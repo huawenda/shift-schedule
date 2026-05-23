@@ -1,15 +1,51 @@
 import type { ScheduleData } from '../types/schedule'
 
-export const scheduleData: ScheduleData = {
-  startDate: '2026-06-07',
-  endDate: '2026-06-30',
-  dates: [
-    '06/07', '06/08', '06/09', '06/10', '06/11', '06/12',
-    '06/13', '06/14', '06/15', '06/16', '06/17', '06/18',
-    '06/19', '06/20', '06/21', '06/22', '06/23', '06/24',
-    '06/25', '06/26', '06/27', '06/28', '06/29', '06/30'
-  ],
-  people: [
+const displayStartDate = '2026-05-01'
+const displayEndDate = '2026-06-30'
+const cycleAnchorDate = '2026-06-07'
+const dayMs = 24 * 60 * 60 * 1000
+
+function parseDate(date: string): Date {
+  const [year, month, day] = date.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function formatDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}/${day}`
+}
+
+function getInclusiveDates(startDate: string, endDate: string): string[] {
+  const start = parseDate(startDate)
+  const end = parseDate(endDate)
+  const dayCount = Math.round((end.getTime() - start.getTime()) / dayMs) + 1
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const current = new Date(start)
+    current.setDate(start.getDate() + index)
+    return formatDate(current)
+  })
+}
+
+function positiveModulo(value: number, modulo: number): number {
+  return ((value % modulo) + modulo) % modulo
+}
+
+function expandCycleShifts<T>(cycle: T[], startDate: string, endDate: string, anchorDate: string): T[] {
+  const start = parseDate(startDate)
+  const end = parseDate(endDate)
+  const anchor = parseDate(anchorDate)
+  const startOffset = Math.round((start.getTime() - anchor.getTime()) / dayMs)
+  const dayCount = Math.round((end.getTime() - start.getTime()) / dayMs) + 1
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const cycleIndex = positiveModulo(startOffset + index, cycle.length)
+    return cycle[cycleIndex]
+  })
+}
+
+const cyclePeople: ScheduleData['people'] = [
     {
       name: '华文达',
       group: '4F',
@@ -80,5 +116,14 @@ export const scheduleData: ScheduleData = {
       group: '4X',
       shifts: ['夜班', '夜班', '夜班', '夜班', '休息', '休息', '白班', '白班', '白班', '白班', '休息', '休息', '白班', '白班', '白班', '白班', '休息', '休息', '夜班', '夜班', '夜班', '夜班', '休息', '休息']
     }
-  ]
+]
+
+export const scheduleData: ScheduleData = {
+  startDate: displayStartDate,
+  endDate: displayEndDate,
+  dates: getInclusiveDates(displayStartDate, displayEndDate),
+  people: cyclePeople.map(person => ({
+    ...person,
+    shifts: expandCycleShifts(person.shifts, displayStartDate, displayEndDate, cycleAnchorDate)
+  }))
 }
