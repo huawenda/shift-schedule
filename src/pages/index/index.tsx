@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { ScrollView, Switch, Text, View } from '@tarojs/components'
+import { ScrollView, Text, View } from '@tarojs/components'
 import { scheduleData } from '../../data/schedule'
 import { getShiftClassName } from '../../utils/shift'
 import {
-  filterPeopleByMode,
   getDateLabels,
   getMonthScheduleView,
   getPersonMonthCalendarCells,
@@ -19,11 +18,16 @@ const dateColumnWidth = 74
 const weekdayLabels = ['日', '一', '二', '三', '四', '五', '六']
 const monthOptions: Array<{ label: string; value: ScheduleMonth }> = [
   { label: '5月', value: '05' },
-  { label: '6月', value: '06' }
+  { label: '6月', value: '06' },
+  { label: '7月', value: '07' },
+  { label: '8月', value: '08' },
+  { label: '9月', value: '09' },
+  { label: '10月', value: '10' },
+  { label: '11月', value: '11' },
+  { label: '12月', value: '12' }
 ]
 
 export default function Index() {
-  const [mineOnly, setMineOnly] = useState(false)
   const [activeMonth, setActiveMonth] = useState<ScheduleMonth>('05')
   const activeScheduleData = getMonthScheduleView(scheduleData, activeMonth)
   const highlightedPerson = activeScheduleData.people.find(person => person.name === highlightedUserName)
@@ -33,7 +37,6 @@ export default function Index() {
     ? getPersonMonthCalendarCells(scheduleData, activeMonth, highlightedUserName)
     : []
   const dateLabels = getDateLabels(activeScheduleData.startDate, activeScheduleData.dates)
-  const visiblePeople = filterPeopleByMode(activeScheduleData.people, highlightedUserName, mineOnly)
   const scheduleTableStyle = `width: ${dateLabels.length * dateColumnWidth}rpx`
 
   return (
@@ -46,7 +49,7 @@ export default function Index() {
         <Text className="desc">完整倒班周期 · MVP</Text>
       </View>
 
-      <View className="month-tabs">
+      <ScrollView scrollX className="month-tabs" enhanced showScrollbar={false}>
         {monthOptions.map(option => (
           <View
             key={option.value}
@@ -56,7 +59,7 @@ export default function Index() {
             <Text>{option.label}</Text>
           </View>
         ))}
-      </View>
+      </ScrollView>
 
       <View className="current-user-card">
         <View className="current-user-main">
@@ -67,14 +70,6 @@ export default function Index() {
               <Text className="mine-badge">我</Text>
               <Text className="current-user-group">{highlightedPerson?.group}</Text>
             </View>
-          </View>
-          <View className="mine-toggle">
-            <Text>只看我</Text>
-            <Switch
-              checked={mineOnly}
-              color="#2563eb"
-              onChange={event => setMineOnly(event.detail.value)}
-            />
           </View>
         </View>
 
@@ -99,7 +94,7 @@ export default function Index() {
       <View className="upcoming-card">
         <View className="section-title-row">
           <Text className="section-title">我的排班</Text>
-          <Text className="section-hint">{activeMonth === '05' ? '2026年5月' : '2026年6月'}</Text>
+          <Text className="section-hint">2026年{Number(activeMonth)}月</Text>
         </View>
         <View className="calendar-weekdays">
           {weekdayLabels.map(weekday => (
@@ -147,7 +142,7 @@ export default function Index() {
               <Text className="identity-header-title">姓名</Text>
               <Text className="identity-subtitle">班组</Text>
             </View>
-            {visiblePeople.map(person => (
+            {activeScheduleData.people.map(person => (
               <View
                 key={person.name}
                 className={`identity-row ${person.name === highlightedUserName ? 'highlight-identity' : ''}`}
@@ -174,7 +169,7 @@ export default function Index() {
                 ))}
               </View>
 
-              {visiblePeople.map(person => (
+              {activeScheduleData.people.map(person => (
                 <View
                   key={person.name}
                   className={`table-row ${person.name === highlightedUserName ? 'highlight-row' : ''}`}

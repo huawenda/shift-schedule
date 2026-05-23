@@ -36,24 +36,33 @@
 }
 
 .month-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  display: flex;
+  width: 100%;
+  white-space: nowrap;
   padding: 6px;
   margin-bottom: 14px;
   border-radius: 14px;
   background: #e9eef7;
+  box-sizing: border-box;
 }
 
 .month-tab {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 104px;
   height: 56px;
+  margin-right: 8px;
+  padding: 0 20px;
   border-radius: 10px;
+  box-sizing: border-box;
   color: #526071;
   font-size: 24px;
   font-weight: 800;
+}
+
+.month-tab:last-child {
+  margin-right: 0;
 }
 
 .month-tab.active {
@@ -137,16 +146,6 @@
   height: 24px;
   padding: 0 8px;
   font-size: 16px;
-}
-
-.mine-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #344054;
 }
 
 .summary-grid {

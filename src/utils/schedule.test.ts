@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { scheduleData } from '../data/schedule'
 import {
-  filterPeopleByMode,
   getDateLabels,
   getMonthScheduleView,
   getPersonMonthCalendarCells,
@@ -14,20 +13,10 @@ describe('schedule utilities', () => {
     const highlightedPerson = scheduleData.people[0]
 
     expect(getPersonShiftSummary(highlightedPerson)).toEqual({
-      白班: 24,
-      夜班: 16,
-      休息: 21
+      白班: 84,
+      夜班: 80,
+      休息: 81
     })
-  })
-
-  it('filters the table to the highlighted person in mine-only mode', () => {
-    const allPeople = filterPeopleByMode(scheduleData.people, '华文达', false)
-    const mineOnlyPeople = filterPeopleByMode(scheduleData.people, '华文达', true)
-
-    expect(allPeople).toHaveLength(14)
-    expect(mineOnlyPeople).toEqual([
-      expect.objectContaining({ name: '华文达', group: '4F' })
-    ])
   })
 
   it('returns seven upcoming shifts from the start of the period', () => {
@@ -52,9 +41,10 @@ describe('schedule utilities', () => {
     ])
   })
 
-  it('slices the generated schedule by month without changing person order', () => {
+  it('slices the generated schedule by selected month without changing person order', () => {
     const mayView = getMonthScheduleView(scheduleData, '05')
     const juneView = getMonthScheduleView(scheduleData, '06')
+    const decemberView = getMonthScheduleView(scheduleData, '12')
 
     expect(mayView.startDate).toBe('2026-05-01')
     expect(mayView.endDate).toBe('2026-05-31')
@@ -72,6 +62,11 @@ describe('schedule utilities', () => {
     expect(juneView.endDate).toBe('2026-06-30')
     expect(juneView.dates).toHaveLength(30)
     expect(juneView.people[0].shifts).toHaveLength(30)
+
+    expect(decemberView.startDate).toBe('2026-12-01')
+    expect(decemberView.endDate).toBe('2026-12-31')
+    expect(decemberView.dates).toHaveLength(31)
+    expect(decemberView.people[0].shifts).toHaveLength(31)
   })
 
   it('builds a 7-column calendar grid for the highlighted person', () => {

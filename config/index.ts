@@ -18,7 +18,12 @@ export default defineConfig({
     options: {}
   },
   framework: 'react',
-  compiler: 'webpack5',
+  compiler: {
+    type: 'webpack5',
+    prebundle: {
+      enable: false
+    }
+  },
   mini: {
     postcss: {
       pxtransform: {

@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { scheduleData } from './schedule'
 
 describe('scheduleData', () => {
-  it('covers May and June 2026 with 61 days', () => {
+  it('covers May through December 2026 with 245 days', () => {
     expect(scheduleData.startDate).toBe('2026-05-01')
-    expect(scheduleData.endDate).toBe('2026-06-30')
-    expect(scheduleData.dates).toHaveLength(61)
+    expect(scheduleData.endDate).toBe('2026-12-31')
+    expect(scheduleData.dates).toHaveLength(245)
     expect(scheduleData.dates[0]).toBe('05/01')
-    expect(scheduleData.dates[60]).toBe('06/30')
+    expect(scheduleData.dates[244]).toBe('12/31')
   })
 
-  it('contains all 14 people and 61 shifts per person', () => {
+  it('contains all 14 people and 245 shifts per person', () => {
     expect(scheduleData.people).toHaveLength(14)
-    expect(scheduleData.people.every(person => person.shifts.length === 61)).toBe(true)
+    expect(scheduleData.people.every(person => person.shifts.length === 245)).toBe(true)
   })
 
   it('includes the default highlighted user', () => {

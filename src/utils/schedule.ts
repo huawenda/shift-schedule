@@ -19,7 +19,7 @@ export interface CalendarCell {
   inCurrentMonth: boolean
 }
 
-export type ScheduleMonth = '05' | '06'
+export type ScheduleMonth = '05' | '06' | '07' | '08' | '09' | '10' | '11' | '12'
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 const cycleLength = 24
@@ -32,15 +32,6 @@ export function getPersonShiftSummary(person: SchedulePerson): ShiftSummary {
     },
     { 白班: 0, 夜班: 0, 休息: 0 }
   )
-}
-
-export function filterPeopleByMode(
-  people: SchedulePerson[],
-  highlightedUserName: string,
-  mineOnly: boolean
-): SchedulePerson[] {
-  if (!mineOnly) return people
-  return people.filter(person => person.name === highlightedUserName)
 }
 
 export function getUpcomingShifts(
