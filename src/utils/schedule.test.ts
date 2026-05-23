@@ -4,6 +4,7 @@ import {
   filterPeopleByMode,
   getDateLabels,
   getMonthScheduleView,
+  getPersonMonthCalendarCells,
   getPersonShiftSummary,
   getUpcomingShifts
 } from './schedule'
@@ -71,5 +72,56 @@ describe('schedule utilities', () => {
     expect(juneView.endDate).toBe('2026-06-30')
     expect(juneView.dates).toHaveLength(30)
     expect(juneView.people[0].shifts).toHaveLength(30)
+  })
+
+  it('builds a 7-column calendar grid for the highlighted person', () => {
+    const mayView = getMonthScheduleView(scheduleData, '05')
+    const juneView = getMonthScheduleView(scheduleData, '06')
+    const mayCells = getPersonMonthCalendarCells(scheduleData, '05', '华文达')
+    const juneCells = getPersonMonthCalendarCells(scheduleData, '06', '华文达')
+
+    expect(mayCells).toHaveLength(42)
+    expect(mayCells.slice(0, 5).map(cell => cell.day)).toEqual(['26', '27', '28', '29', '30'])
+    expect(mayCells[0]).toEqual({
+      key: '04/26',
+      day: '26',
+      shift: '夜班',
+      inCurrentMonth: false
+    })
+    expect(mayCells[5]).toEqual({
+      key: '05/01',
+      day: '01',
+      shift: '休息',
+      inCurrentMonth: true
+    })
+    expect(mayCells.slice(-6).map(cell => cell.key)).toEqual([
+      '06/01',
+      '06/02',
+      '06/03',
+      '06/04',
+      '06/05',
+      '06/06'
+    ])
+    expect(mayCells[36].shift).toBe('白班')
+
+    expect(juneCells).toHaveLength(35)
+    expect(juneCells[0]).toEqual({
+      key: '05/31',
+      day: '31',
+      shift: '休息',
+      inCurrentMonth: false
+    })
+    expect(juneCells[1]).toEqual({
+      key: '06/01',
+      day: '01',
+      shift: '白班',
+      inCurrentMonth: true
+    })
+    expect(juneCells.slice(-4).map(cell => cell.key)).toEqual([
+      '07/01',
+      '07/02',
+      '07/03',
+      '07/04'
+    ])
   })
 })

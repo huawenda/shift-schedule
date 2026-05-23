@@ -6,8 +6,8 @@ import {
   filterPeopleByMode,
   getDateLabels,
   getMonthScheduleView,
+  getPersonMonthCalendarCells,
   getPersonShiftSummary,
-  getUpcomingShifts,
   type ScheduleMonth
 } from '../../utils/schedule'
 import './index.scss'
@@ -16,6 +16,7 @@ const highlightedUserName = '华文达'
 const formatDateRangePart = (date: string) => date.split('-').join('/')
 const getDayPart = (date: string) => date.slice(3)
 const dateColumnWidth = 74
+const weekdayLabels = ['日', '一', '二', '三', '四', '五', '六']
 const monthOptions: Array<{ label: string; value: ScheduleMonth }> = [
   { label: '5月', value: '05' },
   { label: '6月', value: '06' }
@@ -28,8 +29,8 @@ export default function Index() {
   const highlightedPerson = activeScheduleData.people.find(person => person.name === highlightedUserName)
   const dateRangeText = `${formatDateRangePart(activeScheduleData.startDate)} - ${formatDateRangePart(activeScheduleData.endDate)}`
   const shiftSummary = highlightedPerson ? getPersonShiftSummary(highlightedPerson) : null
-  const upcomingShifts = highlightedPerson
-    ? getUpcomingShifts(activeScheduleData.dates, highlightedPerson, 7)
+  const calendarCells = highlightedPerson
+    ? getPersonMonthCalendarCells(scheduleData, activeMonth, highlightedUserName)
     : []
   const dateLabels = getDateLabels(activeScheduleData.startDate, activeScheduleData.dates)
   const visiblePeople = filterPeopleByMode(activeScheduleData.people, highlightedUserName, mineOnly)
@@ -98,18 +99,34 @@ export default function Index() {
       <View className="upcoming-card">
         <View className="section-title-row">
           <Text className="section-title">我的排班</Text>
-          <Text className="section-hint">{activeMonth === '05' ? '5月前 7 天' : '6月前 7 天'}</Text>
+          <Text className="section-hint">{activeMonth === '05' ? '2026年5月' : '2026年6月'}</Text>
         </View>
-        <ScrollView scrollX className="upcoming-scroll" enhanced showScrollbar={false}>
-          <View className="upcoming-list">
-            {upcomingShifts.map(item => (
-              <View key={item.date} className="upcoming-item">
-                <Text className="upcoming-date">{getDayPart(item.date)}</Text>
-                <Text className={getShiftClassName(item.shift)}>{item.shift}</Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
+        <View className="calendar-weekdays">
+          {weekdayLabels.map(weekday => (
+            <Text key={weekday} className="calendar-weekday">{weekday}</Text>
+          ))}
+        </View>
+        <View className="calendar-grid">
+          {calendarCells.map(cell => (
+            <View
+              key={cell.key}
+              className={`calendar-cell ${cell.inCurrentMonth ? '' : 'calendar-cell-empty'}`}
+            >
+              {cell.day && (
+                <>
+                  <Text className={`calendar-day ${cell.inCurrentMonth ? '' : 'calendar-day-muted'}`}>
+                    {cell.day}
+                  </Text>
+                  {cell.shift && (
+                    <Text className={`${getShiftClassName(cell.shift)} ${cell.inCurrentMonth ? '' : 'shift-muted'}`}>
+                      {cell.shift}
+                    </Text>
+                  )}
+                </>
+              )}
+            </View>
+          ))}
+        </View>
       </View>
 
       <View className="table-card">

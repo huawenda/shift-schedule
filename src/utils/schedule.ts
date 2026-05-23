@@ -12,9 +12,17 @@ export interface DateLabel {
   weekday: string
 }
 
+export interface CalendarCell {
+  key: string
+  day: string
+  shift?: ShiftType
+  inCurrentMonth: boolean
+}
+
 export type ScheduleMonth = '05' | '06'
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+const cycleLength = 24
 
 export function getPersonShiftSummary(person: SchedulePerson): ShiftSummary {
   return person.shifts.reduce<ShiftSummary>(
@@ -92,4 +100,79 @@ export function getMonthScheduleView(scheduleData: ScheduleData, month: Schedule
       shifts: person.shifts.slice(firstIndex, lastIndex + 1)
     }))
   }
+}
+
+function parseDate(date: string): Date {
+  const [year, month, day] = date.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function formatMonthDay(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}/${day}`
+}
+
+function addDays(date: Date, offset: number): Date {
+  const result = new Date(date)
+  result.setDate(date.getDate() + offset)
+  return result
+}
+
+function positiveModulo(value: number, modulo: number): number {
+  return ((value % modulo) + modulo) % modulo
+}
+
+export function getPersonMonthCalendarCells(
+  scheduleData: ScheduleData,
+  month: ScheduleMonth,
+  personName: string
+): CalendarCell[] {
+  const monthView = getMonthScheduleView(scheduleData, month)
+  const person = scheduleData.people.find(item => item.name === personName)
+  const firstIndex = scheduleData.dates.findIndex(date => date === monthView.dates[0])
+
+  if (!person || firstIndex < 0 || monthView.dates.length === 0) return []
+
+  const start = parseDate(monthView.startDate)
+  const leadingEmptyCount = start.getDay()
+  const filledCells: CalendarCell[] = monthView.dates.map((date, index) => {
+    const absoluteIndex = firstIndex + index
+
+    return {
+      key: date,
+      day: date.slice(3),
+      shift: person.shifts[positiveModulo(absoluteIndex, cycleLength)],
+      inCurrentMonth: true
+    }
+  })
+  const leadingCells: CalendarCell[] = Array.from({ length: leadingEmptyCount }, (_, index) => {
+    const offset = index - leadingEmptyCount
+    const date = addDays(start, offset)
+    const absoluteIndex = firstIndex + offset
+    const key = formatMonthDay(date)
+
+    return {
+      key,
+      day: key.slice(3),
+      shift: person.shifts[positiveModulo(absoluteIndex, cycleLength)],
+      inCurrentMonth: false
+    }
+  })
+  const trailingEmptyCount = (7 - ((leadingCells.length + filledCells.length) % 7)) % 7
+  const trailingCells: CalendarCell[] = Array.from({ length: trailingEmptyCount }, (_, index) => {
+    const offset = monthView.dates.length + index
+    const date = addDays(start, offset)
+    const absoluteIndex = firstIndex + offset
+    const key = formatMonthDay(date)
+
+    return {
+      key,
+      day: key.slice(3),
+      shift: person.shifts[positiveModulo(absoluteIndex, cycleLength)],
+      inCurrentMonth: false
+    }
+  })
+
+  return [...leadingCells, ...filledCells, ...trailingCells]
 }
