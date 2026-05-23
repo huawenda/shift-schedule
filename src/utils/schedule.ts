@@ -1,3 +1,4 @@
+import { Solar } from 'lunar-javascript'
 import type { ScheduleData, SchedulePerson, ShiftType } from '../types/schedule'
 
 export type ShiftSummary = Record<ShiftType, number>
@@ -17,12 +18,31 @@ export interface CalendarCell {
   day: string
   shift?: ShiftType
   inCurrentMonth: boolean
+  meta: CalendarDateMeta
+}
+
+export interface CalendarDateMeta {
+  label: string
+  isHoliday: boolean
 }
 
 export type ScheduleMonth = '05' | '06' | '07' | '08' | '09' | '10' | '11' | '12'
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 const cycleLength = 24
+const festivalLabelMap: Record<string, string> = {
+  劳动节: '劳动',
+  儿童节: '儿童',
+  国庆节: '国庆',
+  中秋节: '中秋',
+  端午节: '端午',
+  七夕节: '七夕',
+  重阳节: '重阳',
+  元旦节: '元旦',
+  春节: '春节',
+  元宵节: '元宵'
+}
+const visibleFestivalNames = new Set(Object.keys(festivalLabelMap))
 
 export function getPersonShiftSummary(person: SchedulePerson): ShiftSummary {
   return person.shifts.reduce<ShiftSummary>(
@@ -32,6 +52,54 @@ export function getPersonShiftSummary(person: SchedulePerson): ShiftSummary {
     },
     { 白班: 0, 夜班: 0, 休息: 0 }
   )
+}
+
+export function formatScheduleMonthDay(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${month}/${day}`
+}
+
+export function getCurrentScheduleMonth(
+  scheduleData: ScheduleData,
+  date: Date = new Date()
+): ScheduleMonth | null {
+  const today = formatScheduleMonthDay(date)
+  if (!scheduleData.dates.includes(today)) return null
+
+  return today.slice(0, 2) as ScheduleMonth
+}
+
+export function getCalendarDateMeta(date: string): CalendarDateMeta {
+  const [year, month, day] = date.split('-').map(Number)
+  const solar = Solar.fromYmd(year, month, day)
+  const lunar = solar.getLunar()
+  const festival = [
+    ...solar.getFestivals(),
+    ...lunar.getFestivals()
+  ].find(name => visibleFestivalNames.has(name))
+  const jieQi = lunar.getJieQi()
+
+  if (festival) {
+    return {
+      label: festivalLabelMap[festival] ?? festival.replace(/节$/, ''),
+      isHoliday: true
+    }
+  }
+
+  if (jieQi) {
+    return {
+      label: jieQi,
+      isHoliday: true
+    }
+  }
+
+  const lunarDay = lunar.getDayInChinese()
+
+  return {
+    label: lunarDay === '初一' ? `${lunar.getMonthInChinese()}月` : lunarDay,
+    isHoliday: false
+  }
 }
 
 export function getUpcomingShifts(
@@ -104,6 +172,13 @@ function formatMonthDay(date: Date): string {
   return `${month}/${day}`
 }
 
+function formatFullDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function addDays(date: Date, offset: number): Date {
   const result = new Date(date)
   result.setDate(date.getDate() + offset)
@@ -134,7 +209,8 @@ export function getPersonMonthCalendarCells(
       key: date,
       day: date.slice(3),
       shift: person.shifts[positiveModulo(absoluteIndex, cycleLength)],
-      inCurrentMonth: true
+      inCurrentMonth: true,
+      meta: getCalendarDateMeta(formatFullDate(addDays(start, index)))
     }
   })
   const leadingCells: CalendarCell[] = Array.from({ length: leadingEmptyCount }, (_, index) => {
@@ -147,7 +223,8 @@ export function getPersonMonthCalendarCells(
       key,
       day: key.slice(3),
       shift: person.shifts[positiveModulo(absoluteIndex, cycleLength)],
-      inCurrentMonth: false
+      inCurrentMonth: false,
+      meta: getCalendarDateMeta(formatFullDate(date))
     }
   })
   const trailingEmptyCount = (7 - ((leadingCells.length + filledCells.length) % 7)) % 7
@@ -161,7 +238,8 @@ export function getPersonMonthCalendarCells(
       key,
       day: key.slice(3),
       shift: person.shifts[positiveModulo(absoluteIndex, cycleLength)],
-      inCurrentMonth: false
+      inCurrentMonth: false,
+      meta: getCalendarDateMeta(formatFullDate(date))
     }
   })
 

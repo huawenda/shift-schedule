@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { scheduleData } from '../data/schedule'
 import {
+  formatScheduleMonthDay,
+  getCalendarDateMeta,
   getDateLabels,
+  getCurrentScheduleMonth,
   getMonthScheduleView,
   getPersonMonthCalendarCells,
   getPersonShiftSummary,
@@ -41,6 +44,44 @@ describe('schedule utilities', () => {
     ])
   })
 
+  it('formats runtime dates for schedule matching', () => {
+    expect(formatScheduleMonthDay(new Date(2026, 4, 24))).toBe('05/24')
+    expect(formatScheduleMonthDay(new Date(2026, 11, 3))).toBe('12/03')
+  })
+
+  it('detects the current schedule month only when today is in range', () => {
+    expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 4, 24))).toBe('05')
+    expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 11, 31))).toBe('12')
+    expect(getCurrentScheduleMonth(scheduleData, new Date(2027, 0, 1))).toBeNull()
+  })
+
+  it('returns compact lunar, solar holiday, lunar holiday, and solar term labels', () => {
+    expect(getCalendarDateMeta('2026-05-01')).toEqual({
+      label: '劳动',
+      isHoliday: true
+    })
+    expect(getCalendarDateMeta('2026-05-05')).toEqual({
+      label: '立夏',
+      isHoliday: true
+    })
+    expect(getCalendarDateMeta('2026-06-19')).toEqual({
+      label: '端午',
+      isHoliday: true
+    })
+    expect(getCalendarDateMeta('2026-05-24')).toEqual({
+      label: '初八',
+      isHoliday: false
+    })
+    expect(getCalendarDateMeta('2026-05-04')).toEqual({
+      label: '十八',
+      isHoliday: false
+    })
+    expect(getCalendarDateMeta('2026-09-10')).toEqual({
+      label: '廿九',
+      isHoliday: false
+    })
+  })
+
   it('slices the generated schedule by selected month without changing person order', () => {
     const mayView = getMonthScheduleView(scheduleData, '05')
     const juneView = getMonthScheduleView(scheduleData, '06')
@@ -77,18 +118,18 @@ describe('schedule utilities', () => {
 
     expect(mayCells).toHaveLength(42)
     expect(mayCells.slice(0, 5).map(cell => cell.day)).toEqual(['26', '27', '28', '29', '30'])
-    expect(mayCells[0]).toEqual({
+    expect(mayCells[0]).toEqual(expect.objectContaining({
       key: '04/26',
       day: '26',
       shift: '夜班',
       inCurrentMonth: false
-    })
-    expect(mayCells[5]).toEqual({
+    }))
+    expect(mayCells[5]).toEqual(expect.objectContaining({
       key: '05/01',
       day: '01',
       shift: '休息',
       inCurrentMonth: true
-    })
+    }))
     expect(mayCells.slice(-6).map(cell => cell.key)).toEqual([
       '06/01',
       '06/02',
@@ -100,18 +141,18 @@ describe('schedule utilities', () => {
     expect(mayCells[36].shift).toBe('白班')
 
     expect(juneCells).toHaveLength(35)
-    expect(juneCells[0]).toEqual({
+    expect(juneCells[0]).toEqual(expect.objectContaining({
       key: '05/31',
       day: '31',
       shift: '休息',
       inCurrentMonth: false
-    })
-    expect(juneCells[1]).toEqual({
+    }))
+    expect(juneCells[1]).toEqual(expect.objectContaining({
       key: '06/01',
       day: '01',
       shift: '白班',
       inCurrentMonth: true
-    })
+    }))
     expect(juneCells.slice(-4).map(cell => cell.key)).toEqual([
       '07/01',
       '07/02',

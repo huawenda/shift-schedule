@@ -35,6 +35,9 @@ importers:
       '@tarojs/webpack5-runner':
         specifier: 4.2.0
         version: 4.2.0(@babel/core@7.29.0)(@swc/core@1.3.96)(@tarojs/runtime@4.2.0)(less@4.6.4)(postcss@8.5.15)(sass@1.100.0)(stylus@0.64.0)(typescript@5.9.3)(webpack@5.91.0(@swc/core@1.3.96)(lightningcss@1.32.0)(postcss@8.5.15))
+      lunar-javascript:
+        specifier: ^1.7.7
+        version: 1.7.7
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -3809,6 +3812,9 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
+  lunar-javascript@1.7.7:
+    resolution: {integrity: sha512-u/KYiwPIBo/0bT+WWfU7qO1d+aqeB90Tuy4ErXenr2Gam0QcWeezUvtiOIyXR7HbVnW2I1DKfU0NBvzMZhbVQw==}
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -9603,6 +9609,8 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  lunar-javascript@1.7.7: {}
 
   magic-string@0.30.21:
     dependencies:
