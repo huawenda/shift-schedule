@@ -1,0 +1,119 @@
+.page {
+  min-height: 100vh;
+  background: #f6f7fb;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.title {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.subtitle,
+.desc {
+  display: block;
+  margin-top: 6px;
+  font-size: 24px;
+  color: #6b7280;
+}
+
+.current-user-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  font-size: 24px;
+  color: #374151;
+}
+
+.table-scroll {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.schedule-table {
+  min-width: 1832px;
+}
+
+.table-row {
+  display: flex;
+  min-height: 72px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.table-row:last-child {
+  border-bottom: 0;
+}
+
+.table-header {
+  background: #f3f4f6;
+  font-weight: 700;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  box-sizing: border-box;
+  font-size: 22px;
+  color: #374151;
+}
+
+.name-cell {
+  width: 120px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.group-cell {
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.date-cell {
+  width: 68px;
+  flex-shrink: 0;
+}
+
+.highlight-row {
+  background: #fff7ed;
+}
+
+.shift {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.shift-day {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.shift-night {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.shift-rest {
+  background: #ecfdf5;
+  color: #047857;
+}
