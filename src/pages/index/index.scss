@@ -312,6 +312,7 @@
 }
 
 .calendar-cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -322,6 +323,20 @@
   border-radius: 10px;
   background: #fbfcff;
   box-sizing: border-box;
+}
+
+.edited-calendar-cell {
+  border-color: #f7c56b;
+}
+
+.edited-marker {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f59e0b;
 }
 
 .today-calendar-cell {

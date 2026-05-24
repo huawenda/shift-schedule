@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { scheduleData } from './schedule'
 
 describe('scheduleData', () => {
-  it('covers May through December 2026 with 245 days', () => {
-    expect(scheduleData.startDate).toBe('2026-05-01')
-    expect(scheduleData.endDate).toBe('2026-12-31')
+  it('covers May through December work months with 245 generated days', () => {
+    expect(scheduleData.startDate).toBe('2026-04-19')
+    expect(scheduleData.endDate).toBe('2026-12-19')
     expect(scheduleData.dates).toHaveLength(245)
-    expect(scheduleData.dates[0]).toBe('05/01')
-    expect(scheduleData.dates[244]).toBe('12/31')
+    expect(scheduleData.dates[0]).toBe('04/19')
+    expect(scheduleData.dates[244]).toBe('12/19')
   })
 
   it('contains all 14 people and 245 shifts per person', () => {
@@ -40,15 +40,15 @@ describe('scheduleData', () => {
     ])
   })
 
-  it('maps May dates by cycling backward from the provided 06/07 anchor', () => {
+  it('maps generated dates by cycling backward from the provided 06/07 anchor', () => {
     const highlightedPerson = scheduleData.people.find(person => person.name === '华文达')
     const coworker = scheduleData.people.find(person => person.name === '张舒棋')
 
     expect(highlightedPerson?.shifts.slice(0, 7)).toEqual([
-      '休息', '白班', '白班', '白班', '白班', '休息', '休息'
+      '休息', '夜班', '夜班', '夜班', '夜班', '休息', '休息'
     ])
     expect(coworker?.shifts.slice(0, 7)).toEqual([
-      '休息', '休息', '白班', '白班', '白班', '白班', '休息'
+      '休息', '休息', '夜班', '夜班', '夜班', '夜班', '休息'
     ])
   })
 })

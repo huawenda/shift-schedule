@@ -16,8 +16,8 @@ describe('schedule utilities', () => {
     const highlightedPerson = scheduleData.people[0]
 
     expect(getPersonShiftSummary(highlightedPerson)).toEqual({
-      白班: 84,
-      夜班: 80,
+      白班: 80,
+      夜班: 84,
       休息: 81,
       特勤: 0
     })
@@ -40,21 +40,21 @@ describe('schedule utilities', () => {
     const highlightedPerson = scheduleData.people[0]
 
     expect(getUpcomingShifts(scheduleData.dates, highlightedPerson, 7)).toEqual([
-      { date: '05/01', shift: '休息' },
-      { date: '05/02', shift: '白班' },
-      { date: '05/03', shift: '白班' },
-      { date: '05/04', shift: '白班' },
-      { date: '05/05', shift: '白班' },
-      { date: '05/06', shift: '休息' },
-      { date: '05/07', shift: '休息' }
+      { date: '04/19', shift: '休息' },
+      { date: '04/20', shift: '夜班' },
+      { date: '04/21', shift: '夜班' },
+      { date: '04/22', shift: '夜班' },
+      { date: '04/23', shift: '夜班' },
+      { date: '04/24', shift: '休息' },
+      { date: '04/25', shift: '休息' }
     ])
   })
 
   it('adds weekday labels to each date', () => {
     expect(getDateLabels(scheduleData.startDate, scheduleData.dates).slice(0, 3)).toEqual([
-      { date: '05/01', weekday: '五' },
-      { date: '05/02', weekday: '六' },
-      { date: '05/03', weekday: '日' }
+      { date: '04/19', weekday: '日' },
+      { date: '04/20', weekday: '一' },
+      { date: '04/21', weekday: '二' }
     ])
   })
 
@@ -64,8 +64,11 @@ describe('schedule utilities', () => {
   })
 
   it('detects the current schedule month only when today is in range', () => {
-    expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 4, 24))).toBe('05')
-    expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 11, 31))).toBe('12')
+    expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 4, 19))).toBe('05')
+    expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 4, 20))).toBe('06')
+    expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 4, 24))).toBe('06')
+    expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 11, 19))).toBe('12')
+    expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 11, 20))).toBeNull()
     expect(getCurrentScheduleMonth(scheduleData, new Date(2027, 0, 1))).toBeNull()
   })
 
@@ -96,14 +99,14 @@ describe('schedule utilities', () => {
     })
   })
 
-  it('slices the generated schedule by selected month without changing person order', () => {
+  it('slices the generated schedule by selected work month without changing person order', () => {
     const mayView = getMonthScheduleView(scheduleData, '05')
     const juneView = getMonthScheduleView(scheduleData, '06')
     const decemberView = getMonthScheduleView(scheduleData, '12')
 
-    expect(mayView.startDate).toBe('2026-05-01')
-    expect(mayView.endDate).toBe('2026-05-31')
-    expect(mayView.dates).toHaveLength(31)
+    expect(mayView.startDate).toBe('2026-04-20')
+    expect(mayView.endDate).toBe('2026-05-19')
+    expect(mayView.dates).toHaveLength(30)
     expect(mayView.people).toHaveLength(14)
     expect(mayView.people[0]).toEqual(
       expect.objectContaining({
@@ -111,17 +114,17 @@ describe('schedule utilities', () => {
         shifts: expect.arrayContaining(['白班', '夜班', '休息'])
       })
     )
-    expect(mayView.people[0].shifts).toHaveLength(31)
+    expect(mayView.people[0].shifts).toHaveLength(30)
 
-    expect(juneView.startDate).toBe('2026-06-01')
-    expect(juneView.endDate).toBe('2026-06-30')
-    expect(juneView.dates).toHaveLength(30)
-    expect(juneView.people[0].shifts).toHaveLength(30)
+    expect(juneView.startDate).toBe('2026-05-20')
+    expect(juneView.endDate).toBe('2026-06-19')
+    expect(juneView.dates).toHaveLength(31)
+    expect(juneView.people[0].shifts).toHaveLength(31)
 
-    expect(decemberView.startDate).toBe('2026-12-01')
-    expect(decemberView.endDate).toBe('2026-12-31')
-    expect(decemberView.dates).toHaveLength(31)
-    expect(decemberView.people[0].shifts).toHaveLength(31)
+    expect(decemberView.startDate).toBe('2026-11-20')
+    expect(decemberView.endDate).toBe('2026-12-19')
+    expect(decemberView.dates).toHaveLength(30)
+    expect(decemberView.people[0].shifts).toHaveLength(30)
   })
 
   it('builds a 7-column calendar grid for the highlighted person', () => {
@@ -130,48 +133,41 @@ describe('schedule utilities', () => {
     const mayCells = getPersonMonthCalendarCells(scheduleData, '05', '华文达')
     const juneCells = getPersonMonthCalendarCells(scheduleData, '06', '华文达')
 
-    expect(mayCells).toHaveLength(42)
-    expect(mayCells.slice(0, 5).map(cell => cell.day)).toEqual(['26', '27', '28', '29', '30'])
+    expect(mayCells).toHaveLength(35)
+    expect(mayCells.slice(0, 5).map(cell => cell.day)).toEqual(['19', '20', '21', '22', '23'])
     expect(mayCells[0]).toEqual(expect.objectContaining({
-      key: '04/26',
-      day: '26',
-      shift: '夜班',
+      key: '04/19',
+      day: '19',
+      shift: '休息',
       inCurrentMonth: false
     }))
-    expect(mayCells[5]).toEqual(expect.objectContaining({
-      key: '05/01',
-      day: '01',
-      shift: '休息',
+    expect(mayCells[1]).toEqual(expect.objectContaining({
+      key: '04/20',
+      day: '20',
+      shift: '夜班',
       inCurrentMonth: true
     }))
-    expect(mayCells.slice(-6).map(cell => cell.key)).toEqual([
-      '06/01',
-      '06/02',
-      '06/03',
-      '06/04',
-      '06/05',
-      '06/06'
+    expect(mayCells.slice(-4).map(cell => cell.key)).toEqual([
+      '05/20',
+      '05/21',
+      '05/22',
+      '05/23'
     ])
-    expect(mayCells[36].shift).toBe('白班')
+    expect(mayCells[31].shift).toBe('夜班')
 
     expect(juneCells).toHaveLength(35)
     expect(juneCells[0]).toEqual(expect.objectContaining({
-      key: '05/31',
-      day: '31',
-      shift: '休息',
+      key: '05/17',
+      day: '17',
+      shift: '夜班',
       inCurrentMonth: false
     }))
-    expect(juneCells[1]).toEqual(expect.objectContaining({
-      key: '06/01',
-      day: '01',
-      shift: '白班',
+    expect(juneCells[3]).toEqual(expect.objectContaining({
+      key: '05/20',
+      day: '20',
+      shift: '夜班',
       inCurrentMonth: true
     }))
-    expect(juneCells.slice(-4).map(cell => cell.key)).toEqual([
-      '07/01',
-      '07/02',
-      '07/03',
-      '07/04'
-    ])
+    expect(juneCells.slice(-1).map(cell => cell.key)).toEqual(['06/20'])
   })
 })

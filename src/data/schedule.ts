@@ -1,7 +1,7 @@
 import type { ScheduleData } from '../types/schedule'
 
-const displayStartDate = '2026-05-01'
-const displayEndDate = '2026-12-31'
+const displayStartDate = '2026-04-19'
+const displayEndDate = '2026-12-19'
 const cycleAnchorDate = '2026-06-07'
 const dayMs = 24 * 60 * 60 * 1000
 

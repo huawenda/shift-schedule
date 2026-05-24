@@ -52,8 +52,8 @@ interface ShiftEditorState {
   baseShift: ShiftType
 }
 
-function getCenteredTableScrollLeft(date: string): number {
-  const dateIndex = scheduleData.dates.indexOf(date)
+function getCenteredTableScrollLeft(date: string, dates: string[]): number {
+  const dateIndex = dates.indexOf(date)
   if (dateIndex < 0) return 0
 
   const scale = getRpxScale()
@@ -159,7 +159,7 @@ export default function Index() {
   const [monthScrollLeft, setMonthScrollLeft] = useState(() => (
     getMonthTargetScrollLeft(currentScheduleMonth ?? '05', 0) ?? 0
   ))
-  const [tableScrollLeft, setTableScrollLeft] = useState(() => getCenteredTableScrollLeft(todayMonthDay))
+  const [tableScrollLeft, setTableScrollLeft] = useState(0)
   const calendarTouchStart = useRef<{ x: number; y: number } | null>(null)
   const calendarAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const monthScrollLeftRef = useRef(monthScrollLeft)
@@ -181,6 +181,14 @@ export default function Index() {
   const scheduleTableStyle = `width: ${dateLabels.length * dateColumnWidth}rpx`
   const activeMonthIndex = monthOptions.findIndex(option => option.value === activeMonth)
 
+  useEffect(() => {
+    if (activeScheduleData.dates.includes(todayMonthDay)) {
+      setTableScrollLeft(getCenteredTableScrollLeft(todayMonthDay, activeScheduleData.dates))
+    } else {
+      setTableScrollLeft(0)
+    }
+  }, [activeMonth, todayMonthDay])
+
   useEffect(() => () => {
     if (calendarAnimationTimer.current) {
       clearTimeout(calendarAnimationTimer.current)
@@ -197,7 +205,7 @@ export default function Index() {
   }
 
   const jumpTableToDate = (date: string) => {
-    setTableScrollLeft(getCenteredTableScrollLeft(date))
+    setTableScrollLeft(getCenteredTableScrollLeft(date, activeScheduleData.dates))
   }
 
   const openShiftEditor = (date: string) => {
@@ -364,7 +372,7 @@ export default function Index() {
             {calendarCells.map(cell => (
               <View
                 key={cell.key}
-                className={`calendar-cell ${cell.inCurrentMonth ? '' : 'calendar-cell-empty'} ${cell.key === todayMonthDay ? 'today-calendar-cell' : ''}`}
+                className={`calendar-cell ${cell.inCurrentMonth ? '' : 'calendar-cell-empty'} ${cell.key === todayMonthDay ? 'today-calendar-cell' : ''} ${currentUser && shiftOverrides[getOverrideKey(currentUser.name, cell.key)] ? 'edited-calendar-cell' : ''}`}
                 onClick={() => {
                   if (cell.inCurrentMonth) jumpTableToDate(cell.key)
                 }}
@@ -372,6 +380,9 @@ export default function Index() {
                   if (cell.inCurrentMonth) openShiftEditor(cell.key)
                 }}
               >
+                {cell.inCurrentMonth && currentUser && shiftOverrides[getOverrideKey(currentUser.name, cell.key)] && (
+                  <View className="edited-marker" />
+                )}
                 {cell.day && (
                   <View className="calendar-cell-content">
                     <View className="calendar-date-wrap">

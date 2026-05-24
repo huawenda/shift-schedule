@@ -76,7 +76,10 @@ export function getCurrentScheduleMonth(
   const today = formatScheduleMonthDay(date)
   if (!scheduleData.dates.includes(today)) return null
 
-  return today.slice(0, 2) as ScheduleMonth
+  const settlementMonth = date.getDate() >= 20 ? date.getMonth() + 2 : date.getMonth() + 1
+  const month = String(settlementMonth).padStart(2, '0') as ScheduleMonth
+
+  return month >= '05' && month <= '12' ? month : null
 }
 
 export function getCalendarDateMeta(date: string): CalendarDateMeta {
@@ -137,15 +140,12 @@ export function getDateLabels(startDate: string, dates: string[]): DateLabel[] {
 }
 
 export function getMonthScheduleView(scheduleData: ScheduleData, month: ScheduleMonth): ScheduleData {
-  const firstIndex = scheduleData.dates.findIndex(date => date.startsWith(`${month}/`))
-  let lastIndex = -1
-
-  for (let index = scheduleData.dates.length - 1; index >= 0; index -= 1) {
-    if (scheduleData.dates[index].startsWith(`${month}/`)) {
-      lastIndex = index
-      break
-    }
-  }
+  const monthNumber = Number(month)
+  const startMonth = String(monthNumber - 1).padStart(2, '0')
+  const periodStart = `${startMonth}/20`
+  const periodEnd = `${month}/19`
+  const firstIndex = scheduleData.dates.findIndex(date => date === periodStart)
+  const lastIndex = scheduleData.dates.findIndex(date => date === periodEnd)
 
   if (firstIndex < 0 || lastIndex < firstIndex) {
     return {
@@ -156,12 +156,9 @@ export function getMonthScheduleView(scheduleData: ScheduleData, month: Schedule
     }
   }
 
-  const monthStartDay = scheduleData.dates[firstIndex].slice(3)
-  const monthEndDay = scheduleData.dates[lastIndex].slice(3)
-
   return {
-    startDate: `2026-${month}-${monthStartDay}`,
-    endDate: `2026-${month}-${monthEndDay}`,
+    startDate: `2026-${startMonth}-20`,
+    endDate: `2026-${month}-19`,
     dates: scheduleData.dates.slice(firstIndex, lastIndex + 1),
     people: scheduleData.people.map(person => ({
       ...person,
@@ -198,6 +195,10 @@ function positiveModulo(value: number, modulo: number): number {
   return ((value % modulo) + modulo) % modulo
 }
 
+function getShiftAtIndex(person: SchedulePerson, index: number): ShiftType {
+  return person.shifts[index] ?? person.shifts[positiveModulo(index, cycleLength)]
+}
+
 export function getPersonMonthCalendarCells(
   scheduleData: ScheduleData,
   month: ScheduleMonth,
@@ -217,7 +218,7 @@ export function getPersonMonthCalendarCells(
     return {
       key: date,
       day: date.slice(3),
-      shift: person.shifts[positiveModulo(absoluteIndex, cycleLength)],
+      shift: getShiftAtIndex(person, absoluteIndex),
       inCurrentMonth: true,
       meta: getCalendarDateMeta(formatFullDate(addDays(start, index)))
     }
@@ -231,7 +232,7 @@ export function getPersonMonthCalendarCells(
     return {
       key,
       day: key.slice(3),
-      shift: person.shifts[positiveModulo(absoluteIndex, cycleLength)],
+      shift: getShiftAtIndex(person, absoluteIndex),
       inCurrentMonth: false,
       meta: getCalendarDateMeta(formatFullDate(date))
     }
@@ -246,7 +247,7 @@ export function getPersonMonthCalendarCells(
     return {
       key,
       day: key.slice(3),
-      shift: person.shifts[positiveModulo(absoluteIndex, cycleLength)],
+      shift: getShiftAtIndex(person, absoluteIndex),
       inCurrentMonth: false,
       meta: getCalendarDateMeta(formatFullDate(date))
     }
