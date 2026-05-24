@@ -5,7 +5,16 @@ export interface ShiftSummary {
   白班: number
   夜班: number
   休息: number
-  特勤: number
+  白特: number
+  夜特: number
+  加班?: OvertimeSummary
+}
+
+export interface OvertimeSummary {
+  白班: number
+  夜班: number
+  白特: number
+  夜特: number
 }
 
 export interface UpcomingShift {
@@ -45,22 +54,45 @@ function formatFestivalLabel(festival: string): string {
   return festival
 }
 
-export function getPersonShiftSummary(person: SchedulePerson): ShiftSummary {
-  return person.shifts.reduce<ShiftSummary>(
-    (summary, shift) => {
+export function getPersonShiftSummary(person: SchedulePerson, overtimeHours?: number[]): ShiftSummary {
+  const summary = person.shifts.reduce<ShiftSummary>(
+    (currentSummary, shift, index) => {
+      const overtime = overtimeHours?.[index] ?? 0
       if (shift === '白特') {
-        summary.白班 += 1
-        summary.特勤 += 1
+        currentSummary.白特 += 1
+        if (currentSummary.加班) currentSummary.加班.白特 += overtime
       } else if (shift === '夜特') {
-        summary.夜班 += 1
-        summary.特勤 += 1
+        currentSummary.夜特 += 1
+        if (currentSummary.加班) currentSummary.加班.夜特 += overtime
+      } else if (shift === '白班') {
+        currentSummary.白班 += 1
+        if (currentSummary.加班) currentSummary.加班.白班 += overtime
+      } else if (shift === '夜班') {
+        currentSummary.夜班 += 1
+        if (currentSummary.加班) currentSummary.加班.夜班 += overtime
       } else {
-        summary[shift] += 1
+        currentSummary.休息 += 1
       }
-      return summary
+      return currentSummary
     },
-    { 白班: 0, 夜班: 0, 休息: 0, 特勤: 0 }
+    {
+      白班: 0,
+      夜班: 0,
+      休息: 0,
+      白特: 0,
+      夜特: 0,
+      ...(overtimeHours ? { 加班: { 白班: 0, 夜班: 0, 白特: 0, 夜特: 0 } } : {})
+    }
   )
+
+  return summary
+}
+
+export function normalizeOvertimeHours(value: string | number): number {
+  const parsedValue = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) return 0
+
+  return Math.floor(parsedValue * 2) / 2
 }
 
 export function formatScheduleMonthDay(date: Date): string {

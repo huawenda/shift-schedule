@@ -8,7 +8,8 @@ import {
   getMonthScheduleView,
   getPersonMonthCalendarCells,
   getPersonShiftSummary,
-  getUpcomingShifts
+  getUpcomingShifts,
+  normalizeOvertimeHours
 } from './schedule'
 
 describe('schedule utilities', () => {
@@ -19,21 +20,56 @@ describe('schedule utilities', () => {
       白班: 80,
       夜班: 84,
       休息: 81,
-      特勤: 0
+      白特: 0,
+      夜特: 0
     })
   })
 
-  it('counts special duty shifts as duty and their underlying day or night shift', () => {
+  it('counts special duty shifts separately from day and night shifts', () => {
     expect(getPersonShiftSummary({
       name: '测试',
       group: 'T',
       shifts: ['白班', '夜班', '休息', '白特', '夜特']
     })).toEqual({
-      白班: 2,
-      夜班: 2,
+      白班: 1,
+      夜班: 1,
       休息: 1,
-      特勤: 2
+      白特: 1,
+      夜特: 1
     })
+  })
+
+  it('adds overtime totals to matching shift buckets without changing day counts', () => {
+    expect(getPersonShiftSummary(
+      {
+        name: '测试',
+        group: 'T',
+        shifts: ['白班', '夜班', '休息', '白特', '夜特']
+      },
+      [1.5, 2, 8, 3, 4.5]
+    )).toEqual({
+      白班: 1,
+      夜班: 1,
+      休息: 1,
+      白特: 1,
+      夜特: 1,
+      加班: {
+        白班: 1.5,
+        夜班: 2,
+        白特: 3,
+        夜特: 4.5
+      }
+    })
+  })
+
+  it('normalizes overtime input to half-hour units', () => {
+    expect(normalizeOvertimeHours('')).toBe(0)
+    expect(normalizeOvertimeHours('2')).toBe(2)
+    expect(normalizeOvertimeHours('2.5')).toBe(2.5)
+    expect(normalizeOvertimeHours('2.7')).toBe(2.5)
+    expect(normalizeOvertimeHours('0.4')).toBe(0)
+    expect(normalizeOvertimeHours('-1')).toBe(0)
+    expect(normalizeOvertimeHours('abc')).toBe(0)
   })
 
   it('returns seven upcoming shifts from the start of the period', () => {

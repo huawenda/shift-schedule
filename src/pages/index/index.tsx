@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Picker, ScrollView, Text, View } from '@tarojs/components'
+import { Input, Picker, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { scheduleData } from '../../data/schedule'
 import type { ShiftType } from '../../types/schedule'
@@ -11,6 +11,7 @@ import {
   getMonthScheduleView,
   getPersonMonthCalendarCells,
   getPersonShiftSummary,
+  normalizeOvertimeHours,
   type ScheduleMonth
 } from '../../utils/schedule'
 import './index.scss'
@@ -44,12 +45,18 @@ const tableViewOptions: Array<{ label: string; value: TableView }> = [
 ]
 const editableShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特']
 const legendShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特']
+const shiftOverridesStorageKey = 'shift-scheduler:shift-overrides:v1'
+const overtimeOverridesStorageKey = 'shift-scheduler:overtime-overrides:v1'
+const shiftOverridesFileName = 'shift-overrides-v1.json'
+const overtimeOverridesFileName = 'overtime-overrides-v1.json'
 
 type ShiftOverrides = Record<string, ShiftType>
+type OvertimeOverrides = Record<string, number>
 interface ShiftEditorState {
   personName: string
   date: string
   baseShift: ShiftType
+  overtimeInput: string
 }
 
 function getCenteredTableScrollLeft(date: string, dates: string[]): number {
@@ -145,6 +152,94 @@ function getBaseShift(personName: string, date: string): ShiftType | null {
   return person.shifts[dateIndex]
 }
 
+function formatOvertimeHours(hours: number): string {
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
+}
+
+function canRecordOvertime(shift: ShiftType): boolean {
+  return shift !== '休息'
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isShiftType(value: unknown): value is ShiftType {
+  return editableShiftOptions.includes(value as ShiftType)
+}
+
+function readShiftOverridesFromStorage(): ShiftOverrides {
+  const storedValue = readStorage(shiftOverridesStorageKey)
+  return parseShiftOverrides(isRecord(storedValue) ? storedValue : readJsonBackup(shiftOverridesFileName))
+}
+
+function readOvertimeOverridesFromStorage(): OvertimeOverrides {
+  const storedValue = readStorage(overtimeOverridesStorageKey)
+  return parseOvertimeOverrides(isRecord(storedValue) ? storedValue : readJsonBackup(overtimeOverridesFileName))
+}
+
+function readStorage(key: string): unknown {
+  try {
+    return Taro.getStorageSync(key)
+  } catch {
+    return null
+  }
+}
+
+function parseShiftOverrides(value: unknown): ShiftOverrides {
+  if (!isRecord(value)) return {}
+
+  return Object.entries(value).reduce<ShiftOverrides>((overrides, [key, value]) => {
+      if (isShiftType(value)) overrides[key] = value
+      return overrides
+    }, {})
+}
+
+function parseOvertimeOverrides(value: unknown): OvertimeOverrides {
+  if (!isRecord(value)) return {}
+
+  return Object.entries(value).reduce<OvertimeOverrides>((overrides, [key, value]) => {
+      if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        overrides[key] = normalizeOvertimeHours(value)
+      }
+      return overrides
+    }, {})
+}
+
+function getBackupFilePath(fileName: string): string | null {
+  const env = Taro.env as { USER_DATA_PATH?: string } | undefined
+  return env?.USER_DATA_PATH ? `${env.USER_DATA_PATH}/${fileName}` : null
+}
+
+function readJsonBackup(fileName: string): unknown {
+  try {
+    const filePath = getBackupFilePath(fileName)
+    if (!filePath) return null
+
+    const content = Taro.getFileSystemManager().readFileSync(filePath, 'utf8')
+    return typeof content === 'string' ? JSON.parse(content) : null
+  } catch {
+    return null
+  }
+}
+
+function writePersistence(key: string, fileName: string, value: unknown) {
+  try {
+    Taro.setStorageSync(key, value)
+  } catch {
+    // Local persistence should never block editing in runtimes with restricted storage.
+  }
+
+  try {
+    const filePath = getBackupFilePath(fileName)
+    if (!filePath) return
+
+    Taro.getFileSystemManager().writeFileSync(filePath, JSON.stringify(value), 'utf8')
+  } catch {
+    // The file backup is best-effort because some runtimes only expose storage.
+  }
+}
+
 export default function Index() {
   const todayDate = new Date()
   const todayMonthDay = formatScheduleMonthDay(todayDate)
@@ -154,7 +249,8 @@ export default function Index() {
   const [tableView, setTableView] = useState<TableView>('shift')
   const [calendarAnimation, setCalendarAnimation] = useState<CalendarAnimation>('')
   const [headerTopPadding] = useState(getHeaderTopPadding)
-  const [shiftOverrides, setShiftOverrides] = useState<ShiftOverrides>({})
+  const [shiftOverrides, setShiftOverrides] = useState<ShiftOverrides>(readShiftOverridesFromStorage)
+  const [overtimeOverrides, setOvertimeOverrides] = useState<OvertimeOverrides>(readOvertimeOverridesFromStorage)
   const [shiftEditor, setShiftEditor] = useState<ShiftEditorState | null>(null)
   const [monthScrollLeft, setMonthScrollLeft] = useState(() => (
     getMonthTargetScrollLeft(currentScheduleMonth ?? '05', 0) ?? 0
@@ -173,7 +269,10 @@ export default function Index() {
     0
   )
   const dateRangeText = `${formatDateRangePart(activeScheduleData.startDate)} - ${formatDateRangePart(activeScheduleData.endDate)}`
-  const shiftSummary = currentUser ? getPersonShiftSummary(currentUser) : null
+  const currentUserOvertimeHours = currentUser
+    ? activeScheduleData.dates.map(date => overtimeOverrides[getOverrideKey(currentUser.name, date)] ?? 0)
+    : []
+  const shiftSummary = currentUser ? getPersonShiftSummary(currentUser, currentUserOvertimeHours) : null
   const calendarCells = currentUser
     ? getPersonMonthCalendarCells(effectiveScheduleData, activeMonth, currentUser.name)
     : []
@@ -194,6 +293,14 @@ export default function Index() {
       clearTimeout(calendarAnimationTimer.current)
     }
   }, [])
+
+  useEffect(() => {
+    writePersistence(shiftOverridesStorageKey, shiftOverridesFileName, shiftOverrides)
+  }, [shiftOverrides])
+
+  useEffect(() => {
+    writePersistence(overtimeOverridesStorageKey, overtimeOverridesFileName, overtimeOverrides)
+  }, [overtimeOverrides])
 
   const setVisibleActiveMonth = (month: ScheduleMonth) => {
     const nextScrollLeft = getMonthTargetScrollLeft(month, monthScrollLeftRef.current)
@@ -217,7 +324,8 @@ export default function Index() {
     setShiftEditor({
       personName: currentUser.name,
       date,
-      baseShift
+      baseShift,
+      overtimeInput: overtimeOverrides[getOverrideKey(currentUser.name, date)]?.toString() ?? ''
     })
   }
 
@@ -234,6 +342,40 @@ export default function Index() {
         nextOverrides[key] = nextShift
       }
 
+      return nextOverrides
+    })
+
+    const resolvedShift = nextShift === 'default' ? shiftEditor.baseShift : nextShift
+    if (!canRecordOvertime(resolvedShift)) {
+      setOvertimeOverrides(overrides => {
+        const nextOverrides = { ...overrides }
+        delete nextOverrides[key]
+        return nextOverrides
+      })
+    }
+    setShiftEditor(null)
+  }
+
+  const setShiftEditorOvertimeInput = (value: string) => {
+    setShiftEditor(editor => editor ? { ...editor, overtimeInput: value } : editor)
+  }
+
+  const applyOvertimeEdit = () => {
+    if (!shiftEditor) return
+
+    const key = getOverrideKey(shiftEditor.personName, shiftEditor.date)
+    const currentShift = shiftOverrides[key] ?? shiftEditor.baseShift
+    const overtimeHours = canRecordOvertime(currentShift)
+      ? normalizeOvertimeHours(shiftEditor.overtimeInput)
+      : 0
+
+    setOvertimeOverrides(overrides => {
+      const nextOverrides = { ...overrides }
+      if (overtimeHours > 0) {
+        nextOverrides[key] = overtimeHours
+      } else {
+        delete nextOverrides[key]
+      }
       return nextOverrides
     })
     setShiftEditor(null)
@@ -317,20 +459,44 @@ export default function Index() {
           {shiftSummary && (
             <View className="summary-grid">
               <View className="summary-item summary-day">
-                <Text className="summary-value">{shiftSummary.白班}</Text>
+                <View className="summary-value-row">
+                  <Text className="summary-value">{shiftSummary.白班}</Text>
+                  {(shiftSummary.加班?.白班 ?? 0) > 0 && (
+                    <Text className="summary-overtime">{formatOvertimeHours(shiftSummary.加班?.白班 ?? 0)}h</Text>
+                  )}
+                </View>
                 <Text className="summary-label">白班</Text>
               </View>
               <View className="summary-item summary-night">
-                <Text className="summary-value">{shiftSummary.夜班}</Text>
+                <View className="summary-value-row">
+                  <Text className="summary-value">{shiftSummary.夜班}</Text>
+                  {(shiftSummary.加班?.夜班 ?? 0) > 0 && (
+                    <Text className="summary-overtime">{formatOvertimeHours(shiftSummary.加班?.夜班 ?? 0)}h</Text>
+                  )}
+                </View>
                 <Text className="summary-label">夜班</Text>
               </View>
               <View className="summary-item summary-rest">
                 <Text className="summary-value">{shiftSummary.休息}</Text>
                 <Text className="summary-label">休息</Text>
               </View>
-              <View className="summary-item summary-special">
-                <Text className="summary-value">{shiftSummary.特勤}</Text>
-                <Text className="summary-label">特勤</Text>
+              <View className="summary-item summary-white-special">
+                <View className="summary-value-row">
+                  <Text className="summary-value">{shiftSummary.白特}</Text>
+                  {(shiftSummary.加班?.白特 ?? 0) > 0 && (
+                    <Text className="summary-overtime">{formatOvertimeHours(shiftSummary.加班?.白特 ?? 0)}h</Text>
+                  )}
+                </View>
+                <Text className="summary-label">白特</Text>
+              </View>
+              <View className="summary-item summary-night-special">
+                <View className="summary-value-row">
+                  <Text className="summary-value">{shiftSummary.夜特}</Text>
+                  {(shiftSummary.加班?.夜特 ?? 0) > 0 && (
+                    <Text className="summary-overtime">{formatOvertimeHours(shiftSummary.加班?.夜特 ?? 0)}h</Text>
+                  )}
+                </View>
+                <Text className="summary-label">夜特</Text>
               </View>
             </View>
           )}
@@ -382,6 +548,9 @@ export default function Index() {
               >
                 {cell.inCurrentMonth && currentUser && shiftOverrides[getOverrideKey(currentUser.name, cell.key)] && (
                   <View className="edited-marker" />
+                )}
+                {cell.inCurrentMonth && currentUser && (overtimeOverrides[getOverrideKey(currentUser.name, cell.key)] ?? 0) > 0 && (
+                  <View className="overtime-marker" />
                 )}
                 {cell.day && (
                   <View className="calendar-cell-content">
@@ -549,7 +718,31 @@ export default function Index() {
               </View>
             </View>
 
+            <View className="shift-editor-section">
+              <Text className="shift-editor-label">加班时长</Text>
+              {canRecordOvertime(shiftOverrides[getOverrideKey(shiftEditor.personName, shiftEditor.date)] ?? shiftEditor.baseShift) ? (
+                <View className="overtime-editor-row">
+                  <Input
+                    className="overtime-input"
+                    type="digit"
+                    value={shiftEditor.overtimeInput}
+                    placeholder="0"
+                    onInput={event => {
+                      setShiftEditorOvertimeInput(String(event.detail.value))
+                    }}
+                  />
+                  <Text className="overtime-unit">小时</Text>
+                  <Text className="overtime-hint">最小单位0.5</Text>
+                </View>
+              ) : (
+                <Text className="overtime-disabled">休息班次不记录加班</Text>
+              )}
+            </View>
+
             <View className="shift-editor-actions">
+              <View className="shift-editor-save" onClick={applyOvertimeEdit}>
+                <Text>保存</Text>
+              </View>
               <View className="shift-editor-cancel" onClick={() => setShiftEditor(null)}>
                 <Text>取消</Text>
               </View>

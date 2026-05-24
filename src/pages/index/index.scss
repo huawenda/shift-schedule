@@ -179,7 +179,7 @@
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
 }
@@ -205,15 +205,29 @@
   background: #ecfdf3;
 }
 
-.summary-special {
+.summary-white-special {
   background: #fff4de;
 }
 
+.summary-night-special {
+  background: #fdebd3;
+}
+
+.summary-value-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 30px;
+}
+
 .summary-value {
-  font-size: 30px;
+  display: block;
+  text-align: center;
+  font-size: 26px;
   font-weight: 800;
   line-height: 1.1;
   color: #172033;
+  white-space: nowrap;
 }
 
 .summary-label {
@@ -221,6 +235,27 @@
   font-size: 20px;
   font-weight: 700;
   color: #5b6678;
+}
+
+.summary-overtime {
+  position: absolute;
+  top: 50%;
+  left: calc(50% + 14px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translateY(-50%);
 }
 
 .upcoming-card {
@@ -337,6 +372,16 @@
   height: 10px;
   border-radius: 999px;
   background: #f59e0b;
+}
+
+.overtime-marker {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #16a34a;
 }
 
 .today-calendar-cell {
@@ -825,11 +870,49 @@
 
 .shift-editor-actions {
   display: flex;
+  gap: 12px;
   justify-content: flex-end;
   padding-top: 18px;
   border-top: 1px solid #edf2f7;
 }
 
+.overtime-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.overtime-input {
+  width: 150px;
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid #cdd7e5;
+  border-radius: 10px;
+  box-sizing: border-box;
+  background: #fbfcff;
+  color: #172033;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.overtime-unit {
+  font-size: 22px;
+  font-weight: 800;
+  color: #526071;
+}
+
+.overtime-hint,
+.overtime-disabled {
+  font-size: 20px;
+  line-height: 1.2;
+  color: #667085;
+}
+
+.overtime-disabled {
+  display: block;
+}
+
+.shift-editor-save,
 .shift-editor-cancel {
   display: inline-flex;
   align-items: center;
@@ -841,6 +924,11 @@
   color: #526071;
   font-size: 22px;
   font-weight: 800;
+}
+
+.shift-editor-save {
+  background: #2563eb;
+  color: #ffffff;
 }
 
 @media (max-width: 370px) {
