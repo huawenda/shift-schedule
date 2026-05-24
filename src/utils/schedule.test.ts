@@ -18,7 +18,21 @@ describe('schedule utilities', () => {
     expect(getPersonShiftSummary(highlightedPerson)).toEqual({
       白班: 84,
       夜班: 80,
-      休息: 81
+      休息: 81,
+      特勤: 0
+    })
+  })
+
+  it('counts special duty shifts as duty and their underlying day or night shift', () => {
+    expect(getPersonShiftSummary({
+      name: '测试',
+      group: 'T',
+      shifts: ['白班', '夜班', '休息', '白特', '夜特']
+    })).toEqual({
+      白班: 2,
+      夜班: 2,
+      休息: 1,
+      特勤: 2
     })
   })
 
@@ -73,12 +87,12 @@ describe('schedule utilities', () => {
       isHoliday: false
     })
     expect(getCalendarDateMeta('2026-05-04')).toEqual({
-      label: '十八',
-      isHoliday: false
+      label: '青年',
+      isHoliday: true
     })
     expect(getCalendarDateMeta('2026-09-10')).toEqual({
-      label: '廿九',
-      isHoliday: false
+      label: '教师',
+      isHoliday: true
     })
   })
 

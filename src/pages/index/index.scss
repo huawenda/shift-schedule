@@ -179,7 +179,7 @@
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-top: 16px;
 }
@@ -203,6 +203,10 @@
 
 .summary-rest {
   background: #ecfdf3;
+}
+
+.summary-special {
+  background: #fff4de;
 }
 
 .summary-value {
@@ -592,6 +596,10 @@
   border-bottom: 1px solid #edf2f7;
 }
 
+.table-row .date-cell:last-child {
+  margin-right: -18px;
+}
+
 .table-header {
   height: 72px;
   box-sizing: border-box;
@@ -652,6 +660,16 @@
   color: #047857;
 }
 
+.name-shift-special-day {
+  background: #fff0c2;
+  color: #b45309;
+}
+
+.name-shift-special-night {
+  background: #fde7c7;
+  color: #9a3412;
+}
+
 .date-main,
 .date-weekday {
   display: block;
@@ -696,8 +714,118 @@
   color: #047857;
 }
 
+.shift-special-day {
+  background: #fff0c2;
+  color: #b45309;
+}
+
+.shift-special-night {
+  background: #fde7c7;
+  color: #9a3412;
+}
+
 .shift-muted {
   opacity: 0.52;
+}
+
+.editor-mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px;
+  box-sizing: border-box;
+  background: rgba(23, 32, 51, 0.46);
+}
+
+.shift-editor {
+  width: 100%;
+  max-width: 620px;
+  padding: 26px;
+  border-radius: 18px;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+.shift-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.shift-editor-title {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #172033;
+}
+
+.shift-editor-subtitle {
+  display: block;
+  margin-top: 6px;
+  font-size: 22px;
+  line-height: 1.2;
+  color: #667085;
+}
+
+.shift-editor-section {
+  padding: 18px 0;
+  border-top: 1px solid #edf2f7;
+}
+
+.shift-editor-label {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #526071;
+}
+
+.shift-editor-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.shift-editor-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shift-editor-option .shift {
+  min-width: 92px;
+  height: 44px;
+  font-size: 22px;
+}
+
+.shift-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 18px;
+  border-top: 1px solid #edf2f7;
+}
+
+.shift-editor-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  height: 48px;
+  border-radius: 999px;
+  background: #eef3f9;
+  color: #526071;
+  font-size: 22px;
+  font-weight: 800;
 }
 
 @media (max-width: 370px) {

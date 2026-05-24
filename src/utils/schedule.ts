@@ -1,7 +1,12 @@
 import { Solar } from 'lunar-javascript'
 import type { ScheduleData, SchedulePerson, ShiftType } from '../types/schedule'
 
-export type ShiftSummary = Record<ShiftType, number>
+export interface ShiftSummary {
+  白班: number
+  夜班: number
+  休息: number
+  特勤: number
+}
 
 export interface UpcomingShift {
   date: string
@@ -30,27 +35,31 @@ export type ScheduleMonth = '05' | '06' | '07' | '08' | '09' | '10' | '11' | '12
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 const cycleLength = 24
-const festivalLabelMap: Record<string, string> = {
-  劳动节: '劳动',
-  儿童节: '儿童',
-  国庆节: '国庆',
-  中秋节: '中秋',
-  端午节: '端午',
-  七夕节: '七夕',
-  重阳节: '重阳',
-  元旦节: '元旦',
-  春节: '春节',
-  元宵节: '元宵'
+const maxVisibleFestivalNameLength = 3
+
+function formatFestivalLabel(festival: string): string {
+  if (festival.endsWith('节') && festival.length === 3) {
+    return festival.slice(0, -1)
+  }
+
+  return festival
 }
-const visibleFestivalNames = new Set(Object.keys(festivalLabelMap))
 
 export function getPersonShiftSummary(person: SchedulePerson): ShiftSummary {
   return person.shifts.reduce<ShiftSummary>(
     (summary, shift) => {
-      summary[shift] += 1
+      if (shift === '白特') {
+        summary.白班 += 1
+        summary.特勤 += 1
+      } else if (shift === '夜特') {
+        summary.夜班 += 1
+        summary.特勤 += 1
+      } else {
+        summary[shift] += 1
+      }
       return summary
     },
-    { 白班: 0, 夜班: 0, 休息: 0 }
+    { 白班: 0, 夜班: 0, 休息: 0, 特勤: 0 }
   )
 }
 
@@ -77,12 +86,12 @@ export function getCalendarDateMeta(date: string): CalendarDateMeta {
   const festival = [
     ...solar.getFestivals(),
     ...lunar.getFestivals()
-  ].find(name => visibleFestivalNames.has(name))
+  ].find(name => name.length <= maxVisibleFestivalNameLength)
   const jieQi = lunar.getJieQi()
 
   if (festival) {
     return {
-      label: festivalLabelMap[festival] ?? festival.replace(/节$/, ''),
+      label: formatFestivalLabel(festival),
       isHoliday: true
     }
   }

@@ -1,4 +1,4 @@
-export type ShiftType = '白班' | '夜班' | '休息'
+export type ShiftType = '白班' | '夜班' | '休息' | '白特' | '夜特'
 
 export interface SchedulePerson {
   name: string

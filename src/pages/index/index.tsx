@@ -19,6 +19,7 @@ const defaultCurrentUserName = '华文达'
 const formatDateRangePart = (date: string) => date.split('-').join('/')
 const getDayPart = (date: string) => date.slice(3)
 const dateColumnWidth = 74
+const identityColumnWidth = 148
 const monthTabWidth = 104
 const monthTabGap = 8
 const monthTabsHorizontalPadding = 12
@@ -41,6 +42,25 @@ const tableViewOptions: Array<{ label: string; value: TableView }> = [
   { label: '常规', value: 'shift' },
   { label: '姓名', value: 'name' }
 ]
+const editableShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特']
+const legendShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特']
+
+type ShiftOverrides = Record<string, ShiftType>
+interface ShiftEditorState {
+  personName: string
+  date: string
+  baseShift: ShiftType
+}
+
+function getCenteredTableScrollLeft(date: string): number {
+  const dateIndex = scheduleData.dates.indexOf(date)
+  if (dateIndex < 0) return 0
+
+  const scale = getRpxScale()
+  const tableVisibleWidth = 750 - pageHorizontalPadding - identityColumnWidth
+  const columnCenter = (dateIndex * dateColumnWidth) + (dateColumnWidth / 2)
+  return Math.max(0, columnCenter - (tableVisibleWidth / 2)) * scale
+}
 
 function getHeaderTopPadding(): string {
   try {
@@ -95,8 +115,34 @@ function getNameViewShiftClassName(shift: ShiftType): string {
   return {
     白班: 'name-shift-day',
     夜班: 'name-shift-night',
-    休息: 'name-shift-rest'
+    休息: 'name-shift-rest',
+    白特: 'name-shift-special-day',
+    夜特: 'name-shift-special-night'
   }[shift]
+}
+
+function getOverrideKey(personName: string, date: string): string {
+  return `${personName}::${date}`
+}
+
+function applyShiftOverrides(overrides: ShiftOverrides) {
+  return {
+    ...scheduleData,
+    people: scheduleData.people.map(person => ({
+      ...person,
+      shifts: person.shifts.map((shift, index) => (
+        overrides[getOverrideKey(person.name, scheduleData.dates[index])] ?? shift
+      ))
+    }))
+  }
+}
+
+function getBaseShift(personName: string, date: string): ShiftType | null {
+  const person = scheduleData.people.find(item => item.name === personName)
+  const dateIndex = scheduleData.dates.indexOf(date)
+  if (!person || dateIndex < 0) return null
+
+  return person.shifts[dateIndex]
 }
 
 export default function Index() {
@@ -108,13 +154,17 @@ export default function Index() {
   const [tableView, setTableView] = useState<TableView>('shift')
   const [calendarAnimation, setCalendarAnimation] = useState<CalendarAnimation>('')
   const [headerTopPadding] = useState(getHeaderTopPadding)
+  const [shiftOverrides, setShiftOverrides] = useState<ShiftOverrides>({})
+  const [shiftEditor, setShiftEditor] = useState<ShiftEditorState | null>(null)
   const [monthScrollLeft, setMonthScrollLeft] = useState(() => (
     getMonthTargetScrollLeft(currentScheduleMonth ?? '05', 0) ?? 0
   ))
+  const [tableScrollLeft, setTableScrollLeft] = useState(() => getCenteredTableScrollLeft(todayMonthDay))
   const calendarTouchStart = useRef<{ x: number; y: number } | null>(null)
   const calendarAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const monthScrollLeftRef = useRef(monthScrollLeft)
-  const activeScheduleData = getMonthScheduleView(scheduleData, activeMonth)
+  const effectiveScheduleData = applyShiftOverrides(shiftOverrides)
+  const activeScheduleData = getMonthScheduleView(effectiveScheduleData, activeMonth)
   const currentUser = activeScheduleData.people.find(person => person.name === currentUserName)
     ?? activeScheduleData.people[0]
   const userPickerOptions = scheduleData.people.map(person => `${person.name} / ${person.group}`)
@@ -125,7 +175,7 @@ export default function Index() {
   const dateRangeText = `${formatDateRangePart(activeScheduleData.startDate)} - ${formatDateRangePart(activeScheduleData.endDate)}`
   const shiftSummary = currentUser ? getPersonShiftSummary(currentUser) : null
   const calendarCells = currentUser
-    ? getPersonMonthCalendarCells(scheduleData, activeMonth, currentUser.name)
+    ? getPersonMonthCalendarCells(effectiveScheduleData, activeMonth, currentUser.name)
     : []
   const dateLabels = getDateLabels(activeScheduleData.startDate, activeScheduleData.dates)
   const scheduleTableStyle = `width: ${dateLabels.length * dateColumnWidth}rpx`
@@ -144,6 +194,41 @@ export default function Index() {
       setMonthScrollLeft(nextScrollLeft)
     }
     setActiveMonth(month)
+  }
+
+  const jumpTableToDate = (date: string) => {
+    setTableScrollLeft(getCenteredTableScrollLeft(date))
+  }
+
+  const openShiftEditor = (date: string) => {
+    if (!currentUser) return
+
+    const baseShift = getBaseShift(currentUser.name, date)
+    if (!baseShift) return
+
+    setShiftEditor({
+      personName: currentUser.name,
+      date,
+      baseShift
+    })
+  }
+
+  const applyShiftEdit = (nextShift: ShiftType | 'default') => {
+    if (!shiftEditor) return
+
+    const key = getOverrideKey(shiftEditor.personName, shiftEditor.date)
+    setShiftOverrides(overrides => {
+      const nextOverrides = { ...overrides }
+
+      if (nextShift === 'default' || nextShift === shiftEditor.baseShift) {
+        delete nextOverrides[key]
+      } else {
+        nextOverrides[key] = nextShift
+      }
+
+      return nextOverrides
+    })
+    setShiftEditor(null)
   }
 
   const switchMonthBySwipe = (direction: 'previous' | 'next') => {
@@ -235,6 +320,10 @@ export default function Index() {
                 <Text className="summary-value">{shiftSummary.休息}</Text>
                 <Text className="summary-label">休息</Text>
               </View>
+              <View className="summary-item summary-special">
+                <Text className="summary-value">{shiftSummary.特勤}</Text>
+                <Text className="summary-label">特勤</Text>
+              </View>
             </View>
           )}
         </View>
@@ -276,6 +365,12 @@ export default function Index() {
               <View
                 key={cell.key}
                 className={`calendar-cell ${cell.inCurrentMonth ? '' : 'calendar-cell-empty'} ${cell.key === todayMonthDay ? 'today-calendar-cell' : ''}`}
+                onClick={() => {
+                  if (cell.inCurrentMonth) jumpTableToDate(cell.key)
+                }}
+                onLongPress={() => {
+                  if (cell.inCurrentMonth) openShiftEditor(cell.key)
+                }}
               >
                 {cell.day && (
                   <View className="calendar-cell-content">
@@ -323,7 +418,7 @@ export default function Index() {
           </View>
           <View className="table-toolbar-sub">
             <View className="legend">
-              {(['白班', '夜班', '休息'] as const).map(shift => (
+              {legendShiftOptions.map(shift => (
                 <View key={shift} className="legend-item">
                   <Text className={getShiftClassName(shift)}>{shift}</Text>
                 </View>
@@ -362,7 +457,14 @@ export default function Index() {
             ))}
           </View>
 
-          <ScrollView scrollX className="table-scroll" enhanced showScrollbar>
+          <ScrollView
+            scrollX
+            scrollLeft={tableScrollLeft}
+            scrollWithAnimation
+            className="table-scroll"
+            enhanced
+            showScrollbar
+          >
             <View className="schedule-table" style={scheduleTableStyle}>
               <View className="table-row table-header">
                 {dateLabels.map(label => (
@@ -399,6 +501,51 @@ export default function Index() {
         </View>
         </View>
       </ScrollView>
+
+      {shiftEditor && (
+        <View className="editor-mask" onClick={() => setShiftEditor(null)}>
+          <View className="shift-editor" onClick={event => event.stopPropagation()}>
+            <View className="shift-editor-header">
+              <View>
+                <Text className="shift-editor-title">修改班次</Text>
+                <Text className="shift-editor-subtitle">
+                  {shiftEditor.personName} · {shiftEditor.date}
+                </Text>
+              </View>
+            </View>
+
+            <View className="shift-editor-section">
+              <Text className="shift-editor-label">默认班次</Text>
+              <View className="shift-editor-option" onClick={() => applyShiftEdit('default')}>
+                <Text className={getShiftClassName(shiftEditor.baseShift)}>
+                  {shiftEditor.baseShift}
+                </Text>
+              </View>
+            </View>
+
+            <View className="shift-editor-section">
+              <Text className="shift-editor-label">修改为</Text>
+              <View className="shift-editor-options">
+                {editableShiftOptions.map(shift => (
+                  <View
+                    key={shift}
+                    className="shift-editor-option"
+                    onClick={() => applyShiftEdit(shift)}
+                  >
+                    <Text className={getShiftClassName(shift)}>{shift}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className="shift-editor-actions">
+              <View className="shift-editor-cancel" onClick={() => setShiftEditor(null)}>
+                <Text>取消</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   )
 }
