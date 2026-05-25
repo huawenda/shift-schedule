@@ -1,5 +1,6 @@
 {
   "miniprogramRoot": "dist/",
+  "cloudfunctionRoot": "cloudfunctions/",
   "projectname": "shift-schedule-miniapp",
   "description": "倒班表微信小程序 MVP",
   "appid": "wxbd3cf9a208228cf6",

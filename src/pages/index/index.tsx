@@ -14,6 +14,19 @@ import {
   normalizeOvertimeHours,
   type ScheduleMonth
 } from '../../utils/schedule'
+import {
+  getOverrideKey,
+  loadCloudOverrides,
+  syncCloudOverrides,
+  type OvertimeOverrides,
+  type ShiftOverrides
+} from '../../services/cloudRecords'
+import {
+  bindCurrentUserProfile,
+  loadCurrentUserProfile,
+  UserProfileError,
+  type CurrentUserProfile
+} from '../../services/userProfile'
 import './index.scss'
 
 const defaultCurrentUserName = '华文达'
@@ -50,12 +63,11 @@ const overtimeOverridesStorageKey = 'shift-scheduler:overtime-overrides:v1'
 const shiftOverridesFileName = 'shift-overrides-v1.json'
 const overtimeOverridesFileName = 'overtime-overrides-v1.json'
 
-type ShiftOverrides = Record<string, ShiftType>
-type OvertimeOverrides = Record<string, number>
 interface ShiftEditorState {
   personName: string
   date: string
   baseShift: ShiftType
+  selectedShift: ShiftType | 'default'
   overtimeInput: string
 }
 
@@ -126,10 +138,6 @@ function getNameViewShiftClassName(shift: ShiftType): string {
     白特: 'name-shift-special-day',
     夜特: 'name-shift-special-night'
   }[shift]
-}
-
-function getOverrideKey(personName: string, date: string): string {
-  return `${personName}::${date}`
 }
 
 function applyShiftOverrides(overrides: ShiftOverrides) {
@@ -240,6 +248,52 @@ function writePersistence(key: string, fileName: string, value: unknown) {
   }
 }
 
+function filterShiftOverridesByPersonName(overrides: ShiftOverrides, personName: string): ShiftOverrides {
+  return Object.entries(overrides).reduce<ShiftOverrides>((result, [key, shift]) => {
+    if (key.startsWith(`${personName}::`)) result[key] = shift
+    return result
+  }, {})
+}
+
+function filterOvertimeOverridesByPersonName(overrides: OvertimeOverrides, personName: string): OvertimeOverrides {
+  return Object.entries(overrides).reduce<OvertimeOverrides>((result, [key, hours]) => {
+    if (key.startsWith(`${personName}::`)) result[key] = hours
+    return result
+  }, {})
+}
+
+function mergeCloudShiftOverrides(
+  localOverrides: ShiftOverrides,
+  cloudOverrides: ShiftOverrides,
+  personName: string | null
+): ShiftOverrides {
+  if (!personName) return cloudOverrides
+
+  return {
+    ...Object.entries(localOverrides).reduce<ShiftOverrides>((result, [key, shift]) => {
+      if (!key.startsWith(`${personName}::`)) result[key] = shift
+      return result
+    }, {}),
+    ...cloudOverrides
+  }
+}
+
+function mergeCloudOvertimeOverrides(
+  localOverrides: OvertimeOverrides,
+  cloudOverrides: OvertimeOverrides,
+  personName: string | null
+): OvertimeOverrides {
+  if (!personName) return cloudOverrides
+
+  return {
+    ...Object.entries(localOverrides).reduce<OvertimeOverrides>((result, [key, hours]) => {
+      if (!key.startsWith(`${personName}::`)) result[key] = hours
+      return result
+    }, {}),
+    ...cloudOverrides
+  }
+}
+
 export default function Index() {
   const todayDate = new Date()
   const todayMonthDay = formatScheduleMonthDay(todayDate)
@@ -259,10 +313,32 @@ export default function Index() {
   const calendarTouchStart = useRef<{ x: number; y: number } | null>(null)
   const calendarAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const monthScrollLeftRef = useRef(monthScrollLeft)
+  const [currentUserProfile, setCurrentUserProfile] = useState<CurrentUserProfile | null>(null)
+  const [profileReady, setProfileReady] = useState(false)
+  const [profilePickerIndex, setProfilePickerIndex] = useState(0)
+  const [profileBinding, setProfileBinding] = useState(false)
+  const [cloudSyncReady, setCloudSyncReady] = useState(false)
+  const [cloudRefreshing, setCloudRefreshing] = useState(false)
+  const [refreshHintVisible, setRefreshHintVisible] = useState(false)
+  const [deletedOverrideKeys, setDeletedOverrideKeys] = useState<string[]>([])
+  const isAdminUser = currentUserProfile?.isAdmin ?? false
+  const boundPersonName = currentUserProfile?.profile?.personName ?? null
+  const needsProfileBinding = profileReady && !isAdminUser && !boundPersonName
+  const canSwitchUser = isAdminUser
+  const userPickerButtonText = profileReady && boundPersonName ? '已绑定' : '待绑定'
   const effectiveScheduleData = applyShiftOverrides(shiftOverrides)
   const activeScheduleData = getMonthScheduleView(effectiveScheduleData, activeMonth)
   const currentUser = activeScheduleData.people.find(person => person.name === currentUserName)
     ?? activeScheduleData.people[0]
+  const currentUserBadgeType = !isAdminUser
+    ? 'self'
+    : currentUser.name === defaultCurrentUserName ? 'admin' : 'user'
+  const currentUserBadgeLabel = {
+    admin: '管理员',
+    self: '我',
+    user: '用户'
+  }[currentUserBadgeType]
+  const currentUserBadgeClassName = `mine-badge ${currentUserBadgeType}`
   const userPickerOptions = scheduleData.people.map(person => `${person.name} / ${person.group}`)
   const currentUserIndex = Math.max(
     scheduleData.people.findIndex(person => person.name === currentUser.name),
@@ -295,12 +371,147 @@ export default function Index() {
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+
+    loadCurrentUserProfile()
+      .then(profile => {
+        if (cancelled) return
+
+        setCurrentUserProfile(profile)
+        if (!profile.isAdmin && profile.profile?.personName) {
+          setCurrentUserName(profile.profile.personName)
+        }
+      })
+      .catch(error => {
+        console.warn('用户身份读取失败', error)
+      })
+      .finally(() => {
+        if (!cancelled) setProfileReady(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!profileReady || isAdminUser || !boundPersonName) return
+
+    setCurrentUserName(boundPersonName)
+    setShiftOverrides(overrides => filterShiftOverridesByPersonName(overrides, boundPersonName))
+    setOvertimeOverrides(overrides => filterOvertimeOverridesByPersonName(overrides, boundPersonName))
+  }, [boundPersonName, isAdminUser, profileReady])
+
+  useEffect(() => {
+    let cancelled = false
+    const canLoadCloud = profileReady && (isAdminUser || Boolean(boundPersonName))
+    if (!canLoadCloud) return undefined
+
+    setCloudSyncReady(false)
+    loadCloudOverrides()
+      .then(cloudOverrides => {
+        if (cancelled) return
+
+        const scopedPersonName = isAdminUser ? null : boundPersonName
+        setShiftOverrides(localOverrides => mergeCloudShiftOverrides(
+          localOverrides,
+          cloudOverrides.shiftOverrides,
+          scopedPersonName
+        ))
+        setOvertimeOverrides(localOverrides => mergeCloudOvertimeOverrides(
+          localOverrides,
+          cloudOverrides.overtimeOverrides,
+          scopedPersonName
+        ))
+      })
+      .catch(error => {
+        console.warn('云端排班记录读取失败', error)
+      })
+      .finally(() => {
+        if (!cancelled) setCloudSyncReady(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [boundPersonName, isAdminUser, profileReady])
+
+  useEffect(() => {
     writePersistence(shiftOverridesStorageKey, shiftOverridesFileName, shiftOverrides)
   }, [shiftOverrides])
 
   useEffect(() => {
     writePersistence(overtimeOverridesStorageKey, overtimeOverridesFileName, overtimeOverrides)
   }, [overtimeOverrides])
+
+  useEffect(() => {
+    if (!cloudSyncReady || !profileReady) return
+    if (!isAdminUser && !boundPersonName) return
+
+    const syncedPersonName = boundPersonName
+    const nextShiftOverrides = isAdminUser || !syncedPersonName
+      ? shiftOverrides
+      : filterShiftOverridesByPersonName(shiftOverrides, syncedPersonName)
+    const nextOvertimeOverrides = isAdminUser || !syncedPersonName
+      ? overtimeOverrides
+      : filterOvertimeOverridesByPersonName(overtimeOverrides, syncedPersonName)
+    const nextDeletedOverrideKeys = isAdminUser || !syncedPersonName
+      ? deletedOverrideKeys
+      : deletedOverrideKeys.filter(key => key.startsWith(`${syncedPersonName}::`))
+
+    syncCloudOverrides(nextShiftOverrides, nextOvertimeOverrides, nextDeletedOverrideKeys)
+      .then(() => {
+        if (nextDeletedOverrideKeys.length <= 0) return
+
+        setDeletedOverrideKeys(keys => (
+          isAdminUser || !syncedPersonName
+            ? keys.filter(key => !nextDeletedOverrideKeys.includes(key))
+            : keys.filter(key => !key.startsWith(`${syncedPersonName}::`))
+        ))
+      })
+      .catch(error => {
+        console.warn('云端排班记录同步失败', error)
+      })
+  }, [boundPersonName, cloudSyncReady, deletedOverrideKeys, isAdminUser, overtimeOverrides, profileReady, shiftOverrides])
+
+  const applyCloudOverrides = (cloudOverrides: {
+    shiftOverrides: ShiftOverrides
+    overtimeOverrides: OvertimeOverrides
+  }) => {
+    const scopedPersonName = isAdminUser ? null : boundPersonName
+    setShiftOverrides(localOverrides => mergeCloudShiftOverrides(
+      localOverrides,
+      cloudOverrides.shiftOverrides,
+      scopedPersonName
+    ))
+    setOvertimeOverrides(localOverrides => mergeCloudOvertimeOverrides(
+      localOverrides,
+      cloudOverrides.overtimeOverrides,
+      scopedPersonName
+    ))
+  }
+
+  const refreshCloudOverrides = () => {
+    if (cloudRefreshing) return
+
+    setRefreshHintVisible(true)
+    setCloudRefreshing(true)
+    loadCloudOverrides()
+      .then(cloudOverrides => {
+        applyCloudOverrides(cloudOverrides)
+        Taro.showToast({ title: '云端同步完成', icon: 'none' })
+      })
+      .catch(error => {
+        console.warn('手动云端同步失败', error)
+        Taro.showToast({ title: '云端同步失败', icon: 'none' })
+      })
+      .finally(() => {
+        setCloudRefreshing(false)
+        setTimeout(() => {
+          setRefreshHintVisible(false)
+        }, 360)
+      })
+  }
 
   const setVisibleActiveMonth = (month: ScheduleMonth) => {
     const nextScrollLeft = getMonthTargetScrollLeft(month, monthScrollLeftRef.current)
@@ -317,57 +528,63 @@ export default function Index() {
 
   const openShiftEditor = (date: string) => {
     if (!currentUser) return
+    if (!isAdminUser && currentUser.name !== boundPersonName) {
+      Taro.showToast({ title: '只能修改本人排班', icon: 'none' })
+      return
+    }
 
     const baseShift = getBaseShift(currentUser.name, date)
     if (!baseShift) return
+    const overrideKey = getOverrideKey(currentUser.name, date)
+    const currentShiftOverride = shiftOverrides[overrideKey]
 
     setShiftEditor({
       personName: currentUser.name,
       date,
       baseShift,
-      overtimeInput: overtimeOverrides[getOverrideKey(currentUser.name, date)]?.toString() ?? ''
+      selectedShift: currentShiftOverride ?? 'default',
+      overtimeInput: overtimeOverrides[overrideKey]?.toString() ?? ''
     })
   }
 
-  const applyShiftEdit = (nextShift: ShiftType | 'default') => {
-    if (!shiftEditor) return
+  const markOverrideDeleted = (key: string) => {
+    setDeletedOverrideKeys(keys => keys.includes(key) ? keys : [...keys, key])
+  }
 
-    const key = getOverrideKey(shiftEditor.personName, shiftEditor.date)
-    setShiftOverrides(overrides => {
-      const nextOverrides = { ...overrides }
+  const unmarkOverrideDeleted = (key: string) => {
+    setDeletedOverrideKeys(keys => keys.filter(item => item !== key))
+  }
 
-      if (nextShift === 'default' || nextShift === shiftEditor.baseShift) {
-        delete nextOverrides[key]
-      } else {
-        nextOverrides[key] = nextShift
-      }
-
-      return nextOverrides
-    })
-
-    const resolvedShift = nextShift === 'default' ? shiftEditor.baseShift : nextShift
-    if (!canRecordOvertime(resolvedShift)) {
-      setOvertimeOverrides(overrides => {
-        const nextOverrides = { ...overrides }
-        delete nextOverrides[key]
-        return nextOverrides
-      })
-    }
-    setShiftEditor(null)
+  const selectShiftEdit = (nextShift: ShiftType | 'default') => {
+    setShiftEditor(editor => editor ? { ...editor, selectedShift: nextShift } : editor)
   }
 
   const setShiftEditorOvertimeInput = (value: string) => {
     setShiftEditor(editor => editor ? { ...editor, overtimeInput: value } : editor)
   }
 
-  const applyOvertimeEdit = () => {
+  const saveShiftEditor = () => {
     if (!shiftEditor) return
 
     const key = getOverrideKey(shiftEditor.personName, shiftEditor.date)
-    const currentShift = shiftOverrides[key] ?? shiftEditor.baseShift
-    const overtimeHours = canRecordOvertime(currentShift)
+    const resolvedShift = shiftEditor.selectedShift === 'default'
+      ? shiftEditor.baseShift
+      : shiftEditor.selectedShift
+    const shouldUseBaseShift = shiftEditor.selectedShift === 'default'
+      || resolvedShift === shiftEditor.baseShift
+    const overtimeHours = canRecordOvertime(resolvedShift)
       ? normalizeOvertimeHours(shiftEditor.overtimeInput)
       : 0
+
+    setShiftOverrides(overrides => {
+      const nextOverrides = { ...overrides }
+      if (shouldUseBaseShift) {
+        delete nextOverrides[key]
+      } else {
+        nextOverrides[key] = resolvedShift
+      }
+      return nextOverrides
+    })
 
     setOvertimeOverrides(overrides => {
       const nextOverrides = { ...overrides }
@@ -378,6 +595,13 @@ export default function Index() {
       }
       return nextOverrides
     })
+
+    if (shouldUseBaseShift && overtimeHours <= 0) {
+      markOverrideDeleted(key)
+    } else {
+      unmarkOverrideDeleted(key)
+    }
+
     setShiftEditor(null)
   }
 
@@ -396,6 +620,34 @@ export default function Index() {
       setCalendarAnimation('')
       calendarAnimationTimer.current = null
     }, 260)
+  }
+
+  const bindProfile = () => {
+    const selectedPerson = scheduleData.people[profilePickerIndex]
+    if (!selectedPerson) return
+
+    setProfileBinding(true)
+    bindCurrentUserProfile(selectedPerson.name)
+      .then(profile => {
+        setCurrentUserProfile(currentProfile => ({
+          openid: currentProfile?.openid ?? null,
+          isAdmin: currentProfile?.isAdmin ?? false,
+          profile
+        }))
+        setCurrentUserName(profile.personName)
+      })
+      .catch(error => {
+        console.warn('用户身份绑定失败', error)
+        const message = selectedPerson.name === '华文达' && error instanceof UserProfileError
+          ? '该姓名为管理员专用，请选择本人姓名'
+          : error instanceof UserProfileError
+          ? error.message
+          : '绑定失败，请稍后重试'
+        Taro.showToast({ title: message, icon: 'none' })
+      })
+      .finally(() => {
+        setProfileBinding(false)
+      })
   }
 
   return (
@@ -437,23 +689,29 @@ export default function Index() {
               <Text className="eyebrow">当前用户</Text>
               <View className="current-user-title-row">
                 <Text className="current-user-name">{currentUser?.name}</Text>
-                <Text className="mine-badge">我</Text>
+                <Text className={currentUserBadgeClassName}>{currentUserBadgeLabel}</Text>
                 <Text className="current-user-group">{currentUser?.group}</Text>
               </View>
             </View>
-            <Picker
-              mode="selector"
-              range={userPickerOptions}
-              value={currentUserIndex}
-              onChange={event => {
-                const nextUser = scheduleData.people[Number(event.detail.value)]
-                if (nextUser) setCurrentUserName(nextUser.name)
-              }}
-            >
-              <View className="user-picker-button">
-                <Text>切换</Text>
+            {canSwitchUser ? (
+              <Picker
+                mode="selector"
+                range={userPickerOptions}
+                value={currentUserIndex}
+                onChange={event => {
+                  const nextUser = scheduleData.people[Number(event.detail.value)]
+                  if (nextUser) setCurrentUserName(nextUser.name)
+                }}
+              >
+                <View className="user-picker-button">
+                  <Text>切换</Text>
+                </View>
+              </Picker>
+            ) : (
+              <View className="user-picker-button locked">
+                <Text>{userPickerButtonText}</Text>
               </View>
-            </Picker>
+            )}
           </View>
 
           {shiftSummary && (
@@ -503,7 +761,28 @@ export default function Index() {
         </View>
       </View>
 
-      <ScrollView scrollY className="scrollable-content" enhanced showScrollbar={false}>
+      <ScrollView
+        scrollY
+        className="scrollable-content"
+        enhanced
+        showScrollbar={false}
+        refresherEnabled
+        refresherTriggered={cloudRefreshing}
+        refresherDefaultStyle="none"
+        refresherBackground="#f5f7fb"
+        onRefresherPulling={() => setRefreshHintVisible(true)}
+        onRefresherRestore={() => {
+          if (!cloudRefreshing) setRefreshHintVisible(false)
+        }}
+        onRefresherAbort={() => {
+          if (!cloudRefreshing) setRefreshHintVisible(false)
+        }}
+        onRefresherRefresh={refreshCloudOverrides}
+      >
+        <View className={`cloud-refresh-status ${refreshHintVisible ? 'visible' : ''}`}>
+          <View className={`cloud-refresh-spinner ${cloudRefreshing ? 'spinning' : ''}`} />
+          <Text>{cloudRefreshing ? '正在同步云端' : '下拉同步云端'}</Text>
+        </View>
         <View
           className="upcoming-card"
           onTouchStart={event => {
@@ -622,13 +901,17 @@ export default function Index() {
                 {tableView === 'name' ? (
                   <View className="identity-name-row">
                     <Text className="identity-group only-group">{person.group}</Text>
-                    {person.name === currentUser.name && <Text className="mine-badge small">我</Text>}
+                    {person.name === currentUser.name && (
+                      <Text className={`${currentUserBadgeClassName} small`}>{currentUserBadgeLabel}</Text>
+                    )}
                   </View>
                 ) : (
                   <View>
                     <View className="identity-name-row">
                       <Text className="identity-name">{person.name}</Text>
-                      {person.name === currentUser.name && <Text className="mine-badge small">我</Text>}
+                      {person.name === currentUser.name && (
+                        <Text className={`${currentUserBadgeClassName} small`}>{currentUserBadgeLabel}</Text>
+                      )}
                     </View>
                     <Text className="identity-group">{person.group}</Text>
                   </View>
@@ -687,7 +970,7 @@ export default function Index() {
           <View className="shift-editor" onClick={event => event.stopPropagation()}>
             <View className="shift-editor-header">
               <View>
-                <Text className="shift-editor-title">修改班次</Text>
+                <Text className="shift-editor-title">编辑</Text>
                 <Text className="shift-editor-subtitle">
                   {shiftEditor.personName} · {shiftEditor.date}
                 </Text>
@@ -696,7 +979,10 @@ export default function Index() {
 
             <View className="shift-editor-section">
               <Text className="shift-editor-label">默认班次</Text>
-              <View className="shift-editor-option" onClick={() => applyShiftEdit('default')}>
+              <View
+                className={`shift-editor-option ${shiftEditor.selectedShift === 'default' ? 'selected' : ''}`}
+                onClick={() => selectShiftEdit('default')}
+              >
                 <Text className={getShiftClassName(shiftEditor.baseShift)}>
                   {shiftEditor.baseShift}
                 </Text>
@@ -706,11 +992,11 @@ export default function Index() {
             <View className="shift-editor-section">
               <Text className="shift-editor-label">修改为</Text>
               <View className="shift-editor-options">
-                {editableShiftOptions.map(shift => (
+                {editableShiftOptions.filter(shift => shift !== shiftEditor.baseShift).map(shift => (
                   <View
                     key={shift}
-                    className="shift-editor-option"
-                    onClick={() => applyShiftEdit(shift)}
+                    className={`shift-editor-option ${shiftEditor.selectedShift === shift ? 'selected' : ''}`}
+                    onClick={() => selectShiftEdit(shift)}
                   >
                     <Text className={getShiftClassName(shift)}>{shift}</Text>
                   </View>
@@ -720,7 +1006,7 @@ export default function Index() {
 
             <View className="shift-editor-section">
               <Text className="shift-editor-label">加班时长</Text>
-              {canRecordOvertime(shiftOverrides[getOverrideKey(shiftEditor.personName, shiftEditor.date)] ?? shiftEditor.baseShift) ? (
+              {canRecordOvertime(shiftEditor.selectedShift === 'default' ? shiftEditor.baseShift : shiftEditor.selectedShift) ? (
                 <View className="overtime-editor-row">
                   <Input
                     className="overtime-input"
@@ -740,11 +1026,42 @@ export default function Index() {
             </View>
 
             <View className="shift-editor-actions">
-              <View className="shift-editor-save" onClick={applyOvertimeEdit}>
+              <View className="shift-editor-save" onClick={saveShiftEditor}>
                 <Text>保存</Text>
               </View>
               <View className="shift-editor-cancel" onClick={() => setShiftEditor(null)}>
                 <Text>取消</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {needsProfileBinding && (
+        <View className="editor-mask profile-binding-mask">
+          <View className="profile-binding">
+            <Text className="profile-binding-title">绑定你的姓名</Text>
+            <Text className="profile-binding-desc">
+              绑定后只能修改该姓名的排班和加班记录。选错后请联系管理员在后台重置。
+            </Text>
+            <Picker
+              mode="selector"
+              range={userPickerOptions}
+              value={profilePickerIndex}
+              onChange={event => setProfilePickerIndex(Number(event.detail.value))}
+            >
+              <View className="profile-binding-picker">
+                <Text>{userPickerOptions[profilePickerIndex]}</Text>
+              </View>
+            </Picker>
+            <View className="profile-binding-actions">
+              <View
+                className={`profile-binding-confirm ${profileBinding ? 'disabled' : ''}`}
+                onClick={() => {
+                  if (!profileBinding) bindProfile()
+                }}
+              >
+                <Text>{profileBinding ? '绑定中' : '确认绑定'}</Text>
               </View>
             </View>
           </View>
