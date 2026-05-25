@@ -3,6 +3,7 @@ import { Input, Picker, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { scheduleData } from '../../data/schedule'
 import type { ShiftType } from '../../types/schedule'
+import { shouldRefreshCloudOnUserSwitch } from '../../utils/cloudSync'
 import { getShiftClassName } from '../../utils/shift'
 import {
   formatScheduleMonthDay,
@@ -27,6 +28,15 @@ import {
   UserProfileError,
   type CurrentUserProfile
 } from '../../services/userProfile'
+import {
+  overtimeOverridesFileName,
+  overtimeOverridesStorageKey,
+  readOvertimeOverridesFromStorage,
+  readShiftOverridesFromStorage,
+  shiftOverridesFileName,
+  shiftOverridesStorageKey,
+  writePersistence
+} from '../../services/localOverrides'
 import './index.scss'
 
 const defaultCurrentUserName = '华文达'
@@ -58,10 +68,6 @@ const tableViewOptions: Array<{ label: string; value: TableView }> = [
 ]
 const editableShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特']
 const legendShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特']
-const shiftOverridesStorageKey = 'shift-scheduler:shift-overrides:v1'
-const overtimeOverridesStorageKey = 'shift-scheduler:overtime-overrides:v1'
-const shiftOverridesFileName = 'shift-overrides-v1.json'
-const overtimeOverridesFileName = 'overtime-overrides-v1.json'
 
 interface ShiftEditorState {
   personName: string
@@ -166,86 +172,6 @@ function formatOvertimeHours(hours: number): string {
 
 function canRecordOvertime(shift: ShiftType): boolean {
   return shift !== '休息'
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function isShiftType(value: unknown): value is ShiftType {
-  return editableShiftOptions.includes(value as ShiftType)
-}
-
-function readShiftOverridesFromStorage(): ShiftOverrides {
-  const storedValue = readStorage(shiftOverridesStorageKey)
-  return parseShiftOverrides(isRecord(storedValue) ? storedValue : readJsonBackup(shiftOverridesFileName))
-}
-
-function readOvertimeOverridesFromStorage(): OvertimeOverrides {
-  const storedValue = readStorage(overtimeOverridesStorageKey)
-  return parseOvertimeOverrides(isRecord(storedValue) ? storedValue : readJsonBackup(overtimeOverridesFileName))
-}
-
-function readStorage(key: string): unknown {
-  try {
-    return Taro.getStorageSync(key)
-  } catch {
-    return null
-  }
-}
-
-function parseShiftOverrides(value: unknown): ShiftOverrides {
-  if (!isRecord(value)) return {}
-
-  return Object.entries(value).reduce<ShiftOverrides>((overrides, [key, value]) => {
-      if (isShiftType(value)) overrides[key] = value
-      return overrides
-    }, {})
-}
-
-function parseOvertimeOverrides(value: unknown): OvertimeOverrides {
-  if (!isRecord(value)) return {}
-
-  return Object.entries(value).reduce<OvertimeOverrides>((overrides, [key, value]) => {
-      if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
-        overrides[key] = normalizeOvertimeHours(value)
-      }
-      return overrides
-    }, {})
-}
-
-function getBackupFilePath(fileName: string): string | null {
-  const env = Taro.env as { USER_DATA_PATH?: string } | undefined
-  return env?.USER_DATA_PATH ? `${env.USER_DATA_PATH}/${fileName}` : null
-}
-
-function readJsonBackup(fileName: string): unknown {
-  try {
-    const filePath = getBackupFilePath(fileName)
-    if (!filePath) return null
-
-    const content = Taro.getFileSystemManager().readFileSync(filePath, 'utf8')
-    return typeof content === 'string' ? JSON.parse(content) : null
-  } catch {
-    return null
-  }
-}
-
-function writePersistence(key: string, fileName: string, value: unknown) {
-  try {
-    Taro.setStorageSync(key, value)
-  } catch {
-    // Local persistence should never block editing in runtimes with restricted storage.
-  }
-
-  try {
-    const filePath = getBackupFilePath(fileName)
-    if (!filePath) return
-
-    Taro.getFileSystemManager().writeFileSync(filePath, JSON.stringify(value), 'utf8')
-  } catch {
-    // The file backup is best-effort because some runtimes only expose storage.
-  }
 }
 
 function filterShiftOverridesByPersonName(overrides: ShiftOverrides, personName: string): ShiftOverrides {
@@ -513,6 +439,19 @@ export default function Index() {
       })
   }
 
+  const refreshCloudOverridesForUserSwitch = (nextUserName: string) => {
+    if (!shouldRefreshCloudOnUserSwitch(isAdminUser, currentUser.name, nextUserName)) return
+
+    loadCloudOverrides()
+      .then(cloudOverrides => {
+        applyCloudOverrides(cloudOverrides)
+      })
+      .catch(error => {
+        console.warn('切换用户时云端排班记录读取失败', error)
+        Taro.showToast({ title: '云端同步失败，请下拉刷新', icon: 'none' })
+      })
+  }
+
   const setVisibleActiveMonth = (month: ScheduleMonth) => {
     const nextScrollLeft = getMonthTargetScrollLeft(month, monthScrollLeftRef.current)
     if (nextScrollLeft !== null) {
@@ -694,19 +633,27 @@ export default function Index() {
               </View>
             </View>
             {canSwitchUser ? (
-              <Picker
-                mode="selector"
-                range={userPickerOptions}
-                value={currentUserIndex}
-                onChange={event => {
-                  const nextUser = scheduleData.people[Number(event.detail.value)]
-                  if (nextUser) setCurrentUserName(nextUser.name)
-                }}
-              >
-                <View className="user-picker-button">
-                  <Text>切换</Text>
+              <View className="current-user-actions">
+                <View className="user-picker-button" onClick={() => Taro.navigateTo({ url: '/pages/stats/index' })}>
+                  <Text>统计</Text>
                 </View>
-              </Picker>
+                <Picker
+                  mode="selector"
+                  range={userPickerOptions}
+                  value={currentUserIndex}
+                  onChange={event => {
+                    const nextUser = scheduleData.people[Number(event.detail.value)]
+                    if (!nextUser) return
+
+                    setCurrentUserName(nextUser.name)
+                    refreshCloudOverridesForUserSwitch(nextUser.name)
+                  }}
+                >
+                  <View className="user-picker-button">
+                    <Text>切换</Text>
+                  </View>
+                </Picker>
+              </View>
             ) : (
               <View className="user-picker-button locked">
                 <Text>{userPickerButtonText}</Text>

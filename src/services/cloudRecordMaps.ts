@@ -2,6 +2,7 @@ import type { ShiftType } from '../types/schedule'
 import { normalizeOvertimeHours } from '../utils/schedule'
 
 const editableShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特']
+const chinaTimezoneOffsetMs = 8 * 60 * 60 * 1000
 
 export type ShiftOverrides = Record<string, ShiftType>
 export type OvertimeOverrides = Record<string, number>
@@ -12,7 +13,10 @@ export interface CloudDayRecord {
   date: string
   shiftOverride?: ShiftType
   overtimeHours?: number
+  createdAt?: number
+  createdAtText?: string
   updatedAt?: number
+  updatedAtText?: string
 }
 
 export function getOverrideKey(personName: string, date: string): string {
@@ -35,6 +39,36 @@ export function isCloudDayRecord(value: unknown): value is CloudDayRecord {
 
   const record = value as Record<string, unknown>
   return typeof record.personName === 'string' && typeof record.date === 'string'
+}
+
+function padTimePart(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+export function formatCloudTimestamp(timestamp: number): string {
+  const date = new Date(timestamp + chinaTimezoneOffsetMs)
+  return [
+    date.getUTCFullYear(),
+    padTimePart(date.getUTCMonth() + 1),
+    padTimePart(date.getUTCDate())
+  ].join('-') + ' ' + [
+    padTimePart(date.getUTCHours()),
+    padTimePart(date.getUTCMinutes()),
+    padTimePart(date.getUTCSeconds())
+  ].join(':')
+}
+
+export function hasCloudDayRecordChanged(
+  existingRecord: CloudDayRecord,
+  nextRecord: CloudDayRecord
+): boolean {
+  return (
+    existingRecord.personName !== nextRecord.personName ||
+    existingRecord.date !== nextRecord.date ||
+    (isShiftType(existingRecord.shiftOverride) ? existingRecord.shiftOverride : null) !==
+      (isShiftType(nextRecord.shiftOverride) ? nextRecord.shiftOverride : null) ||
+    normalizeOvertimeHours(existingRecord.overtimeHours ?? 0) !== normalizeOvertimeHours(nextRecord.overtimeHours ?? 0)
+  )
 }
 
 export function cloudRecordsToOverrides(records: unknown[]): {

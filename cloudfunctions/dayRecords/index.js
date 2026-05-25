@@ -9,6 +9,7 @@ const adminOpenids = ['oK0h23Zc4Z5ZIebbU0GiaLDPIpQA']
 const adminOpenidSet = new Set(adminOpenids.map(openid => openid.trim().toLowerCase()))
 const shiftOptions = new Set(['白班', '夜班', '休息', '白特', '夜特'])
 const pageSize = 100
+const chinaTimezoneOffsetMs = 8 * 60 * 60 * 1000
 
 function isAdmin(openid) {
   return typeof openid === 'string' && adminOpenidSet.has(openid.trim().toLowerCase())
@@ -23,6 +24,36 @@ function normalizeOvertimeHours(value) {
 
 function getOverrideKey(personName, date) {
   return `${personName}::${date}`
+}
+
+function padTimePart(value) {
+  return String(value).padStart(2, '0')
+}
+
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp + chinaTimezoneOffsetMs)
+  return [
+    date.getUTCFullYear(),
+    padTimePart(date.getUTCMonth() + 1),
+    padTimePart(date.getUTCDate())
+  ].join('-') + ' ' + [
+    padTimePart(date.getUTCHours()),
+    padTimePart(date.getUTCMinutes()),
+    padTimePart(date.getUTCSeconds())
+  ].join(':')
+}
+
+function normalizeShiftOverride(value) {
+  return shiftOptions.has(value) ? value : null
+}
+
+function hasRecordChanged(existingRecord, nextRecord) {
+  return (
+    existingRecord.personName !== nextRecord.personName ||
+    existingRecord.date !== nextRecord.date ||
+    normalizeShiftOverride(existingRecord.shiftOverride) !== normalizeShiftOverride(nextRecord.shiftOverride) ||
+    normalizeOvertimeHours(existingRecord.overtimeHours) !== normalizeOvertimeHours(nextRecord.overtimeHours)
+  )
 }
 
 function splitOverrideKey(key) {
@@ -48,7 +79,7 @@ function isValidRecord(value) {
 
 function normalizeRecord(record) {
   const overtimeHours = normalizeOvertimeHours(record.overtimeHours)
-  const shiftOverride = shiftOptions.has(record.shiftOverride) ? record.shiftOverride : null
+  const shiftOverride = normalizeShiftOverride(record.shiftOverride)
   if (!shiftOverride && overtimeHours <= 0) return null
 
   return {
@@ -109,17 +140,24 @@ async function syncRecords(openid, records, deletedKeys) {
     record
   ]))
   const nextKeys = new Set(nextRecords.map(record => getOverrideKey(record.personName, record.date)))
-  const updatedAt = Date.now()
 
   await Promise.all(nextRecords.map(record => {
     const key = getOverrideKey(record.personName, record.date)
     const existing = existingByKey.get(key)
+    const now = Date.now()
+    const createdAt = existing?.createdAt || existing?.updatedAt || now
+    const updatedAt = existing && !hasRecordChanged(existing, record)
+      ? existing.updatedAt || now
+      : now
     const data = {
       personName: record.personName,
       date: record.date,
       shiftOverride: record.shiftOverride,
       overtimeHours: record.overtimeHours,
-      updatedAt
+      createdAt,
+      createdAtText: formatTimestamp(createdAt),
+      updatedAt,
+      updatedAtText: formatTimestamp(updatedAt)
     }
 
     if (existing?._id) {

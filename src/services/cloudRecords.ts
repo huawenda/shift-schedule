@@ -2,7 +2,9 @@ import Taro from '@tarojs/taro'
 import {
   buildCloudDayRecords,
   cloudRecordsToOverrides,
+  formatCloudTimestamp,
   getOverrideKey,
+  hasCloudDayRecordChanged,
   isCloudDayRecord,
   type OvertimeOverrides,
   type ShiftOverrides
@@ -87,17 +89,24 @@ export async function syncCloudOverrides(
     record
   ]))
   const nextKeys = new Set(nextRecords.map(record => getOverrideKey(record.personName, record.date)))
-  const updatedAt = Date.now()
 
   await Promise.all(nextRecords.map(record => {
     const key = getOverrideKey(record.personName, record.date)
     const existing = existingByKey.get(key)
+    const now = Date.now()
+    const createdAt = existing?.createdAt ?? existing?.updatedAt ?? now
+    const updatedAt = existing && !hasCloudDayRecordChanged(existing, record)
+      ? existing.updatedAt ?? now
+      : now
     const data = {
       personName: record.personName,
       date: record.date,
       shiftOverride: record.shiftOverride ?? null,
       overtimeHours: record.overtimeHours ?? 0,
-      updatedAt
+      createdAt,
+      createdAtText: formatCloudTimestamp(createdAt),
+      updatedAt,
+      updatedAtText: formatCloudTimestamp(updatedAt)
     }
 
     if (existing?._id) {

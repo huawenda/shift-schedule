@@ -9,7 +9,9 @@ export interface UserProfile {
   _openid?: string
   personName: string
   boundAt: number
+  boundAtText?: string
   updatedAt: number
+  updatedAtText?: string
 }
 
 export interface CurrentUserProfile {

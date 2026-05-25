@@ -9,6 +9,7 @@ const adminOpenidSet = new Set(adminOpenids.map(openid => openid.trim().toLowerC
 const reservedPersonBindings = {
   华文达: 'oK0h23Zc4Z5ZIebbU0GiaLDPIpQA'
 }
+const chinaTimezoneOffsetMs = 8 * 60 * 60 * 1000
 
 function isAdmin(openid) {
   return typeof openid === 'string' && adminOpenidSet.has(openid.trim().toLowerCase())
@@ -26,6 +27,23 @@ function isSameOpenid(left, right) {
   )
 }
 
+function padTimePart(value) {
+  return String(value).padStart(2, '0')
+}
+
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp + chinaTimezoneOffsetMs)
+  return [
+    date.getUTCFullYear(),
+    padTimePart(date.getUTCMonth() + 1),
+    padTimePart(date.getUTCDate())
+  ].join('-') + ' ' + [
+    padTimePart(date.getUTCHours()),
+    padTimePart(date.getUTCMinutes()),
+    padTimePart(date.getUTCSeconds())
+  ].join(':')
+}
+
 async function getCurrentProfile(openid) {
   const response = await db.collection(collectionName).where({ _openid: openid }).limit(1).get()
   return response.data[0] || null
@@ -33,6 +51,18 @@ async function getCurrentProfile(openid) {
 
 async function loadProfile(openid) {
   const profile = await getCurrentProfile(openid)
+  if (profile?._id && (!profile.boundAtText || !profile.updatedAtText)) {
+    const boundAt = profile.boundAt || profile.updatedAt || Date.now()
+    const updatedAt = profile.updatedAt || boundAt
+    const data = {
+      boundAt,
+      boundAtText: formatTimestamp(boundAt),
+      updatedAt,
+      updatedAtText: formatTimestamp(updatedAt)
+    }
+    await db.collection(collectionName).doc(profile._id).update({ data })
+    Object.assign(profile, data)
+  }
 
   return {
     openid,
@@ -75,11 +105,14 @@ async function bindProfile(openid, personName) {
   }
 
   const now = Date.now()
+  const boundAt = currentProfile?.boundAt || now
   const data = {
     _openid: openid,
     personName: normalizedPersonName,
-    boundAt: currentProfile?.boundAt || now,
-    updatedAt: now
+    boundAt,
+    boundAtText: formatTimestamp(boundAt),
+    updatedAt: now,
+    updatedAtText: formatTimestamp(now)
   }
 
   if (currentProfile?._id) {
