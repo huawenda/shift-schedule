@@ -1,4 +1,8 @@
 const cloud = require('wx-server-sdk')
+const {
+  canWritePersonRecord,
+  getLoadRecordsWhere
+} = require('./access')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -115,10 +119,10 @@ async function getBoundPersonName(openid) {
 }
 
 async function loadRecords(openid) {
-  const boundPersonName = isAdmin(openid) ? null : await getBoundPersonName(openid)
-  const records = isAdmin(openid)
-    ? await getAllRecords(userDayRecordsCollection)
-    : await getAllRecords(userDayRecordsCollection, boundPersonName ? { personName: boundPersonName } : { _openid: openid })
+  const isAdminUser = isAdmin(openid)
+  const boundPersonName = isAdminUser ? null : await getBoundPersonName(openid)
+  const where = getLoadRecordsWhere({ isAdminUser, boundPersonName, openid })
+  const records = await getAllRecords(userDayRecordsCollection, where || {})
 
   return { records }
 }
@@ -131,7 +135,11 @@ async function syncRecords(openid, records, deletedKeys) {
     .filter(isValidRecord)
     .map(normalizeRecord)
     .filter(Boolean)
-    .filter(record => isAdmin(openid) || record.personName === allowedPersonName)
+    .filter(record => canWritePersonRecord({
+      isAdminUser: isAdmin(openid),
+      allowedPersonName,
+      personName: record.personName
+    }))
   const existingRecords = isAdmin(openid)
     ? await getAllRecords(userDayRecordsCollection)
     : await getAllRecords(userDayRecordsCollection, { personName: allowedPersonName })
@@ -186,15 +194,6 @@ async function syncRecords(openid, records, deletedKeys) {
       ? db.collection(userDayRecordsCollection).doc(existing._id).remove()
       : Promise.resolve()
   }))
-
-  const submittedPeople = new Set(nextRecords.map(record => record.personName))
-  await Promise.all(existingRecords
-    .filter(record => (
-      record._id &&
-      submittedPeople.has(record.personName) &&
-      !nextKeys.has(getOverrideKey(record.personName, record.date))
-    ))
-    .map(record => db.collection(userDayRecordsCollection).doc(record._id).remove()))
 
   return loadRecords(openid)
 }

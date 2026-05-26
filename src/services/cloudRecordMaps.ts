@@ -71,6 +71,17 @@ export function hasCloudDayRecordChanged(
   )
 }
 
+export function getDeletedCloudRecordKeys(
+  existingRecords: CloudDayRecord[],
+  nextRecords: CloudDayRecord[],
+  deletedKeys: string[]
+): string[] {
+  const nextKeys = new Set(nextRecords.map(record => getOverrideKey(record.personName, record.date)))
+  return existingRecords
+    .map(record => getOverrideKey(record.personName, record.date))
+    .filter(key => deletedKeys.includes(key) && !nextKeys.has(key))
+}
+
 export function cloudRecordsToOverrides(records: unknown[]): {
   shiftOverrides: ShiftOverrides
   overtimeOverrides: OvertimeOverrides

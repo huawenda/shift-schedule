@@ -3,8 +3,8 @@ import { Input, Picker, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { scheduleData } from '../../data/schedule'
 import type { ShiftType } from '../../types/schedule'
-import { shouldRefreshCloudOnUserSwitch } from '../../utils/cloudSync'
-import { getShiftClassName } from '../../utils/shift'
+import { mergeSharedCloudOverrides, shouldRefreshCloudOnUserSwitch } from '../../utils/cloudSync'
+import { getShiftClassName, hasShiftOverrideChanged } from '../../utils/shift'
 import {
   formatScheduleMonthDay,
   getDateLabels,
@@ -188,38 +188,6 @@ function filterOvertimeOverridesByPersonName(overrides: OvertimeOverrides, perso
   }, {})
 }
 
-function mergeCloudShiftOverrides(
-  localOverrides: ShiftOverrides,
-  cloudOverrides: ShiftOverrides,
-  personName: string | null
-): ShiftOverrides {
-  if (!personName) return cloudOverrides
-
-  return {
-    ...Object.entries(localOverrides).reduce<ShiftOverrides>((result, [key, shift]) => {
-      if (!key.startsWith(`${personName}::`)) result[key] = shift
-      return result
-    }, {}),
-    ...cloudOverrides
-  }
-}
-
-function mergeCloudOvertimeOverrides(
-  localOverrides: OvertimeOverrides,
-  cloudOverrides: OvertimeOverrides,
-  personName: string | null
-): OvertimeOverrides {
-  if (!personName) return cloudOverrides
-
-  return {
-    ...Object.entries(localOverrides).reduce<OvertimeOverrides>((result, [key, hours]) => {
-      if (!key.startsWith(`${personName}::`)) result[key] = hours
-      return result
-    }, {}),
-    ...cloudOverrides
-  }
-}
-
 export default function Index() {
   const todayDate = new Date()
   const todayMonthDay = formatScheduleMonthDay(todayDate)
@@ -338,16 +306,13 @@ export default function Index() {
       .then(cloudOverrides => {
         if (cancelled) return
 
-        const scopedPersonName = isAdminUser ? null : boundPersonName
-        setShiftOverrides(localOverrides => mergeCloudShiftOverrides(
+        setShiftOverrides(localOverrides => mergeSharedCloudOverrides(
           localOverrides,
-          cloudOverrides.shiftOverrides,
-          scopedPersonName
+          cloudOverrides.shiftOverrides
         ))
-        setOvertimeOverrides(localOverrides => mergeCloudOvertimeOverrides(
+        setOvertimeOverrides(localOverrides => mergeSharedCloudOverrides(
           localOverrides,
-          cloudOverrides.overtimeOverrides,
-          scopedPersonName
+          cloudOverrides.overtimeOverrides
         ))
       })
       .catch(error => {
@@ -404,16 +369,13 @@ export default function Index() {
     shiftOverrides: ShiftOverrides
     overtimeOverrides: OvertimeOverrides
   }) => {
-    const scopedPersonName = isAdminUser ? null : boundPersonName
-    setShiftOverrides(localOverrides => mergeCloudShiftOverrides(
+    setShiftOverrides(localOverrides => mergeSharedCloudOverrides(
       localOverrides,
-      cloudOverrides.shiftOverrides,
-      scopedPersonName
+      cloudOverrides.shiftOverrides
     ))
-    setOvertimeOverrides(localOverrides => mergeCloudOvertimeOverrides(
+    setOvertimeOverrides(localOverrides => mergeSharedCloudOverrides(
       localOverrides,
-      cloudOverrides.overtimeOverrides,
-      scopedPersonName
+      cloudOverrides.overtimeOverrides
     ))
   }
 
@@ -890,20 +852,30 @@ export default function Index() {
 
               {activeScheduleData.people.map(person => (
                 <View key={person.name} className={`table-row ${person.name === currentUser.name ? 'highlight-row' : ''}`}>
-                  {person.shifts.map((shift, index) => (
-                    <View
-                      key={`${person.name}-${index}`}
-                      className="cell date-cell"
-                    >
-                      {tableView === 'name' ? (
-                        <Text className={`name-view-person-name ${getNameViewShiftClassName(shift)}`}>
-                          {person.name}
-                        </Text>
-                      ) : (
-                        <Text className={getShiftClassName(shift)}>{shift}</Text>
-                      )}
-                    </View>
-                  ))}
+                  {person.shifts.map((shift, index) => {
+                    const date = activeScheduleData.dates[index]
+                    const overrideKey = getOverrideKey(person.name, date)
+                    const baseShift = getBaseShift(person.name, date)
+                    const isEditedShift = Boolean(
+                      baseShift && hasShiftOverrideChanged(baseShift, shiftOverrides[overrideKey])
+                    )
+
+                    return (
+                      <View
+                        key={`${person.name}-${index}`}
+                        className="cell date-cell table-shift-cell"
+                      >
+                        {isEditedShift && <View className="table-edited-marker" />}
+                        {tableView === 'name' ? (
+                          <Text className={`name-view-person-name ${getNameViewShiftClassName(shift)}`}>
+                            {person.name}
+                          </Text>
+                        ) : (
+                          <Text className={getShiftClassName(shift)}>{shift}</Text>
+                        )}
+                      </View>
+                    )
+                  })}
                 </View>
               ))}
             </View>

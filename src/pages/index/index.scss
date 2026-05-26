@@ -762,6 +762,20 @@
   flex-shrink: 0;
 }
 
+.table-shift-cell {
+  position: relative;
+}
+
+.table-edited-marker {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #f59e0b;
+}
+
 .name-view-person-name {
   display: inline-flex;
   align-items: center;

@@ -1,5 +1,9 @@
 import type { ShiftType } from '../types/schedule'
 
+export function hasShiftOverrideChanged(baseShift: ShiftType, overrideShift?: ShiftType): boolean {
+  return Boolean(overrideShift) && overrideShift !== baseShift
+}
+
 export function getShiftClassName(shift: ShiftType): string {
   if (shift === '白班') return 'shift shift-day'
   if (shift === '夜班') return 'shift shift-night'

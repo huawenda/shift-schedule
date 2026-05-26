@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildCloudDayRecords,
   cloudRecordsToOverrides,
+  getDeletedCloudRecordKeys,
   formatCloudTimestamp,
   getOverrideKey,
   hasCloudDayRecordChanged,
@@ -87,5 +88,27 @@ describe('cloud record mapping', () => {
       { personName: '华文达', date: '05/26', shiftOverride: '夜班', overtimeHours: 0 },
       { personName: '华文达', date: '05/26', shiftOverride: '白班', overtimeHours: 0 }
     )).toBe(true)
+  })
+
+  it('deletes only explicitly deleted cloud record keys during sync', () => {
+    expect(getDeletedCloudRecordKeys(
+      [
+        { personName: '华文达', date: '05/23', shiftOverride: '夜特' },
+        { personName: '张舒祺', date: '05/23', shiftOverride: '夜特' }
+      ],
+      [
+        { personName: '华文达', date: '05/23', shiftOverride: '白班' }
+      ],
+      [getOverrideKey('华文达', '05/24')]
+    )).toEqual([])
+
+    expect(getDeletedCloudRecordKeys(
+      [
+        { personName: '华文达', date: '05/23', shiftOverride: '夜特' },
+        { personName: '张舒祺', date: '05/23', shiftOverride: '夜特' }
+      ],
+      [],
+      [getOverrideKey('张舒祺', '05/23')]
+    )).toEqual([getOverrideKey('张舒祺', '05/23')])
   })
 })
