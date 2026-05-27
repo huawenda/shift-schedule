@@ -3,6 +3,8 @@ import {
   buildCloudDayRecords,
   cloudRecordsToOverrides,
   getOverrideKey,
+  type LeaveDurationOverrides,
+  type LegalOverrides,
   type OvertimeOverrides,
   type ShiftOverrides
 } from './cloudRecordMaps'
@@ -12,6 +14,8 @@ export {
   cloudRecordsToOverrides,
   getOverrideKey,
   type CloudDayRecord,
+  type LeaveDurationOverrides,
+  type LegalOverrides,
   type OvertimeOverrides,
   type ShiftOverrides
 } from './cloudRecordMaps'
@@ -51,6 +55,8 @@ async function callDayRecordsFunction(
 export async function loadCloudOverrides(): Promise<{
   shiftOverrides: ShiftOverrides
   overtimeOverrides: OvertimeOverrides
+  legalOverrides: LegalOverrides
+  leaveDurationOverrides: LeaveDurationOverrides
 }> {
   const functionRecords = await callDayRecordsFunction('load')
   return cloudRecordsToOverrides(functionRecords)
@@ -59,8 +65,10 @@ export async function loadCloudOverrides(): Promise<{
 export async function syncCloudOverrides(
   shiftOverrides: ShiftOverrides,
   overtimeOverrides: OvertimeOverrides,
+  legalOverrides: LegalOverrides,
+  leaveDurationOverrides: LeaveDurationOverrides,
   deletedKeys: string[] = []
 ): Promise<void> {
-  const nextRecords = buildCloudDayRecords(shiftOverrides, overtimeOverrides)
+  const nextRecords = buildCloudDayRecords(shiftOverrides, overtimeOverrides, legalOverrides, leaveDurationOverrides)
   await callDayRecordsFunction('sync', nextRecords, deletedKeys)
 }

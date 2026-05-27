@@ -7,6 +7,8 @@ export interface ShiftSummary {
   休息: number
   白特: number
   夜特: number
+  事假?: number
+  法定?: number
   加班?: OvertimeSummary
 }
 
@@ -15,6 +17,7 @@ export interface OvertimeSummary {
   夜班: number
   白特: number
   夜特: number
+  法定?: number
 }
 
 export interface UpcomingShift {
@@ -54,11 +57,20 @@ function formatFestivalLabel(festival: string): string {
   return festival
 }
 
-export function getPersonShiftSummary(person: SchedulePerson, overtimeHours?: number[]): ShiftSummary {
+export function getPersonShiftSummary(
+  person: SchedulePerson,
+  overtimeHours?: number[],
+  legalFlags?: boolean[]
+): ShiftSummary {
+  const shouldTrackLegal = Boolean(legalFlags)
   const summary = person.shifts.reduce<ShiftSummary>(
     (currentSummary, shift, index) => {
       const overtime = overtimeHours?.[index] ?? 0
-      if (shift === '白特') {
+      const isLegal = legalFlags?.[index] === true && shift !== '休息'
+      if (isLegal) {
+        currentSummary.法定 = (currentSummary.法定 ?? 0) + 1
+        if (currentSummary.加班) currentSummary.加班.法定 = (currentSummary.加班.法定 ?? 0) + overtime
+      } else if (shift === '白特') {
         currentSummary.白特 += 1
         if (currentSummary.加班) currentSummary.加班.白特 += overtime
       } else if (shift === '夜特') {
@@ -70,6 +82,8 @@ export function getPersonShiftSummary(person: SchedulePerson, overtimeHours?: nu
       } else if (shift === '夜班') {
         currentSummary.夜班 += 1
         if (currentSummary.加班) currentSummary.加班.夜班 += overtime
+      } else if (shift === '事假') {
+        currentSummary.事假 = (currentSummary.事假 ?? 0) + 1
       } else {
         currentSummary.休息 += 1
       }
@@ -81,7 +95,16 @@ export function getPersonShiftSummary(person: SchedulePerson, overtimeHours?: nu
       休息: 0,
       白特: 0,
       夜特: 0,
-      ...(overtimeHours ? { 加班: { 白班: 0, 夜班: 0, 白特: 0, 夜特: 0 } } : {})
+      ...(shouldTrackLegal ? { 法定: 0 } : {}),
+      ...(overtimeHours ? {
+        加班: {
+          白班: 0,
+          夜班: 0,
+          白特: 0,
+          夜特: 0,
+          ...(shouldTrackLegal ? { 法定: 0 } : {})
+        }
+      } : {})
     }
   )
 
@@ -197,6 +220,20 @@ export function getMonthScheduleView(scheduleData: ScheduleData, month: Schedule
       shifts: person.shifts.slice(firstIndex, lastIndex + 1)
     }))
   }
+}
+
+export function isFutureScheduleMonth(
+  scheduleData: ScheduleData,
+  month: ScheduleMonth,
+  date: Date = new Date()
+): boolean {
+  const monthView = getMonthScheduleView(scheduleData, month)
+  if (monthView.dates.length === 0) return false
+
+  const periodStart = parseDate(monthView.startDate)
+  const today = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+
+  return periodStart.getTime() > today.getTime()
 }
 
 function parseDate(date: string): Date {

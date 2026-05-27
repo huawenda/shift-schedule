@@ -11,7 +11,8 @@ const userDayRecordsCollection = 'user_day_records'
 const userProfilesCollection = 'user_profiles'
 const adminOpenids = ['oK0h23Zc4Z5ZIebbU0GiaLDPIpQA']
 const adminOpenidSet = new Set(adminOpenids.map(openid => openid.trim().toLowerCase()))
-const shiftOptions = new Set(['白班', '夜班', '休息', '白特', '夜特'])
+const shiftOptions = new Set(['白班', '夜班', '休息', '白特', '夜特', '事假'])
+const leaveDurationOptions = new Set(['半天', '一天'])
 const pageSize = 100
 const chinaTimezoneOffsetMs = 8 * 60 * 60 * 1000
 
@@ -51,12 +52,18 @@ function normalizeShiftOverride(value) {
   return shiftOptions.has(value) ? value : null
 }
 
+function normalizeLeaveDuration(value) {
+  return leaveDurationOptions.has(value) ? value : null
+}
+
 function hasRecordChanged(existingRecord, nextRecord) {
   return (
     existingRecord.personName !== nextRecord.personName ||
     existingRecord.date !== nextRecord.date ||
     normalizeShiftOverride(existingRecord.shiftOverride) !== normalizeShiftOverride(nextRecord.shiftOverride) ||
-    normalizeOvertimeHours(existingRecord.overtimeHours) !== normalizeOvertimeHours(nextRecord.overtimeHours)
+    normalizeOvertimeHours(existingRecord.overtimeHours) !== normalizeOvertimeHours(nextRecord.overtimeHours) ||
+    Boolean(existingRecord.isLegalOvertime) !== Boolean(nextRecord.isLegalOvertime) ||
+    normalizeLeaveDuration(existingRecord.leaveDuration) !== normalizeLeaveDuration(nextRecord.leaveDuration)
   )
 }
 
@@ -84,13 +91,17 @@ function isValidRecord(value) {
 function normalizeRecord(record) {
   const overtimeHours = normalizeOvertimeHours(record.overtimeHours)
   const shiftOverride = normalizeShiftOverride(record.shiftOverride)
-  if (!shiftOverride && overtimeHours <= 0) return null
+  const isLegalOvertime = record.isLegalOvertime === true
+  const leaveDuration = shiftOverride === '事假' ? normalizeLeaveDuration(record.leaveDuration) : null
+  if (!shiftOverride && overtimeHours <= 0 && !isLegalOvertime && !leaveDuration) return null
 
   return {
     personName: record.personName,
     date: record.date,
     shiftOverride,
-    overtimeHours
+    overtimeHours,
+    isLegalOvertime,
+    leaveDuration
   }
 }
 
@@ -162,6 +173,8 @@ async function syncRecords(openid, records, deletedKeys) {
       date: record.date,
       shiftOverride: record.shiftOverride,
       overtimeHours: record.overtimeHours,
+      isLegalOvertime: record.isLegalOvertime,
+      leaveDuration: record.leaveDuration,
       createdAt,
       createdAtText: formatTimestamp(createdAt),
       updatedAt,

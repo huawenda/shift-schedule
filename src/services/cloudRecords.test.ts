@@ -6,6 +6,8 @@ import {
   formatCloudTimestamp,
   getOverrideKey,
   hasCloudDayRecordChanged,
+  type LegalOverrides,
+  type LeaveDurationOverrides,
   type OvertimeOverrides,
   type ShiftOverrides
 } from './cloudRecordMaps'
@@ -31,15 +33,35 @@ describe('cloud record mapping', () => {
         personName: '华文达',
         date: '05/28',
         shiftOverride: '休息'
+      },
+      {
+        _id: '4',
+        personName: '华文达',
+        date: '05/29',
+        isLegalOvertime: true
+      },
+      {
+        _id: '5',
+        personName: '张舒祺',
+        date: '05/30',
+        shiftOverride: '事假',
+        leaveDuration: '半天'
       }
     ])).toEqual({
       shiftOverrides: {
         [getOverrideKey('华文达', '05/26')]: '白特',
-        [getOverrideKey('华文达', '05/28')]: '休息'
+        [getOverrideKey('华文达', '05/28')]: '休息',
+        [getOverrideKey('张舒祺', '05/30')]: '事假'
       },
       overtimeOverrides: {
         [getOverrideKey('华文达', '05/26')]: 1.5,
         [getOverrideKey('华文达', '05/27')]: 2
+      },
+      legalOverrides: {
+        [getOverrideKey('华文达', '05/29')]: true
+      },
+      leaveDurationOverrides: {
+        [getOverrideKey('张舒祺', '05/30')]: '半天'
       }
     })
   })
@@ -53,8 +75,15 @@ describe('cloud record mapping', () => {
       [getOverrideKey('华文达', '05/26')]: 1,
       [getOverrideKey('华文达', '05/27')]: 2.5
     }
+    const legalOverrides: LegalOverrides = {
+      [getOverrideKey('华文达', '05/28')]: true
+    }
+    const leaveDurationOverrides: LeaveDurationOverrides = {
+      [getOverrideKey('张舒祺', '05/29')]: '一天'
+    }
+    shiftOverrides[getOverrideKey('张舒祺', '05/29')] = '事假'
 
-    expect(buildCloudDayRecords(shiftOverrides, overtimeOverrides)).toEqual([
+    expect(buildCloudDayRecords(shiftOverrides, overtimeOverrides, legalOverrides, leaveDurationOverrides)).toEqual([
       {
         personName: '华文达',
         date: '05/26',
@@ -67,10 +96,23 @@ describe('cloud record mapping', () => {
         overtimeHours: 2.5
       },
       {
+        personName: '华文达',
+        date: '05/28',
+        isLegalOvertime: true,
+        overtimeHours: 0
+      },
+      {
         personName: '张舒祺',
         date: '05/26',
         shiftOverride: '夜班',
         overtimeHours: 0
+      },
+      {
+        personName: '张舒祺',
+        date: '05/29',
+        shiftOverride: '事假',
+        overtimeHours: 0,
+        leaveDuration: '一天'
       }
     ])
   })
@@ -86,7 +128,15 @@ describe('cloud record mapping', () => {
     )).toBe(false)
     expect(hasCloudDayRecordChanged(
       { personName: '华文达', date: '05/26', shiftOverride: '夜班', overtimeHours: 0 },
+      { personName: '华文达', date: '05/26', shiftOverride: '夜班', overtimeHours: 0, isLegalOvertime: true }
+    )).toBe(true)
+    expect(hasCloudDayRecordChanged(
+      { personName: '华文达', date: '05/26', shiftOverride: '夜班', overtimeHours: 0 },
       { personName: '华文达', date: '05/26', shiftOverride: '白班', overtimeHours: 0 }
+    )).toBe(true)
+    expect(hasCloudDayRecordChanged(
+      { personName: '华文达', date: '05/26', shiftOverride: '事假', overtimeHours: 0, leaveDuration: '半天' },
+      { personName: '华文达', date: '05/26', shiftOverride: '事假', overtimeHours: 0, leaveDuration: '一天' }
     )).toBe(true)
   })
 

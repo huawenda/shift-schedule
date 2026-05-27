@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Input, Picker, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { scheduleData } from '../../data/schedule'
-import type { ShiftType } from '../../types/schedule'
+import type { LeaveDuration, ShiftType } from '../../types/schedule'
+import { canMarkLegalShift, normalizeLegalOverride } from '../../utils/legalOvertime'
 import { mergeSharedCloudOverrides, shouldRefreshCloudOnUserSwitch } from '../../utils/cloudSync'
 import { getShiftClassName, hasShiftOverrideChanged } from '../../utils/shift'
+import { getEditableShiftOptionsForBase } from '../../utils/shiftEditRules'
 import {
   formatScheduleMonthDay,
   getDateLabels,
@@ -19,6 +21,8 @@ import {
   getOverrideKey,
   loadCloudOverrides,
   syncCloudOverrides,
+  type LeaveDurationOverrides,
+  type LegalOverrides,
   type OvertimeOverrides,
   type ShiftOverrides
 } from '../../services/cloudRecords'
@@ -29,6 +33,12 @@ import {
   type CurrentUserProfile
 } from '../../services/userProfile'
 import {
+  legalOverridesFileName,
+  legalOverridesStorageKey,
+  readLegalOverridesFromStorage,
+  leaveDurationOverridesFileName,
+  leaveDurationOverridesStorageKey,
+  readLeaveDurationOverridesFromStorage,
   overtimeOverridesFileName,
   overtimeOverridesStorageKey,
   readOvertimeOverridesFromStorage,
@@ -66,8 +76,8 @@ const tableViewOptions: Array<{ label: string; value: TableView }> = [
   { label: '常规', value: 'shift' },
   { label: '姓名', value: 'name' }
 ]
-const editableShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特']
-const legendShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特']
+const legendShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特', '事假']
+const leaveDurationOptions: LeaveDuration[] = ['半天', '一天']
 
 interface ShiftEditorState {
   personName: string
@@ -75,6 +85,8 @@ interface ShiftEditorState {
   baseShift: ShiftType
   selectedShift: ShiftType | 'default'
   overtimeInput: string
+  isLegal: boolean
+  leaveDuration: LeaveDuration
 }
 
 function getCenteredTableScrollLeft(date: string, dates: string[]): number {
@@ -142,7 +154,8 @@ function getNameViewShiftClassName(shift: ShiftType): string {
     夜班: 'name-shift-night',
     休息: 'name-shift-rest',
     白特: 'name-shift-special-day',
-    夜特: 'name-shift-special-night'
+    夜特: 'name-shift-special-night',
+    事假: 'name-shift-leave'
   }[shift]
 }
 
@@ -171,7 +184,11 @@ function formatOvertimeHours(hours: number): string {
 }
 
 function canRecordOvertime(shift: ShiftType): boolean {
-  return shift !== '休息'
+  return shift !== '休息' && shift !== '事假'
+}
+
+function getEditorEffectiveShift(editor: ShiftEditorState): ShiftType {
+  return editor.selectedShift === 'default' ? editor.baseShift : editor.selectedShift
 }
 
 function filterShiftOverridesByPersonName(overrides: ShiftOverrides, personName: string): ShiftOverrides {
@@ -188,6 +205,20 @@ function filterOvertimeOverridesByPersonName(overrides: OvertimeOverrides, perso
   }, {})
 }
 
+function filterLegalOverridesByPersonName(overrides: LegalOverrides, personName: string): LegalOverrides {
+  return Object.entries(overrides).reduce<LegalOverrides>((result, [key, isLegal]) => {
+    if (key.startsWith(`${personName}::`)) result[key] = isLegal
+    return result
+  }, {})
+}
+
+function filterLeaveDurationOverridesByPersonName(overrides: LeaveDurationOverrides, personName: string): LeaveDurationOverrides {
+  return Object.entries(overrides).reduce<LeaveDurationOverrides>((result, [key, duration]) => {
+    if (key.startsWith(`${personName}::`)) result[key] = duration
+    return result
+  }, {})
+}
+
 export default function Index() {
   const todayDate = new Date()
   const todayMonthDay = formatScheduleMonthDay(todayDate)
@@ -199,6 +230,8 @@ export default function Index() {
   const [headerTopPadding] = useState(getHeaderTopPadding)
   const [shiftOverrides, setShiftOverrides] = useState<ShiftOverrides>(readShiftOverridesFromStorage)
   const [overtimeOverrides, setOvertimeOverrides] = useState<OvertimeOverrides>(readOvertimeOverridesFromStorage)
+  const [legalOverrides, setLegalOverrides] = useState<LegalOverrides>(readLegalOverridesFromStorage)
+  const [leaveDurationOverrides, setLeaveDurationOverrides] = useState<LeaveDurationOverrides>(readLeaveDurationOverridesFromStorage)
   const [shiftEditor, setShiftEditor] = useState<ShiftEditorState | null>(null)
   const [monthScrollLeft, setMonthScrollLeft] = useState(() => (
     getMonthTargetScrollLeft(currentScheduleMonth ?? '05', 0) ?? 0
@@ -242,7 +275,10 @@ export default function Index() {
   const currentUserOvertimeHours = currentUser
     ? activeScheduleData.dates.map(date => overtimeOverrides[getOverrideKey(currentUser.name, date)] ?? 0)
     : []
-  const shiftSummary = currentUser ? getPersonShiftSummary(currentUser, currentUserOvertimeHours) : null
+  const currentUserLegalFlags = currentUser
+    ? activeScheduleData.dates.map(date => legalOverrides[getOverrideKey(currentUser.name, date)] === true)
+    : []
+  const shiftSummary = currentUser ? getPersonShiftSummary(currentUser, currentUserOvertimeHours, currentUserLegalFlags) : null
   const calendarCells = currentUser
     ? getPersonMonthCalendarCells(effectiveScheduleData, activeMonth, currentUser.name)
     : []
@@ -294,6 +330,8 @@ export default function Index() {
     setCurrentUserName(boundPersonName)
     setShiftOverrides(overrides => filterShiftOverridesByPersonName(overrides, boundPersonName))
     setOvertimeOverrides(overrides => filterOvertimeOverridesByPersonName(overrides, boundPersonName))
+    setLegalOverrides(overrides => filterLegalOverridesByPersonName(overrides, boundPersonName))
+    setLeaveDurationOverrides(overrides => filterLeaveDurationOverridesByPersonName(overrides, boundPersonName))
   }, [boundPersonName, isAdminUser, profileReady])
 
   useEffect(() => {
@@ -313,6 +351,14 @@ export default function Index() {
         setOvertimeOverrides(localOverrides => mergeSharedCloudOverrides(
           localOverrides,
           cloudOverrides.overtimeOverrides
+        ))
+        setLegalOverrides(localOverrides => mergeSharedCloudOverrides(
+          localOverrides,
+          cloudOverrides.legalOverrides
+        ))
+        setLeaveDurationOverrides(localOverrides => mergeSharedCloudOverrides(
+          localOverrides,
+          cloudOverrides.leaveDurationOverrides
         ))
       })
       .catch(error => {
@@ -336,6 +382,14 @@ export default function Index() {
   }, [overtimeOverrides])
 
   useEffect(() => {
+    writePersistence(legalOverridesStorageKey, legalOverridesFileName, legalOverrides)
+  }, [legalOverrides])
+
+  useEffect(() => {
+    writePersistence(leaveDurationOverridesStorageKey, leaveDurationOverridesFileName, leaveDurationOverrides)
+  }, [leaveDurationOverrides])
+
+  useEffect(() => {
     if (!cloudSyncReady || !profileReady) return
     if (!isAdminUser && !boundPersonName) return
 
@@ -346,11 +400,17 @@ export default function Index() {
     const nextOvertimeOverrides = isAdminUser || !syncedPersonName
       ? overtimeOverrides
       : filterOvertimeOverridesByPersonName(overtimeOverrides, syncedPersonName)
+    const nextLegalOverrides = isAdminUser || !syncedPersonName
+      ? legalOverrides
+      : filterLegalOverridesByPersonName(legalOverrides, syncedPersonName)
+    const nextLeaveDurationOverrides = isAdminUser || !syncedPersonName
+      ? leaveDurationOverrides
+      : filterLeaveDurationOverridesByPersonName(leaveDurationOverrides, syncedPersonName)
     const nextDeletedOverrideKeys = isAdminUser || !syncedPersonName
       ? deletedOverrideKeys
       : deletedOverrideKeys.filter(key => key.startsWith(`${syncedPersonName}::`))
 
-    syncCloudOverrides(nextShiftOverrides, nextOvertimeOverrides, nextDeletedOverrideKeys)
+    syncCloudOverrides(nextShiftOverrides, nextOvertimeOverrides, nextLegalOverrides, nextLeaveDurationOverrides, nextDeletedOverrideKeys)
       .then(() => {
         if (nextDeletedOverrideKeys.length <= 0) return
 
@@ -363,11 +423,13 @@ export default function Index() {
       .catch(error => {
         console.warn('云端排班记录同步失败', error)
       })
-  }, [boundPersonName, cloudSyncReady, deletedOverrideKeys, isAdminUser, overtimeOverrides, profileReady, shiftOverrides])
+  }, [boundPersonName, cloudSyncReady, deletedOverrideKeys, isAdminUser, leaveDurationOverrides, legalOverrides, overtimeOverrides, profileReady, shiftOverrides])
 
   const applyCloudOverrides = (cloudOverrides: {
     shiftOverrides: ShiftOverrides
     overtimeOverrides: OvertimeOverrides
+    legalOverrides: LegalOverrides
+    leaveDurationOverrides: LeaveDurationOverrides
   }) => {
     setShiftOverrides(localOverrides => mergeSharedCloudOverrides(
       localOverrides,
@@ -376,6 +438,14 @@ export default function Index() {
     setOvertimeOverrides(localOverrides => mergeSharedCloudOverrides(
       localOverrides,
       cloudOverrides.overtimeOverrides
+    ))
+    setLegalOverrides(localOverrides => mergeSharedCloudOverrides(
+      localOverrides,
+      cloudOverrides.legalOverrides
+    ))
+    setLeaveDurationOverrides(localOverrides => mergeSharedCloudOverrides(
+      localOverrides,
+      cloudOverrides.leaveDurationOverrides
     ))
   }
 
@@ -444,7 +514,9 @@ export default function Index() {
       date,
       baseShift,
       selectedShift: currentShiftOverride ?? 'default',
-      overtimeInput: overtimeOverrides[overrideKey]?.toString() ?? ''
+      overtimeInput: overtimeOverrides[overrideKey]?.toString() ?? '',
+      isLegal: legalOverrides[overrideKey] === true,
+      leaveDuration: leaveDurationOverrides[overrideKey] ?? '一天'
     })
   }
 
@@ -457,11 +529,35 @@ export default function Index() {
   }
 
   const selectShiftEdit = (nextShift: ShiftType | 'default') => {
-    setShiftEditor(editor => editor ? { ...editor, selectedShift: nextShift } : editor)
+    setShiftEditor(editor => {
+      if (!editor) return editor
+      const effectiveShift = nextShift === 'default' ? editor.baseShift : nextShift
+      return {
+        ...editor,
+        selectedShift: nextShift,
+        isLegal: normalizeLegalOverride(effectiveShift, editor.isLegal),
+        leaveDuration: effectiveShift === '事假' ? editor.leaveDuration : '一天'
+      }
+    })
   }
 
   const setShiftEditorOvertimeInput = (value: string) => {
     setShiftEditor(editor => editor ? { ...editor, overtimeInput: value } : editor)
+  }
+
+  const setShiftEditorLegal = (isLegal: boolean) => {
+    setShiftEditor(editor => {
+      if (!editor) return editor
+      const effectiveShift = getEditorEffectiveShift(editor)
+      return {
+        ...editor,
+        isLegal: normalizeLegalOverride(effectiveShift, isLegal)
+      }
+    })
+  }
+
+  const setShiftEditorLeaveDuration = (leaveDuration: LeaveDuration) => {
+    setShiftEditor(editor => editor ? { ...editor, leaveDuration } : editor)
   }
 
   const saveShiftEditor = () => {
@@ -476,6 +572,8 @@ export default function Index() {
     const overtimeHours = canRecordOvertime(resolvedShift)
       ? normalizeOvertimeHours(shiftEditor.overtimeInput)
       : 0
+    const isLegalOvertime = normalizeLegalOverride(resolvedShift, shiftEditor.isLegal)
+    const leaveDuration = resolvedShift === '事假' ? shiftEditor.leaveDuration : null
 
     setShiftOverrides(overrides => {
       const nextOverrides = { ...overrides }
@@ -497,7 +595,27 @@ export default function Index() {
       return nextOverrides
     })
 
-    if (shouldUseBaseShift && overtimeHours <= 0) {
+    setLegalOverrides(overrides => {
+      const nextOverrides = { ...overrides }
+      if (isLegalOvertime) {
+        nextOverrides[key] = true
+      } else {
+        delete nextOverrides[key]
+      }
+      return nextOverrides
+    })
+
+    setLeaveDurationOverrides(overrides => {
+      const nextOverrides = { ...overrides }
+      if (leaveDuration) {
+        nextOverrides[key] = leaveDuration
+      } else {
+        delete nextOverrides[key]
+      }
+      return nextOverrides
+    })
+
+    if (shouldUseBaseShift && overtimeHours <= 0 && !isLegalOvertime && !leaveDuration) {
       markOverrideDeleted(key)
     } else {
       unmarkOverrideDeleted(key)
@@ -573,15 +691,17 @@ export default function Index() {
             monthScrollLeftRef.current = scrollLeft
           }}
         >
-          {monthOptions.map(option => (
-            <View
-              key={option.value}
-              className={`month-tab ${activeMonth === option.value ? 'active' : ''}`}
-              onClick={() => setVisibleActiveMonth(option.value)}
-            >
-              <Text>{option.label}</Text>
-            </View>
-          ))}
+          <View className="month-tabs-inner">
+            {monthOptions.map(option => (
+              <View
+                key={option.value}
+                className={`month-tab ${activeMonth === option.value ? 'active' : ''}`}
+                onClick={() => setVisibleActiveMonth(option.value)}
+              >
+                <Text>{option.label}</Text>
+              </View>
+            ))}
+          </View>
         </ScrollView>
 
         <View className="current-user-card">
@@ -665,6 +785,15 @@ export default function Index() {
                 </View>
                 <Text className="summary-label">夜特</Text>
               </View>
+              <View className="summary-item summary-legal">
+                <View className="summary-value-row">
+                  <Text className="summary-value">{shiftSummary.法定 ?? 0}</Text>
+                  {(shiftSummary.加班?.法定 ?? 0) > 0 && (
+                    <Text className="summary-overtime legal">{formatOvertimeHours(shiftSummary.加班?.法定 ?? 0)}h</Text>
+                  )}
+                </View>
+                <Text className="summary-label">法定</Text>
+              </View>
             </View>
           )}
         </View>
@@ -673,6 +802,7 @@ export default function Index() {
       <ScrollView
         scrollY
         className="scrollable-content"
+        enableFlex
         enhanced
         showScrollbar={false}
         refresherEnabled
@@ -688,31 +818,32 @@ export default function Index() {
         }}
         onRefresherRefresh={refreshCloudOverrides}
       >
-        <View className={`cloud-refresh-status ${refreshHintVisible ? 'visible' : ''}`}>
-          <View className={`cloud-refresh-spinner ${cloudRefreshing ? 'spinning' : ''}`} />
-          <Text>{cloudRefreshing ? '正在同步云端' : '下拉同步云端'}</Text>
-        </View>
-        <View
-          className="upcoming-card"
-          onTouchStart={event => {
-            const touch = (event as unknown as { changedTouches: Array<{ clientX: number; clientY: number }> }).changedTouches[0]
-            if (!touch) return
-            calendarTouchStart.current = { x: touch.clientX, y: touch.clientY }
-          }}
-          onTouchEnd={event => {
-            const start = calendarTouchStart.current
-            const touch = (event as unknown as { changedTouches: Array<{ clientX: number; clientY: number }> }).changedTouches[0]
-            calendarTouchStart.current = null
-            if (!start || !touch) return
+        <View className="scrollable-content-inner">
+          <View className={`cloud-refresh-status ${refreshHintVisible ? 'visible' : ''}`}>
+            <View className={`cloud-refresh-spinner ${cloudRefreshing ? 'spinning' : ''}`} />
+            <Text>{cloudRefreshing ? '正在同步云端' : '下拉同步云端'}</Text>
+          </View>
+          <View
+            className="upcoming-card"
+            onTouchStart={event => {
+              const touch = (event as unknown as { changedTouches: Array<{ clientX: number; clientY: number }> }).changedTouches[0]
+              if (!touch) return
+              calendarTouchStart.current = { x: touch.clientX, y: touch.clientY }
+            }}
+            onTouchEnd={event => {
+              const start = calendarTouchStart.current
+              const touch = (event as unknown as { changedTouches: Array<{ clientX: number; clientY: number }> }).changedTouches[0]
+              calendarTouchStart.current = null
+              if (!start || !touch) return
 
-            const deltaX = touch.clientX - start.x
-            const deltaY = touch.clientY - start.y
-            if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return
+              const deltaX = touch.clientX - start.x
+              const deltaY = touch.clientY - start.y
+              if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return
 
-            switchMonthBySwipe(deltaX < 0 ? 'next' : 'previous')
-          }}
-        >
-        <View className="calendar-panel">
+              switchMonthBySwipe(deltaX < 0 ? 'next' : 'previous')
+            }}
+          >
+          <View className="calendar-panel">
           <View className="section-title-row">
             <Text className="section-title">排班日历</Text>
             <Text className="section-hint">2026年{Number(activeMonth)}月</Text>
@@ -737,7 +868,10 @@ export default function Index() {
                 {cell.inCurrentMonth && currentUser && shiftOverrides[getOverrideKey(currentUser.name, cell.key)] && (
                   <View className="edited-marker" />
                 )}
-                {cell.inCurrentMonth && currentUser && (overtimeOverrides[getOverrideKey(currentUser.name, cell.key)] ?? 0) > 0 && (
+                {cell.inCurrentMonth &&
+                  currentUser &&
+                  (overtimeOverrides[getOverrideKey(currentUser.name, cell.key)] ?? 0) > 0 &&
+                  legalOverrides[getOverrideKey(currentUser.name, cell.key)] !== true && (
                   <View className="overtime-marker" />
                 )}
                 {cell.day && (
@@ -756,19 +890,24 @@ export default function Index() {
                       </View>
                     </View>
                     {cell.shift && (
-                      <Text className={`${getShiftClassName(cell.shift)} ${cell.inCurrentMonth ? '' : 'shift-muted'}`}>
-                        {cell.shift}
-                      </Text>
+                      <View className="calendar-shift-row">
+                        <Text className={`${getShiftClassName(cell.shift)} ${cell.inCurrentMonth ? '' : 'shift-muted'}`}>
+                          {cell.shift}
+                        </Text>
+                        {currentUser && legalOverrides[getOverrideKey(currentUser.name, cell.key)] === true && (
+                          <Text className={`legal-shift-badge ${cell.inCurrentMonth ? '' : 'shift-muted'}`}>法</Text>
+                        )}
+                      </View>
                     )}
                   </View>
                 )}
               </View>
             ))}
           </View>
-        </View>
-        </View>
+          </View>
+          </View>
 
-        <View className="table-card">
+          <View className="table-card">
         <View className="table-toolbar">
           <View className="table-toolbar-main">
             <Text className="table-card-title">多视图</Text>
@@ -880,7 +1019,8 @@ export default function Index() {
               ))}
             </View>
           </ScrollView>
-        </View>
+          </View>
+          </View>
         </View>
       </ScrollView>
 
@@ -911,21 +1051,29 @@ export default function Index() {
             <View className="shift-editor-section">
               <Text className="shift-editor-label">修改为</Text>
               <View className="shift-editor-options">
-                {editableShiftOptions.filter(shift => shift !== shiftEditor.baseShift).map(shift => (
-                  <View
-                    key={shift}
-                    className={`shift-editor-option ${shiftEditor.selectedShift === shift ? 'selected' : ''}`}
-                    onClick={() => selectShiftEdit(shift)}
-                  >
-                    <Text className={getShiftClassName(shift)}>{shift}</Text>
-                  </View>
-                ))}
+                {getEditableShiftOptionsForBase(shiftEditor.baseShift).map(shift => {
+                  const selectedShift = shiftEditor.selectedShift === 'default' ? shiftEditor.baseShift : shiftEditor.selectedShift
+                  const isSelected = selectedShift === shift
+                  const isDisabled = shiftEditor.isLegal && shift === '事假'
+
+                  return (
+                    <View
+                      key={shift}
+                      className={`shift-editor-option ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+                      onClick={() => {
+                        if (!isDisabled) selectShiftEdit(shift === shiftEditor.baseShift ? 'default' : shift)
+                      }}
+                    >
+                      <Text className={getShiftClassName(shift)}>{shift}</Text>
+                    </View>
+                  )
+                })}
               </View>
             </View>
 
             <View className="shift-editor-section">
               <Text className="shift-editor-label">加班时长</Text>
-              {canRecordOvertime(shiftEditor.selectedShift === 'default' ? shiftEditor.baseShift : shiftEditor.selectedShift) ? (
+              {canRecordOvertime(getEditorEffectiveShift(shiftEditor)) ? (
                 <View className="overtime-editor-row">
                   <Input
                     className="overtime-input"
@@ -940,7 +1088,46 @@ export default function Index() {
                   <Text className="overtime-hint">最小单位0.5</Text>
                 </View>
               ) : (
-                <Text className="overtime-disabled">休息班次不记录加班</Text>
+                <Text className="overtime-disabled">该班次不记录加班</Text>
+              )}
+            </View>
+
+            {getEditorEffectiveShift(shiftEditor) === '事假' && (
+              <View className="shift-editor-section">
+                <Text className="shift-editor-label">事假时长</Text>
+                <View className="legal-editor-row">
+                  {leaveDurationOptions.map(duration => (
+                    <View
+                      key={duration}
+                      className={`legal-editor-option ${shiftEditor.leaveDuration === duration ? 'selected' : ''}`}
+                      onClick={() => setShiftEditorLeaveDuration(duration)}
+                    >
+                      <Text>{duration}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View className="shift-editor-section">
+              <Text className="shift-editor-label">法定</Text>
+              {canMarkLegalShift(getEditorEffectiveShift(shiftEditor)) ? (
+                <View className="legal-editor-row">
+                  <View
+                    className={`legal-editor-option ${!shiftEditor.isLegal ? 'selected' : ''}`}
+                    onClick={() => setShiftEditorLegal(false)}
+                  >
+                    <Text>否</Text>
+                  </View>
+                  <View
+                    className={`legal-editor-option ${shiftEditor.isLegal ? 'selected' : ''}`}
+                    onClick={() => setShiftEditorLegal(true)}
+                  >
+                    <Text>是</Text>
+                  </View>
+                </View>
+              ) : (
+                <Text className="overtime-disabled">该班次不可标记法定</Text>
               )}
             </View>
 

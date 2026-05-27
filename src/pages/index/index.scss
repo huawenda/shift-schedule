@@ -18,6 +18,10 @@
 .scrollable-content {
   flex: 1;
   min-height: 0;
+  box-sizing: border-box;
+}
+
+.scrollable-content-inner {
   padding-bottom: 28px;
   box-sizing: border-box;
 }
@@ -95,10 +99,15 @@
   display: flex;
   width: 100%;
   white-space: nowrap;
-  padding: 6px;
   margin-bottom: 14px;
   border-radius: 14px;
   background: #e9eef7;
+  box-sizing: border-box;
+}
+
+.month-tabs-inner {
+  display: inline-flex;
+  padding: 6px;
   box-sizing: border-box;
 }
 
@@ -253,7 +262,7 @@
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
 }
@@ -285,6 +294,10 @@
 
 .summary-night-special {
   background: #fdebd3;
+}
+
+.summary-legal {
+  background: #fee2e2;
 }
 
 .summary-value-row {
@@ -330,6 +343,11 @@
   line-height: 1;
   white-space: nowrap;
   transform: translateY(-50%);
+}
+
+.summary-overtime.legal {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
 }
 
 .upcoming-card {
@@ -487,6 +505,30 @@
   justify-content: center;
   width: 100%;
   min-height: 58px;
+}
+
+.calendar-shift-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.legal-shift-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .calendar-date-wrap {
@@ -818,6 +860,11 @@
   color: #9a3412;
 }
 
+.name-shift-leave {
+  background: #e5e7eb;
+  color: #475467;
+}
+
 .date-main,
 .date-weekday {
   display: block;
@@ -870,6 +917,11 @@
 .shift-special-night {
   background: #fde7c7;
   color: #9a3412;
+}
+
+.shift-leave {
+  background: #e5e7eb;
+  color: #475467;
 }
 
 .shift-muted {
@@ -977,6 +1029,10 @@
   box-shadow: 0 6px 14px rgba(25, 39, 70, 0.08);
 }
 
+.shift-editor-option.disabled {
+  opacity: 0.42;
+}
+
 .shift-editor-actions {
   display: flex;
   gap: 12px;
@@ -1019,6 +1075,35 @@
 
 .overtime-disabled {
   display: block;
+}
+
+.legal-editor-row {
+  display: inline-flex;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #f3f6fa;
+}
+
+.legal-editor-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  color: #667085;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.legal-editor-option.selected {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 3px 10px rgba(21, 32, 54, 0.12);
 }
 
 .shift-editor-save,

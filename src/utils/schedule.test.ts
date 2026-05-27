@@ -5,6 +5,7 @@ import {
   getCalendarDateMeta,
   getDateLabels,
   getCurrentScheduleMonth,
+  isFutureScheduleMonth,
   getMonthScheduleView,
   getPersonMonthCalendarCells,
   getPersonShiftSummary,
@@ -62,6 +63,32 @@ describe('schedule utilities', () => {
     })
   })
 
+  it('counts legal marked work days separately from the effective shift bucket', () => {
+    expect(getPersonShiftSummary(
+      {
+        name: '测试',
+        group: 'T',
+        shifts: ['白班', '夜班', '休息', '白特', '夜特']
+      },
+      [1.5, 2, 0, 3, 4.5],
+      [true, false, true, true, false]
+    )).toEqual({
+      白班: 0,
+      夜班: 1,
+      休息: 1,
+      白特: 0,
+      夜特: 1,
+      法定: 2,
+      加班: {
+        白班: 0,
+        夜班: 2,
+        白特: 0,
+        夜特: 4.5,
+        法定: 4.5
+      }
+    })
+  })
+
   it('normalizes overtime input to half-hour units', () => {
     expect(normalizeOvertimeHours('')).toBe(0)
     expect(normalizeOvertimeHours('2')).toBe(2)
@@ -106,6 +133,14 @@ describe('schedule utilities', () => {
     expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 11, 19))).toBe('12')
     expect(getCurrentScheduleMonth(scheduleData, new Date(2026, 11, 20))).toBeNull()
     expect(getCurrentScheduleMonth(scheduleData, new Date(2027, 0, 1))).toBeNull()
+  })
+
+  it('detects future schedule months by the selected period start date', () => {
+    const today = new Date(2026, 4, 27)
+
+    expect(isFutureScheduleMonth(scheduleData, '05', today)).toBe(false)
+    expect(isFutureScheduleMonth(scheduleData, '06', today)).toBe(false)
+    expect(isFutureScheduleMonth(scheduleData, '07', today)).toBe(true)
   })
 
   it('returns compact lunar, solar holiday, lunar holiday, and solar term labels', () => {

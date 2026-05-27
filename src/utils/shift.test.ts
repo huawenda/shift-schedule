@@ -8,6 +8,7 @@ describe('getShiftClassName', () => {
     expect(getShiftClassName('休息')).toBe('shift shift-rest')
     expect(getShiftClassName('白特')).toBe('shift shift-special-day')
     expect(getShiftClassName('夜特')).toBe('shift shift-special-night')
+    expect(getShiftClassName('事假')).toBe('shift shift-leave')
   })
 })
 
