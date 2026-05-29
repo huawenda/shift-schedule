@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Input, Picker, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { scheduleData } from '../../data/schedule'
+import { loadCloudOverrides } from '../../services/cloudRecords'
 import {
   readLeaveDurationOverridesFromStorage,
   readLegalOverridesFromStorage,
@@ -14,6 +15,7 @@ import {
   writeSalaryInputsToStorage,
   type SalaryInputRecords
 } from '../../services/salaryInputs'
+import { loadCurrentUserProfile, type CurrentUserProfile } from '../../services/userProfile'
 import type { ShiftType } from '../../types/schedule'
 import {
   getCurrentScheduleMonth,
@@ -34,7 +36,6 @@ import {
   getPersonMonthlyStats,
   type PersonOvertimeStats
 } from '../../utils/statistics'
-import { applyTeamJuneDemoOverrides } from '../../utils/statisticsDemo'
 import './index.scss'
 
 const defaultPersonName = '华文达'
@@ -50,6 +51,7 @@ const monthOptions: Array<{ label: string; value: ScheduleMonth }> = [
 ]
 type StatsViewMode = 'personal' | 'team'
 type SalaryInputField = keyof SalaryInputValues
+type TouchPoint = { x: number; y: number }
 
 function getHeaderTopPadding(): string {
   try {
@@ -87,6 +89,13 @@ function getDailyOvertimeMultiplier(record: { shift: ShiftType; isLegal?: boolea
   if (record.shift === '白班' || record.shift === '夜班') return 1.5
 
   return 0
+}
+
+function getDailyPayClassName(record: { shift: ShiftType; isLegal?: boolean }): string {
+  if (record.isLegal) return 'legal'
+  if (record.shift === '白特' || record.shift === '夜特') return 'special'
+
+  return ''
 }
 
 function getStatsShiftClassName(shift: ShiftType): string {
@@ -184,19 +193,20 @@ function getMonthlyOverviewRows(stats: NonNullable<ReturnType<typeof getPersonMo
 export default function StatsPage() {
   const [headerTopPadding] = useState(getHeaderTopPadding)
   const [viewMode, setViewMode] = useState<StatsViewMode>('personal')
+  const [personalPageIndex, setPersonalPageIndex] = useState(0)
+  const personalPageTouchStart = useRef<TouchPoint | null>(null)
+  const [currentUserProfile, setCurrentUserProfile] = useState<CurrentUserProfile | null>(null)
+  const [profileReady, setProfileReady] = useState(false)
   const [activeMonth, setActiveMonth] = useState<ScheduleMonth>(getCurrentScheduleMonth(scheduleData) ?? '05')
   const [salaryInputRecords, setSalaryInputRecords] = useState<SalaryInputRecords>(readSalaryInputsFromStorage)
   const [personIndex, setPersonIndex] = useState(() => (
     Math.max(scheduleData.people.findIndex(person => person.name === defaultPersonName), 0)
   ))
-  const [demoOverrides] = useState(() => applyTeamJuneDemoOverrides(
-    getMonthScheduleView(scheduleData, '06'),
-    readShiftOverridesFromStorage(),
-    readOvertimeOverridesFromStorage(),
-    readLegalOverridesFromStorage()
-  ))
-  const { shiftOverrides, overtimeOverrides, legalOverrides } = demoOverrides
-  const [leaveDurationOverrides] = useState(readLeaveDurationOverridesFromStorage)
+  const [shiftOverrides, setShiftOverrides] = useState(readShiftOverridesFromStorage)
+  const [overtimeOverrides, setOvertimeOverrides] = useState(readOvertimeOverridesFromStorage)
+  const [legalOverrides, setLegalOverrides] = useState(readLegalOverridesFromStorage)
+  const [leaveDurationOverrides, setLeaveDurationOverrides] = useState(readLeaveDurationOverridesFromStorage)
+  const [cloudStatsReady, setCloudStatsReady] = useState(false)
   const availableMonthOptions = monthOptions.filter(option => !isFutureScheduleMonth(scheduleData, option.value))
   const monthPickerOptions = availableMonthOptions.map(option => option.label)
   const activeMonthIndex = Math.max(
@@ -204,7 +214,15 @@ export default function StatsPage() {
     0
   )
   const activeScheduleData = getMonthScheduleView(scheduleData, activeMonth)
-  const currentPerson = scheduleData.people[personIndex] ?? scheduleData.people[0]
+  const isAdminUser = currentUserProfile?.isAdmin ?? false
+  const boundPersonName = currentUserProfile?.profile?.personName ?? null
+  const boundPersonIndex = boundPersonName
+    ? scheduleData.people.findIndex(person => person.name === boundPersonName)
+    : -1
+  const resolvedPersonIndex = !isAdminUser && boundPersonIndex >= 0
+    ? boundPersonIndex
+    : personIndex
+  const currentPerson = scheduleData.people[resolvedPersonIndex] ?? scheduleData.people[0]
   const currentPersonIndex = Math.max(
     scheduleData.people.findIndex(person => person.name === currentPerson.name),
     0
@@ -237,6 +255,65 @@ export default function StatsPage() {
   const allPeopleChartMax = Math.max(...allPeopleStats.people.map(person => person.totalHours), 0)
 
   useEffect(() => {
+    let cancelled = false
+
+    loadCurrentUserProfile()
+      .then(profile => {
+        if (cancelled) return
+
+        setCurrentUserProfile(profile)
+        if (!profile.isAdmin && profile.profile?.personName) {
+          const nextPersonIndex = scheduleData.people.findIndex(person => person.name === profile.profile?.personName)
+          if (nextPersonIndex >= 0) {
+            setPersonIndex(nextPersonIndex)
+          }
+        }
+      })
+      .catch(error => {
+        console.warn('统计页用户身份读取失败', error)
+      })
+      .finally(() => {
+        if (!cancelled) setProfileReady(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!profileReady) return undefined
+
+    const canLoadCloudStats = isAdminUser || Boolean(boundPersonName)
+    if (!canLoadCloudStats) {
+      setCloudStatsReady(true)
+      return undefined
+    }
+
+    setCloudStatsReady(false)
+    loadCloudOverrides()
+      .then(cloudOverrides => {
+        if (cancelled) return
+
+        setShiftOverrides(cloudOverrides.shiftOverrides)
+        setOvertimeOverrides(cloudOverrides.overtimeOverrides)
+        setLegalOverrides(cloudOverrides.legalOverrides)
+        setLeaveDurationOverrides(cloudOverrides.leaveDurationOverrides)
+      })
+      .catch(error => {
+        console.warn('统计页云端排班记录读取失败，已使用本地缓存', error)
+      })
+      .finally(() => {
+        if (!cancelled) setCloudStatsReady(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [boundPersonName, isAdminUser, profileReady])
+
+  useEffect(() => {
     writeSalaryInputsToStorage(salaryInputRecords)
   }, [salaryInputRecords])
 
@@ -248,6 +325,69 @@ export default function StatsPage() {
         [field]: value
       }
     }))
+  }
+
+  const handlePersonalPageTouchStart = (event: any) => {
+    const touch = event.touches?.[0]
+    personalPageTouchStart.current = touch
+      ? { x: touch.clientX, y: touch.clientY }
+      : null
+  }
+
+  const handlePersonalPageTouchEnd = (event: any) => {
+    const start = personalPageTouchStart.current
+    const touch = event.changedTouches?.[0]
+    personalPageTouchStart.current = null
+    if (!start || !touch) return
+
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    const horizontalIntent = Math.abs(deltaX) > 64 && Math.abs(deltaX) > Math.abs(deltaY) * 1.35
+    if (!horizontalIntent) return
+
+    if (deltaX < 0) {
+      setPersonalPageIndex(index => Math.min(index + 1, 1))
+    } else {
+      setPersonalPageIndex(index => Math.max(index - 1, 0))
+    }
+  }
+
+  const switchToPersonalSummary = () => {
+    setViewMode('personal')
+    setPersonalPageIndex(0)
+  }
+
+  const switchToDailyDetails = () => {
+    setViewMode('personal')
+    setPersonalPageIndex(1)
+  }
+
+  if (!profileReady || !cloudStatsReady) {
+    return (
+      <View className="stats-page">
+        <View className="stats-header" style={{ paddingTop: headerTopPadding }}>
+          <View className="stats-back-button" onClick={() => Taro.navigateBack()}>
+            <Text>返回</Text>
+          </View>
+          <View className="stats-header-copy">
+            <Text className="stats-title">统计</Text>
+            <Text className="stats-subtitle">
+              {activeScheduleData.startDate.replace(/-/g, '/')} - {activeScheduleData.endDate.replace(/-/g, '/')}
+            </Text>
+          </View>
+        </View>
+
+        <View className="stats-loading-card">
+          <View className="stats-loading-mark" />
+          <Text className="stats-loading-title">
+            {profileReady ? '同步统计数据' : '读取统计信息'}
+          </Text>
+          <Text className="stats-loading-text">
+            {profileReady ? '正在读取云端最新排班记录' : '正在同步当前账号身份与绑定人员'}
+          </Text>
+        </View>
+      </View>
+    )
   }
 
   return (
@@ -265,18 +405,37 @@ export default function StatsPage() {
       </View>
 
       <View className="stats-view-tabs">
-        <View
-          className={`stats-view-tab ${viewMode === 'personal' ? 'active' : ''}`}
-          onClick={() => setViewMode('personal')}
-        >
-          <Text>个人统计</Text>
-        </View>
-        <View
-          className={`stats-view-tab ${viewMode === 'team' ? 'active' : ''}`}
-          onClick={() => setViewMode('team')}
-        >
-          <Text>全员统计</Text>
-        </View>
+        {isAdminUser ? (
+          <>
+            <View
+              className={`stats-view-tab ${viewMode === 'personal' ? 'active' : ''}`}
+              onClick={switchToPersonalSummary}
+            >
+              <Text>个人统计</Text>
+            </View>
+            <View
+              className={`stats-view-tab ${viewMode === 'team' ? 'active' : ''}`}
+              onClick={() => setViewMode('team')}
+            >
+              <Text>全员统计</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View
+              className={`stats-view-tab ${viewMode === 'personal' && personalPageIndex === 0 ? 'active' : ''}`}
+              onClick={switchToPersonalSummary}
+            >
+              <Text>综合统计</Text>
+            </View>
+            <View
+              className={`stats-view-tab ${viewMode === 'personal' && personalPageIndex === 1 ? 'active' : ''}`}
+              onClick={switchToDailyDetails}
+            >
+              <Text>每日明细</Text>
+            </View>
+          </>
+        )}
       </View>
 
       <View className={`stats-filter-card ${viewMode === 'personal' ? 'has-person-filter' : ''}`}>
@@ -296,7 +455,7 @@ export default function StatsPage() {
             <Text className="stats-filter-value">{availableMonthOptions[activeMonthIndex]?.label ?? ''}</Text>
           </View>
         </Picker>
-        {viewMode === 'personal' && (
+        {viewMode === 'personal' && isAdminUser && (
           <Picker
             mode="selector"
             range={personOptions}
@@ -309,13 +468,43 @@ export default function StatsPage() {
             </View>
           </Picker>
         )}
+        {viewMode === 'personal' && !isAdminUser && (
+          <View className="stats-filter-item">
+            <Text className="stats-filter-label">用户</Text>
+            <Text className="stats-filter-value">
+              {boundPersonName ? personOptions[currentPersonIndex] : (profileReady ? '未绑定' : '读取中')}
+            </Text>
+          </View>
+        )}
       </View>
 
-      <ScrollView scrollY className="stats-content" enableFlex enhanced showScrollbar={false}>
-        <View className="stats-content-inner">
-          {viewMode === 'personal' && stats && (
-            <>
-            <View className="stats-card">
+      {isAdminUser && viewMode === 'personal' && (
+        <View className="stats-page-indicator">
+          {[0, 1].map(index => (
+            <View
+              key={index}
+              className={`stats-page-indicator-dot ${personalPageIndex === index ? 'active' : ''}`}
+              onClick={() => setPersonalPageIndex(index)}
+            />
+          ))}
+        </View>
+      )}
+
+      {viewMode === 'personal' && stats && (
+        <View
+          className="stats-personal-pages"
+          onTouchStart={handlePersonalPageTouchStart}
+          onTouchEnd={handlePersonalPageTouchEnd}
+        >
+          <View
+            className="stats-personal-track"
+            style={`transform: translate3d(-${personalPageIndex * 50}%, 0, 0);`}
+          >
+          <View className="stats-personal-page">
+            <View className="stats-personal-page-inner">
+            <ScrollView scrollY className="stats-content stats-personal-scroll" enableFlex enhanced showScrollbar={false}>
+              <View className="stats-content-inner">
+                <View className="stats-card">
               <View className="stats-section-title-row">
                 <Text className="stats-section-title">月度概览</Text>
                 <Text className="stats-section-hint">加班 {formatOvertimeHours(stats.overtimeTotal)} 小时</Text>
@@ -338,9 +527,9 @@ export default function StatsPage() {
                   </View>
                 ))}
               </View>
-            </View>
+                </View>
 
-            <View className="stats-card">
+                <View className="stats-card">
               <View className="stats-section-title-row">
                 <Text className="stats-section-title">加班分布</Text>
                 <Text className="stats-section-hint">按类型统计</Text>
@@ -367,9 +556,9 @@ export default function StatsPage() {
                   )
                 })}
               </View>
-            </View>
+                </View>
 
-            <View className="stats-card salary-card">
+                <View className="stats-card salary-card">
               <View className="stats-section-title-row salary-title-row">
                 <Text className="stats-section-title">薪资计算</Text>
               </View>
@@ -450,56 +639,83 @@ export default function StatsPage() {
                 </View>
               </View>
 
-              <View className="salary-final-grid">
-                <View className="salary-summary-item">
-                  <Text className="salary-summary-label">应付工资</Text>
-                  <Text className="salary-summary-value">¥{formatMoney(salaryCalculation.payableSalary)}</Text>
+              <View className="salary-section salary-summary-section">
+                <View className="salary-section-head">
+                  <Text className="salary-block-title">汇总</Text>
                 </View>
-                <View className="salary-summary-item primary">
-                  <Text className="salary-summary-label">实付工资</Text>
-                  <Text className="salary-summary-value">¥{formatMoney(salaryCalculation.netSalary)}</Text>
+                <View className="salary-final-grid">
+                  <View className="salary-summary-item">
+                    <Text className="salary-summary-label">应付工资</Text>
+                    <Text className="salary-summary-value">¥{formatMoney(salaryCalculation.payableSalary)}</Text>
+                  </View>
+                  <View className="salary-summary-item primary">
+                    <Text className="salary-summary-label">实付工资</Text>
+                    <Text className="salary-summary-value">¥{formatMoney(salaryCalculation.netSalary)}</Text>
+                  </View>
                 </View>
               </View>
+                </View>
+              </View>
+            </ScrollView>
             </View>
-
-            <View className="stats-card">
-              <View className="stats-section-title-row">
-                <Text className="stats-section-title">每日明细</Text>
-                <Text className="stats-section-hint">{activeScheduleData.startDate.slice(5)} - {activeScheduleData.endDate.slice(5)}</Text>
-              </View>
-              <View className="stats-daily-list">
-                {stats.dailyRecords.map(record => {
-                  const dailyOvertimePay = calculateOvertimePay(
-                    salaryInputs,
-                    record.overtimeHours,
-                    getDailyOvertimeMultiplier(record)
-                  )
-
-                  return (
-                    <View key={record.date} className={`stats-daily-row ${record.overtimeHours > 0 ? 'has-overtime' : ''}`}>
-                      <View className="stats-daily-date-wrap">
-                        <Text className="stats-daily-date">{record.date}</Text>
-                      </View>
-                      <Text className={`stats-shift ${getStatsShiftClassName(record.shift)} ${record.isLegal ? 'has-legal' : ''}`}>
-                        {record.isLegal && (
-                          <Text className="stats-legal-shift-badge">法</Text>
-                        )}
-                        {record.shift}
-                      </Text>
-                      <Text className={`stats-daily-pay ${record.overtimeHours > 0 ? '' : 'placeholder'}`}>
-                        {record.overtimeHours > 0 ? `+${formatMoney(dailyOvertimePay)}` : '+0.00'}
-                      </Text>
-                      <Text className={`stats-daily-overtime ${record.overtimeHours > 0 ? 'active' : ''}`}>
-                        {record.overtimeHours > 0 ? `${formatOvertimeHours(record.overtimeHours)}h` : '0h'}
-                      </Text>
+          </View>
+          <View className="stats-personal-page">
+            <View className="stats-personal-page-inner">
+            <ScrollView scrollY className="stats-content stats-personal-scroll" enableFlex enhanced showScrollbar={false}>
+              <View className="stats-content-inner">
+                <View className="stats-card">
+                  <View className="stats-section-title-row">
+                    <Text className="stats-section-title">每日明细</Text>
+                    <Text className="stats-section-hint">{activeScheduleData.startDate.slice(5)} - {activeScheduleData.endDate.slice(5)}</Text>
+                  </View>
+                  <View className="stats-daily-list">
+                    <View className="stats-daily-row stats-daily-header">
+                      <Text>日期</Text>
+                      <Text>班次</Text>
+                      <Text>金额</Text>
+                      <Text>小时</Text>
                     </View>
-                  )
-                })}
+                    {stats.dailyRecords.map(record => {
+                      const dailyOvertimePay = calculateOvertimePay(
+                        salaryInputs,
+                        record.overtimeHours,
+                        getDailyOvertimeMultiplier(record)
+                      )
+
+                      return (
+                        <View key={record.date} className={`stats-daily-row ${record.overtimeHours > 0 ? 'has-overtime' : ''}`}>
+                          <View className="stats-daily-date-wrap">
+                            <Text className="stats-daily-date">{record.date}</Text>
+                          </View>
+                          <View className="stats-daily-shift-cell">
+                            <Text className={`stats-shift ${getStatsShiftClassName(record.shift)} ${record.isLegal ? 'has-legal' : ''}`}>
+                              {record.isLegal && (
+                                <Text className="stats-legal-shift-badge">法</Text>
+                              )}
+                              {record.shift}
+                            </Text>
+                          </View>
+                          <Text className={`stats-daily-pay ${getDailyPayClassName(record)} ${record.overtimeHours > 0 ? '' : 'placeholder'}`}>
+                            {record.overtimeHours > 0 ? `+${formatMoney(dailyOvertimePay)}` : '+0.00'}
+                          </Text>
+                          <Text className={`stats-daily-overtime ${record.overtimeHours > 0 ? 'active' : ''}`}>
+                            {record.overtimeHours > 0 ? `${formatOvertimeHours(record.overtimeHours)}h` : '0h'}
+                          </Text>
+                        </View>
+                      )
+                    })}
+                  </View>
+                </View>
               </View>
+            </ScrollView>
             </View>
-            </>
-          )}
-          {viewMode === 'team' && (
+          </View>
+          </View>
+        </View>
+      )}
+      {viewMode === 'team' && (
+        <ScrollView scrollY className="stats-content" enableFlex enhanced showScrollbar={false}>
+          <View className="stats-content-inner">
             <>
             <View className="stats-card">
               <View className="stats-section-title-row">
@@ -561,9 +777,9 @@ export default function StatsPage() {
               </View>
             </View>
             </>
-          )}
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      )}
     </View>
   )
 }

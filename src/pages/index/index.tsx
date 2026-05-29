@@ -6,7 +6,7 @@ import type { LeaveDuration, ShiftType } from '../../types/schedule'
 import { canMarkLegalShift, normalizeLegalOverride } from '../../utils/legalOvertime'
 import { mergeSharedCloudOverrides, shouldRefreshCloudOnUserSwitch } from '../../utils/cloudSync'
 import { getShiftClassName, hasShiftOverrideChanged } from '../../utils/shift'
-import { getEditableShiftOptionsForBase } from '../../utils/shiftEditRules'
+import { getEditableShiftOptionsForBase, getOvertimePresetOptions } from '../../utils/shiftEditRules'
 import {
   formatScheduleMonthDay,
   getDateLabels,
@@ -497,20 +497,20 @@ export default function Index() {
     setTableScrollLeft(getCenteredTableScrollLeft(date, activeScheduleData.dates))
   }
 
-  const openShiftEditor = (date: string) => {
-    if (!currentUser) return
-    if (!isAdminUser && currentUser.name !== boundPersonName) {
+  const openShiftEditor = (date: string, personName = currentUser?.name) => {
+    if (!personName) return
+    if (!isAdminUser && personName !== boundPersonName) {
       Taro.showToast({ title: '只能修改本人排班', icon: 'none' })
       return
     }
 
-    const baseShift = getBaseShift(currentUser.name, date)
+    const baseShift = getBaseShift(personName, date)
     if (!baseShift) return
-    const overrideKey = getOverrideKey(currentUser.name, date)
+    const overrideKey = getOverrideKey(personName, date)
     const currentShiftOverride = shiftOverrides[overrideKey]
 
     setShiftEditor({
-      personName: currentUser.name,
+      personName,
       date,
       baseShift,
       selectedShift: currentShiftOverride ?? 'default',
@@ -737,8 +737,13 @@ export default function Index() {
                 </Picker>
               </View>
             ) : (
-              <View className="user-picker-button locked">
-                <Text>{userPickerButtonText}</Text>
+              <View className="current-user-actions">
+                <View className="user-picker-button" onClick={() => Taro.navigateTo({ url: '/pages/stats/index' })}>
+                  <Text>统计</Text>
+                </View>
+                <View className="user-picker-button locked">
+                  <Text>{userPickerButtonText}</Text>
+                </View>
               </View>
             )}
           </View>
@@ -1003,6 +1008,7 @@ export default function Index() {
                       <View
                         key={`${person.name}-${index}`}
                         className="cell date-cell table-shift-cell"
+                        onLongPress={() => openShiftEditor(date, person.name)}
                       >
                         {isEditedShift && <View className="table-edited-marker" />}
                         {tableView === 'name' ? (
@@ -1071,27 +1077,6 @@ export default function Index() {
               </View>
             </View>
 
-            <View className="shift-editor-section">
-              <Text className="shift-editor-label">加班时长</Text>
-              {canRecordOvertime(getEditorEffectiveShift(shiftEditor)) ? (
-                <View className="overtime-editor-row">
-                  <Input
-                    className="overtime-input"
-                    type="digit"
-                    value={shiftEditor.overtimeInput}
-                    placeholder="0"
-                    onInput={event => {
-                      setShiftEditorOvertimeInput(String(event.detail.value))
-                    }}
-                  />
-                  <Text className="overtime-unit">小时</Text>
-                  <Text className="overtime-hint">最小单位0.5</Text>
-                </View>
-              ) : (
-                <Text className="overtime-disabled">该班次不记录加班</Text>
-              )}
-            </View>
-
             {getEditorEffectiveShift(shiftEditor) === '事假' && (
               <View className="shift-editor-section">
                 <Text className="shift-editor-label">事假时长</Text>
@@ -1128,6 +1113,44 @@ export default function Index() {
                 </View>
               ) : (
                 <Text className="overtime-disabled">该班次不可标记法定</Text>
+              )}
+            </View>
+
+            <View className="shift-editor-section">
+              <Text className="shift-editor-label">加班时长</Text>
+              {canRecordOvertime(getEditorEffectiveShift(shiftEditor)) ? (
+                <View className="overtime-editor-stack">
+                  <View className="overtime-preset-row">
+                    {getOvertimePresetOptions(getEditorEffectiveShift(shiftEditor), shiftEditor.isLegal).map(hours => {
+                      const isSelected = normalizeOvertimeHours(shiftEditor.overtimeInput) === hours
+
+                      return (
+                        <View
+                          key={hours}
+                          className={`overtime-preset-option ${isSelected ? 'selected' : ''}`}
+                          onClick={() => setShiftEditorOvertimeInput(formatOvertimeHours(hours))}
+                        >
+                          <Text>{formatOvertimeHours(hours)}h</Text>
+                        </View>
+                      )
+                    })}
+                  </View>
+                  <View className="overtime-editor-row">
+                    <Input
+                      className="overtime-input"
+                      type="digit"
+                      value={shiftEditor.overtimeInput}
+                      placeholder="0"
+                      onInput={event => {
+                        setShiftEditorOvertimeInput(String(event.detail.value))
+                      }}
+                    />
+                    <Text className="overtime-unit">小时</Text>
+                    <Text className="overtime-hint">最小单位0.5</Text>
+                  </View>
+                </View>
+              ) : (
+                <Text className="overtime-disabled">该班次不记录加班</Text>
               )}
             </View>
 
