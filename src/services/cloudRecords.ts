@@ -8,6 +8,22 @@ import {
   type OvertimeOverrides,
   type ShiftOverrides
 } from './cloudRecordMaps'
+import {
+  leaveDurationOverridesFileName,
+  leaveDurationOverridesStorageKey,
+  overtimeOverridesFileName,
+  overtimeOverridesStorageKey,
+  readLeaveDurationOverridesFromStorage,
+  readLegalOverridesFromStorage,
+  readOvertimeOverridesFromStorage,
+  readShiftOverridesFromStorage,
+  shiftOverridesFileName,
+  shiftOverridesStorageKey,
+  legalOverridesFileName,
+  legalOverridesStorageKey,
+  writePersistence
+} from './localOverrides'
+import { isH5Runtime } from './runtime'
 
 export {
   buildCloudDayRecords,
@@ -58,6 +74,15 @@ export async function loadCloudOverrides(): Promise<{
   legalOverrides: LegalOverrides
   leaveDurationOverrides: LeaveDurationOverrides
 }> {
+  if (isH5Runtime) {
+    return {
+      shiftOverrides: readShiftOverridesFromStorage(),
+      overtimeOverrides: readOvertimeOverridesFromStorage(),
+      legalOverrides: readLegalOverridesFromStorage(),
+      leaveDurationOverrides: readLeaveDurationOverridesFromStorage()
+    }
+  }
+
   const functionRecords = await callDayRecordsFunction('load')
   return cloudRecordsToOverrides(functionRecords)
 }
@@ -69,6 +94,14 @@ export async function syncCloudOverrides(
   leaveDurationOverrides: LeaveDurationOverrides,
   deletedKeys: string[] = []
 ): Promise<void> {
+  if (isH5Runtime) {
+    writePersistence(shiftOverridesStorageKey, shiftOverridesFileName, shiftOverrides)
+    writePersistence(overtimeOverridesStorageKey, overtimeOverridesFileName, overtimeOverrides)
+    writePersistence(legalOverridesStorageKey, legalOverridesFileName, legalOverrides)
+    writePersistence(leaveDurationOverridesStorageKey, leaveDurationOverridesFileName, leaveDurationOverrides)
+    return
+  }
+
   const nextRecords = buildCloudDayRecords(shiftOverrides, overtimeOverrides, legalOverrides, leaveDurationOverrides)
   await callDayRecordsFunction('sync', nextRecords, deletedKeys)
 }

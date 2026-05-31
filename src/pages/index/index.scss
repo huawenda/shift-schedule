@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   background: linear-gradient(180deg, #f3f7fc 0%, #f5f7fb 260px, #f5f7fb 100%);
   padding: 0 18px;
   box-sizing: border-box;
@@ -22,8 +23,12 @@
 }
 
 .scrollable-content-inner {
-  padding-bottom: 28px;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
+}
+
+.page-h5 .scrollable-content-inner {
+  padding-bottom: 18px;
 }
 
 .cloud-refresh-status {
@@ -156,11 +161,32 @@
   gap: 12px;
 }
 
+.current-user-main > view:first-child,
+.current-user-main > .taro-view-core:first-child {
+  min-width: 0;
+}
+
 .current-user-actions {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  line-height: 1;
+}
+
+.current-user-actions taro-picker-core,
+.current-user-actions .taro-picker-core {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  line-height: 1 !important;
+}
+
+.current-user-actions taro-picker-core .user-picker-button,
+.current-user-actions .taro-picker-core .user-picker-button {
+  display: flex;
+  width: 100%;
+  height: 48px;
 }
 
 .eyebrow {
@@ -178,16 +204,25 @@
   gap: 8px;
 }
 
+.current-user-title-row {
+  min-width: 0;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
 .identity-name-row {
   width: 100%;
   min-width: 0;
 }
 
 .current-user-name {
+  max-width: 168px;
+  overflow: hidden;
   font-size: 32px;
   font-weight: 800;
   line-height: 1.2;
   color: #172033;
+  white-space: nowrap;
 }
 
 .current-user-group {
@@ -212,6 +247,13 @@
   font-size: 22px;
   font-weight: 800;
   line-height: 1;
+}
+
+.user-picker-button taro-text-core,
+.user-picker-button .taro-text-core {
+  display: block;
+  line-height: 1;
+  text-align: center;
 }
 
 .user-picker-button.locked {
@@ -614,11 +656,12 @@
 }
 
 .table-toolbar-sub {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   margin-top: 10px;
+  overflow: hidden;
 }
 
 .table-card-title {
@@ -633,6 +676,13 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.legend::-webkit-scrollbar {
+  display: none;
 }
 
 .legend-item {
@@ -667,7 +717,9 @@
 
 .table-toolbar-sub .scroll-tip {
   flex-shrink: 0;
+  max-width: 156px;
   text-align: right;
+  white-space: nowrap;
 }
 
 .table-shell {
@@ -756,7 +808,8 @@
 }
 
 .table-scroll {
-  width: calc(100vw - 166px);
+  width: calc(100% - 148px);
+  min-width: 0;
   flex: 1;
   background: #ffffff;
 }

@@ -1,3 +1,25 @@
 page {
   background: #f6f7fb;
 }
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  background: #e8edf5;
+}
+
+#app {
+  min-height: 100%;
+  background: #e8edf5;
+}
+
+#app.taro_router {
+  width: 100%;
+  max-width: 480PX;
+  min-height: 100vh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #f6f7fb;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.16);
+}

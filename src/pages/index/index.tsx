@@ -47,6 +47,7 @@ import {
   shiftOverridesStorageKey,
   writePersistence
 } from '../../services/localOverrides'
+import { isH5Runtime } from '../../services/runtime'
 import './index.scss'
 
 const defaultCurrentUserName = '华文达'
@@ -100,6 +101,8 @@ function getCenteredTableScrollLeft(date: string, dates: string[]): number {
 }
 
 function getHeaderTopPadding(): string {
+  if (isH5Runtime) return '8px'
+
   try {
     const menuButton = Taro.getMenuButtonBoundingClientRect()
     const systemInfo = Taro.getSystemInfoSync()
@@ -670,7 +673,7 @@ export default function Index() {
   }
 
   return (
-    <View className="page">
+    <View className={`page ${isH5Runtime ? 'page-h5' : ''}`}>
       <View className="frozen-panel">
         <View className="header" style={{ paddingTop: headerTopPadding }}>
           <View>
@@ -810,18 +813,22 @@ export default function Index() {
         enableFlex
         enhanced
         showScrollbar={false}
-        refresherEnabled
+        refresherEnabled={!isH5Runtime}
         refresherTriggered={cloudRefreshing}
         refresherDefaultStyle="none"
         refresherBackground="#f5f7fb"
-        onRefresherPulling={() => setRefreshHintVisible(true)}
+        onRefresherPulling={() => {
+          if (!isH5Runtime) setRefreshHintVisible(true)
+        }}
         onRefresherRestore={() => {
-          if (!cloudRefreshing) setRefreshHintVisible(false)
+          if (!isH5Runtime && !cloudRefreshing) setRefreshHintVisible(false)
         }}
         onRefresherAbort={() => {
-          if (!cloudRefreshing) setRefreshHintVisible(false)
+          if (!isH5Runtime && !cloudRefreshing) setRefreshHintVisible(false)
         }}
-        onRefresherRefresh={refreshCloudOverrides}
+        onRefresherRefresh={() => {
+          if (!isH5Runtime) refreshCloudOverrides()
+        }}
       >
         <View className="scrollable-content-inner">
           <View className={`cloud-refresh-status ${refreshHintVisible ? 'visible' : ''}`}>

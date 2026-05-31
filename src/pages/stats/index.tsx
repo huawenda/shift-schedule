@@ -36,6 +36,7 @@ import {
   getPersonMonthlyStats,
   type PersonOvertimeStats
 } from '../../utils/statistics'
+import { isH5Runtime } from '../../services/runtime'
 import './index.scss'
 
 const defaultPersonName = '华文达'
@@ -54,6 +55,8 @@ type SalaryInputField = keyof SalaryInputValues
 type TouchPoint = { x: number; y: number }
 
 function getHeaderTopPadding(): string {
+  if (isH5Runtime) return '8px'
+
   try {
     const menuButton = Taro.getMenuButtonBoundingClientRect()
     const systemInfo = Taro.getSystemInfoSync()
@@ -364,7 +367,7 @@ export default function StatsPage() {
 
   if (!profileReady || !cloudStatsReady) {
     return (
-      <View className="stats-page">
+      <View className={`stats-page ${isH5Runtime ? 'stats-page-h5' : ''}`}>
         <View className="stats-header" style={{ paddingTop: headerTopPadding }}>
           <View className="stats-back-button" onClick={() => Taro.navigateBack()}>
             <Text>返回</Text>
@@ -391,7 +394,7 @@ export default function StatsPage() {
   }
 
   return (
-    <View className="stats-page">
+    <View className={`stats-page ${isH5Runtime ? 'stats-page-h5' : ''}`}>
       <View className="stats-header" style={{ paddingTop: headerTopPadding }}>
         <View className="stats-back-button" onClick={() => Taro.navigateBack()}>
           <Text>返回</Text>

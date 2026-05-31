@@ -10,8 +10,8 @@ export default defineConfig({
     828: 1.81 / 2
   },
   sourceRoot: 'src',
-  outputRoot: 'dist',
-  plugins: ['@tarojs/plugin-platform-weapp'],
+  outputRoot: process.env.TARO_ENV === 'h5' ? 'dist-h5' : 'dist',
+  plugins: ['@tarojs/plugin-platform-weapp', '@tarojs/plugin-platform-h5'],
   defineConstants: {},
   copy: {
     patterns: [],
@@ -22,6 +22,13 @@ export default defineConfig({
     type: 'webpack5',
     prebundle: {
       enable: false
+    }
+  },
+  h5: {
+    publicPath: '/',
+    staticDirectory: 'static',
+    router: {
+      mode: 'hash'
     }
   },
   mini: {

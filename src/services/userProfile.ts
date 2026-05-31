@@ -1,6 +1,8 @@
 import Taro from '@tarojs/taro'
+import { isH5Runtime } from './runtime'
 
 const collectionName = 'user_profiles'
+const h5ProfileStorageKey = 'shift-scheduler:h5-user-profile:v1'
 export const adminOpenids = ['oK0h23Zc4Z5ZIebbU0GiaLDPIpQA']
 const adminOpenidSet = new Set(adminOpenids.map(openid => openid.trim().toLowerCase()))
 
@@ -64,6 +66,8 @@ function isUserProfile(value: unknown): value is UserProfile {
 }
 
 export async function getCurrentOpenid(): Promise<string | null> {
+  if (isH5Runtime) return 'h5-admin'
+
   try {
     const response = await Taro.cloud.callFunction({ name: 'getOpenid' })
     const result = response.result as { openid?: unknown } | undefined
@@ -108,6 +112,14 @@ async function callUserProfileFunction(
 }
 
 export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
+  if (isH5Runtime) {
+    return {
+      openid: 'h5-admin',
+      isAdmin: true,
+      profile: readH5UserProfile()
+    }
+  }
+
   const functionProfile = normalizeCurrentUserProfile(await callUserProfileFunction('load'))
   if (functionProfile) return functionProfile
 
@@ -126,6 +138,19 @@ export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
 }
 
 export async function bindCurrentUserProfile(personName: string): Promise<UserProfile> {
+  if (isH5Runtime) {
+    const now = Date.now()
+    const profile: UserProfile = {
+      _id: 'h5-profile',
+      _openid: 'h5-admin',
+      personName,
+      boundAt: now,
+      updatedAt: now
+    }
+    writeH5UserProfile(profile)
+    return profile
+  }
+
   const result = await callUserProfileFunction('bind', personName)
   if (!result) {
     throw new UserProfileError('USER_PROFILE_FUNCTION_UNAVAILABLE', '绑定服务暂不可用，请稍后重试')
@@ -140,4 +165,30 @@ export async function bindCurrentUserProfile(personName: string): Promise<UserPr
   }
 
   return result.profile
+}
+
+function readH5UserProfile(): UserProfile {
+  try {
+    const storedValue = Taro.getStorageSync(h5ProfileStorageKey)
+    if (isUserProfile(storedValue)) return storedValue
+  } catch {
+    // H5 profile is a local mock and can fall back to the default administrator.
+  }
+
+  const now = Date.now()
+  return {
+    _id: 'h5-profile',
+    _openid: 'h5-admin',
+    personName: '华文达',
+    boundAt: now,
+    updatedAt: now
+  }
+}
+
+function writeH5UserProfile(profile: UserProfile) {
+  try {
+    Taro.setStorageSync(h5ProfileStorageKey, profile)
+  } catch {
+    // Local mock profile should not block the Web preview.
+  }
 }

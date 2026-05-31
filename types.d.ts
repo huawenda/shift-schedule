@@ -1,5 +1,11 @@
 /// <reference types="@tarojs/taro" />
 
+declare const process: {
+  env: {
+    TARO_ENV?: string
+  }
+}
+
 declare module 'lunar-javascript' {
   export class Solar {
     static fromYmd(year: number, month: number, day: number): Solar
