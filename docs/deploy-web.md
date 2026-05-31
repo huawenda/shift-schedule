@@ -18,9 +18,10 @@ Open:
 http://<server-ip>:10086
 ```
 
-The normal Web login passcode is `WEB_ACCESS_CODE` in `.env`.
-The administrator login passcode is `ADMIN_ACCESS_CODE` in `.env`.
-Only `ADMIN_PERSON_NAME` with `ADMIN_ACCESS_CODE` receives administrator permissions.
+Users sign in with their registered account username and password.
+The normal registration invite code is `REGISTRATION_CODE` in `.env`.
+The administrator registration invite code is `ADMIN_ACCESS_CODE` in `.env`.
+Only `ADMIN_PERSON_NAME` registered with `ADMIN_ACCESS_CODE` receives administrator permissions.
 
 ## Update Deployment
 
@@ -66,8 +67,16 @@ docker exec -it shift-schedule-postgres psql -U shift_schedule -d shift_schedule
 List recent Web login sessions:
 
 ```sql
-SELECT id, person_name, user_agent, created_ip, created_at_text, expires_at_text, revoked_at_text
+SELECT login_sessions.id,
+       user_accounts.username,
+       login_sessions.person_name,
+       login_sessions.user_agent,
+       login_sessions.created_ip,
+       login_sessions.created_at_text,
+       login_sessions.expires_at_text,
+       login_sessions.revoked_at_text
 FROM login_sessions
+LEFT JOIN user_accounts ON user_accounts.id = login_sessions.account_id
 ORDER BY created_at DESC
 LIMIT 20;
 ```
@@ -75,7 +84,7 @@ LIMIT 20;
 Disable a user account and make all cached browser tokens fail on the next request:
 
 ```sql
-UPDATE user_profiles
+UPDATE user_accounts
 SET enabled = FALSE
 WHERE person_name = '张舒琪';
 ```
@@ -83,7 +92,7 @@ WHERE person_name = '张舒琪';
 Enable the user again:
 
 ```sql
-UPDATE user_profiles
+UPDATE user_accounts
 SET enabled = TRUE
 WHERE person_name = '张舒琪';
 ```

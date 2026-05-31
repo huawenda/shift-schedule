@@ -36,6 +36,21 @@ function hashToken(token) {
     .digest('hex')
 }
 
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hash = crypto.scryptSync(String(password), salt, 64).toString('hex')
+  return `scrypt$${salt}$${hash}`
+}
+
+function isValidPassword(inputPassword, storedHash) {
+  if (typeof inputPassword !== 'string' || typeof storedHash !== 'string') return false
+  const [algorithm, salt, hash] = storedHash.split('$')
+  if (algorithm !== 'scrypt' || !salt || !hash) return false
+
+  const inputHash = crypto.scryptSync(inputPassword, salt, 64).toString('hex')
+  return timingSafeEqualString(inputHash, hash)
+}
+
 function createToken(user, secret, now = Date.now()) {
   const payload = {
     openid: user.openid,
@@ -100,8 +115,10 @@ module.exports = {
   createSessionId,
   createToken,
   getWebLoginRole,
+  hashPassword,
   hashToken,
   isValidAccessCode,
+  isValidPassword,
   tokenTtlMs,
   verifyToken
 }

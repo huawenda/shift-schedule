@@ -27,8 +27,9 @@ import {
   type ShiftOverrides
 } from '../../services/cloudRecords'
 import {
-  bindCurrentUserProfile,
   loadCurrentUserProfile,
+  loginWebAccount,
+  registerWebAccount,
   UserProfileError,
   type CurrentUserProfile
 } from '../../services/userProfile'
@@ -245,8 +246,11 @@ export default function Index() {
   const monthScrollLeftRef = useRef(monthScrollLeft)
   const [currentUserProfile, setCurrentUserProfile] = useState<CurrentUserProfile | null>(null)
   const [profileReady, setProfileReady] = useState(false)
+  const [profileAuthMode, setProfileAuthMode] = useState<'login' | 'register'>('login')
   const [profilePickerIndex, setProfilePickerIndex] = useState(0)
-  const [profileAccessCode, setProfileAccessCode] = useState('')
+  const [profileUsername, setProfileUsername] = useState('')
+  const [profilePassword, setProfilePassword] = useState('')
+  const [profileInviteCode, setProfileInviteCode] = useState('')
   const [profileBinding, setProfileBinding] = useState(false)
   const [cloudSyncReady, setCloudSyncReady] = useState(false)
   const [cloudRefreshing, setCloudRefreshing] = useState(false)
@@ -647,25 +651,33 @@ export default function Index() {
 
   const bindProfile = () => {
     const selectedPerson = scheduleData.people[profilePickerIndex]
-    if (!selectedPerson) return
+    if (profileAuthMode === 'register' && !selectedPerson) return
 
     setProfileBinding(true)
-    bindCurrentUserProfile(selectedPerson.name, profileAccessCode)
+    const authRequest = profileAuthMode === 'login'
+      ? loginWebAccount({
+        username: profileUsername,
+        password: profilePassword
+      })
+      : registerWebAccount({
+        username: profileUsername,
+        password: profilePassword,
+        personName: selectedPerson.name,
+        inviteCode: profileInviteCode
+      })
+
+    authRequest
       .then(profile => {
-        setCurrentUserProfile(currentProfile => ({
-          openid: currentProfile?.openid ?? null,
-          isAdmin: currentProfile?.isAdmin ?? false,
-          profile
-        }))
-        setCurrentUserName(profile.personName)
+        setCurrentUserProfile(profile)
+        if (profile.profile?.personName) {
+          setCurrentUserName(profile.profile.personName)
+        }
       })
       .catch(error => {
-        console.warn('用户身份绑定失败', error)
-        const message = selectedPerson.name === '华文达' && error instanceof UserProfileError
-          ? '该姓名为管理员专用，请选择本人姓名'
-          : error instanceof UserProfileError
+        console.warn('账号登录失败', error)
+        const message = error instanceof UserProfileError
           ? error.message
-          : '绑定失败，请稍后重试'
+          : '登录失败，请稍后重试'
         Taro.showToast({ title: message, icon: 'none' })
       })
       .finally(() => {
@@ -1177,35 +1189,73 @@ export default function Index() {
       {needsProfileBinding && (
         <View className="editor-mask profile-binding-mask">
           <View className="profile-binding">
-            <Text className="profile-binding-title">绑定你的姓名</Text>
+            <Text className="profile-binding-title">{profileAuthMode === 'login' ? '账号登录' : '注册账号'}</Text>
             <Text className="profile-binding-desc">
-              选择你的姓名并输入访问口令。登录后只能修改该姓名的排班和加班记录。
+              {profileAuthMode === 'login'
+                ? '使用你的账号登录。登录后权限会绑定到账号和对应姓名。'
+                : '创建账号并绑定姓名。注册后只能修改该姓名的排班和加班记录。'}
             </Text>
-            <Picker
-              mode="selector"
-              range={userPickerOptions}
-              value={profilePickerIndex}
-              onChange={event => setProfilePickerIndex(Number(event.detail.value))}
-            >
-              <View className="profile-binding-picker">
-                <Text>{userPickerOptions[profilePickerIndex]}</Text>
+            <View className="profile-auth-tabs">
+              <View
+                className={`profile-auth-tab ${profileAuthMode === 'login' ? 'active' : ''}`}
+                onClick={() => setProfileAuthMode('login')}
+              >
+                <Text>登录</Text>
               </View>
-            </Picker>
+              <View
+                className={`profile-auth-tab ${profileAuthMode === 'register' ? 'active' : ''}`}
+                onClick={() => setProfileAuthMode('register')}
+              >
+                <Text>注册</Text>
+              </View>
+            </View>
+            <Input
+              className="profile-binding-input"
+              placeholder="账号"
+              value={profileUsername}
+              onInput={event => setProfileUsername(String(event.detail.value ?? ''))}
+            />
             <Input
               className="profile-binding-input"
               password
-              placeholder="请输入访问口令"
-              value={profileAccessCode}
-              onInput={event => setProfileAccessCode(String(event.detail.value ?? ''))}
+              placeholder="密码"
+              value={profilePassword}
+              onInput={event => setProfilePassword(String(event.detail.value ?? ''))}
             />
+            {profileAuthMode === 'register' && (
+              <>
+                <Picker
+                  mode="selector"
+                  range={userPickerOptions}
+                  value={profilePickerIndex}
+                  onChange={event => setProfilePickerIndex(Number(event.detail.value))}
+                >
+                  <View className="profile-binding-picker">
+                    <Text>{userPickerOptions[profilePickerIndex]}</Text>
+                  </View>
+                </Picker>
+                <Input
+                  className="profile-binding-input"
+                  password
+                  placeholder="邀请码"
+                  value={profileInviteCode}
+                  onInput={event => setProfileInviteCode(String(event.detail.value ?? ''))}
+                />
+              </>
+            )}
             <View className="profile-binding-actions">
               <View
-                className={`profile-binding-confirm ${profileBinding || !profileAccessCode ? 'disabled' : ''}`}
+                className={`profile-binding-confirm ${profileBinding || !profileUsername || !profilePassword || (profileAuthMode === 'register' && !profileInviteCode) ? 'disabled' : ''}`}
                 onClick={() => {
-                  if (!profileBinding && profileAccessCode) bindProfile()
+                  if (
+                    !profileBinding
+                    && profileUsername
+                    && profilePassword
+                    && (profileAuthMode === 'login' || profileInviteCode)
+                  ) bindProfile()
                 }}
               >
-                <Text>{profileBinding ? '登录中' : '登录'}</Text>
+                <Text>{profileBinding ? '处理中' : (profileAuthMode === 'login' ? '登录' : '注册')}</Text>
               </View>
             </View>
           </View>

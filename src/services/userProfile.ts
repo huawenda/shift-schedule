@@ -49,6 +49,16 @@ interface WebLoginResult extends UserProfileFunctionResult {
   token?: unknown
 }
 
+interface WebAccountLoginInput {
+  username: string
+  password: string
+}
+
+interface WebAccountRegisterInput extends WebAccountLoginInput {
+  personName: string
+  inviteCode: string
+}
+
 export class UserProfileError extends Error {
   code: string
 
@@ -152,32 +162,57 @@ export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
   }
 }
 
+function persistWebLoginResult(result: WebLoginResult): CurrentUserProfile {
+  if (typeof result.token === 'string') setWebAuthToken(result.token)
+  const currentProfile = normalizeCurrentUserProfile(result)
+  if (!currentProfile?.profile) {
+    throw new UserProfileError('INVALID_PROFILE_RESPONSE', '登录失败，请稍后重试')
+  }
+  writeH5UserProfile(currentProfile.profile)
+  return currentProfile
+}
+
+export async function loginWebAccount(input: WebAccountLoginInput): Promise<CurrentUserProfile> {
+  if (!isH5Runtime) {
+    throw new UserProfileError('WEB_LOGIN_UNAVAILABLE', '账号登录仅用于 Web 端')
+  }
+
+  const result = await apiRequest<WebLoginResult>('/auth/login', {
+    method: 'POST',
+    auth: false,
+    body: input
+  }).catch(error => {
+    if (error instanceof ApiError) {
+      throw new UserProfileError('WEB_LOGIN_FAILED', error.message)
+    }
+    throw error
+  })
+
+  return persistWebLoginResult(result)
+}
+
+export async function registerWebAccount(input: WebAccountRegisterInput): Promise<CurrentUserProfile> {
+  if (!isH5Runtime) {
+    throw new UserProfileError('WEB_REGISTER_UNAVAILABLE', '账号注册仅用于 Web 端')
+  }
+
+  const result = await apiRequest<WebLoginResult>('/auth/register', {
+    method: 'POST',
+    auth: false,
+    body: input
+  }).catch(error => {
+    if (error instanceof ApiError) {
+      throw new UserProfileError('WEB_REGISTER_FAILED', error.message)
+    }
+    throw error
+  })
+
+  return persistWebLoginResult(result)
+}
+
 export async function bindCurrentUserProfile(personName: string, accessCode?: string): Promise<UserProfile> {
   if (isH5Runtime) {
-    if (!accessCode) {
-      throw new UserProfileError('ACCESS_CODE_REQUIRED', '请输入访问口令')
-    }
-
-    const result = await apiRequest<WebLoginResult>('/auth/login', {
-      method: 'POST',
-      auth: false,
-      body: {
-        personName,
-        accessCode
-      }
-    }).catch(error => {
-      if (error instanceof ApiError) {
-        throw new UserProfileError('WEB_LOGIN_FAILED', error.message)
-      }
-      throw error
-    })
-    if (typeof result.token === 'string') setWebAuthToken(result.token)
-    const profile = normalizeCurrentUserProfile(result)?.profile
-    if (!profile) {
-      throw new UserProfileError('INVALID_PROFILE_RESPONSE', '登录失败，请稍后重试')
-    }
-    writeH5UserProfile(profile)
-    return profile
+    throw new UserProfileError('WEB_ACCOUNT_REQUIRED', '请使用账号登录')
   }
 
   const result = await callUserProfileFunction('bind', personName)

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import auth from './auth'
 
-const { createToken, getWebLoginRole, hashToken, isValidAccessCode, verifyToken } = auth
+const {
+  createToken,
+  getWebLoginRole,
+  hashPassword,
+  hashToken,
+  isValidAccessCode,
+  isValidPassword,
+  verifyToken
+} = auth
 
 describe('web token auth', () => {
   it('creates verifiable signed tokens', () => {
@@ -35,6 +43,14 @@ describe('web token auth', () => {
 
     expect(hashToken(token)).toBe(hashToken(token))
     expect(hashToken(token)).not.toBe(token)
+  })
+
+  it('hashes account passwords and verifies only the matching password', () => {
+    const passwordHash = hashPassword('my-secret-password')
+
+    expect(passwordHash).not.toBe('my-secret-password')
+    expect(isValidPassword('my-secret-password', passwordHash)).toBe(true)
+    expect(isValidPassword('wrong-password', passwordHash)).toBe(false)
   })
 
   it('validates configured access code without accepting empty codes', () => {

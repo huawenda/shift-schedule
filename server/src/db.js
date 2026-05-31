@@ -27,6 +27,19 @@ async function ensureSchema(pool) {
     ALTER TABLE user_profiles
       ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
 
+    CREATE TABLE IF NOT EXISTS user_accounts (
+      id BIGSERIAL PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      person_name TEXT NOT NULL UNIQUE,
+      role TEXT NOT NULL DEFAULT 'user',
+      enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at BIGINT NOT NULL,
+      created_at_text TEXT NOT NULL,
+      updated_at BIGINT NOT NULL,
+      updated_at_text TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS day_records (
       id BIGSERIAL PRIMARY KEY,
       openid TEXT NOT NULL,
@@ -58,6 +71,7 @@ async function ensureSchema(pool) {
 
     CREATE TABLE IF NOT EXISTS login_sessions (
       id TEXT PRIMARY KEY,
+      account_id BIGINT,
       openid TEXT NOT NULL,
       person_name TEXT NOT NULL,
       token_hash TEXT NOT NULL UNIQUE,
@@ -70,6 +84,9 @@ async function ensureSchema(pool) {
       revoked_at BIGINT,
       revoked_at_text TEXT
     );
+
+    ALTER TABLE login_sessions
+      ADD COLUMN IF NOT EXISTS account_id BIGINT;
   `)
 }
 
@@ -106,8 +123,9 @@ async function upsertProfile(pool, user) {
       updated_at_text
     )
     VALUES ($1, $2, $3, TRUE, $4, $5, $4, $5)
-    ON CONFLICT (openid)
+    ON CONFLICT (person_name)
     DO UPDATE SET
+      openid = EXCLUDED.openid,
       person_name = EXCLUDED.person_name,
       role = EXCLUDED.role,
       updated_at = EXCLUDED.updated_at,
@@ -136,12 +154,71 @@ async function loadProfileByPersonName(pool, personName) {
   return response.rows[0] ?? null
 }
 
+function accountRowToUser(row, sessionId = '') {
+  if (!row) return null
+
+  return {
+    accountId: Number(row.id),
+    username: row.username,
+    openid: `web-account:${row.id}`,
+    personName: row.person_name,
+    isAdmin: row.role === 'admin',
+    sessionId
+  }
+}
+
+async function createUserAccount(pool, account) {
+  const now = Date.now()
+  const nowText = formatTimestamp(now)
+  const response = await pool.query(`
+    INSERT INTO user_accounts (
+      username,
+      password_hash,
+      person_name,
+      role,
+      enabled,
+      created_at,
+      created_at_text,
+      updated_at,
+      updated_at_text
+    )
+    VALUES ($1, $2, $3, $4, TRUE, $5, $6, $5, $6)
+    RETURNING *
+  `, [
+    account.username,
+    account.passwordHash,
+    account.personName,
+    account.isAdmin ? 'admin' : 'user',
+    now,
+    nowText
+  ])
+
+  return accountRowToUser(response.rows[0])
+}
+
+async function loadUserAccountByUsername(pool, username) {
+  const response = await pool.query(
+    'SELECT * FROM user_accounts WHERE lower(username) = lower($1) LIMIT 1',
+    [username]
+  )
+  return response.rows[0] ?? null
+}
+
+async function loadUserAccountByPersonName(pool, personName) {
+  const response = await pool.query(
+    'SELECT * FROM user_accounts WHERE person_name = $1 LIMIT 1',
+    [personName]
+  )
+  return response.rows[0] ?? null
+}
+
 async function createLoginSession(pool, session) {
   const now = Date.now()
   const nowText = formatTimestamp(now)
   await pool.query(`
     INSERT INTO login_sessions (
       id,
+      account_id,
       openid,
       person_name,
       token_hash,
@@ -152,9 +229,10 @@ async function createLoginSession(pool, session) {
       expires_at,
       expires_at_text
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
   `, [
     session.id,
+    session.accountId || null,
     session.openid,
     session.personName,
     session.tokenHash,
@@ -171,25 +249,28 @@ async function loadActiveSessionUser(pool, sessionId, tokenHash, now = Date.now(
   const response = await pool.query(`
     SELECT
       login_sessions.id,
-      user_profiles.openid,
-      user_profiles.person_name,
-      user_profiles.role,
-      user_profiles.enabled
+      user_accounts.id AS account_id,
+      user_accounts.username,
+      user_accounts.person_name,
+      user_accounts.role,
+      user_accounts.enabled
     FROM login_sessions
-    INNER JOIN user_profiles
-      ON user_profiles.openid = login_sessions.openid
+    INNER JOIN user_accounts
+      ON user_accounts.id = login_sessions.account_id
     WHERE login_sessions.id = $1
       AND login_sessions.token_hash = $2
       AND login_sessions.revoked_at IS NULL
       AND login_sessions.expires_at > $3
-      AND user_profiles.enabled = TRUE
+      AND user_accounts.enabled = TRUE
     LIMIT 1
   `, [sessionId, tokenHash, now])
   const row = response.rows[0]
   if (!row) return null
 
   return {
-    openid: row.openid,
+    accountId: Number(row.account_id),
+    username: row.username,
+    openid: `web-account:${row.account_id}`,
     personName: row.person_name,
     isAdmin: row.role === 'admin'
   }
@@ -326,6 +407,7 @@ async function upsertSalaryInput(pool, personName, month, values) {
 module.exports = {
   createLoginSession,
   createPool,
+  createUserAccount,
   deleteDayRecord,
   ensureSchema,
   loadActiveSessionUser,
@@ -333,6 +415,8 @@ module.exports = {
   loadProfile,
   loadProfileByPersonName,
   loadSalaryInputs,
+  loadUserAccountByPersonName,
+  loadUserAccountByUsername,
   upsertDayRecord,
   upsertProfile,
   upsertSalaryInput

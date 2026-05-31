@@ -25,6 +25,7 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-shift_schedule}:${POSTGRES_PASSWORD:-change-me-postgres}@postgres:5432/${POSTGRES_DB:-shift_schedule}
       WEB_ACCESS_CODE: ${WEB_ACCESS_CODE:-change-me}
+      REGISTRATION_CODE: ${REGISTRATION_CODE:-}
       ADMIN_ACCESS_CODE: ${ADMIN_ACCESS_CODE:-}
       TOKEN_SECRET: ${TOKEN_SECRET:-change-this-token-secret}
       ADMIN_PERSON_NAME: ${ADMIN_PERSON_NAME:-华文达}
