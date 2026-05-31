@@ -656,11 +656,12 @@
 }
 
 .table-toolbar-sub {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  margin-top: 10px;
+  min-height: 34px;
+  margin-top: 6px;
   overflow: hidden;
 }
 
@@ -676,6 +677,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  height: 34px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -716,6 +718,9 @@
 }
 
 .table-toolbar-sub .scroll-tip {
+  display: flex;
+  align-items: center;
+  height: 34px;
   flex-shrink: 0;
   max-width: none;
   text-align: right;
