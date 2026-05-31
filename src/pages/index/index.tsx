@@ -246,6 +246,7 @@ export default function Index() {
   const [currentUserProfile, setCurrentUserProfile] = useState<CurrentUserProfile | null>(null)
   const [profileReady, setProfileReady] = useState(false)
   const [profilePickerIndex, setProfilePickerIndex] = useState(0)
+  const [profileAccessCode, setProfileAccessCode] = useState('')
   const [profileBinding, setProfileBinding] = useState(false)
   const [cloudSyncReady, setCloudSyncReady] = useState(false)
   const [cloudRefreshing, setCloudRefreshing] = useState(false)
@@ -649,7 +650,7 @@ export default function Index() {
     if (!selectedPerson) return
 
     setProfileBinding(true)
-    bindCurrentUserProfile(selectedPerson.name)
+    bindCurrentUserProfile(selectedPerson.name, profileAccessCode)
       .then(profile => {
         setCurrentUserProfile(currentProfile => ({
           openid: currentProfile?.openid ?? null,
@@ -1178,7 +1179,7 @@ export default function Index() {
           <View className="profile-binding">
             <Text className="profile-binding-title">绑定你的姓名</Text>
             <Text className="profile-binding-desc">
-              绑定后只能修改该姓名的排班和加班记录。选错后请联系管理员在后台重置。
+              选择你的姓名并输入访问口令。登录后只能修改该姓名的排班和加班记录。
             </Text>
             <Picker
               mode="selector"
@@ -1190,14 +1191,21 @@ export default function Index() {
                 <Text>{userPickerOptions[profilePickerIndex]}</Text>
               </View>
             </Picker>
+            <Input
+              className="profile-binding-input"
+              password
+              placeholder="请输入访问口令"
+              value={profileAccessCode}
+              onInput={event => setProfileAccessCode(String(event.detail.value ?? ''))}
+            />
             <View className="profile-binding-actions">
               <View
-                className={`profile-binding-confirm ${profileBinding ? 'disabled' : ''}`}
+                className={`profile-binding-confirm ${profileBinding || !profileAccessCode ? 'disabled' : ''}`}
                 onClick={() => {
-                  if (!profileBinding) bindProfile()
+                  if (!profileBinding && profileAccessCode) bindProfile()
                 }}
               >
-                <Text>{profileBinding ? '绑定中' : '确认绑定'}</Text>
+                <Text>{profileBinding ? '登录中' : '登录'}</Text>
               </View>
             </View>
           </View>

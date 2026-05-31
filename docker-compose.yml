@@ -1,6 +1,37 @@
 version: "3.8"
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shift-schedule-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shift_schedule}
+      POSTGRES_USER: ${POSTGRES_USER:-shift_schedule}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-postgres}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  shift-schedule-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: shift-schedule-api:latest
+    container_name: shift-schedule-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-shift_schedule}:${POSTGRES_PASSWORD:-change-me-postgres}@postgres:5432/${POSTGRES_DB:-shift_schedule}
+      WEB_ACCESS_CODE: ${WEB_ACCESS_CODE:-change-me}
+      TOKEN_SECRET: ${TOKEN_SECRET:-change-this-token-secret}
+      ADMIN_PERSON_NAME: ${ADMIN_PERSON_NAME:-华文达}
+    depends_on:
+      - postgres
+
   shift-schedule-web:
     build:
       context: .
@@ -10,4 +41,8 @@ services:
     restart: unless-stopped
     ports:
       - "10086:80"
+    depends_on:
+      - shift-schedule-api
 
+volumes:
+  postgres-data:

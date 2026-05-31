@@ -11,8 +11,9 @@ import {
 } from '../../services/localOverrides'
 import {
   getSalaryInputKey,
+  loadSalaryInputs,
   readSalaryInputsFromStorage,
-  writeSalaryInputsToStorage,
+  syncSalaryInputs,
   type SalaryInputRecords
 } from '../../services/salaryInputs'
 import { loadCurrentUserProfile, type CurrentUserProfile } from '../../services/userProfile'
@@ -228,6 +229,7 @@ export default function StatsPage() {
   const [profileReady, setProfileReady] = useState(false)
   const [activeMonth, setActiveMonth] = useState<ScheduleMonth>(getCurrentScheduleMonth(scheduleData) ?? '05')
   const [salaryInputRecords, setSalaryInputRecords] = useState<SalaryInputRecords>(readSalaryInputsFromStorage)
+  const [salarySyncReady, setSalarySyncReady] = useState(false)
   const [personIndex, setPersonIndex] = useState(() => (
     Math.max(scheduleData.people.findIndex(person => person.name === defaultPersonName), 0)
   ))
@@ -343,8 +345,33 @@ export default function StatsPage() {
   }, [boundPersonName, isAdminUser, profileReady])
 
   useEffect(() => {
-    writeSalaryInputsToStorage(salaryInputRecords)
-  }, [salaryInputRecords])
+    let cancelled = false
+    if (!profileReady || (!isAdminUser && !boundPersonName)) return undefined
+
+    setSalarySyncReady(false)
+    loadSalaryInputs()
+      .then(records => {
+        if (!cancelled) setSalaryInputRecords(records)
+      })
+      .catch(error => {
+        console.warn('薪资输入读取失败，已使用本地缓存', error)
+      })
+      .finally(() => {
+        if (!cancelled) setSalarySyncReady(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [boundPersonName, isAdminUser, profileReady])
+
+  useEffect(() => {
+    if (!salarySyncReady) return
+
+    syncSalaryInputs(salaryInputRecords).catch(error => {
+      console.warn('薪资输入同步失败', error)
+    })
+  }, [salaryInputRecords, salarySyncReady])
 
   const setSalaryInputValue = (field: SalaryInputField, value: string) => {
     setSalaryInputRecords(records => ({

@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { ApiError, apiRequest, clearWebAuthToken, setWebAuthToken } from './apiClient'
 import { isH5Runtime } from './runtime'
 
 const collectionName = 'user_profiles'
@@ -42,6 +43,10 @@ interface UserProfileFunctionResult {
   openid?: unknown
   isAdmin?: unknown
   profile?: unknown
+}
+
+interface WebLoginResult extends UserProfileFunctionResult {
+  token?: unknown
 }
 
 export class UserProfileError extends Error {
@@ -113,10 +118,20 @@ async function callUserProfileFunction(
 
 export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
   if (isH5Runtime) {
-    return {
-      openid: 'h5-admin',
-      isAdmin: true,
-      profile: readH5UserProfile()
+    try {
+      const result = await apiRequest<UserProfileFunctionResult>('/profile')
+      return normalizeCurrentUserProfile(result) ?? {
+        openid: null,
+        isAdmin: false,
+        profile: null
+      }
+    } catch {
+      clearWebAuthToken()
+      return {
+        openid: null,
+        isAdmin: false,
+        profile: null
+      }
     }
   }
 
@@ -137,15 +152,29 @@ export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
   }
 }
 
-export async function bindCurrentUserProfile(personName: string): Promise<UserProfile> {
+export async function bindCurrentUserProfile(personName: string, accessCode?: string): Promise<UserProfile> {
   if (isH5Runtime) {
-    const now = Date.now()
-    const profile: UserProfile = {
-      _id: 'h5-profile',
-      _openid: 'h5-admin',
-      personName,
-      boundAt: now,
-      updatedAt: now
+    if (!accessCode) {
+      throw new UserProfileError('ACCESS_CODE_REQUIRED', '请输入访问口令')
+    }
+
+    const result = await apiRequest<WebLoginResult>('/auth/login', {
+      method: 'POST',
+      auth: false,
+      body: {
+        personName,
+        accessCode
+      }
+    }).catch(error => {
+      if (error instanceof ApiError) {
+        throw new UserProfileError('WEB_LOGIN_FAILED', error.message)
+      }
+      throw error
+    })
+    if (typeof result.token === 'string') setWebAuthToken(result.token)
+    const profile = normalizeCurrentUserProfile(result)?.profile
+    if (!profile) {
+      throw new UserProfileError('INVALID_PROFILE_RESPONSE', '登录失败，请稍后重试')
     }
     writeH5UserProfile(profile)
     return profile

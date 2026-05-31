@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { apiRequest, hasWebAuthToken } from './apiClient'
 import {
   buildCloudDayRecords,
   cloudRecordsToOverrides,
@@ -75,6 +76,11 @@ export async function loadCloudOverrides(): Promise<{
   leaveDurationOverrides: LeaveDurationOverrides
 }> {
   if (isH5Runtime) {
+    if (hasWebAuthToken()) {
+      const response = await apiRequest<DayRecordsFunctionResponse>('/day-records')
+      if (Array.isArray(response.records)) return cloudRecordsToOverrides(response.records)
+    }
+
     return {
       shiftOverrides: readShiftOverridesFromStorage(),
       overtimeOverrides: readOvertimeOverridesFromStorage(),
@@ -95,6 +101,18 @@ export async function syncCloudOverrides(
   deletedKeys: string[] = []
 ): Promise<void> {
   if (isH5Runtime) {
+    if (hasWebAuthToken()) {
+      const nextRecords = buildCloudDayRecords(shiftOverrides, overtimeOverrides, legalOverrides, leaveDurationOverrides)
+      await apiRequest<DayRecordsFunctionResponse>('/day-records/sync', {
+        method: 'POST',
+        body: {
+          records: nextRecords,
+          deletedKeys
+        }
+      })
+      return
+    }
+
     writePersistence(shiftOverridesStorageKey, shiftOverridesFileName, shiftOverrides)
     writePersistence(overtimeOverridesStorageKey, overtimeOverridesFileName, overtimeOverrides)
     writePersistence(legalOverridesStorageKey, legalOverridesFileName, legalOverrides)

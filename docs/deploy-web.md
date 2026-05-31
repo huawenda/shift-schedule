@@ -7,6 +7,8 @@ This project builds the Taro H5 app into `dist-h5` and serves it with Nginx in D
 ```bash
 git clone <your-repo-url>
 cd shift-schedule-miniapp
+cp .env.example .env
+nano .env
 docker-compose up -d --build
 ```
 
@@ -15,6 +17,8 @@ Open:
 ```text
 http://<server-ip>:10086
 ```
+
+The Web login passcode is `WEB_ACCESS_CODE` in `.env`.
 
 ## Update Deployment
 
@@ -48,4 +52,3 @@ docker-compose logs -f
 docker-compose restart
 docker-compose down
 ```
-

@@ -1,0 +1,36 @@
+import { describe, expect, it } from 'vitest'
+import auth from './auth'
+
+const { createToken, isValidAccessCode, verifyToken } = auth
+
+describe('web token auth', () => {
+  it('creates verifiable signed tokens', () => {
+    const token = createToken({
+      openid: 'web:华文达',
+      personName: '华文达',
+      isAdmin: true
+    }, 'secret', 1000)
+
+    expect(verifyToken(token, 'secret', 1000)).toEqual({
+      openid: 'web:华文达',
+      personName: '华文达',
+      isAdmin: true
+    })
+  })
+
+  it('rejects tokens signed with a different secret', () => {
+    const token = createToken({
+      openid: 'web:张舒琪',
+      personName: '张舒琪',
+      isAdmin: false
+    }, 'secret', 1000)
+
+    expect(verifyToken(token, 'other-secret', 1000)).toBeNull()
+  })
+
+  it('validates configured access code without accepting empty codes', () => {
+    expect(isValidAccessCode('open-sesame', 'open-sesame')).toBe(true)
+    expect(isValidAccessCode('wrong', 'open-sesame')).toBe(false)
+    expect(isValidAccessCode('', '')).toBe(false)
+  })
+})

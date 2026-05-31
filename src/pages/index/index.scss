@@ -1282,6 +1282,34 @@
   font-weight: 800;
 }
 
+.profile-binding-input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 58px;
+  margin-top: 16px;
+  padding: 0 18px;
+  border: 1px solid #cdd7e5;
+  border-radius: 12px;
+  box-sizing: border-box;
+  background: #fbfcff;
+  color: #172033;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 58px;
+}
+
+.profile-binding-input input,
+.profile-binding-input .weui-input,
+.profile-binding-input.taro-input-core {
+  height: 100%;
+  padding: 0;
+  color: #172033;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 58px;
+}
+
 .profile-binding-actions {
   display: flex;
   justify-content: flex-end;

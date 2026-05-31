@@ -1,4 +1,6 @@
 import Taro from '@tarojs/taro'
+import { apiRequest, hasWebAuthToken } from './apiClient'
+import { isH5Runtime } from './runtime'
 import { emptySalaryInputs, type SalaryInputValues } from '../utils/salary'
 
 export type SalaryInputRecords = Record<string, SalaryInputValues>
@@ -23,6 +25,27 @@ export function writeSalaryInputsToStorage(records: SalaryInputRecords) {
   } catch {
     // Salary inputs are local-only convenience data and should not block rendering.
   }
+}
+
+export async function loadSalaryInputs(): Promise<SalaryInputRecords> {
+  if (isH5Runtime && hasWebAuthToken()) {
+    const response = await apiRequest<{ records?: unknown }>('/salary-inputs')
+    return parseSalaryInputRecords(response.records)
+  }
+
+  return readSalaryInputsFromStorage()
+}
+
+export async function syncSalaryInputs(records: SalaryInputRecords): Promise<void> {
+  if (isH5Runtime && hasWebAuthToken()) {
+    await apiRequest<{ records?: unknown }>('/salary-inputs', {
+      method: 'PUT',
+      body: { records }
+    })
+    return
+  }
+
+  writeSalaryInputsToStorage(records)
 }
 
 function parseSalaryInputRecords(value: unknown): SalaryInputRecords {
