@@ -18,6 +18,8 @@ Open:
 http://<server-ip>:10086
 ```
 
+The H5 build includes a PWA manifest and service worker, so mobile browsers can install the Web app to the home screen. Full install prompts generally require a domain with HTTPS; a public HTTP IP address may only show "add shortcut" behavior in some browsers.
+
 Users sign in with their registered account username and password.
 The normal registration invite code is `REGISTRATION_CODE` in `.env`.
 The administrator registration invite code is `ADMIN_ACCESS_CODE` in `.env`.

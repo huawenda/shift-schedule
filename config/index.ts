@@ -14,7 +14,12 @@ export default defineConfig({
   plugins: ['@tarojs/plugin-platform-weapp', '@tarojs/plugin-platform-h5'],
   defineConstants: {},
   copy: {
-    patterns: [],
+    patterns: [
+      {
+        from: 'public',
+        to: process.env.TARO_ENV === 'h5' ? 'dist-h5' : 'dist'
+      }
+    ],
     options: {}
   },
   framework: 'react',
