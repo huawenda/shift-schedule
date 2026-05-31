@@ -1,20 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import auth from './auth'
 
-const { createToken, getWebLoginRole, isValidAccessCode, verifyToken } = auth
+const { createToken, getWebLoginRole, hashToken, isValidAccessCode, verifyToken } = auth
 
 describe('web token auth', () => {
   it('creates verifiable signed tokens', () => {
     const token = createToken({
       openid: 'web:华文达',
       personName: '华文达',
-      isAdmin: true
+      isAdmin: true,
+      sessionId: 'session-1'
     }, 'secret', 1000)
 
     expect(verifyToken(token, 'secret', 1000)).toEqual({
       openid: 'web:华文达',
       personName: '华文达',
-      isAdmin: true
+      isAdmin: true,
+      sessionId: 'session-1'
     })
   })
 
@@ -26,6 +28,13 @@ describe('web token auth', () => {
     }, 'secret', 1000)
 
     expect(verifyToken(token, 'other-secret', 1000)).toBeNull()
+  })
+
+  it('hashes tokens for database session lookup without storing raw tokens', () => {
+    const token = 'browser-token'
+
+    expect(hashToken(token)).toBe(hashToken(token))
+    expect(hashToken(token)).not.toBe(token)
   })
 
   it('validates configured access code without accepting empty codes', () => {

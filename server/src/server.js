@@ -1,16 +1,19 @@
 const express = require('express')
 const {
+  createLoginSession,
   createPool,
   deleteDayRecord,
   ensureSchema,
+  loadActiveSessionUser,
   loadDayRecords,
   loadProfile,
+  loadProfileByPersonName,
   loadSalaryInputs,
   upsertDayRecord,
   upsertProfile,
   upsertSalaryInput
 } = require('./db')
-const { createToken, getWebLoginRole, verifyToken } = require('./auth')
+const { createSessionId, createToken, getWebLoginRole, hashToken, tokenTtlMs, verifyToken } = require('./auth')
 const {
   filterWritableDeletedKeys,
   filterWritableRecords,
@@ -27,11 +30,12 @@ function normalizePersonName(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function getUserForPerson(personName, isAdmin) {
+function getUserForPerson(personName, isAdmin, sessionId = '') {
   return {
     openid: `web:${personName}`,
     personName,
-    isAdmin
+    isAdmin,
+    sessionId
   }
 }
 
@@ -39,17 +43,27 @@ function createApp(pool) {
   const app = express()
   app.use(express.json({ limit: '1mb' }))
 
-  function requireAuth(req, res, next) {
+  async function requireAuth(req, res, next) {
     const header = req.get('authorization') || ''
     const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : ''
-    const user = verifyToken(token, tokenSecret)
-    if (!user) {
-      res.status(401).json({ ok: false, message: '登录已过期，请重新登录' })
-      return
-    }
+    try {
+      const tokenUser = verifyToken(token, tokenSecret)
+      if (!tokenUser?.sessionId) {
+        res.status(401).json({ ok: false, message: '登录已过期，请重新登录' })
+        return
+      }
 
-    req.user = user
-    next()
+      const user = await loadActiveSessionUser(pool, tokenUser.sessionId, hashToken(token))
+      if (!user) {
+        res.status(401).json({ ok: false, message: '登录已失效，请重新登录' })
+        return
+      }
+
+      req.user = user
+      next()
+    } catch (error) {
+      next(error)
+    }
   }
 
   app.get('/api/health', (_req, res) => {
@@ -73,11 +87,28 @@ function createApp(pool) {
         return
       }
 
-      const user = getUserForPerson(personName, loginRole.isAdmin)
+      const existingProfile = await loadProfileByPersonName(pool, personName)
+      if (existingProfile && existingProfile.enabled !== true) {
+        res.status(403).json({ ok: false, message: '该账号已停用' })
+        return
+      }
+
+      const sessionId = createSessionId()
+      const user = getUserForPerson(personName, loginRole.isAdmin, sessionId)
+      const token = createToken(user, tokenSecret)
       const profile = await upsertProfile(pool, user)
+      await createLoginSession(pool, {
+        id: sessionId,
+        openid: user.openid,
+        personName: user.personName,
+        tokenHash: hashToken(token),
+        userAgent: req.get('user-agent') || '',
+        createdIp: req.ip || '',
+        expiresAt: Date.now() + tokenTtlMs
+      })
       res.json({
         ok: true,
-        token: createToken(user, tokenSecret),
+        token,
         ...profile
       })
     } catch (error) {

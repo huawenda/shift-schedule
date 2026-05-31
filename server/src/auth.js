@@ -25,11 +25,23 @@ function signPayload(encodedPayload, secret) {
     .digest('base64url')
 }
 
+function createSessionId() {
+  return crypto.randomUUID()
+}
+
+function hashToken(token) {
+  return crypto
+    .createHash('sha256')
+    .update(String(token))
+    .digest('hex')
+}
+
 function createToken(user, secret, now = Date.now()) {
   const payload = {
     openid: user.openid,
     personName: user.personName,
     isAdmin: Boolean(user.isAdmin),
+    sessionId: user.sessionId,
     exp: now + tokenTtlMs
   }
   const encodedPayload = base64UrlEncode(payload)
@@ -56,7 +68,8 @@ function verifyToken(token, secret, now = Date.now()) {
     return {
       openid: payload.openid,
       personName: payload.personName,
-      isAdmin: payload.isAdmin === true
+      isAdmin: payload.isAdmin === true,
+      sessionId: typeof payload.sessionId === 'string' ? payload.sessionId : ''
     }
   } catch {
     return null
@@ -84,8 +97,11 @@ function getWebLoginRole(personName, inputCode, options) {
 }
 
 module.exports = {
+  createSessionId,
   createToken,
   getWebLoginRole,
+  hashToken,
   isValidAccessCode,
+  tokenTtlMs,
   verifyToken
 }

@@ -13,11 +13,19 @@ async function ensureSchema(pool) {
       id BIGSERIAL PRIMARY KEY,
       openid TEXT NOT NULL UNIQUE,
       person_name TEXT NOT NULL UNIQUE,
+      role TEXT NOT NULL DEFAULT 'user',
+      enabled BOOLEAN NOT NULL DEFAULT TRUE,
       bound_at BIGINT NOT NULL,
       bound_at_text TEXT NOT NULL,
       updated_at BIGINT NOT NULL,
       updated_at_text TEXT NOT NULL
     );
+
+    ALTER TABLE user_profiles
+      ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+
+    ALTER TABLE user_profiles
+      ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
 
     CREATE TABLE IF NOT EXISTS day_records (
       id BIGSERIAL PRIMARY KEY,
@@ -47,10 +55,25 @@ async function ensureSchema(pool) {
       updated_at_text TEXT NOT NULL,
       UNIQUE (person_name, month)
     );
+
+    CREATE TABLE IF NOT EXISTS login_sessions (
+      id TEXT PRIMARY KEY,
+      openid TEXT NOT NULL,
+      person_name TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      user_agent TEXT NOT NULL DEFAULT '',
+      created_ip TEXT NOT NULL DEFAULT '',
+      created_at BIGINT NOT NULL,
+      created_at_text TEXT NOT NULL,
+      expires_at BIGINT NOT NULL,
+      expires_at_text TEXT NOT NULL,
+      revoked_at BIGINT,
+      revoked_at_text TEXT
+    );
   `)
 }
 
-function profileRowToApi(row, isAdmin) {
+function profileRowToApi(row, isAdmin = row?.role === 'admin') {
   if (!row) return null
 
   return {
@@ -75,21 +98,30 @@ async function upsertProfile(pool, user) {
     INSERT INTO user_profiles (
       openid,
       person_name,
+      role,
+      enabled,
       bound_at,
       bound_at_text,
       updated_at,
       updated_at_text
     )
-    VALUES ($1, $2, $3, $4, $3, $4)
+    VALUES ($1, $2, $3, TRUE, $4, $5, $4, $5)
     ON CONFLICT (openid)
     DO UPDATE SET
       person_name = EXCLUDED.person_name,
+      role = EXCLUDED.role,
       updated_at = EXCLUDED.updated_at,
       updated_at_text = EXCLUDED.updated_at_text
     RETURNING *
-  `, [user.openid, user.personName, now, nowText])
+  `, [
+    user.openid,
+    user.personName,
+    user.isAdmin ? 'admin' : 'user',
+    now,
+    nowText
+  ])
 
-  return profileRowToApi(response.rows[0], user.isAdmin)
+  return profileRowToApi(response.rows[0])
 }
 
 async function loadProfile(pool, user) {
@@ -97,6 +129,70 @@ async function loadProfile(pool, user) {
   if (response.rows[0]) return profileRowToApi(response.rows[0], user.isAdmin)
 
   return upsertProfile(pool, user)
+}
+
+async function loadProfileByPersonName(pool, personName) {
+  const response = await pool.query('SELECT * FROM user_profiles WHERE person_name = $1 LIMIT 1', [personName])
+  return response.rows[0] ?? null
+}
+
+async function createLoginSession(pool, session) {
+  const now = Date.now()
+  const nowText = formatTimestamp(now)
+  await pool.query(`
+    INSERT INTO login_sessions (
+      id,
+      openid,
+      person_name,
+      token_hash,
+      user_agent,
+      created_ip,
+      created_at,
+      created_at_text,
+      expires_at,
+      expires_at_text
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  `, [
+    session.id,
+    session.openid,
+    session.personName,
+    session.tokenHash,
+    session.userAgent || '',
+    session.createdIp || '',
+    now,
+    nowText,
+    session.expiresAt,
+    formatTimestamp(session.expiresAt)
+  ])
+}
+
+async function loadActiveSessionUser(pool, sessionId, tokenHash, now = Date.now()) {
+  const response = await pool.query(`
+    SELECT
+      login_sessions.id,
+      user_profiles.openid,
+      user_profiles.person_name,
+      user_profiles.role,
+      user_profiles.enabled
+    FROM login_sessions
+    INNER JOIN user_profiles
+      ON user_profiles.openid = login_sessions.openid
+    WHERE login_sessions.id = $1
+      AND login_sessions.token_hash = $2
+      AND login_sessions.revoked_at IS NULL
+      AND login_sessions.expires_at > $3
+      AND user_profiles.enabled = TRUE
+    LIMIT 1
+  `, [sessionId, tokenHash, now])
+  const row = response.rows[0]
+  if (!row) return null
+
+  return {
+    openid: row.openid,
+    personName: row.person_name,
+    isAdmin: row.role === 'admin'
+  }
 }
 
 function dayRecordRowToApi(row) {
@@ -228,14 +324,16 @@ async function upsertSalaryInput(pool, personName, month, values) {
 }
 
 module.exports = {
+  createLoginSession,
   createPool,
   deleteDayRecord,
   ensureSchema,
+  loadActiveSessionUser,
   loadDayRecords,
   loadProfile,
+  loadProfileByPersonName,
   loadSalaryInputs,
   upsertDayRecord,
   upsertProfile,
   upsertSalaryInput
 }
-
