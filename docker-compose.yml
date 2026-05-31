@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  shift-schedule-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shift-schedule-web:latest
+    container_name: shift-schedule-web
+    restart: unless-stopped
+    ports:
+      - "10086:80"
+

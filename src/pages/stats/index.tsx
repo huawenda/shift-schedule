@@ -78,6 +78,32 @@ function getHeaderTopPadding(): string {
   return '48px'
 }
 
+function goBackToIndexPage() {
+  const indexPageUrl = '/pages/index/index'
+
+  if (isH5Runtime) {
+    void Taro.redirectTo({ url: indexPageUrl }).catch(() => {
+      void Taro.navigateTo({ url: indexPageUrl })
+    })
+    return
+  }
+
+  try {
+    if (Taro.getCurrentPages().length > 1) {
+      void Taro.navigateBack().catch(() => {
+        void Taro.redirectTo({ url: indexPageUrl })
+      })
+      return
+    }
+  } catch {
+    // Some runtimes cannot report the route stack; fall back to a deterministic home route.
+  }
+
+  void Taro.redirectTo({ url: indexPageUrl }).catch(() => {
+    void Taro.navigateTo({ url: indexPageUrl })
+  })
+}
+
 function formatOvertimeHours(hours: number): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
 }
@@ -369,7 +395,7 @@ export default function StatsPage() {
     return (
       <View className={`stats-page ${isH5Runtime ? 'stats-page-h5' : ''}`}>
         <View className="stats-header" style={{ paddingTop: headerTopPadding }}>
-          <View className="stats-back-button" onClick={() => Taro.navigateBack()}>
+          <View className="stats-back-button" onClick={goBackToIndexPage}>
             <Text>返回</Text>
           </View>
           <View className="stats-header-copy">
@@ -396,7 +422,7 @@ export default function StatsPage() {
   return (
     <View className={`stats-page ${isH5Runtime ? 'stats-page-h5' : ''}`}>
       <View className="stats-header" style={{ paddingTop: headerTopPadding }}>
-        <View className="stats-back-button" onClick={() => Taro.navigateBack()}>
+        <View className="stats-back-button" onClick={goBackToIndexPage}>
           <Text>返回</Text>
         </View>
         <View className="stats-header-copy">
@@ -513,7 +539,7 @@ export default function StatsPage() {
                 <Text className="stats-section-hint">加班 {formatOvertimeHours(stats.overtimeTotal)} 小时</Text>
               </View>
               <View className="stats-overview-table">
-                <View className="stats-overview-row header">
+                <View className="stats-overview-row stats-overview-header">
                   <Text>项目</Text>
                   <Text>天数</Text>
                   <Text>小时</Text>

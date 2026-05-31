@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   padding: 0 18px;
   box-sizing: border-box;
   overflow: hidden;
@@ -253,6 +254,10 @@
   box-sizing: border-box;
 }
 
+.stats-page-h5 .stats-content-inner {
+  padding-bottom: 18px;
+}
+
 .stats-card {
   padding: 18px;
   margin-bottom: 12px;
@@ -377,7 +382,7 @@
 
 .stats-overview-row {
   display: grid;
-  grid-template-columns: 112px 1fr 92px 104px;
+  grid-template-columns: 112px minmax(0, 1fr) 92px 92px;
   align-items: center;
   min-height: 58px;
   padding: 0 14px;
@@ -390,7 +395,7 @@
   border-bottom: 0;
 }
 
-.stats-overview-row.header {
+.stats-overview-header {
   min-height: 48px;
   background: #f6f9fd;
   color: #667085;
@@ -398,19 +403,29 @@
   font-weight: 800;
 }
 
-.stats-overview-row.header text {
+.stats-overview-header > *,
+.stats-overview-header text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: stretch;
+  width: auto;
   text-align: center;
 }
 
-.stats-overview-row.header text:first-child {
+.stats-overview-header > *:first-child,
+.stats-overview-header text:first-child {
   grid-column: 1;
+  text-align: center;
 }
 
-.stats-overview-row.header text:nth-child(2) {
+.stats-overview-header > *:nth-child(2),
+.stats-overview-header text:nth-child(2) {
   grid-column: 3;
 }
 
-.stats-overview-row.header text:nth-child(3) {
+.stats-overview-header > *:nth-child(3),
+.stats-overview-header text:nth-child(3) {
   grid-column: 4;
 }
 
@@ -603,6 +618,7 @@
 .salary-input-box {
   display: flex;
   align-items: center;
+  gap: 4px;
   min-height: 54px;
   padding: 0 12px;
   border: 1px solid #d9e2ef;
@@ -612,8 +628,10 @@
 }
 
 .salary-input-prefix {
+  display: flex;
+  align-items: center;
+  height: 100%;
   flex-shrink: 0;
-  margin-right: 4px;
   color: #98a2b3;
   font-size: 20px;
   font-weight: 900;
@@ -621,11 +639,34 @@
 }
 
 .salary-input {
+  display: flex;
+  align-items: center;
   min-width: 0;
   flex: 1;
   height: 50px;
   color: #172033;
-  font-size: 22px;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 50px;
+}
+
+.salary-input.taro-input-core,
+.salary-input taro-input-core,
+.salary-input .taro-input-core {
+  height: 100%;
+  padding: 0;
+  color: #172033;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 50px;
+}
+
+.salary-input input,
+.salary-input .weui-input {
+  height: 100%;
+  padding: 0;
+  color: #172033;
+  font-size: 20px;
   font-weight: 900;
   line-height: 50px;
 }

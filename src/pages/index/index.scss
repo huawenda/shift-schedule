@@ -717,7 +717,7 @@
 
 .table-toolbar-sub .scroll-tip {
   flex-shrink: 0;
-  max-width: 156px;
+  max-width: none;
   text-align: right;
   white-space: nowrap;
 }
@@ -816,10 +816,15 @@
 
 .schedule-table {
   flex-shrink: 0;
+  display: inline-block;
+  min-width: 100%;
+  width: max-content !important;
 }
 
 .table-row {
   display: flex;
+  min-width: 100%;
+  width: max-content;
   height: 68px;
   box-sizing: border-box;
   border-bottom: 1px solid #edf2f7;
@@ -833,7 +838,12 @@
   height: 72px;
   box-sizing: border-box;
   background: #e9eef7;
+  box-shadow: 100vw 0 0 #e9eef7;
   font-weight: 800;
+}
+
+.highlight-row {
+  box-shadow: 100vw 0 0 #fff6e7;
 }
 
 .table-header .today-date-cell .date-main {
@@ -1135,6 +1145,9 @@
 }
 
 .overtime-input {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 92px;
   height: 48px;
   padding: 0 16px;
@@ -1145,6 +1158,22 @@
   color: #172033;
   font-size: 24px;
   font-weight: 800;
+  line-height: 48px;
+  text-align: left;
+}
+
+.overtime-input.taro-input-core,
+.overtime-input taro-input-core,
+.overtime-input .taro-input-core,
+.overtime-input input,
+.overtime-input .weui-input {
+  height: 100%;
+  padding: 0;
+  color: #172033;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 48px;
+  text-align: left;
 }
 
 .overtime-unit {

@@ -1,0 +1,13 @@
+node_modules
+.pnpm-store
+.swc
+dist
+dist-h5
+.git
+h5-dev.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+project.private.config.json
+
