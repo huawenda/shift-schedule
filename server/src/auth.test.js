@@ -46,7 +46,7 @@ describe('web token auth', () => {
       isAdmin: true
     })
     expect(getWebLoginRole('华文达', 'staff-code', options)).toEqual({
-      ok: true,
+      ok: false,
       isAdmin: false
     })
     expect(getWebLoginRole('张舒琪', 'admin-code', options)).toEqual({

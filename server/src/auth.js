@@ -73,10 +73,11 @@ function isValidAccessCode(inputCode, configuredCode) {
 function getWebLoginRole(personName, inputCode, options) {
   const normalizedPersonName = typeof personName === 'string' ? personName.trim() : ''
   const adminPersonName = typeof options?.adminPersonName === 'string' ? options.adminPersonName.trim() : ''
-  const isAdminLogin = normalizedPersonName === adminPersonName
-    && isValidAccessCode(inputCode, options?.adminAccessCode)
+  const isAdminPerson = normalizedPersonName === adminPersonName
+  const isAdminLogin = isAdminPerson && isValidAccessCode(inputCode, options?.adminAccessCode)
 
   if (isAdminLogin) return { ok: true, isAdmin: true }
+  if (isAdminPerson) return { ok: false, isAdmin: false }
   if (isValidAccessCode(inputCode, options?.accessCode)) return { ok: true, isAdmin: false }
 
   return { ok: false, isAdmin: false }
