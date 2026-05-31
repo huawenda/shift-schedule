@@ -10,7 +10,7 @@ const {
   upsertProfile,
   upsertSalaryInput
 } = require('./db')
-const { createToken, isValidAccessCode, verifyToken } = require('./auth')
+const { createToken, getWebLoginRole, verifyToken } = require('./auth')
 const {
   filterWritableDeletedKeys,
   filterWritableRecords,
@@ -19,6 +19,7 @@ const {
 
 const port = Number(process.env.PORT || 3000)
 const accessCode = process.env.WEB_ACCESS_CODE || 'change-me'
+const adminAccessCode = process.env.ADMIN_ACCESS_CODE || ''
 const tokenSecret = process.env.TOKEN_SECRET || 'change-this-token-secret'
 const adminPersonName = process.env.ADMIN_PERSON_NAME || '华文达'
 
@@ -26,11 +27,11 @@ function normalizePersonName(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function getUserForPerson(personName) {
+function getUserForPerson(personName, isAdmin) {
   return {
     openid: `web:${personName}`,
     personName,
-    isAdmin: personName === adminPersonName
+    isAdmin
   }
 }
 
@@ -62,12 +63,17 @@ function createApp(pool) {
         res.status(400).json({ ok: false, message: '请选择姓名' })
         return
       }
-      if (!isValidAccessCode(req.body?.accessCode, accessCode)) {
+      const loginRole = getWebLoginRole(personName, req.body?.accessCode, {
+        accessCode,
+        adminAccessCode,
+        adminPersonName
+      })
+      if (!loginRole.ok) {
         res.status(401).json({ ok: false, message: '口令错误' })
         return
       }
 
-      const user = getUserForPerson(personName)
+      const user = getUserForPerson(personName, loginRole.isAdmin)
       const profile = await upsertProfile(pool, user)
       res.json({
         ok: true,
@@ -186,4 +192,3 @@ if (require.main === module) {
 module.exports = {
   createApp
 }
-

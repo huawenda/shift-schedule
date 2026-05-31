@@ -18,7 +18,9 @@ Open:
 http://<server-ip>:10086
 ```
 
-The Web login passcode is `WEB_ACCESS_CODE` in `.env`.
+The normal Web login passcode is `WEB_ACCESS_CODE` in `.env`.
+The administrator login passcode is `ADMIN_ACCESS_CODE` in `.env`.
+Only `ADMIN_PERSON_NAME` with `ADMIN_ACCESS_CODE` receives administrator permissions.
 
 ## Update Deployment
 

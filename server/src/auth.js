@@ -70,9 +70,21 @@ function isValidAccessCode(inputCode, configuredCode) {
   return timingSafeEqualString(inputCode, configuredCode)
 }
 
+function getWebLoginRole(personName, inputCode, options) {
+  const normalizedPersonName = typeof personName === 'string' ? personName.trim() : ''
+  const adminPersonName = typeof options?.adminPersonName === 'string' ? options.adminPersonName.trim() : ''
+  const isAdminLogin = normalizedPersonName === adminPersonName
+    && isValidAccessCode(inputCode, options?.adminAccessCode)
+
+  if (isAdminLogin) return { ok: true, isAdmin: true }
+  if (isValidAccessCode(inputCode, options?.accessCode)) return { ok: true, isAdmin: false }
+
+  return { ok: false, isAdmin: false }
+}
+
 module.exports = {
   createToken,
+  getWebLoginRole,
   isValidAccessCode,
   verifyToken
 }
-
