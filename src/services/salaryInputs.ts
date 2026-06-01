@@ -1,6 +1,12 @@
 import Taro from '@tarojs/taro'
 import { apiRequest, hasWebAuthToken } from './apiClient'
 import { isH5Runtime } from './runtime'
+import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient'
+import {
+  salaryEntryToSupabaseRow,
+  supabaseSalaryRowsToRecords,
+  type SupabaseSalaryInputRow
+} from './supabaseMaps'
 import { emptySalaryInputs, type SalaryInputValues } from '../utils/salary'
 
 export type SalaryInputRecords = Record<string, SalaryInputValues>
@@ -28,6 +34,10 @@ export function writeSalaryInputsToStorage(records: SalaryInputRecords) {
 }
 
 export async function loadSalaryInputs(): Promise<SalaryInputRecords> {
+  if (isH5Runtime && isSupabaseConfigured()) {
+    return loadSupabaseSalaryInputs()
+  }
+
   if (isH5Runtime && hasWebAuthToken()) {
     const response = await apiRequest<{ records?: unknown }>('/salary-inputs')
     return parseSalaryInputRecords(response.records)
@@ -37,6 +47,11 @@ export async function loadSalaryInputs(): Promise<SalaryInputRecords> {
 }
 
 export async function syncSalaryInputs(records: SalaryInputRecords): Promise<void> {
+  if (isH5Runtime && isSupabaseConfigured()) {
+    await syncSupabaseSalaryInputs(records)
+    return
+  }
+
   if (isH5Runtime && hasWebAuthToken()) {
     await apiRequest<{ records?: unknown }>('/salary-inputs', {
       method: 'PUT',
@@ -70,4 +85,34 @@ function parseInputString(value: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+async function loadSupabaseSalaryInputs(): Promise<SalaryInputRecords> {
+  const supabase = getSupabaseClient()
+  const { data: sessionData } = await supabase.auth.getSession()
+  if (!sessionData.session) return readSalaryInputsFromStorage()
+
+  const { data, error } = await supabase
+    .from('salary_inputs')
+    .select('person_name, month, base_salary, performance_allowance, position_allowance, other_deductions')
+    .order('person_name', { ascending: true })
+    .order('month', { ascending: true })
+
+  if (error) throw error
+  return supabaseSalaryRowsToRecords((data || []) as SupabaseSalaryInputRow[])
+}
+
+async function syncSupabaseSalaryInputs(records: SalaryInputRecords): Promise<void> {
+  const supabase = getSupabaseClient()
+  const rows = Object.entries(records)
+    .map(([key, values]) => salaryEntryToSupabaseRow(key, values))
+    .filter((row): row is SupabaseSalaryInputRow => Boolean(row))
+
+  if (rows.length === 0) return
+
+  const { error } = await supabase
+    .from('salary_inputs')
+    .upsert(rows, { onConflict: 'person_name,month' })
+
+  if (error) throw error
 }

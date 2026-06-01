@@ -12,7 +12,10 @@ export default defineConfig({
   sourceRoot: 'src',
   outputRoot: process.env.TARO_ENV === 'h5' ? 'dist-h5' : 'dist',
   plugins: ['@tarojs/plugin-platform-weapp', '@tarojs/plugin-platform-h5'],
-  defineConstants: {},
+  defineConstants: {
+    'process.env.TARO_APP_SUPABASE_URL': JSON.stringify(process.env.TARO_APP_SUPABASE_URL || ''),
+    'process.env.TARO_APP_SUPABASE_ANON_KEY': JSON.stringify(process.env.TARO_APP_SUPABASE_ANON_KEY || '')
+  },
   copy: {
     patterns: [
       {

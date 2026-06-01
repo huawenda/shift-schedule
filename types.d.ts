@@ -3,6 +3,8 @@
 declare const process: {
   env: {
     TARO_ENV?: string
+    TARO_APP_SUPABASE_URL?: string
+    TARO_APP_SUPABASE_ANON_KEY?: string
   }
 }
 

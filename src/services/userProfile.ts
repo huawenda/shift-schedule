@@ -1,6 +1,8 @@
 import Taro from '@tarojs/taro'
 import { ApiError, apiRequest, clearWebAuthToken, setWebAuthToken } from './apiClient'
 import { isH5Runtime } from './runtime'
+import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient'
+import { webUsernameToSupabaseEmail } from './supabaseMaps'
 
 const collectionName = 'user_profiles'
 const h5ProfileStorageKey = 'shift-scheduler:h5-user-profile:v1'
@@ -57,6 +59,19 @@ interface WebAccountLoginInput {
 interface WebAccountRegisterInput extends WebAccountLoginInput {
   personName: string
   inviteCode: string
+}
+
+interface SupabaseAccountRow {
+  id: number
+  auth_user_id: string
+  username: string
+  person_name: string
+  role: string
+  enabled: boolean
+  created_at_ms?: number | string | null
+  created_at_text?: string | null
+  updated_at_ms?: number | string | null
+  updated_at_text?: string | null
 }
 
 export class UserProfileError extends Error {
@@ -128,6 +143,10 @@ async function callUserProfileFunction(
 
 export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
   if (isH5Runtime) {
+    if (isSupabaseConfigured()) {
+      return loadSupabaseCurrentUserProfile()
+    }
+
     try {
       const result = await apiRequest<UserProfileFunctionResult>('/profile')
       return normalizeCurrentUserProfile(result) ?? {
@@ -177,6 +196,10 @@ export async function loginWebAccount(input: WebAccountLoginInput): Promise<Curr
     throw new UserProfileError('WEB_LOGIN_UNAVAILABLE', '账号登录仅用于 Web 端')
   }
 
+  if (isSupabaseConfigured()) {
+    return loginSupabaseAccount(input)
+  }
+
   const result = await apiRequest<WebLoginResult>('/auth/login', {
     method: 'POST',
     auth: false,
@@ -194,6 +217,10 @@ export async function loginWebAccount(input: WebAccountLoginInput): Promise<Curr
 export async function registerWebAccount(input: WebAccountRegisterInput): Promise<CurrentUserProfile> {
   if (!isH5Runtime) {
     throw new UserProfileError('WEB_REGISTER_UNAVAILABLE', '账号注册仅用于 Web 端')
+  }
+
+  if (isSupabaseConfigured()) {
+    return registerSupabaseAccount(input)
   }
 
   const result = await apiRequest<WebLoginResult>('/auth/register', {
@@ -255,4 +282,116 @@ function writeH5UserProfile(profile: UserProfile) {
   } catch {
     // Local mock profile should not block the Web preview.
   }
+}
+
+async function loadSupabaseCurrentUserProfile(): Promise<CurrentUserProfile> {
+  const supabase = getSupabaseClient()
+  const { data: sessionData } = await supabase.auth.getSession()
+  if (!sessionData.session) {
+    return {
+      openid: null,
+      isAdmin: false,
+      profile: null
+    }
+  }
+
+  const account = await loadSupabaseAccount()
+  if (!account) {
+    await supabase.auth.signOut()
+    return {
+      openid: null,
+      isAdmin: false,
+      profile: null
+    }
+  }
+
+  return supabaseAccountToCurrentUserProfile(account)
+}
+
+async function loginSupabaseAccount(input: WebAccountLoginInput): Promise<CurrentUserProfile> {
+  const supabase = getSupabaseClient()
+  const { error } = await supabase.auth.signInWithPassword({
+    email: webUsernameToSupabaseEmail(input.username),
+    password: input.password
+  })
+  if (error) {
+    throw new UserProfileError('WEB_LOGIN_FAILED', error.message || '账号或密码错误')
+  }
+
+  const account = await loadSupabaseAccount()
+  if (!account) {
+    throw new UserProfileError('WEB_LOGIN_FAILED', '账号未完成绑定或已停用')
+  }
+
+  const currentProfile = supabaseAccountToCurrentUserProfile(account)
+  if (currentProfile.profile) writeH5UserProfile(currentProfile.profile)
+  return currentProfile
+}
+
+async function registerSupabaseAccount(input: WebAccountRegisterInput): Promise<CurrentUserProfile> {
+  const supabase = getSupabaseClient()
+  const { error } = await supabase.auth.signUp({
+    email: webUsernameToSupabaseEmail(input.username),
+    password: input.password,
+    options: {
+      data: {
+        username: input.username.trim(),
+        person_name: input.personName.trim(),
+        invite_code: input.inviteCode
+      }
+    }
+  })
+  if (error) {
+    throw new UserProfileError('WEB_REGISTER_FAILED', normalizeSupabaseAuthError(error.message))
+  }
+
+  const account = await loadSupabaseAccount()
+  if (!account) {
+    throw new UserProfileError('WEB_REGISTER_FAILED', '注册成功后未自动登录，请确认 Supabase 已关闭邮箱确认后重试')
+  }
+
+  const currentProfile = supabaseAccountToCurrentUserProfile(account)
+  if (currentProfile.profile) writeH5UserProfile(currentProfile.profile)
+  return currentProfile
+}
+
+async function loadSupabaseAccount(): Promise<SupabaseAccountRow | null> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase
+    .from('user_accounts')
+    .select('id, auth_user_id, username, person_name, role, enabled, created_at_ms, created_at_text, updated_at_ms, updated_at_text')
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    throw new UserProfileError('WEB_LOGIN_FAILED', error.message || '账号资料读取失败')
+  }
+
+  if (!data || data.enabled !== true) return null
+  return data as SupabaseAccountRow
+}
+
+function supabaseAccountToCurrentUserProfile(account: SupabaseAccountRow): CurrentUserProfile {
+  const openid = `web-account:${account.id}`
+  return {
+    openid,
+    isAdmin: account.role === 'admin',
+    profile: {
+      _id: String(account.id),
+      _openid: openid,
+      personName: account.person_name,
+      boundAt: Number(account.created_at_ms || Date.now()),
+      boundAtText: account.created_at_text || undefined,
+      updatedAt: Number(account.updated_at_ms || Date.now()),
+      updatedAtText: account.updated_at_text || undefined
+    }
+  }
+}
+
+function normalizeSupabaseAuthError(message: string): string {
+  if (message.includes('User already registered')) return '账号名已存在'
+  if (message.includes('duplicate key')) return '账号名或姓名已被绑定'
+  if (message.includes('registration_invite')) return '邀请码错误'
+  if (message.includes('Password')) return '密码至少需要6个字符'
+  return message || '注册失败，请稍后重试'
 }
