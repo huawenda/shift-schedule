@@ -5,6 +5,7 @@
   "description": "倒班表微信小程序 MVP",
   "scripts": {
     "dev:h5": "taro build --type h5 --watch",
+    "dev:h5:https": "node scripts/dev-h5-https.mjs",
     "build:h5": "taro build --type h5",
     "dev:weapp": "taro build --type weapp --watch",
     "build:weapp": "taro build --type weapp",

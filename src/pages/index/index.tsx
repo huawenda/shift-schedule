@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Input, Picker, ScrollView, Text, View } from '@tarojs/components'
+import { Image, Input, Picker, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { scheduleData } from '../../data/schedule'
 import type { LeaveDuration, ShiftType } from '../../types/schedule'
@@ -74,6 +74,13 @@ const monthOptions: Array<{ label: string; value: ScheduleMonth }> = [
   { label: '11月', value: '11' },
   { label: '12月', value: '12' }
 ]
+
+function openStatsPage() {
+  void Taro.navigateTo({ url: '/pages/stats/index' }).catch(() => {
+    void Taro.redirectTo({ url: '/pages/stats/index' })
+  })
+}
+
 const tableViewOptions: Array<{ label: string; value: TableView }> = [
   { label: '常规', value: 'shift' },
   { label: '姓名', value: 'name' }
@@ -293,6 +300,7 @@ export default function Index() {
   const dateLabels = getDateLabels(activeScheduleData.startDate, activeScheduleData.dates)
   const scheduleTableStyle = `width: ${dateLabels.length * dateColumnWidth}rpx`
   const activeMonthIndex = monthOptions.findIndex(option => option.value === activeMonth)
+  const activeMonthLabel = monthOptions[activeMonthIndex]?.label ?? `${Number(activeMonth)}月`
 
   useEffect(() => {
     if (activeScheduleData.dates.includes(todayMonthDay)) {
@@ -689,9 +697,20 @@ export default function Index() {
     <View className={`page ${isH5Runtime ? 'page-h5' : ''}`}>
       <View className="frozen-panel">
         <View className="header" style={{ paddingTop: headerTopPadding }}>
-          <View>
-            <Text className="title">倒班表</Text>
-            <Text className="subtitle">{dateRangeText}</Text>
+          <View className="header-main">
+            <View className="title-row">
+              <View className="app-mark">
+                <Image className="app-mark-icon" src="/icons/icon-192.png" mode="aspectFill" />
+              </View>
+              <View className="title-copy">
+                <Text className="title">倒班表</Text>
+                <Text className="subtitle">{dateRangeText}</Text>
+              </View>
+            </View>
+          </View>
+          <View className="header-month-chip">
+            <Text className="header-month-value">{activeMonthLabel}</Text>
+            <Text className="header-month-label">当前</Text>
           </View>
         </View>
 
@@ -732,7 +751,7 @@ export default function Index() {
             </View>
             {canSwitchUser ? (
               <View className="current-user-actions">
-                <View className="user-picker-button" onClick={() => Taro.navigateTo({ url: '/pages/stats/index' })}>
+                <View className="user-picker-button" onClick={openStatsPage}>
                   <Text>统计</Text>
                 </View>
                 <Picker
@@ -754,7 +773,7 @@ export default function Index() {
               </View>
             ) : (
               <View className="current-user-actions">
-                <View className="user-picker-button" onClick={() => Taro.navigateTo({ url: '/pages/stats/index' })}>
+                <View className="user-picker-button" onClick={openStatsPage}>
                   <Text>统计</Text>
                 </View>
                 <View className="user-picker-button locked">

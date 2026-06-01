@@ -76,28 +76,95 @@
 
 .header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 64px;
-  margin-bottom: 18px;
+  min-height: 74px;
+  margin-bottom: 12px;
   box-sizing: border-box;
+}
+
+.header-main {
+  min-width: 0;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 10px;
+}
+
+.app-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  flex-shrink: 0;
+  border-radius: 18px;
+  background: transparent;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.app-mark-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+}
+
+.title-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .title {
   display: block;
-  font-size: 32px;
-  font-weight: 800;
-  line-height: 1.2;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.05;
   color: #172033;
 }
 
 .subtitle {
   display: block;
-  margin-top: 4px;
-  font-size: 22px;
+  margin-top: 7px;
+  font-size: 20px;
   line-height: 1.25;
   color: #667085;
+}
+
+.header-month-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  width: 76px;
+  height: 54px;
+  flex-shrink: 0;
+  border: 1px solid rgba(203, 213, 225, 0.72);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(16px);
+}
+
+.header-month-value {
+  color: #172033;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.header-month-label {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .month-tabs {
@@ -660,8 +727,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 34px;
-  margin-top: 6px;
+  height: 32px;
+  margin-top: 4px;
   overflow: hidden;
 }
 
@@ -675,20 +742,18 @@
 .legend {
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
   gap: 8px;
   min-width: 0;
-  height: 34px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.legend::-webkit-scrollbar {
-  display: none;
+  height: 32px;
+  overflow: hidden;
 }
 
 .legend-item {
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
+  height: 32px;
 }
 
 .table-view-switch {
@@ -720,7 +785,8 @@
 .table-toolbar-sub .scroll-tip {
   display: flex;
   align-items: center;
-  height: 34px;
+  height: 32px;
+  line-height: 32px;
   flex-shrink: 0;
   max-width: none;
   text-align: right;

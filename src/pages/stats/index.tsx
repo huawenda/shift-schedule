@@ -82,13 +82,6 @@ function getHeaderTopPadding(): string {
 function goBackToIndexPage() {
   const indexPageUrl = '/pages/index/index'
 
-  if (isH5Runtime) {
-    void Taro.redirectTo({ url: indexPageUrl }).catch(() => {
-      void Taro.navigateTo({ url: indexPageUrl })
-    })
-    return
-  }
-
   try {
     if (Taro.getCurrentPages().length > 1) {
       void Taro.navigateBack().catch(() => {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shift-schedule-shell-v1'
+const CACHE_NAME = 'shift-schedule-shell-v4'
 const SHELL_URLS = [
   '/',
   '/index.html',

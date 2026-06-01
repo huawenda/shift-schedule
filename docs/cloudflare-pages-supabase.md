@@ -55,6 +55,44 @@ Build output directory: dist-h5
 
 Deploy again after adding the variables.
 
+## Local development
+
+Create a local-only `.env.local` file:
+
+```text
+TARO_APP_SUPABASE_URL=https://your-project-ref.supabase.co
+TARO_APP_SUPABASE_ANON_KEY=your-supabase-publishable-key
+```
+
+Then start H5 development:
+
+```bash
+pnpm dev:h5
+```
+
+Without these variables, H5 falls back to the legacy `/api` backend. That is
+only useful when the old Express server is running locally.
+
+### Preview PWA on a phone
+
+Mobile browsers require a trusted HTTPS origin for Service Worker and PWA
+installation. For local phone testing, create a local development certificate:
+
+```bash
+mkdir certs
+mkcert -install
+mkcert -key-file certs/dev-key.pem -cert-file certs/dev.pem localhost 127.0.0.1 192.168.31.241
+```
+
+Replace `192.168.31.241` with your computer's current LAN IP. Install and trust
+the mkcert root certificate on the phone, then start:
+
+```bash
+pnpm dev:h5:https
+```
+
+Open `https://<your-lan-ip>:10086/#/pages/index/index` on the phone.
+
 ## 4. Register users
 
 Use the app registration page:

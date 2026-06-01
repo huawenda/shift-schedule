@@ -32,7 +32,7 @@ export function setupPwa() {
   document.title = '倒班表'
   upsertLink('manifest', '/manifest.webmanifest')
   upsertLink('apple-touch-icon', '/icons/icon-192.png')
-  upsertMeta('theme-color', '#2563eb')
+  upsertMeta('theme-color', '#f5f7fb')
   upsertMeta('mobile-web-app-capable', 'yes')
   upsertMeta('apple-mobile-web-app-capable', 'yes')
   upsertMeta('apple-mobile-web-app-title', '倒班表')
