@@ -1272,3 +1272,477 @@
     display: none;
   }
 }
+
+@media (min-width: 900PX) {
+  .stats-page {
+    height: 100vh;
+    padding: 0 32PX;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(37, 99, 235, 0.08), transparent 32%),
+      linear-gradient(180deg, #eef4fb 0%, #f6f8fb 100%);
+    align-items: center;
+  }
+
+  .stats-header,
+  .stats-view-tabs,
+  .stats-filter-card,
+  .stats-page-indicator,
+  .stats-personal-pages,
+  .stats-page > .stats-content,
+  .stats-loading-card {
+    width: 100%;
+    max-width: 1280PX;
+  }
+
+  .stats-header {
+    min-height: 86PX;
+    margin-bottom: 14PX;
+    padding-top: 0 !important;
+  }
+
+  .stats-title {
+    font-size: 30PX;
+  }
+
+  .stats-subtitle {
+    font-size: 16PX;
+  }
+
+  .stats-back-button {
+    min-width: 72PX;
+    height: 44PX;
+    padding: 0 18PX;
+    font-size: 17PX;
+  }
+
+  .stats-view-tabs {
+    gap: 8PX;
+    padding: 6PX;
+    margin-bottom: 14PX;
+    border-radius: 14PX;
+  }
+
+  .stats-view-tab {
+    height: 48PX;
+    border-radius: 10PX;
+    font-size: 18PX;
+    cursor: pointer;
+  }
+
+  .stats-filter-card {
+    gap: 12PX;
+    padding: 14PX;
+    margin-bottom: 14PX;
+    border-radius: 16PX;
+  }
+
+  .stats-filter-card.has-person-filter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-filter-item {
+    min-height: 68PX;
+    padding: 0 16PX;
+    border-radius: 12PX;
+  }
+
+  .stats-filter-label {
+    margin-bottom: 5PX;
+    font-size: 14PX;
+  }
+
+  .stats-filter-value {
+    font-size: 20PX;
+  }
+
+  .stats-page-indicator {
+    height: 22PX;
+    margin: -2PX 0 10PX;
+  }
+
+  .stats-page-indicator-dot {
+    width: 9PX;
+    height: 9PX;
+    cursor: pointer;
+  }
+
+  .stats-page-indicator-dot.active {
+    width: 28PX;
+  }
+
+  .stats-personal-pages {
+    margin: 0 -10PX;
+  }
+
+  .stats-personal-page {
+    padding: 0 10PX;
+  }
+
+  .stats-content-inner {
+    padding-bottom: 32PX;
+  }
+
+  .stats-card {
+    padding: 18PX;
+    margin-bottom: 16PX;
+    border-radius: 16PX;
+    box-shadow: 0 16PX 38PX rgba(15, 23, 42, 0.07);
+  }
+
+  .stats-section-title-row {
+    margin-bottom: 16PX;
+  }
+
+  .stats-section-title {
+    font-size: 24PX;
+  }
+
+  .stats-section-hint {
+    font-size: 16PX;
+  }
+
+  .stats-overview-row {
+    grid-template-columns: 120PX minmax(0, 1fr) 96PX 96PX;
+    min-height: 54PX;
+    padding: 0 14PX;
+  }
+
+  .stats-overview-header {
+    min-height: 46PX;
+    font-size: 15PX;
+  }
+
+  .stats-overview-tag,
+  .stats-shift {
+    min-width: 50PX;
+    height: 28PX;
+    padding: 0 9PX;
+    font-size: 14PX;
+  }
+
+  .stats-overview-value {
+    font-size: 18PX;
+  }
+
+  .stats-bar-chart {
+    min-height: 210PX;
+  }
+
+  .stats-bar-track {
+    width: 38PX;
+    height: 140PX;
+  }
+
+  .stats-bar-item {
+    grid-template-rows: 28PX 140PX 28PX;
+  }
+
+  .stats-bar-value,
+  .stats-bar-label {
+    font-size: 16PX;
+  }
+
+  .salary-input-label,
+  .salary-result-label,
+  .salary-summary-label {
+    font-size: 14PX;
+  }
+
+  .salary-block-title {
+    font-size: 18PX;
+  }
+
+  .salary-section-total {
+    font-size: 15PX;
+  }
+
+  .salary-input-box {
+    min-height: 48PX;
+    border-radius: 10PX;
+  }
+
+  .salary-input,
+  .salary-input.taro-input-core,
+  .salary-input taro-input-core,
+  .salary-input .taro-input-core,
+  .salary-input input,
+  .salary-input .weui-input {
+    height: 46PX;
+    font-size: 16PX;
+    line-height: 46PX;
+  }
+
+  .salary-input-prefix,
+  .salary-result-value,
+  .salary-summary-value {
+    font-size: 16PX;
+  }
+
+  .salary-result-item {
+    min-height: 62PX;
+    border-radius: 10PX;
+  }
+
+  .salary-summary-item {
+    min-height: 68PX;
+  }
+
+  .stats-daily-row {
+    min-height: 52PX;
+    padding: 0 14PX;
+  }
+
+  .stats-daily-header {
+    min-height: 46PX;
+    font-size: 15PX;
+  }
+
+  .stats-daily-date,
+  .stats-daily-pay,
+  .stats-daily-overtime {
+    font-size: 17PX;
+  }
+
+  .stats-team-overview-value {
+    font-size: 24PX;
+  }
+
+  .stats-team-overview-label,
+  .stats-team-chart-group,
+  .stats-team-legend-item {
+    font-size: 14PX;
+  }
+
+  .stats-team-chart-row {
+    grid-template-columns: 42PX 96PX minmax(0, 1fr) 64PX;
+    min-height: 54PX;
+    gap: 12PX;
+  }
+
+  .stats-team-chart-name,
+  .stats-team-chart-total,
+  .stats-ranking-rank {
+    font-size: 16PX;
+  }
+}
+
+/* Visual polish: match the schedule cockpit shell */
+.stats-page {
+  color: #162033;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.10), transparent 34%),
+    radial-gradient(circle at 94% 6%, rgba(20, 184, 166, 0.08), transparent 32%),
+    linear-gradient(180deg, #f3f7fc 0%, #f7f9fc 260px, #f7f9fc 100%);
+}
+
+.stats-title,
+.stats-section-title,
+.stats-filter-value,
+.stats-overview-value,
+.salary-block-title,
+.salary-result-value,
+.salary-summary-value {
+  color: #0f172a;
+}
+
+.stats-subtitle,
+.stats-filter-label,
+.stats-section-hint,
+.salary-input-label,
+.salary-result-label,
+.salary-summary-label,
+.salary-rate-line {
+  color: #64748b;
+}
+
+.stats-back-button,
+.stats-view-tabs,
+.stats-filter-card,
+.stats-card,
+.stats-loading-card {
+  border-color: rgba(226, 232, 240, 0.92);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 12px 30px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.stats-back-button {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border-color: #cbdcf2;
+  color: #2563eb;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.stats-view-tabs {
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.stats-view-tab {
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.stats-view-tab.active {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.20);
+}
+
+.stats-filter-item {
+  background: linear-gradient(180deg, #f8fbff 0%, #f2f7fc 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.stats-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb 0%, #14b8a6 62%, #f59e0b 100%);
+  opacity: 0.68;
+}
+
+.stats-summary-item {
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.stats-summary-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.stats-summary-item.stats-shift-day {
+  background: linear-gradient(180deg, #e6f6ff 0%, #dff2ff 100%);
+}
+
+.stats-summary-item.stats-shift-night {
+  background: linear-gradient(180deg, #f0ecff 0%, #ebe6ff 100%);
+}
+
+.stats-summary-item.stats-shift-rest {
+  background: linear-gradient(180deg, #e9fbf1 0%, #def8eb 100%);
+}
+
+.stats-summary-item.stats-shift-special-day {
+  background: linear-gradient(180deg, #fff5de 0%, #ffedc8 100%);
+}
+
+.stats-summary-item.stats-shift-special-night {
+  background: linear-gradient(180deg, #fdebd3 0%, #fbe0be 100%);
+}
+
+.stats-summary-item.stats-shift-legal {
+  background: linear-gradient(180deg, #fee3e3 0%, #fbd6d7 100%);
+}
+
+.stats-overview-table {
+  border-color: #e6edf5;
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+.stats-overview-header,
+.stats-daily-header {
+  background: #eef4fb;
+  color: #536174;
+}
+
+.stats-overview-row,
+.stats-daily-row {
+  border-bottom-color: #e8eef6;
+}
+
+.stats-overview-tag,
+.stats-shift {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+
+.stats-bar-track {
+  background: linear-gradient(180deg, #eef4fb 0%, #f6f9fd 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.04),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.stats-bar-fill.stats-overtime-weekday {
+  background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 100%);
+}
+
+.stats-bar-fill.stats-overtime-special {
+  background: linear-gradient(180deg, #fdba74 0%, #fb923c 100%);
+}
+
+.stats-bar-fill.stats-overtime-legal {
+  background: linear-gradient(180deg, #fca5a5 0%, #ef4444 100%);
+}
+
+.salary-input-box,
+.salary-result-item,
+.salary-summary-item {
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  background: linear-gradient(180deg, #f8fbff 0%, #f3f7fc 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.salary-result-item.deduction,
+.salary-summary-item.deduction {
+  background: linear-gradient(180deg, #fff7ed 0%, #fff2df 100%);
+}
+
+.salary-result-item.legal {
+  background: linear-gradient(180deg, #fff1f2 0%, #ffe7e9 100%);
+}
+
+.salary-summary-item.primary {
+  background: linear-gradient(180deg, #eff6ff 0%, #e5f0ff 100%);
+  border-color: #bfdbfe;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .stats-back-button:hover,
+  .stats-view-tab:hover {
+    cursor: pointer;
+    transform: translateY(-1px);
+  }
+
+  .stats-back-button:hover {
+    border-color: #93bdf8;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.12);
+  }
+}
+
+@media (min-width: 900PX) {
+  .stats-page {
+    background: transparent;
+  }
+
+  .stats-header,
+  .stats-view-tabs,
+  .stats-filter-card,
+  .stats-page-indicator,
+  .stats-personal-pages,
+  .stats-page > .stats-content,
+  .stats-loading-card {
+    max-width: 1320PX;
+  }
+
+  .stats-card,
+  .stats-filter-card,
+  .stats-view-tabs {
+    box-shadow:
+      0 18PX 42PX rgba(15, 23, 42, 0.07),
+      inset 0 1PX 0 rgba(255, 255, 255, 0.76);
+  }
+}

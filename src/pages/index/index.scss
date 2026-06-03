@@ -13,7 +13,7 @@
   flex-shrink: 0;
   position: relative;
   z-index: 5;
-  background: linear-gradient(180deg, #f3f7fc 0%, #f5f7fb 100%);
+  background: transparent;
 }
 
 .scrollable-content {
@@ -25,6 +25,12 @@
 .scrollable-content-inner {
   padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
+}
+
+.desktop-layout,
+.desktop-primary-column,
+.desktop-secondary-column {
+  min-width: 0;
 }
 
 .page-h5 .scrollable-content-inner {
@@ -793,6 +799,10 @@
   white-space: nowrap;
 }
 
+.table-scroll-controls {
+  display: none;
+}
+
 .table-shell {
   display: flex;
   width: 100%;
@@ -883,6 +893,11 @@
   min-width: 0;
   flex: 1;
   background: #ffffff;
+}
+
+.table-scroll ::-webkit-scrollbar,
+.table-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .schedule-table {
@@ -1451,5 +1466,750 @@
 
   .scroll-tip {
     display: none;
+  }
+}
+
+@media (min-width: 900PX) {
+  .page {
+    height: 100vh;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(37, 99, 235, 0.08), transparent 32%),
+      linear-gradient(180deg, #eef4fb 0%, #f6f8fb 100%);
+    padding: 0 32PX;
+  }
+
+  .frozen-panel,
+  .scrollable-content-inner {
+    width: 100%;
+    max-width: 1280PX;
+    margin: 0 auto;
+  }
+
+  .frozen-panel {
+    background: transparent;
+  }
+
+  .header {
+    min-height: 86PX;
+    margin-bottom: 14PX;
+  }
+
+  .app-mark {
+    width: 56PX;
+    height: 56PX;
+    border-radius: 16PX;
+  }
+
+  .app-mark-icon {
+    border-radius: 16PX;
+  }
+
+  .title {
+    font-size: 28PX;
+  }
+
+  .subtitle {
+    margin-top: 4PX;
+    font-size: 16PX;
+  }
+
+  .header-month-chip {
+    width: 72PX;
+    height: 56PX;
+    border-radius: 16PX;
+  }
+
+  .header-month-value {
+    font-size: 20PX;
+  }
+
+  .header-month-label {
+    font-size: 12PX;
+  }
+
+  .month-tabs {
+    margin-bottom: 16PX;
+    border-radius: 14PX;
+  }
+
+  .month-tabs-inner {
+    display: flex;
+    width: 100%;
+  }
+
+  .month-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 52PX;
+    margin-right: 8PX;
+    padding: 0 12PX;
+    border-radius: 10PX;
+    font-size: 20PX;
+  }
+
+  .current-user-card {
+    padding: 18PX 22PX;
+    margin-bottom: 18PX;
+    border-radius: 16PX;
+  }
+
+  .current-user-main {
+    align-items: center;
+  }
+
+  .eyebrow {
+    margin-bottom: 4PX;
+    font-size: 14PX;
+  }
+
+  .current-user-name {
+    max-width: 260PX;
+    font-size: 28PX;
+  }
+
+  .current-user-group {
+    font-size: 18PX;
+  }
+
+  .user-picker-button {
+    min-width: 82PX;
+    height: 42PX;
+    padding: 0 18PX;
+    font-size: 17PX;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(6, minmax(92PX, 1fr));
+    gap: 12PX;
+    margin-top: 14PX;
+  }
+
+  .summary-item {
+    min-height: 70PX;
+    border-radius: 12PX;
+  }
+
+  .summary-value {
+    font-size: 24PX;
+  }
+
+  .summary-label {
+    margin-top: 3PX;
+    font-size: 15PX;
+  }
+
+  .summary-overtime {
+    left: calc(50% + 18PX);
+    height: 18PX;
+    min-width: 26PX;
+    padding: 0 6PX;
+    font-size: 11PX;
+  }
+
+  .scrollable-content-inner {
+    padding-bottom: 32PX;
+  }
+
+  .desktop-layout {
+    display: grid;
+    grid-template-columns: minmax(520PX, 560PX) minmax(0, 1fr);
+    gap: 20PX;
+    align-items: start;
+  }
+
+  .upcoming-card,
+  .table-card {
+    border-radius: 16PX;
+    box-shadow: 0 16PX 38PX rgba(15, 23, 42, 0.07);
+  }
+
+  .upcoming-card {
+    margin-bottom: 0;
+    padding: 18PX;
+  }
+
+  .section-title {
+    font-size: 22PX;
+  }
+
+  .section-hint,
+  .scroll-tip {
+    font-size: 14PX;
+  }
+
+  .section-hint {
+    padding-right: 0;
+  }
+
+  .calendar-weekdays {
+    gap: 8PX;
+    margin-top: 14PX;
+  }
+
+  .calendar-weekday {
+    font-size: 15PX;
+  }
+
+  .calendar-grid {
+    gap: 8PX;
+    margin-top: 10PX;
+  }
+
+  .calendar-cell {
+    height: 86PX;
+    border-radius: 10PX;
+    cursor: pointer;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+
+  .calendar-cell:hover {
+    border-color: #bfdbfe;
+    box-shadow: 0 8PX 20PX rgba(37, 99, 235, 0.1);
+    transform: translateY(-1PX);
+  }
+
+  .calendar-cell-content {
+    min-height: 60PX;
+  }
+
+  .calendar-date-wrap {
+    width: 64PX;
+    min-height: 30PX;
+    margin-bottom: 6PX;
+  }
+
+  .calendar-lunar-spacer,
+  .calendar-lunar,
+  .calendar-lunar-char {
+    width: 20PX;
+  }
+
+  .calendar-day {
+    width: 22PX;
+    font-size: 19PX;
+  }
+
+  .calendar-lunar,
+  .calendar-lunar-char {
+    font-size: 11PX;
+    line-height: 11PX;
+  }
+
+  .calendar-lunar-char {
+    height: 11PX;
+    margin-bottom: 1PX;
+  }
+
+  .edited-marker,
+  .overtime-marker {
+    width: 8PX;
+    height: 8PX;
+  }
+
+  .edited-marker {
+    top: 7PX;
+    left: 7PX;
+  }
+
+  .overtime-marker {
+    bottom: 7PX;
+    left: 7PX;
+  }
+
+  .legal-shift-badge {
+    min-width: 20PX;
+    height: 20PX;
+    padding: 0 5PX;
+    font-size: 11PX;
+  }
+
+  .calendar-shift-row {
+    gap: 3PX;
+  }
+
+  .calendar-shift-row .shift {
+    min-width: 42PX;
+    height: 24PX;
+    padding: 0 7PX;
+    font-size: 13PX;
+  }
+
+  .table-card {
+    overflow: hidden;
+  }
+
+  .table-toolbar {
+    padding: 16PX 18PX 12PX;
+    flex-shrink: 0;
+  }
+
+  .table-card-title {
+    font-size: 22PX;
+  }
+
+  .table-toolbar-sub {
+    height: 38PX;
+    align-items: center;
+    margin-top: 6PX;
+    overflow: visible;
+  }
+
+  .table-toolbar-sub .scroll-tip {
+    display: none;
+  }
+
+  .table-scroll-controls {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    gap: 4PX;
+    height: 32PX;
+    padding: 2PX;
+    border: 1PX solid #dbe6f3;
+    border-radius: 999PX;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+    box-shadow: 0 6PX 16PX rgba(15, 23, 42, 0.08);
+  }
+
+  .table-scroll-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28PX;
+    height: 28PX;
+    border: 0;
+    border-radius: 999PX;
+    box-sizing: border-box;
+    background: transparent;
+    color: #2563eb;
+    cursor: pointer;
+    font-size: 20PX;
+    font-weight: 900;
+    line-height: 1;
+    transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+
+  .table-scroll-button:hover {
+    background: #eff6ff;
+    box-shadow: 0 4PX 10PX rgba(37, 99, 235, 0.14);
+    transform: translateY(-1PX);
+  }
+
+  .table-scroll-button text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+  }
+
+  .legend {
+    height: 30PX;
+    gap: 8PX;
+  }
+
+  .legend-item {
+    height: 30PX;
+  }
+
+  .table-view-option {
+    min-width: 62PX;
+    height: 34PX;
+    font-size: 15PX;
+  }
+
+  .identity-column {
+    width: 156PX;
+  }
+
+  .table-scroll {
+    width: calc(100% - 156PX);
+  }
+
+  .identity-row,
+  .table-row {
+    height: 54PX;
+  }
+
+  .identity-header,
+  .table-header {
+    height: 60PX;
+  }
+
+  .identity-row {
+    padding: 7PX 12PX;
+  }
+
+  .identity-header-title,
+  .date-main {
+    font-size: 16PX;
+  }
+
+  .identity-subtitle,
+  .date-weekday {
+    font-size: 13PX;
+  }
+
+  .identity-name {
+    max-width: 96PX;
+    font-size: 16PX;
+  }
+
+  .identity-group {
+    margin-top: 3PX;
+    font-size: 13PX;
+  }
+
+  .identity-group.only-group {
+    max-width: 88PX;
+    font-size: 17PX;
+  }
+
+  .date-cell {
+    width: 82PX;
+  }
+
+  .cell {
+    padding: 5PX;
+    font-size: 14PX;
+  }
+
+  .table-edited-marker {
+    top: 7PX;
+    left: 7PX;
+    width: 7PX;
+    height: 7PX;
+  }
+
+  .table-shift-cell {
+    cursor: pointer;
+    transition: background 160ms ease;
+  }
+
+  .table-shift-cell:hover {
+    background: rgba(37, 99, 235, 0.045);
+  }
+
+  .name-view-person-name {
+    width: 66PX;
+    height: 28PX;
+    font-size: 13PX;
+  }
+}
+
+/* Visual polish: native-feeling scheduling cockpit */
+.page {
+  color: #162033;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.10), transparent 34%),
+    radial-gradient(circle at 94% 6%, rgba(20, 184, 166, 0.08), transparent 32%),
+    linear-gradient(180deg, #f3f7fc 0%, #f7f9fc 260px, #f7f9fc 100%);
+}
+
+.frozen-panel {
+  background: transparent;
+}
+
+.header {
+  padding: 2px 2px 0;
+}
+
+.title-row {
+  gap: 12px;
+}
+
+.app-mark {
+  background: linear-gradient(145deg, #ffffff 0%, #eef6ff 100%);
+  border: 1px solid rgba(219, 230, 243, 0.86);
+  box-shadow:
+    0 10px 24px rgba(37, 99, 235, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.title {
+  color: #0f172a;
+  letter-spacing: 0;
+}
+
+.subtitle {
+  color: #64748b;
+}
+
+.header-month-chip,
+.current-user-card,
+.upcoming-card,
+.table-card {
+  border-color: rgba(226, 232, 240, 0.92);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 12px 30px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.header-month-chip {
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+}
+
+.month-tabs {
+  border: 1px solid rgba(219, 230, 243, 0.72);
+  background: rgba(232, 238, 247, 0.90);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
+}
+
+.month-tab {
+  color: #516174;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.month-tab.active {
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.90);
+}
+
+.current-user-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.current-user-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb 0%, #14b8a6 62%, #f59e0b 100%);
+}
+
+.eyebrow,
+.section-hint,
+.scroll-tip {
+  color: #64748b;
+}
+
+.current-user-name,
+.section-title,
+.table-card-title,
+.calendar-day,
+.identity-header-title,
+.date-main {
+  color: #0f172a;
+}
+
+.user-picker-button,
+.stats-button,
+.table-scroll-button {
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.user-picker-button {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border-color: #cbdcf2;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.08);
+}
+
+.summary-item {
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.summary-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.summary-day {
+  background: linear-gradient(180deg, #e6f6ff 0%, #dff2ff 100%);
+}
+
+.summary-night {
+  background: linear-gradient(180deg, #f0ecff 0%, #ebe6ff 100%);
+}
+
+.summary-rest {
+  background: linear-gradient(180deg, #e9fbf1 0%, #def8eb 100%);
+}
+
+.summary-white-special {
+  background: linear-gradient(180deg, #fff5de 0%, #ffedc8 100%);
+}
+
+.summary-night-special {
+  background: linear-gradient(180deg, #fdebd3 0%, #fbe0be 100%);
+}
+
+.summary-legal {
+  background: linear-gradient(180deg, #fee3e3 0%, #fbd6d7 100%);
+}
+
+.upcoming-card,
+.table-card {
+  border-radius: 16px;
+}
+
+.section-title-row {
+  padding-bottom: 2px;
+}
+
+.calendar-weekday {
+  color: #536174;
+}
+
+.calendar-cell {
+  border-color: #e6edf5;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.calendar-cell-empty {
+  background: linear-gradient(180deg, #fbfcff 0%, #f5f8fc 100%);
+}
+
+.today-calendar-cell {
+  border-color: #38a3ff;
+  background: linear-gradient(180deg, #edf8ff 0%, #e3f4ff 100%);
+  box-shadow:
+    0 6px 16px rgba(24, 144, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.edited-calendar-cell {
+  border-color: #f3bd4d;
+  background: linear-gradient(180deg, #fffaf0 0%, #fff4df 100%);
+}
+
+.table-toolbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(249, 252, 255, 0.96) 100%);
+  border-bottom-color: #e6edf5;
+}
+
+.table-view-switch {
+  background: #eef4fb;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.table-view-option.active {
+  background: #ffffff;
+  box-shadow:
+    0 7px 16px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.identity-column {
+  background: #ffffff;
+  box-shadow: 10px 0 22px rgba(15, 23, 42, 0.07);
+}
+
+.identity-header,
+.table-header {
+  background: #eef4fb;
+}
+
+.table-header {
+  box-shadow: 100vw 0 0 #eef4fb;
+}
+
+.identity-row,
+.table-row {
+  border-bottom-color: #e8eef6;
+}
+
+.highlight-identity,
+.highlight-row {
+  background: #fff8ec;
+}
+
+.highlight-row {
+  box-shadow: 100vw 0 0 #fff8ec;
+}
+
+.table-shift-cell {
+  transition: background 150ms ease;
+}
+
+.name-view-person-name,
+.shift {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .month-tab:hover,
+  .table-view-option:hover,
+  .user-picker-button:hover,
+  .calendar-cell:hover,
+  .table-shift-cell:hover {
+    cursor: pointer;
+  }
+
+  .month-tab:hover,
+  .user-picker-button:hover,
+  .table-view-option:hover {
+    transform: translateY(-1px);
+  }
+
+  .user-picker-button:hover {
+    border-color: #93bdf8;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.12);
+  }
+}
+
+@media (min-width: 900PX) {
+  .page {
+    background: transparent;
+  }
+
+  .frozen-panel,
+  .scrollable-content-inner {
+    max-width: 1320PX;
+  }
+
+  .frozen-panel {
+    background: transparent;
+  }
+
+  .desktop-layout {
+    gap: 24PX;
+  }
+
+  .current-user-card,
+  .upcoming-card,
+  .table-card {
+    box-shadow:
+      0 18PX 42PX rgba(15, 23, 42, 0.07),
+      inset 0 1PX 0 rgba(255, 255, 255, 0.76);
+  }
+
+  .table-card {
+    min-height: 560PX;
+  }
+
+  .current-user-actions {
+    align-items: center;
+    gap: 12PX;
+  }
+
+  .current-user-actions .user-picker-button,
+  .current-user-actions taro-picker-core,
+  .current-user-actions .taro-picker-core,
+  .current-user-actions taro-picker-core .user-picker-button,
+  .current-user-actions .taro-picker-core .user-picker-button {
+    width: 80PX;
+    min-width: 80PX;
+    height: 46PX;
+    padding: 0;
+    flex: 0 0 80PX;
+    box-sizing: border-box;
   }
 }

@@ -81,6 +81,12 @@ function openStatsPage() {
   })
 }
 
+function isDesktopPointerRuntime(): boolean {
+  if (!isH5Runtime || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+
+  return window.matchMedia('(min-width: 900px) and (pointer: fine)').matches
+}
+
 const tableViewOptions: Array<{ label: string; value: TableView }> = [
   { label: '常规', value: 'shift' },
   { label: '姓名', value: 'name' }
@@ -106,6 +112,14 @@ function getCenteredTableScrollLeft(date: string, dates: string[]): number {
   const tableVisibleWidth = 750 - pageHorizontalPadding - identityColumnWidth
   const columnCenter = (dateIndex * dateColumnWidth) + (dateColumnWidth / 2)
   return Math.max(0, columnCenter - (tableVisibleWidth / 2)) * scale
+}
+
+function getMaxTableScrollLeft(dates: string[]): number {
+  const scale = getRpxScale()
+  const tableVisibleWidth = 750 - pageHorizontalPadding - identityColumnWidth
+  const tableWidth = dates.length * dateColumnWidth
+
+  return Math.max(0, tableWidth - tableVisibleWidth) * scale
 }
 
 function getHeaderTopPadding(): string {
@@ -513,6 +527,18 @@ export default function Index() {
     setTableScrollLeft(getCenteredTableScrollLeft(date, activeScheduleData.dates))
   }
 
+  const scrollTableByDays = (direction: 'previous' | 'next') => {
+    const step = dateColumnWidth * 4 * getRpxScale()
+    const maxScrollLeft = getMaxTableScrollLeft(activeScheduleData.dates)
+    setTableScrollLeft(currentScrollLeft => {
+      const nextScrollLeft = direction === 'next'
+        ? currentScrollLeft + step
+        : currentScrollLeft - step
+
+      return Math.min(Math.max(nextScrollLeft, 0), maxScrollLeft)
+    })
+  }
+
   const openShiftEditor = (date: string, personName = currentUser?.name) => {
     if (!personName) return
     if (!isAdminUser && personName !== boundPersonName) {
@@ -867,6 +893,8 @@ export default function Index() {
             <View className={`cloud-refresh-spinner ${cloudRefreshing ? 'spinning' : ''}`} />
             <Text>{cloudRefreshing ? '正在同步云端' : '下拉同步云端'}</Text>
           </View>
+          <View className="desktop-layout">
+            <View className="desktop-primary-column">
           <View
             className="upcoming-card"
             onTouchStart={event => {
@@ -903,7 +931,13 @@ export default function Index() {
                 key={cell.key}
                 className={`calendar-cell ${cell.inCurrentMonth ? '' : 'calendar-cell-empty'} ${cell.key === todayMonthDay ? 'today-calendar-cell' : ''} ${currentUser && shiftOverrides[getOverrideKey(currentUser.name, cell.key)] ? 'edited-calendar-cell' : ''}`}
                 onClick={() => {
-                  if (cell.inCurrentMonth) jumpTableToDate(cell.key)
+                  if (!cell.inCurrentMonth) return
+                  if (isDesktopPointerRuntime()) {
+                    openShiftEditor(cell.key)
+                    return
+                  }
+
+                  jumpTableToDate(cell.key)
                 }}
                 onLongPress={() => {
                   if (cell.inCurrentMonth) openShiftEditor(cell.key)
@@ -950,7 +984,9 @@ export default function Index() {
           </View>
           </View>
           </View>
+            </View>
 
+            <View className="desktop-secondary-column">
           <View className="table-card">
         <View className="table-toolbar">
           <View className="table-toolbar-main">
@@ -974,6 +1010,14 @@ export default function Index() {
                   <Text className={getShiftClassName(shift)}>{shift}</Text>
                 </View>
               ))}
+            </View>
+            <View className="table-scroll-controls">
+              <View className="table-scroll-button" onClick={() => scrollTableByDays('previous')}>
+                <Text>‹</Text>
+              </View>
+              <View className="table-scroll-button" onClick={() => scrollTableByDays('next')}>
+                <Text>›</Text>
+              </View>
             </View>
             <Text className="scroll-tip">左右滑动查看更多日期</Text>
           </View>
@@ -1018,7 +1062,11 @@ export default function Index() {
             scrollWithAnimation
             className="table-scroll"
             enhanced
-            showScrollbar
+            showScrollbar={false}
+            onScroll={event => {
+              const scrollLeft = Number((event as unknown as { detail?: { scrollLeft?: number } }).detail?.scrollLeft)
+              if (Number.isFinite(scrollLeft)) setTableScrollLeft(scrollLeft)
+            }}
           >
             <View className="schedule-table" style={scheduleTableStyle}>
               <View className="table-row table-header">
@@ -1047,6 +1095,9 @@ export default function Index() {
                       <View
                         key={`${person.name}-${index}`}
                         className="cell date-cell table-shift-cell"
+                        onClick={() => {
+                          if (isDesktopPointerRuntime()) openShiftEditor(date, person.name)
+                        }}
                         onLongPress={() => openShiftEditor(date, person.name)}
                       >
                         {isEditedShift && <View className="table-edited-marker" />}
@@ -1064,7 +1115,9 @@ export default function Index() {
               ))}
             </View>
           </ScrollView>
+        </View>
           </View>
+            </View>
           </View>
         </View>
       </ScrollView>

@@ -1,17 +1,22 @@
 page {
   background: #f6f7fb;
+  color: #162033;
 }
 
 html,
 body {
   min-height: 100%;
   margin: 0;
-  background: #e8edf5;
+  background:
+    radial-gradient(circle at 22% 8%, rgba(37, 99, 235, 0.10), transparent 30%),
+    radial-gradient(circle at 80% 16%, rgba(20, 184, 166, 0.08), transparent 28%),
+    #e8edf5;
+  color: #162033;
 }
 
 #app {
   min-height: 100%;
-  background: #e8edf5;
+  background: transparent;
 }
 
 #app.taro_router {
@@ -20,6 +25,14 @@ body {
   min-height: 100vh;
   margin: 0 auto;
   overflow: hidden;
-  background: #f6f7fb;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.16);
+  background: #f6f8fc;
+  box-shadow: 0 22px 58px rgba(15, 23, 42, 0.16);
+}
+
+@media (min-width: 900PX) {
+  #app.taro_router {
+    max-width: none;
+    box-shadow: none;
+    background: transparent;
+  }
 }
