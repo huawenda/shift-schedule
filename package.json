@@ -2,14 +2,21 @@
   "name": "shift-schedule-miniapp",
   "version": "0.1.0",
   "private": true,
-  "description": "倒班表微信小程序 MVP",
+  "description": "倒班表 Web/PWA 主线与小程序旁支",
   "scripts": {
+    "dev:web": "pnpm --filter @shift-schedule/web dev",
+    "build:web": "pnpm --filter @shift-schedule/web build",
+    "preview:web": "pnpm --filter @shift-schedule/web preview",
+    "typecheck:web": "pnpm --filter @shift-schedule/web typecheck",
+    "test:core": "pnpm --filter @shift-schedule/core test",
+    "typecheck:core": "pnpm --filter @shift-schedule/core typecheck",
     "dev:h5": "taro build --type h5 --watch",
     "dev:h5:https": "node scripts/dev-h5-https.mjs",
     "build:h5": "taro build --type h5",
     "dev:weapp": "taro build --type weapp --watch",
     "build:weapp": "taro build --type weapp",
     "typecheck": "tsc --noEmit",
+    "typecheck:all": "pnpm typecheck && pnpm typecheck:core && pnpm typecheck:web",
     "test": "vitest run"
   },
   "dependencies": {

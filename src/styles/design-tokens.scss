@@ -1,0 +1,117 @@
+$color-canvas: #eef4fb;
+$color-canvas-soft: #f7f9fc;
+$color-surface: #ffffff;
+$color-surface-muted: #f6f9fd;
+$color-surface-disabled: #f3f6fb;
+$color-border-soft: #eef2f7;
+$color-border-strong: #cdd7e5;
+$color-border-control-disabled: #d8e0ec;
+$color-ink: #172033;
+$color-ink-base: #162033;
+$color-ink-soft: #526071;
+$color-muted: #667085;
+$color-muted-strong: #5b6678;
+$color-primary: #2563eb;
+$color-primary-soft: #eff6ff;
+$color-primary-border: #bfdbfe;
+$color-success: #15803d;
+$color-warning: #f59e0b;
+$color-danger: #ef4444;
+$color-legal-text: #dc2626;
+
+$shift-day-bg: #dff3ff;
+$shift-day-text: #02689f;
+$shift-night-bg: #eee9ff;
+$shift-night-text: #5b21b6;
+$shift-rest-bg: #dcfce7;
+$shift-rest-text: #047857;
+$shift-special-day-bg: #fff0c2;
+$shift-special-day-text: #b45309;
+$shift-special-night-bg: #fde7c7;
+$shift-special-night-text: #9a3412;
+$shift-leave-bg: #e5e7eb;
+$shift-leave-text: #475467;
+$shift-legal-bg: #fee2e2;
+
+$radius-sm: 8px;
+$radius-md: 10px;
+$radius-lg: 14px;
+$radius-xl: 18px;
+$radius-pill: 999px;
+
+$space-xs: 4px;
+$space-sm: 8px;
+$space-md: 12px;
+$space-lg: 18px;
+$space-xl: 24px;
+
+$font-headline: 32px;
+$font-title: 26px;
+$font-body: 20px;
+$font-control: 22px;
+$font-label: 18px;
+$font-micro: 16px;
+
+$shadow-mobile-shell: 0 22px 58px rgba(15, 23, 42, 0.16);
+$shadow-raised-control: 0 4px 12px rgba(25, 39, 70, 0.08);
+$shadow-resting-card: 0 1px 2px rgba(15, 23, 42, 0.04);
+$shadow-sticky-column: 8px 0 16px rgba(25, 39, 70, 0.08);
+
+@mixin page-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  padding: 0 $space-lg;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: linear-gradient(180deg, $color-canvas 0%, $color-canvas-soft 260px, $color-canvas-soft 100%);
+}
+
+@mixin card-surface($padding: null) {
+  border: 1px solid $color-border-soft;
+  border-radius: $radius-lg;
+  box-sizing: border-box;
+  background: $color-surface;
+
+  @if $padding != null {
+    padding: $padding;
+  }
+}
+
+@mixin pill-control($border-color: $color-border-strong, $bg: $color-surface, $text: $color-primary) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  height: 48px;
+  padding: 0 $space-lg;
+  border: 1px solid $border-color;
+  border-radius: $radius-pill;
+  box-sizing: border-box;
+  background: $bg;
+  color: $text;
+  font-size: $font-control;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@mixin semantic-chip($bg, $text) {
+  background: $bg;
+  color: $text;
+}
+
+@mixin spinner($size, $stroke, $track: $color-border-strong, $active: $color-primary) {
+  width: $size;
+  height: $size;
+  border: $stroke solid $track;
+  border-top-color: $active;
+  border-radius: $radius-pill;
+  box-sizing: border-box;
+}
+
+@mixin field-surface {
+  border-radius: $radius-md;
+  box-sizing: border-box;
+  background: $color-surface-muted;
+}
