@@ -427,7 +427,8 @@
   font-weight: 800;
 }
 
-.stats-overview-header > *,
+.stats-overview-header > view,
+.stats-overview-header > .taro-view-core,
 .stats-overview-header text {
   display: flex;
   align-items: center;
@@ -437,18 +438,21 @@
   text-align: center;
 }
 
-.stats-overview-header > *:first-child,
+.stats-overview-header > view:first-child,
+.stats-overview-header > .taro-view-core:first-child,
 .stats-overview-header text:first-child {
   grid-column: 1;
   text-align: center;
 }
 
-.stats-overview-header > *:nth-child(2),
+.stats-overview-header > view:nth-child(2),
+.stats-overview-header > .taro-view-core:nth-child(2),
 .stats-overview-header text:nth-child(2) {
   grid-column: 3;
 }
 
-.stats-overview-header > *:nth-child(3),
+.stats-overview-header > view:nth-child(3),
+.stats-overview-header > .taro-view-core:nth-child(3),
 .stats-overview-header text:nth-child(3) {
   grid-column: 4;
 }
