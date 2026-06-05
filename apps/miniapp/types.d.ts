@@ -6,6 +6,11 @@ declare const process: {
   }
 }
 
+declare module '*.png' {
+  const src: string
+  export default src
+}
+
 declare module 'lunar-javascript' {
   export class Solar {
     static fromYmd(year: number, month: number, day: number): Solar

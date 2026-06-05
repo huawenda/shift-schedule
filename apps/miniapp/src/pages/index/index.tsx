@@ -32,6 +32,7 @@ import {
   UserProfileError,
   type CurrentUserProfile
 } from '../../services/userProfile'
+import appIcon from '../../assets/icon2.png'
 import {
   legalOverridesFileName,
   legalOverridesStorageKey,
@@ -101,13 +102,21 @@ interface ShiftEditorState {
 }
 
 function getWindowWidth(): number {
+  const miniProgramGlobal = globalThis as typeof globalThis & {
+    wx?: {
+      getWindowInfo?: () => { windowWidth?: number }
+    }
+  }
+  const nativeWindowWidth = miniProgramGlobal.wx?.getWindowInfo?.().windowWidth
+  if (typeof nativeWindowWidth === 'number' && nativeWindowWidth > 0) return nativeWindowWidth
+
   const taroWithWindowInfo = Taro as typeof Taro & {
     getWindowInfo?: () => { windowWidth?: number }
   }
   const windowWidth = taroWithWindowInfo.getWindowInfo?.().windowWidth
   if (typeof windowWidth === 'number' && windowWidth > 0) return windowWidth
 
-  return Taro.getSystemInfoSync().windowWidth
+  return 375
 }
 
 function getCenteredTableScrollLeft(date: string, dates: string[]): number {
@@ -717,7 +726,7 @@ export default function Index() {
           <View className="header-main">
             <View className="title-row">
               <View className="app-mark">
-                <Image className="app-mark-icon" src="/icons/icon-192.png" mode="aspectFill" />
+                <Image className="app-mark-icon" src={appIcon} mode="aspectFill" />
               </View>
               <View className="title-copy">
                 <Text className="title">倒班表</Text>

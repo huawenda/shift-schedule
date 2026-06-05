@@ -56,13 +56,21 @@ type TouchPoint = { x: number; y: number }
 type SalarySaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
 
 function getWindowWidth(): number {
+  const miniProgramGlobal = globalThis as typeof globalThis & {
+    wx?: {
+      getWindowInfo?: () => { windowWidth?: number }
+    }
+  }
+  const nativeWindowWidth = miniProgramGlobal.wx?.getWindowInfo?.().windowWidth
+  if (typeof nativeWindowWidth === 'number' && nativeWindowWidth > 0) return nativeWindowWidth
+
   const taroWithWindowInfo = Taro as typeof Taro & {
     getWindowInfo?: () => { windowWidth?: number }
   }
   const windowWidth = taroWithWindowInfo.getWindowInfo?.().windowWidth
   if (typeof windowWidth === 'number' && windowWidth > 0) return windowWidth
 
-  return Taro.getSystemInfoSync().windowWidth
+  return 375
 }
 
 function getHeaderTopPadding(): string {
