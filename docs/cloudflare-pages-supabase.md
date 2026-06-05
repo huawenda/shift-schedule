@@ -1,19 +1,21 @@
 # Cloudflare Pages + Supabase Deployment
 
-This project uses Supabase as the serverless backend for the H5 build.
+This project now treats the pure Web app in `apps/web` as the primary
+Cloudflare Pages target. The legacy Taro H5 build is no longer the recommended
+Web deployment path.
 
-## 1. Create the Supabase project
+## 1. Supabase project
 
 1. Create a Supabase project.
 2. Open `Authentication` -> `Providers` -> `Email`.
 3. Keep Email enabled.
 4. Disable email confirmation for this private scheduling tool, otherwise a new
-   account will not be usable until the hidden generated email is confirmed.
+   account will not be usable until the generated internal email is confirmed.
 
-The app still shows username/password. Internally it turns the username into a
-private Supabase Auth email such as `zhangsan@shift-schedule.local`.
+The Web UI still shows username/password. Internally it turns the username into
+an email such as `zhangsan@shift-schedule.local` for Supabase Auth.
 
-## 2. Create tables and RLS policies
+## 2. Database schema
 
 Open Supabase SQL Editor and run:
 
@@ -21,7 +23,7 @@ Open Supabase SQL Editor and run:
 -- Copy and run docs/supabase-schema.sql
 ```
 
-Then change the invite codes:
+Then set your invite codes:
 
 ```sql
 update private.registration_settings
@@ -33,66 +35,62 @@ set
 where id = 1;
 ```
 
-The invite codes live in the private schema. They are not bundled into the
-Cloudflare Pages frontend.
+Invite codes live in the private schema and are not bundled into the frontend.
 
-## 3. Configure Cloudflare Pages environment variables
+## 3. Cloudflare Pages settings
 
-In Cloudflare Pages, open the project settings and add production variables:
+Recommended Pages settings:
 
 ```text
-TARO_APP_SUPABASE_URL=https://your-project-ref.supabase.co
-TARO_APP_SUPABASE_ANON_KEY=your-supabase-anon-or-publishable-key
+Root directory: /
+Build command: pnpm install --frozen-lockfile && pnpm build:web
+Build output directory: apps/web/dist
 ```
 
-Build settings:
+Production environment variables:
 
 ```text
-Build command: pnpm install --frozen-lockfile && pnpm build:h5
-Build output directory: dist-h5
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-or-publishable-key
 ```
 
 Deploy again after adding the variables.
 
-## Local development
+## 4. Local Web development
 
-Create a local-only `.env.local` file:
+Create `apps/web/.env.local`:
 
 ```text
-TARO_APP_SUPABASE_URL=https://your-project-ref.supabase.co
-TARO_APP_SUPABASE_ANON_KEY=your-supabase-publishable-key
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-publishable-key
 ```
 
-Then start H5 development:
+Then start the Web app:
 
 ```bash
-pnpm dev:h5
+pnpm dev:web
 ```
 
-Without these variables, H5 uses local browser storage only and Web account
-login/registration is unavailable.
+Without these variables, the Web app runs in demo/local mode. Supabase login,
+registration, cloud schedule records, and cloud salary input persistence require
+the variables above.
 
-### Preview PWA on a phone
+## 5. PWA assets
 
-Mobile browsers require a trusted HTTPS origin for Service Worker and PWA
-installation. For local phone testing, create a local development certificate:
+The pure Web app owns its PWA files:
 
-```bash
-mkdir certs
-mkcert -install
-mkcert -key-file certs/dev-key.pem -cert-file certs/dev.pem localhost 127.0.0.1 192.168.31.241
-```
+- `apps/web/public/manifest.webmanifest`
+- `apps/web/public/service-worker.js`
+- `apps/web/public/icons/icon-192.png`
+- `apps/web/public/icons/icon-512.png`
+- `apps/web/public/_redirects`
+- `apps/web/public/_headers`
 
-Replace `192.168.31.241` with your computer's current LAN IP. Install and trust
-the mkcert root certificate on the phone, then start:
+Cloudflare Pages copies these into `apps/web/dist` during `pnpm build:web`.
+`_redirects` provides SPA fallback, and `_headers` keeps the service worker
+uncached while adding basic browser security headers.
 
-```bash
-pnpm dev:h5:https
-```
-
-Open `https://<your-lan-ip>:10086/#/pages/index/index` on the phone.
-
-## 4. Register users
+## 6. Register users
 
 Use the app registration page:
 
@@ -101,7 +99,7 @@ Use the app registration page:
 
 The database enforces one account per person name.
 
-## 5. Disable or remove a user
+## 7. Disable or remove a user
 
 Use Supabase Table Editor or SQL:
 
@@ -111,5 +109,10 @@ set enabled = false
 where person_name = '张舒祺';
 ```
 
-Disabled accounts cannot read or write app data because all public tables use
-RLS policies tied to an enabled account.
+Disabled accounts cannot read or write app data because public tables use RLS
+policies tied to an enabled account.
+
+## Legacy Taro H5 note
+
+The old Taro H5 scripts still exist while the miniapp line is being contained,
+but Cloudflare Pages should use `pnpm build:web` and `apps/web/dist`.
