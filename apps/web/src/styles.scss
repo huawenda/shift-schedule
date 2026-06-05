@@ -1467,29 +1467,29 @@ h2 {
 
 @media (max-width: 720px) {
   :root {
-    --space-3: 10px;
-    --space-4: 12px;
-    --space-5: 14px;
-    --space-6: 18px;
-    --tap-target: 38px;
+    --space-3: 8px;
+    --space-4: 10px;
+    --space-5: 12px;
+    --space-6: 14px;
+    --tap-target: 34px;
   }
 
   .app-shell {
-    padding: 10px 10px 24px;
+    padding: 8px 8px 20px;
   }
 
   .hero-panel {
     align-items: center;
-    min-height: 72px;
-    padding: 14px;
+    min-height: 58px;
+    padding: 10px 12px;
   }
 
   h1 {
-    font-size: 24px;
+    font-size: 21px;
   }
 
   h2 {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .eyebrow,
@@ -1499,30 +1499,30 @@ h2 {
 
   .period {
     margin-top: 4px;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .sync-button {
-    min-width: 72px;
-    height: 40px;
-    font-size: 15px;
+    min-width: 64px;
+    height: 34px;
+    font-size: 13px;
   }
 
   .month-tabs {
-    gap: 6px;
-    padding: 5px;
+    gap: 4px;
+    padding: 4px;
   }
 
   .month-tab {
-    min-width: 64px;
-    height: 36px;
-    padding: 0 12px;
-    font-size: 15px;
+    min-width: 56px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
   }
 
   .status-strip {
-    min-height: 36px;
-    padding: 0 12px;
+    min-height: 32px;
+    padding: 0 10px;
     font-size: 12px;
   }
 
@@ -1538,9 +1538,9 @@ h2 {
   .view-tabs a,
   .view-tabs button,
   .stats-mode-tabs button {
-    min-height: 36px;
-    padding: 0 12px;
-    font-size: 14px;
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
   }
 
   .current-user-card,
@@ -1554,12 +1554,12 @@ h2 {
   .current-user-card,
   .calendar-card,
   .schedule-card {
-    padding: 14px;
+    padding: 10px;
   }
 
   .calendar-card {
-    padding-right: 12px;
-    padding-left: 12px;
+    padding-right: 10px;
+    padding-left: 10px;
   }
 
   .current-user-card .section-header {
@@ -1587,79 +1587,100 @@ h2 {
 
   .summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 12px;
+    gap: 6px;
+    margin-top: 10px;
   }
 
   .summary-item {
-    min-height: 64px;
+    min-height: 52px;
   }
 
   .summary-item strong {
-    font-size: 22px;
+    font-size: 19px;
   }
 
   .summary-item span {
-    margin-top: 5px;
-    font-size: 13px;
+    margin-top: 4px;
+    font-size: 11px;
   }
 
   .calendar-weekdays {
-    gap: 6px;
-    margin-top: 12px;
+    gap: 7px;
+    margin-top: 10px;
   }
 
   .calendar-weekdays span {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .calendar-grid {
-    gap: 6px;
+    gap: 7px;
   }
 
   .calendar-cell {
-    min-height: 60px;
-    border-radius: 8px;
+    aspect-ratio: 1 / 1;
+    min-height: 0;
+    border-radius: 7px;
   }
 
-  .calendar-day {
-    font-size: 15px;
-  }
-
-  .calendar-lunar {
-    width: 10px;
-    max-height: 26px;
-    font-size: 8px;
-  }
-
-  .calendar-lunar span {
-    width: 10px;
-    height: 8px;
-    line-height: 8px;
-  }
-
-  .calendar-lunar-spacer {
-    width: 10px;
+  .calendar-cell-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: auto;
+    min-height: 0;
+    gap: 3px;
+    transform: translate(-50%, -50%);
   }
 
   .calendar-date-wrap {
-    width: 42px;
-    min-height: 18px;
-    margin-bottom: 3px;
+    display: block;
+    width: auto;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .calendar-lunar-spacer {
+    display: none;
+  }
+
+  .calendar-day {
+    width: auto;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .calendar-lunar {
+    position: absolute;
+    top: 50%;
+    right: 2px;
+    width: 8px;
+    max-height: 22px;
+    font-size: 7px;
+    transform: translateY(-50%);
+  }
+
+  .calendar-lunar span {
+    width: 8px;
+    height: 7px;
+    line-height: 7px;
   }
 
   .calendar-shift-row .shift-chip {
-    min-width: 34px;
-    height: 18px;
-    padding: 0 5px;
-    font-size: 9px;
+    min-width: 30px;
+    height: 15px;
+    padding: 0 4px;
+    font-size: 8px;
   }
 
   .legal-shift-badge {
-    min-width: 13px;
-    height: 13px;
-    padding: 0 3px;
-    font-size: 8px;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 10px;
+    height: 10px;
+    padding: 0 2px;
+    font-size: 7px;
   }
 
   .edited-marker,
@@ -1725,9 +1746,9 @@ h2 {
   }
 
   .table-view-option {
-    min-width: 48px;
-    height: 28px;
-    font-size: 12px;
+    min-width: 44px;
+    height: 24px;
+    font-size: 11px;
   }
 
   .legend {
@@ -1741,9 +1762,9 @@ h2 {
   }
 
   .table-shell {
-    --schedule-name-column: 82px;
-    --schedule-date-column: 52px;
-    margin-top: 10px;
+    --schedule-name-column: 72px;
+    --schedule-date-column: 46px;
+    margin-top: 8px;
     border-right: 0;
     border-left: 0;
     border-radius: 0 0 12px 12px;
@@ -1751,12 +1772,12 @@ h2 {
 
   .identity-row,
   .table-row {
-    height: 44px;
+    height: 38px;
   }
 
   .table-head,
   .shift-cell {
-    min-height: 44px;
+    min-height: 38px;
   }
 
   .table-head {
@@ -1764,11 +1785,11 @@ h2 {
   }
 
   .date-head strong {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .date-head span {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .identity-row {
@@ -1776,23 +1797,23 @@ h2 {
   }
 
   .identity-row strong {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .identity-row span {
     margin-top: 2px;
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .shift-cell {
-    min-height: 44px;
+    min-height: 38px;
   }
 
   .shift-chip {
-    min-width: 40px;
-    height: 22px;
-    padding: 0 6px;
-    font-size: 11px;
+    min-width: 34px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 9px;
   }
 
   .calendar-shift-row .shift-chip,
@@ -1804,9 +1825,9 @@ h2 {
   }
 
   .name-view-person-name {
-    width: 44px;
-    height: 22px;
-    font-size: 10px;
+    width: 38px;
+    height: 18px;
+    font-size: 9px;
   }
 
   .edited-dot {
