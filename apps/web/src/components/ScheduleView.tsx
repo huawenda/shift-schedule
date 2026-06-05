@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { useState } from 'react'
 import {
   formatScheduleMonthDay,
   getDateLabels,
@@ -140,18 +140,23 @@ export function ScheduleView({
               >
                 {cell.inCurrentMonth && hasShiftChange ? <span className="edited-marker" /> : null}
                 {cell.inCurrentMonth && hasOvertime && !isLegal ? <span className="overtime-marker" /> : null}
-                <span className="calendar-center-stack">
-                  <span className="calendar-day">{cell.day}</span>
+                <span className="calendar-cell-content">
+                  <span className="calendar-date-wrap">
+                    <span className="calendar-lunar-spacer" />
+                    <span className="calendar-day">{cell.day}</span>
+                    <span className={`calendar-lunar ${cell.meta.isHoliday ? 'calendar-lunar-holiday' : ''}`}>
+                      {cell.meta.label.split('').map((char, charIndex) => (
+                        <span key={`${cell.key}-${charIndex}`}>{char}</span>
+                      ))}
+                    </span>
+                  </span>
                 {shift ? (
-                  <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
+                  <span className="calendar-shift-row">
+                    <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
+                    {cell.inCurrentMonth && isLegal ? <span className="legal-shift-badge">法</span> : null}
+                  </span>
                 ) : null}
                 </span>
-                <span className={`calendar-lunar ${cell.meta.isHoliday ? 'calendar-lunar-holiday' : ''}`}>
-                  {cell.meta.label.split('').map((char, charIndex) => (
-                    <span key={`${cell.key}-${charIndex}`}>{char}</span>
-                  ))}
-                </span>
-                {cell.inCurrentMonth && isLegal ? <span className="legal-shift-badge">法</span> : null}
               </button>
             )
           })}
@@ -187,50 +192,60 @@ export function ScheduleView({
           </div>
         </div>
 
-        <div
-          className="schedule-grid"
-          style={{ gridTemplateColumns: `var(--schedule-name-column, 128px) repeat(${visibleDates.length}, var(--schedule-date-column, 76px))` }}
-        >
-          <div className="table-head sticky-name identity-head">
-            <strong>{tableView === 'name' ? '班次' : '姓名'}</strong>
-            {tableView === 'shift' ? <span>班次</span> : null}
-          </div>
-          {dateLabels.map(label => (
-            <div className={`table-head date-head ${label.date === todayMonthDay ? 'today-date-head' : ''}`} key={label.date}>
-              <strong>{label.date.slice(3)}</strong>
-              <span>{label.weekday}</span>
+        <div className="table-shell">
+          <div className="identity-column">
+            <div className="identity-row identity-header">
+              <strong>{tableView === 'name' ? '班次' : '姓名'}</strong>
+              {tableView === 'shift' ? <span>班次</span> : null}
             </div>
-          ))}
-
-          {appliedMonthView.people.map(person => (
-            <Fragment key={person.name}>
-              <div className={`person-cell sticky-name ${person.name === appliedCurrentUser.name ? 'current-person-cell' : ''}`}>
+            {appliedMonthView.people.map(person => (
+              <div
+                className={`identity-row ${person.name === appliedCurrentUser.name ? 'current-person-cell' : ''}`}
+                key={person.name}
+              >
                 {tableView === 'shift' ? <strong>{person.name}</strong> : null}
                 <span>{person.group}</span>
               </div>
-              {visibleDates.map((date, index) => {
-                const shift = person.shifts[index]
-                const key = getOverrideKey(person.name, date)
-                const isEdited = Boolean(
-                  overrides.shiftOverrides[key] ||
-                  overrides.overtimeOverrides[key] ||
-                  overrides.legalOverrides[key] ||
-                  overrides.leaveDurationOverrides[key]
-                )
+            ))}
+          </div>
+          <div className="table-scroll">
+            <div className="schedule-table" style={{ width: `calc(${visibleDates.length} * var(--schedule-date-column, 76px))` }}>
+              <div className="table-row table-header">
+                {dateLabels.map(label => (
+                  <div className={`table-head date-head ${label.date === todayMonthDay ? 'today-date-head' : ''}`} key={label.date}>
+                    <strong>{label.date.slice(3)}</strong>
+                    <span>{label.weekday}</span>
+                  </div>
+                ))}
+              </div>
 
-                return (
-                  <button className="shift-cell" key={`${person.name}-${date}`} type="button" onClick={() => onOpenShiftEditor(person.name, date)}>
-                    {isEdited ? <span className="edited-dot" /> : null}
-                    {tableView === 'name' ? (
-                      <span className={`name-view-person-name ${getNameViewShiftClassName(shift)}`}>{person.name}</span>
-                    ) : (
-                      <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
-                    )}
-                  </button>
-                )
-              })}
-            </Fragment>
-          ))}
+              {appliedMonthView.people.map(person => (
+                <div className={`table-row ${person.name === appliedCurrentUser.name ? 'current-person-row' : ''}`} key={person.name}>
+                  {visibleDates.map((date, index) => {
+                    const shift = person.shifts[index]
+                    const key = getOverrideKey(person.name, date)
+                    const isEdited = Boolean(
+                      overrides.shiftOverrides[key] ||
+                      overrides.overtimeOverrides[key] ||
+                      overrides.legalOverrides[key] ||
+                      overrides.leaveDurationOverrides[key]
+                    )
+
+                    return (
+                      <button className="shift-cell date-cell" key={`${person.name}-${date}`} type="button" onClick={() => onOpenShiftEditor(person.name, date)}>
+                        {isEdited ? <span className="edited-dot" /> : null}
+                        {tableView === 'name' ? (
+                          <span className={`name-view-person-name ${getNameViewShiftClassName(shift)}`}>{person.name}</span>
+                        ) : (
+                          <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
     </>

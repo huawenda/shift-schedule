@@ -476,9 +476,11 @@ h2 {
 
 .calendar-cell {
   position: relative;
-  display: block;
+  display: flex;
   min-width: 0;
   min-height: 76px;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-control);
   background: #fbfcff;
@@ -514,39 +516,55 @@ h2 {
 .edited-marker,
 .overtime-marker {
   position: absolute;
-  left: 4px;
-  width: 5px;
-  height: 5px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: var(--radius-pill);
   z-index: 1;
 }
 
 .edited-marker {
-  top: 4px;
+  top: 6px;
   background: var(--warning);
 }
 
 .overtime-marker {
-  bottom: 4px;
+  bottom: 6px;
   background: var(--success);
 }
 
-.calendar-center-stack {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  transform: translate(-50%, -50%);
+.calendar-cell-content {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-date-wrap {
+  display: flex;
+  width: 48px;
+  min-height: 21px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.calendar-lunar-spacer {
+  width: 12px;
+  flex: 0 0 auto;
 }
 
 .calendar-day {
+  display: block;
+  width: 18px;
+  flex: 0 0 auto;
   color: var(--ink);
   font-size: 18px;
   font-weight: 900;
   line-height: 1;
+  text-align: center;
 }
 
 .today-calendar-cell .calendar-day {
@@ -554,13 +572,10 @@ h2 {
 }
 
 .calendar-lunar {
-  position: absolute;
-  top: 50%;
-  right: 3px;
-  z-index: 1;
   display: flex;
-  width: 10px;
-  max-height: 32px;
+  width: 12px;
+  max-height: 27px;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
@@ -570,12 +585,11 @@ h2 {
   line-height: 1;
   text-overflow: ellipsis;
   white-space: normal;
-  transform: translateY(-50%);
 }
 
 .calendar-lunar span {
   display: block;
-  width: 10px;
+  width: 12px;
   height: 9px;
   line-height: 9px;
   text-align: center;
@@ -585,22 +599,26 @@ h2 {
   color: #e76f51;
 }
 
-.calendar-center-stack .shift-chip {
+.calendar-shift-row {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.calendar-shift-row .shift-chip {
   min-width: 42px;
-  height: 24px;
-  font-size: 12px;
+  height: 22px;
+  font-size: 11px;
 }
 
 .legal-shift-badge {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 15px;
-  height: 15px;
+  min-width: 16px;
+  height: 16px;
   padding: 0 3px;
   border-radius: var(--radius-pill);
   background: var(--danger);
@@ -671,6 +689,87 @@ h2 {
   font-size: 12px;
 }
 
+.table-shell {
+  display: flex;
+  width: 100%;
+  margin-top: var(--space-3);
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.identity-column {
+  position: relative;
+  z-index: 2;
+  width: var(--schedule-name-column, 128px);
+  flex: 0 0 var(--schedule-name-column, 128px);
+  background: var(--surface);
+  box-shadow: var(--shadow-sticky);
+}
+
+.identity-row {
+  display: grid;
+  height: 52px;
+  align-content: center;
+  justify-items: center;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: center;
+}
+
+.identity-row strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.identity-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+.identity-header {
+  background: var(--surface-muted);
+}
+
+.identity-header strong {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.identity-header span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.table-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.table-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.schedule-table {
+  min-width: 100%;
+}
+
+.table-row {
+  display: flex;
+  height: 52px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
 .schedule-grid {
   display: grid;
   max-width: 100%;
@@ -728,6 +827,12 @@ h2 {
   gap: 4px;
 }
 
+.date-head,
+.date-cell {
+  width: var(--schedule-date-column, 76px);
+  flex: 0 0 var(--schedule-date-column, 76px);
+}
+
 .date-head strong {
   color: var(--ink-soft);
   font-size: 15px;
@@ -761,6 +866,10 @@ h2 {
 }
 
 .current-person-cell {
+  background: #fff8eb;
+}
+
+.current-person-row .shift-cell {
   background: #fff8eb;
 }
 
@@ -1518,23 +1627,28 @@ h2 {
   }
 
   .calendar-lunar {
-    right: 2px;
-    width: 9px;
+    width: 10px;
     max-height: 26px;
     font-size: 8px;
   }
 
   .calendar-lunar span {
-    width: 9px;
+    width: 10px;
     height: 8px;
     line-height: 8px;
   }
 
-  .calendar-center-stack {
-    gap: 3px;
+  .calendar-lunar-spacer {
+    width: 10px;
   }
 
-  .calendar-center-stack .shift-chip {
+  .calendar-date-wrap {
+    width: 42px;
+    min-height: 18px;
+    margin-bottom: 3px;
+  }
+
+  .calendar-shift-row .shift-chip {
     min-width: 34px;
     height: 18px;
     padding: 0 5px;
@@ -1542,8 +1656,6 @@ h2 {
   }
 
   .legal-shift-badge {
-    top: 2px;
-    right: 2px;
     min-width: 13px;
     height: 13px;
     padding: 0 3px;
@@ -1600,7 +1712,6 @@ h2 {
     padding-bottom: 0;
   }
 
-  .schedule-card .section-header,
   .table-toolbar {
     padding: 0 14px;
   }
@@ -1629,18 +1740,21 @@ h2 {
     font-size: 10px;
   }
 
-  .schedule-grid {
+  .table-shell {
     --schedule-name-column: 82px;
     --schedule-date-column: 52px;
     margin-top: 10px;
     border-right: 0;
     border-left: 0;
     border-radius: 0 0 12px 12px;
-    grid-auto-rows: 44px;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 44px;
   }
 
   .table-head,
-  .person-cell,
   .shift-cell {
     min-height: 44px;
   }
@@ -1657,15 +1771,15 @@ h2 {
     font-size: 11px;
   }
 
-  .person-cell {
+  .identity-row {
     padding: 0 10px;
   }
 
-  .person-cell strong {
+  .identity-row strong {
     font-size: 13px;
   }
 
-  .person-cell span {
+  .identity-row span {
     margin-top: 2px;
     font-size: 11px;
   }
@@ -1679,6 +1793,14 @@ h2 {
     height: 22px;
     padding: 0 6px;
     font-size: 11px;
+  }
+
+  .calendar-shift-row .shift-chip,
+  .legend .shift-chip {
+    min-width: 34px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 9px;
   }
 
   .name-view-person-name {
