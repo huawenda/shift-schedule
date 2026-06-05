@@ -1,8 +1,7 @@
 import Taro from '@tarojs/taro'
-import { ApiError, apiRequest, clearWebAuthToken, setWebAuthToken } from './apiClient'
 import { isH5Runtime } from './runtime'
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient'
-import { webUsernameToSupabaseEmail } from './supabaseMaps'
+import { getCurrentUserAccountFilter, webUsernameToSupabaseEmail } from './supabaseMaps'
 
 const collectionName = 'user_profiles'
 const h5ProfileStorageKey = 'shift-scheduler:h5-user-profile:v1'
@@ -45,10 +44,6 @@ interface UserProfileFunctionResult {
   openid?: unknown
   isAdmin?: unknown
   profile?: unknown
-}
-
-interface WebLoginResult extends UserProfileFunctionResult {
-  token?: unknown
 }
 
 interface WebAccountLoginInput {
@@ -147,20 +142,10 @@ export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
       return loadSupabaseCurrentUserProfile()
     }
 
-    try {
-      const result = await apiRequest<UserProfileFunctionResult>('/profile')
-      return normalizeCurrentUserProfile(result) ?? {
-        openid: null,
-        isAdmin: false,
-        profile: null
-      }
-    } catch {
-      clearWebAuthToken()
-      return {
-        openid: null,
-        isAdmin: false,
-        profile: null
-      }
+    return {
+      openid: null,
+      isAdmin: false,
+      profile: null
     }
   }
 
@@ -181,16 +166,6 @@ export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
   }
 }
 
-function persistWebLoginResult(result: WebLoginResult): CurrentUserProfile {
-  if (typeof result.token === 'string') setWebAuthToken(result.token)
-  const currentProfile = normalizeCurrentUserProfile(result)
-  if (!currentProfile?.profile) {
-    throw new UserProfileError('INVALID_PROFILE_RESPONSE', '登录失败，请稍后重试')
-  }
-  writeH5UserProfile(currentProfile.profile)
-  return currentProfile
-}
-
 export async function loginWebAccount(input: WebAccountLoginInput): Promise<CurrentUserProfile> {
   if (!isH5Runtime) {
     throw new UserProfileError('WEB_LOGIN_UNAVAILABLE', '账号登录仅用于 Web 端')
@@ -200,18 +175,7 @@ export async function loginWebAccount(input: WebAccountLoginInput): Promise<Curr
     return loginSupabaseAccount(input)
   }
 
-  const result = await apiRequest<WebLoginResult>('/auth/login', {
-    method: 'POST',
-    auth: false,
-    body: input
-  }).catch(error => {
-    if (error instanceof ApiError) {
-      throw new UserProfileError('WEB_LOGIN_FAILED', error.message)
-    }
-    throw error
-  })
-
-  return persistWebLoginResult(result)
+  throw new UserProfileError('SUPABASE_REQUIRED', 'Web 端需要配置 Supabase 后才能登录')
 }
 
 export async function registerWebAccount(input: WebAccountRegisterInput): Promise<CurrentUserProfile> {
@@ -223,18 +187,7 @@ export async function registerWebAccount(input: WebAccountRegisterInput): Promis
     return registerSupabaseAccount(input)
   }
 
-  const result = await apiRequest<WebLoginResult>('/auth/register', {
-    method: 'POST',
-    auth: false,
-    body: input
-  }).catch(error => {
-    if (error instanceof ApiError) {
-      throw new UserProfileError('WEB_REGISTER_FAILED', error.message)
-    }
-    throw error
-  })
-
-  return persistWebLoginResult(result)
+  throw new UserProfileError('SUPABASE_REQUIRED', 'Web 端需要配置 Supabase 后才能注册')
 }
 
 export async function bindCurrentUserProfile(personName: string, accessCode?: string): Promise<UserProfile> {
@@ -256,24 +209,6 @@ export async function bindCurrentUserProfile(personName: string, accessCode?: st
   }
 
   return result.profile
-}
-
-function readH5UserProfile(): UserProfile {
-  try {
-    const storedValue = Taro.getStorageSync(h5ProfileStorageKey)
-    if (isUserProfile(storedValue)) return storedValue
-  } catch {
-    // H5 profile is a local mock and can fall back to the default administrator.
-  }
-
-  const now = Date.now()
-  return {
-    _id: 'h5-profile',
-    _openid: 'h5-admin',
-    personName: '华文达',
-    boundAt: now,
-    updatedAt: now
-  }
 }
 
 function writeH5UserProfile(profile: UserProfile) {
@@ -357,10 +292,16 @@ async function registerSupabaseAccount(input: WebAccountRegisterInput): Promise<
 
 async function loadSupabaseAccount(): Promise<SupabaseAccountRow | null> {
   const supabase = getSupabaseClient()
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError) {
+    throw new UserProfileError('WEB_LOGIN_FAILED', userError.message || '账号资料读取失败')
+  }
+  const authUserId = userData.user?.id ?? ''
+  const accountFilter = getCurrentUserAccountFilter(authUserId)
   const { data, error } = await supabase
     .from('user_accounts')
     .select('id, auth_user_id, username, person_name, role, enabled, created_at_ms, created_at_text, updated_at_ms, updated_at_text')
-    .limit(1)
+    .eq(accountFilter.column, accountFilter.value)
     .maybeSingle()
 
   if (error) {

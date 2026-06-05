@@ -1,5 +1,4 @@
 import Taro from '@tarojs/taro'
-import { apiRequest, hasWebAuthToken } from './apiClient'
 import { isH5Runtime } from './runtime'
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient'
 import {
@@ -38,11 +37,6 @@ export async function loadSalaryInputs(): Promise<SalaryInputRecords> {
     return loadSupabaseSalaryInputs()
   }
 
-  if (isH5Runtime && hasWebAuthToken()) {
-    const response = await apiRequest<{ records?: unknown }>('/salary-inputs')
-    return parseSalaryInputRecords(response.records)
-  }
-
   return readSalaryInputsFromStorage()
 }
 
@@ -52,15 +46,20 @@ export async function syncSalaryInputs(records: SalaryInputRecords): Promise<voi
     return
   }
 
-  if (isH5Runtime && hasWebAuthToken()) {
-    await apiRequest<{ records?: unknown }>('/salary-inputs', {
-      method: 'PUT',
-      body: { records }
-    })
+  writeSalaryInputsToStorage(records)
+}
+
+export async function saveSalaryInput(key: string, values: SalaryInputValues): Promise<void> {
+  if (isH5Runtime && isSupabaseConfigured()) {
+    await saveSupabaseSalaryInput(key, values)
     return
   }
 
-  writeSalaryInputsToStorage(records)
+  const records = readSalaryInputsFromStorage()
+  writeSalaryInputsToStorage({
+    ...records,
+    [key]: values
+  })
 }
 
 function parseSalaryInputRecords(value: unknown): SalaryInputRecords {
@@ -113,6 +112,18 @@ async function syncSupabaseSalaryInputs(records: SalaryInputRecords): Promise<vo
   const { error } = await supabase
     .from('salary_inputs')
     .upsert(rows, { onConflict: 'person_name,month' })
+
+  if (error) throw error
+}
+
+async function saveSupabaseSalaryInput(key: string, values: SalaryInputValues): Promise<void> {
+  const supabase = getSupabaseClient()
+  const row = salaryEntryToSupabaseRow(key, values)
+  if (!row) return
+
+  const { error } = await supabase
+    .from('salary_inputs')
+    .upsert(row, { onConflict: 'person_name,month' })
 
   if (error) throw error
 }

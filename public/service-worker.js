@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shift-schedule-shell-v4'
+const CACHE_NAME = 'shift-schedule-shell-v6'
 const SHELL_URLS = [
   '/',
   '/index.html',
@@ -31,7 +31,6 @@ self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url)
 
   if (requestUrl.origin !== self.location.origin) return
-  if (requestUrl.pathname.startsWith('/api/')) return
   if (event.request.method !== 'GET') return
 
   event.respondWith(

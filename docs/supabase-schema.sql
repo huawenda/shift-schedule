@@ -31,6 +31,7 @@ create or replace function public.current_ms()
 returns bigint
 language sql
 stable
+set search_path = pg_catalog
 as $$
   select floor(extract(epoch from now()) * 1000)::bigint;
 $$;
@@ -39,6 +40,7 @@ create or replace function public.beijing_time_text(value timestamptz)
 returns text
 language sql
 stable
+set search_path = pg_catalog
 as $$
   select to_char(value at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS');
 $$;
@@ -70,20 +72,31 @@ create table if not exists public.user_profiles (
   updated_at_text text not null
 );
 
-create table if not exists public.day_records (
+create table if not exists public.day_shift_overrides (
   id bigserial primary key,
   auth_user_id uuid references auth.users(id) on delete set null,
   person_name text not null,
   record_date text not null,
-  shift_override text check (shift_override is null or shift_override in ('白班', '夜班', '休息', '白特', '夜特', '事假')),
-  overtime_hours numeric not null default 0,
-  is_legal_overtime boolean not null default false,
-  leave_duration text check (leave_duration is null or leave_duration in ('半天', '一天')),
+  shift_override text not null check (shift_override in ('白班', '夜班', '休息', '白特', '夜特', '事假')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   created_at_ms bigint not null default public.current_ms(),
   updated_at_ms bigint not null default public.current_ms(),
   created_at_text text not null default public.beijing_time_text(now()),
+  updated_at_text text not null default public.beijing_time_text(now()),
+  unique (person_name, record_date)
+);
+
+create table if not exists public.day_private_records (
+  id bigserial primary key,
+  auth_user_id uuid references auth.users(id) on delete set null,
+  person_name text not null,
+  record_date text not null,
+  overtime_hours numeric not null default 0,
+  is_legal_overtime boolean not null default false,
+  leave_duration text check (leave_duration is null or leave_duration in ('半天', '一天')),
+  updated_at timestamptz not null default now(),
+  updated_at_ms bigint not null default public.current_ms(),
   updated_at_text text not null default public.beijing_time_text(now()),
   unique (person_name, record_date)
 );
@@ -118,6 +131,7 @@ create table if not exists public.login_sessions (
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
+set search_path = public, pg_catalog
 as $$
 begin
   new.updated_at = now();
@@ -130,6 +144,7 @@ $$;
 create or replace function public.set_row_owner()
 returns trigger
 language plpgsql
+set search_path = public, pg_catalog
 as $$
 begin
   if new.auth_user_id is null then
@@ -144,14 +159,24 @@ create trigger touch_user_accounts_updated_at
 before update on public.user_accounts
 for each row execute function public.touch_updated_at();
 
-drop trigger if exists touch_day_records_updated_at on public.day_records;
-create trigger touch_day_records_updated_at
-before update on public.day_records
+drop trigger if exists touch_day_shift_overrides_updated_at on public.day_shift_overrides;
+create trigger touch_day_shift_overrides_updated_at
+before update on public.day_shift_overrides
 for each row execute function public.touch_updated_at();
 
-drop trigger if exists set_day_records_owner on public.day_records;
-create trigger set_day_records_owner
-before insert on public.day_records
+drop trigger if exists set_day_shift_overrides_owner on public.day_shift_overrides;
+create trigger set_day_shift_overrides_owner
+before insert on public.day_shift_overrides
+for each row execute function public.set_row_owner();
+
+drop trigger if exists touch_day_private_records_updated_at on public.day_private_records;
+create trigger touch_day_private_records_updated_at
+before update on public.day_private_records
+for each row execute function public.touch_updated_at();
+
+drop trigger if exists set_day_private_records_owner on public.day_private_records;
+create trigger set_day_private_records_owner
+before insert on public.day_private_records
 for each row execute function public.set_row_owner();
 
 drop trigger if exists touch_salary_inputs_updated_at on public.salary_inputs;
@@ -164,7 +189,7 @@ create trigger set_salary_inputs_owner
 before insert on public.salary_inputs
 for each row execute function public.set_row_owner();
 
-create or replace function public.is_current_admin()
+create or replace function private.is_current_admin()
 returns boolean
 language sql
 stable
@@ -180,7 +205,7 @@ as $$
   );
 $$;
 
-create or replace function public.has_active_account()
+create or replace function private.has_active_account()
 returns boolean
 language sql
 stable
@@ -195,7 +220,7 @@ as $$
   );
 $$;
 
-create or replace function public.can_write_person(target_person_name text)
+create or replace function private.can_write_person(target_person_name text)
 returns boolean
 language sql
 stable
@@ -211,7 +236,7 @@ as $$
   );
 $$;
 
-create or replace function public.handle_new_auth_user()
+create or replace function private.handle_new_auth_user()
 returns trigger
 language plpgsql
 security definer
@@ -302,76 +327,108 @@ $$;
 drop trigger if exists on_auth_user_created_shift_schedule on auth.users;
 create trigger on_auth_user_created_shift_schedule
 after insert on auth.users
-for each row execute function public.handle_new_auth_user();
+for each row execute function private.handle_new_auth_user();
 
 alter table public.user_accounts enable row level security;
 alter table public.user_profiles enable row level security;
-alter table public.day_records enable row level security;
+alter table public.day_shift_overrides enable row level security;
+alter table public.day_private_records enable row level security;
 alter table public.salary_inputs enable row level security;
 alter table public.login_sessions enable row level security;
 
 drop policy if exists user_accounts_select on public.user_accounts;
 create policy user_accounts_select on public.user_accounts
 for select to authenticated
-using (auth_user_id = auth.uid() or public.is_current_admin());
+using (auth_user_id = (select auth.uid()) or (select private.is_current_admin()));
 
 drop policy if exists user_accounts_admin_update on public.user_accounts;
 create policy user_accounts_admin_update on public.user_accounts
 for update to authenticated
-using (public.is_current_admin())
-with check (public.is_current_admin());
+using (private.is_current_admin())
+with check (private.is_current_admin());
 
 drop policy if exists user_profiles_select on public.user_profiles;
 create policy user_profiles_select on public.user_profiles
 for select to authenticated
-using (public.has_active_account());
+using (private.has_active_account());
 
-drop policy if exists day_records_select on public.day_records;
-create policy day_records_select on public.day_records
+drop policy if exists day_shift_overrides_select on public.day_shift_overrides;
+create policy day_shift_overrides_select on public.day_shift_overrides
 for select to authenticated
-using (public.has_active_account());
+using ((select private.has_active_account()));
 
-drop policy if exists day_records_insert on public.day_records;
-create policy day_records_insert on public.day_records
+drop policy if exists day_shift_overrides_insert on public.day_shift_overrides;
+create policy day_shift_overrides_insert on public.day_shift_overrides
 for insert to authenticated
-with check (public.can_write_person(person_name));
+with check (private.can_write_person(person_name));
 
-drop policy if exists day_records_update on public.day_records;
-create policy day_records_update on public.day_records
+drop policy if exists day_shift_overrides_update on public.day_shift_overrides;
+create policy day_shift_overrides_update on public.day_shift_overrides
 for update to authenticated
-using (public.can_write_person(person_name))
-with check (public.can_write_person(person_name));
+using (private.can_write_person(person_name))
+with check (private.can_write_person(person_name));
 
-drop policy if exists day_records_delete on public.day_records;
-create policy day_records_delete on public.day_records
+drop policy if exists day_shift_overrides_delete on public.day_shift_overrides;
+create policy day_shift_overrides_delete on public.day_shift_overrides
 for delete to authenticated
-using (public.can_write_person(person_name));
+using (private.can_write_person(person_name));
+
+drop policy if exists day_private_records_select on public.day_private_records;
+create policy day_private_records_select on public.day_private_records
+for select to authenticated
+using (private.can_write_person(person_name));
+
+drop policy if exists day_private_records_insert on public.day_private_records;
+create policy day_private_records_insert on public.day_private_records
+for insert to authenticated
+with check (private.can_write_person(person_name));
+
+drop policy if exists day_private_records_update on public.day_private_records;
+create policy day_private_records_update on public.day_private_records
+for update to authenticated
+using (private.can_write_person(person_name))
+with check (private.can_write_person(person_name));
+
+drop policy if exists day_private_records_delete on public.day_private_records;
+create policy day_private_records_delete on public.day_private_records
+for delete to authenticated
+using (private.can_write_person(person_name));
 
 drop policy if exists salary_inputs_select on public.salary_inputs;
 create policy salary_inputs_select on public.salary_inputs
 for select to authenticated
-using (public.can_write_person(person_name));
+using (private.can_write_person(person_name));
 
 drop policy if exists salary_inputs_insert on public.salary_inputs;
 create policy salary_inputs_insert on public.salary_inputs
 for insert to authenticated
-with check (public.can_write_person(person_name));
+with check (private.can_write_person(person_name));
 
 drop policy if exists salary_inputs_update on public.salary_inputs;
 create policy salary_inputs_update on public.salary_inputs
 for update to authenticated
-using (public.can_write_person(person_name))
-with check (public.can_write_person(person_name));
+using (private.can_write_person(person_name))
+with check (private.can_write_person(person_name));
 
 drop policy if exists login_sessions_select on public.login_sessions;
 create policy login_sessions_select on public.login_sessions
 for select to authenticated
-using (auth_user_id = auth.uid() or public.is_current_admin());
+using (auth_user_id = (select auth.uid()) or (select private.is_current_admin()));
 
 grant usage on schema public to anon, authenticated;
+grant usage on schema private to authenticated;
+grant execute on function private.is_current_admin() to authenticated;
+grant execute on function private.has_active_account() to authenticated;
+grant execute on function private.can_write_person(text) to authenticated;
 grant select, update on public.user_accounts to authenticated;
 grant select on public.user_profiles to authenticated;
-grant select, insert, update, delete on public.day_records to authenticated;
+grant select, insert, update, delete on public.day_shift_overrides to authenticated;
+grant select, insert, update, delete on public.day_private_records to authenticated;
 grant select, insert, update on public.salary_inputs to authenticated;
 grant select, insert, update on public.login_sessions to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
+
+create index if not exists day_shift_overrides_auth_user_id_idx on public.day_shift_overrides(auth_user_id);
+create index if not exists day_private_records_auth_user_id_idx on public.day_private_records(auth_user_id);
+create index if not exists salary_inputs_auth_user_id_idx on public.salary_inputs(auth_user_id);
+create index if not exists login_sessions_auth_user_id_idx on public.login_sessions(auth_user_id);

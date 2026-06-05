@@ -3,7 +3,7 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'light',
     navigationStyle: 'custom',
-    navigationBarBackgroundColor: '#f5f7fb',
+    navigationBarBackgroundColor: '#eef4fb',
     navigationBarTitleText: '倒班表',
     navigationBarTextStyle: 'black'
   }

@@ -1,5 +1,4 @@
 import Taro from '@tarojs/taro'
-import { apiRequest, hasWebAuthToken } from './apiClient'
 import {
   buildCloudDayRecords,
   cloudRecordsToOverrides,
@@ -7,13 +6,15 @@ import {
   type LeaveDurationOverrides,
   type LegalOverrides,
   type OvertimeOverrides,
+  type CloudDayRecord,
   type ShiftOverrides
 } from './cloudRecordMaps'
 import { getSupabaseClient, isSupabaseConfigured } from './supabaseClient'
 import {
-  cloudDayRecordToSupabaseRow,
-  supabaseDayRecordToCloudRecord,
-  type SupabaseDayRecordRow
+  cloudDayRecordToSupabaseRows,
+  mergeSupabaseDayRecordRows,
+  type SupabasePrivateDayRecordRow,
+  type SupabaseShiftOverrideRow
 } from './supabaseMaps'
 import {
   leaveDurationOverridesFileName,
@@ -87,11 +88,6 @@ export async function loadCloudOverrides(): Promise<{
       return cloudRecordsToOverrides(records)
     }
 
-    if (hasWebAuthToken()) {
-      const response = await apiRequest<DayRecordsFunctionResponse>('/day-records')
-      if (Array.isArray(response.records)) return cloudRecordsToOverrides(response.records)
-    }
-
     return {
       shiftOverrides: readShiftOverridesFromStorage(),
       overtimeOverrides: readOvertimeOverridesFromStorage(),
@@ -120,18 +116,6 @@ export async function syncCloudOverrides(
       return
     }
 
-    if (hasWebAuthToken()) {
-      const nextRecords = buildCloudDayRecords(shiftOverrides, overtimeOverrides, legalOverrides, leaveDurationOverrides)
-      await apiRequest<DayRecordsFunctionResponse>('/day-records/sync', {
-        method: 'POST',
-        body: {
-          records: nextRecords,
-          deletedKeys
-        }
-      })
-      return
-    }
-
     writePersistence(shiftOverridesStorageKey, shiftOverridesFileName, shiftOverrides)
     writePersistence(overtimeOverridesStorageKey, overtimeOverridesFileName, overtimeOverrides)
     writePersistence(legalOverridesStorageKey, legalOverridesFileName, legalOverrides)
@@ -143,40 +127,145 @@ export async function syncCloudOverrides(
   await callDayRecordsFunction('sync', nextRecords, deletedKeys)
 }
 
+export async function saveCloudDayRecord(record: CloudDayRecord): Promise<void> {
+  if (isH5Runtime) {
+    if (isSupabaseConfigured()) {
+      await saveSupabaseDayRecord(record)
+      return
+    }
+
+    return
+  }
+
+  const existingOverrides = await loadCloudOverrides()
+  const key = getOverrideKey(record.personName, record.date)
+  await syncCloudOverrides(
+    {
+      ...existingOverrides.shiftOverrides,
+      ...(record.shiftOverride ? { [key]: record.shiftOverride } : {})
+    },
+    {
+      ...existingOverrides.overtimeOverrides,
+      ...(record.overtimeHours && record.overtimeHours > 0 ? { [key]: record.overtimeHours } : {})
+    },
+    {
+      ...existingOverrides.legalOverrides,
+      ...(record.isLegalOvertime ? { [key]: true } : {})
+    },
+    {
+      ...existingOverrides.leaveDurationOverrides,
+      ...(record.leaveDuration ? { [key]: record.leaveDuration } : {})
+    }
+  )
+}
+
+export async function deleteCloudDayRecord(personName: string, date: string): Promise<void> {
+  if (isH5Runtime) {
+    if (isSupabaseConfigured()) {
+      await deleteSupabaseDayRecord(personName, date)
+      return
+    }
+
+    return
+  }
+
+  const key = getOverrideKey(personName, date)
+  const existingOverrides = await loadCloudOverrides()
+  const { [key]: _deletedShift, ...shiftOverrides } = existingOverrides.shiftOverrides
+  const { [key]: _deletedOvertime, ...overtimeOverrides } = existingOverrides.overtimeOverrides
+  const { [key]: _deletedLegal, ...legalOverrides } = existingOverrides.legalOverrides
+  const { [key]: _deletedLeaveDuration, ...leaveDurationOverrides } = existingOverrides.leaveDurationOverrides
+
+  await syncCloudOverrides(shiftOverrides, overtimeOverrides, legalOverrides, leaveDurationOverrides, [key])
+}
+
 async function loadSupabaseDayRecords() {
   const supabase = getSupabaseClient()
   const { data: sessionData } = await supabase.auth.getSession()
   if (!sessionData.session) return []
 
-  const { data, error } = await supabase
-    .from('day_records')
-    .select('id, person_name, record_date, shift_override, overtime_hours, is_legal_overtime, leave_duration, created_at_ms, created_at_text, updated_at_ms, updated_at_text')
-    .order('person_name', { ascending: true })
-    .order('record_date', { ascending: true })
+  const [
+    { data: shiftRows, error: shiftError },
+    { data: privateRows, error: privateError }
+  ] = await Promise.all([
+    supabase
+      .from('day_shift_overrides')
+      .select('id, person_name, record_date, shift_override, created_at_ms, created_at_text, updated_at_ms, updated_at_text')
+      .order('person_name', { ascending: true })
+      .order('record_date', { ascending: true }),
+    supabase
+      .from('day_private_records')
+      .select('id, person_name, record_date, overtime_hours, is_legal_overtime, leave_duration, updated_at_ms, updated_at_text')
+      .order('person_name', { ascending: true })
+      .order('record_date', { ascending: true })
+  ])
 
-  if (error) throw error
-  return (data || []).map(row => supabaseDayRecordToCloudRecord(row as SupabaseDayRecordRow))
+  if (shiftError) throw shiftError
+  if (privateError) throw privateError
+
+  return mergeSupabaseDayRecordRows(
+    (shiftRows || []) as SupabaseShiftOverrideRow[],
+    (privateRows || []) as SupabasePrivateDayRecordRow[]
+  )
 }
 
 async function syncSupabaseDayRecords(records: ReturnType<typeof buildCloudDayRecords>, deletedKeys: string[]) {
-  const supabase = getSupabaseClient()
-  const rows = records.map(cloudDayRecordToSupabaseRow)
-  if (rows.length > 0) {
-    const { error } = await supabase
-      .from('day_records')
-      .upsert(rows, { onConflict: 'person_name,record_date' })
-    if (error) throw error
-  }
-
+  await Promise.all(records.map(saveSupabaseDayRecord))
   await Promise.all(deletedKeys.map(async key => {
     const [personName, date, ...rest] = key.split('::')
     if (!personName || !date || rest.length > 0) return
+    await deleteSupabaseDayRecord(personName, date)
+  }))
+}
 
+async function saveSupabaseDayRecord(record: CloudDayRecord) {
+  const supabase = getSupabaseClient()
+  const { shiftRow, privateRow } = cloudDayRecordToSupabaseRows(record)
+
+  if (shiftRow) {
     const { error } = await supabase
-      .from('day_records')
+      .from('day_shift_overrides')
+      .upsert(shiftRow, { onConflict: 'person_name,record_date' })
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('day_shift_overrides')
+      .delete()
+      .eq('person_name', record.personName)
+      .eq('record_date', record.date)
+    if (error) throw error
+  }
+
+  if (privateRow) {
+    const { error } = await supabase
+      .from('day_private_records')
+      .upsert(privateRow, { onConflict: 'person_name,record_date' })
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('day_private_records')
+      .delete()
+      .eq('person_name', record.personName)
+      .eq('record_date', record.date)
+    if (error) throw error
+  }
+}
+
+async function deleteSupabaseDayRecord(personName: string, date: string) {
+  const supabase = getSupabaseClient()
+  const [{ error: shiftError }, { error: privateError }] = await Promise.all([
+    supabase
+      .from('day_shift_overrides')
+      .delete()
+      .eq('person_name', personName)
+      .eq('record_date', date),
+    supabase
+      .from('day_private_records')
       .delete()
       .eq('person_name', personName)
       .eq('record_date', date)
-    if (error) throw error
-  }))
+  ])
+
+  if (shiftError) throw shiftError
+  if (privateError) throw privateError
 }

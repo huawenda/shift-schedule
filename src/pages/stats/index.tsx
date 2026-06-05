@@ -13,6 +13,7 @@ import {
   getSalaryInputKey,
   loadSalaryInputs,
   readSalaryInputsFromStorage,
+  saveSalaryInput,
   syncSalaryInputs,
   type SalaryInputRecords
 } from '../../services/salaryInputs'
@@ -54,6 +55,7 @@ const monthOptions: Array<{ label: string; value: ScheduleMonth }> = [
 type StatsViewMode = 'personal' | 'team'
 type SalaryInputField = keyof SalaryInputValues
 type TouchPoint = { x: number; y: number }
+type SalarySaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
 
 function getHeaderTopPadding(): string {
   if (isH5Runtime) return '8px'
@@ -218,6 +220,9 @@ export default function StatsPage() {
   const [viewMode, setViewMode] = useState<StatsViewMode>('personal')
   const [personalPageIndex, setPersonalPageIndex] = useState(0)
   const personalPageTouchStart = useRef<TouchPoint | null>(null)
+  const salarySaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editedSalaryKey = useRef<string | null>(null)
+  const salaryEditVersion = useRef(0)
   const [currentUserProfile, setCurrentUserProfile] = useState<CurrentUserProfile | null>(null)
   const [profileReady, setProfileReady] = useState(false)
   const [activeMonth, setActiveMonth] = useState<ScheduleMonth>(getCurrentScheduleMonth(scheduleData) ?? '05')
@@ -231,6 +236,8 @@ export default function StatsPage() {
   const [legalOverrides, setLegalOverrides] = useState(readLegalOverridesFromStorage)
   const [leaveDurationOverrides, setLeaveDurationOverrides] = useState(readLeaveDurationOverridesFromStorage)
   const [cloudStatsReady, setCloudStatsReady] = useState(false)
+  const [cloudStatsRefreshing, setCloudStatsRefreshing] = useState(false)
+  const [salarySaveStatus, setSalarySaveStatus] = useState<SalarySaveStatus>('idle')
   const availableMonthOptions = monthOptions.filter(option => !isFutureScheduleMonth(scheduleData, option.value))
   const monthPickerOptions = availableMonthOptions.map(option => option.label)
   const activeMonthIndex = Math.max(
@@ -264,6 +271,15 @@ export default function StatsPage() {
   const overtimeChartMax = Math.max(...overtimeChartItems.map(item => item.hours), 0)
   const salaryInputKey = getSalaryInputKey(currentPerson.name, activeMonth)
   const salaryInputs = salaryInputRecords[salaryInputKey] ?? emptySalaryInputs
+  const salarySaveStatusLabel = salarySaveStatus === 'pending'
+    ? '待保存'
+    : salarySaveStatus === 'saving'
+      ? '保存中'
+      : salarySaveStatus === 'saved'
+        ? '已保存'
+        : salarySaveStatus === 'error'
+          ? '保存失败'
+          : ''
   const salaryCalculation = calculateSalary(salaryInputs, {
     weekdayHours: getOvertimeHoursByType(overtimeChartItems, '平日'),
     specialHours: getOvertimeHoursByType(overtimeChartItems, '特勤'),
@@ -360,6 +376,37 @@ export default function StatsPage() {
 
   useEffect(() => {
     if (!salarySyncReady) return
+    if (isH5Runtime) {
+      const key = editedSalaryKey.current
+      if (!key) return
+
+      if (salarySaveTimer.current) clearTimeout(salarySaveTimer.current)
+      const saveVersion = salaryEditVersion.current
+      salarySaveTimer.current = setTimeout(() => {
+        const values = salaryInputRecords[key] ?? emptySalaryInputs
+        setSalarySaveStatus('saving')
+        saveSalaryInput(key, values)
+          .then(() => {
+            if (editedSalaryKey.current === key && salaryEditVersion.current === saveVersion) {
+              editedSalaryKey.current = null
+              setSalarySaveStatus('saved')
+            }
+          })
+          .catch(error => {
+            console.warn('薪资输入保存失败', error)
+            if (salaryEditVersion.current === saveVersion) {
+              setSalarySaveStatus('error')
+            }
+          })
+      }, 700)
+
+      return () => {
+        if (salarySaveTimer.current) {
+          clearTimeout(salarySaveTimer.current)
+          salarySaveTimer.current = null
+        }
+      }
+    }
 
     syncSalaryInputs(salaryInputRecords).catch(error => {
       console.warn('薪资输入同步失败', error)
@@ -367,6 +414,9 @@ export default function StatsPage() {
   }, [salaryInputRecords, salarySyncReady])
 
   const setSalaryInputValue = (field: SalaryInputField, value: string) => {
+    editedSalaryKey.current = salaryInputKey
+    salaryEditVersion.current += 1
+    setSalarySaveStatus('pending')
     setSalaryInputRecords(records => ({
       ...records,
       [salaryInputKey]: {
@@ -374,6 +424,46 @@ export default function StatsPage() {
         [field]: value
       }
     }))
+  }
+
+  const refreshStatsCloudData = () => {
+    if (cloudStatsRefreshing) return
+    if (!profileReady || (!isAdminUser && !boundPersonName)) return
+
+    setCloudStatsRefreshing(true)
+    const pendingSalaryKey = editedSalaryKey.current
+    const pendingSalaryValues = pendingSalaryKey ? salaryInputRecords[pendingSalaryKey] ?? emptySalaryInputs : null
+    Promise.resolve()
+      .then(() => {
+        if (!pendingSalaryKey || !pendingSalaryValues) return undefined
+
+        setSalarySaveStatus('saving')
+        return saveSalaryInput(pendingSalaryKey, pendingSalaryValues).then(() => {
+          if (editedSalaryKey.current === pendingSalaryKey) editedSalaryKey.current = null
+          setSalarySaveStatus('saved')
+        })
+      })
+      .then(() => Promise.all([
+        loadCloudOverrides(),
+        loadSalaryInputs()
+      ]))
+      .then(([cloudOverrides, salaryRecords]) => {
+        setShiftOverrides(cloudOverrides.shiftOverrides)
+        setOvertimeOverrides(cloudOverrides.overtimeOverrides)
+        setLegalOverrides(cloudOverrides.legalOverrides)
+        setLeaveDurationOverrides(cloudOverrides.leaveDurationOverrides)
+        setSalaryInputRecords(salaryRecords)
+        editedSalaryKey.current = null
+        setSalarySaveStatus('idle')
+        Taro.showToast({ title: '云端同步完成', icon: 'none' })
+      })
+      .catch(error => {
+        console.warn('统计页手动云端同步失败', error)
+        Taro.showToast({ title: '云端同步失败', icon: 'none' })
+      })
+      .finally(() => {
+        setCloudStatsRefreshing(false)
+      })
   }
 
   const handlePersonalPageTouchStart = (event: any) => {
@@ -451,6 +541,14 @@ export default function StatsPage() {
             {activeScheduleData.startDate.replace(/-/g, '/')} - {activeScheduleData.endDate.replace(/-/g, '/')}
           </Text>
         </View>
+        {isH5Runtime && (
+          <View
+            className={`stats-sync-button ${cloudStatsRefreshing ? 'loading' : ''}`}
+            onClick={refreshStatsCloudData}
+          >
+            <Text>{cloudStatsRefreshing ? '同步中' : '同步'}</Text>
+          </View>
+        )}
       </View>
 
       <View className="stats-view-tabs">
@@ -610,6 +708,9 @@ export default function StatsPage() {
                 <View className="stats-card salary-card">
               <View className="stats-section-title-row salary-title-row">
                 <Text className="stats-section-title">薪资计算</Text>
+                {isH5Runtime && salarySaveStatusLabel && (
+                  <Text className={`salary-save-status ${salarySaveStatus}`}>{salarySaveStatusLabel}</Text>
+                )}
               </View>
 
               <View className="salary-section">

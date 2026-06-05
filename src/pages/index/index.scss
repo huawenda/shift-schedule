@@ -3,7 +3,7 @@
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
-  background: linear-gradient(180deg, #f3f7fc 0%, #f5f7fb 260px, #f5f7fb 100%);
+  background: linear-gradient(180deg, #eef4fb 0%, #f7f9fc 260px, #f7f9fc 100%);
   padding: 0 18px;
   box-sizing: border-box;
   overflow: hidden;
@@ -335,6 +335,16 @@
   color: #667085;
 }
 
+.user-picker-button.sync-button {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.user-picker-button.sync-button.loading {
+  color: #526071;
+  background: #f3f6fb;
+}
+
 .mine-badge {
   display: inline-flex;
   align-items: center;
@@ -467,7 +477,7 @@
 
 .upcoming-card {
   padding: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 6px;
   overflow: hidden;
 }
 
@@ -1763,47 +1773,67 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    gap: 4PX;
-    height: 32PX;
+    position: relative;
+    gap: 0;
+    width: 72PX;
+    height: 34PX;
     padding: 2PX;
     border: 1PX solid #dbe6f3;
     border-radius: 999PX;
     box-sizing: border-box;
-    background: linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
-    box-shadow: 0 6PX 16PX rgba(15, 23, 42, 0.08);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(245, 249, 255, 0.94) 100%);
+    box-shadow:
+      0 8PX 18PX rgba(37, 99, 235, 0.10),
+      inset 0 1PX 0 rgba(255, 255, 255, 0.90);
+  }
+
+  .table-scroll-controls::before {
+    content: "";
+    position: absolute;
+    top: 9PX;
+    bottom: 9PX;
+    left: 50%;
+    width: 1PX;
+    background: #dbeafe;
+    transform: translateX(-50%);
   }
 
   .table-scroll-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28PX;
-    height: 28PX;
+    position: relative;
+    z-index: 1;
+    width: 34PX;
+    height: 30PX;
     border: 0;
     border-radius: 999PX;
     box-sizing: border-box;
     background: transparent;
     color: #2563eb;
     cursor: pointer;
-    font-size: 20PX;
+    font-size: 21PX;
     font-weight: 900;
     line-height: 1;
-    transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
   }
 
   .table-scroll-button:hover {
-    background: #eff6ff;
-    box-shadow: 0 4PX 10PX rgba(37, 99, 235, 0.14);
-    transform: translateY(-1PX);
+    background: #eaf3ff;
+    color: #1d4ed8;
+    box-shadow: inset 0 0 0 1PX rgba(147, 197, 253, 0.42);
   }
 
-  .table-scroll-button text {
+  .table-scroll-button text,
+  .table-scroll-button taro-text-core,
+  .table-scroll-button .taro-text-core {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
     height: 100%;
-    line-height: 1;
+    line-height: 30PX;
   }
 
   .legend {
@@ -1906,7 +1936,7 @@
   background:
     radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.10), transparent 34%),
     radial-gradient(circle at 94% 6%, rgba(20, 184, 166, 0.08), transparent 32%),
-    linear-gradient(180deg, #f3f7fc 0%, #f7f9fc 260px, #f7f9fc 100%);
+    linear-gradient(180deg, #eef4fb 0%, #f7f9fc 260px, #f7f9fc 100%);
 }
 
 .frozen-panel {
@@ -1945,7 +1975,7 @@
   border-color: rgba(226, 232, 240, 0.92);
   background: rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 12px 30px rgba(15, 23, 42, 0.06),
+    0 1px 2px rgba(15, 23, 42, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
@@ -2211,5 +2241,11 @@
     padding: 0;
     flex: 0 0 80PX;
     box-sizing: border-box;
+  }
+
+  .current-user-actions .sync-button {
+    width: 92PX;
+    min-width: 92PX;
+    flex-basis: 92PX;
   }
 }

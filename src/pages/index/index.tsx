@@ -19,8 +19,11 @@ import {
 } from '../../utils/schedule'
 import {
   getOverrideKey,
+  deleteCloudDayRecord,
   loadCloudOverrides,
+  saveCloudDayRecord,
   syncCloudOverrides,
+  type CloudDayRecord,
   type LeaveDurationOverrides,
   type LegalOverrides,
   type OvertimeOverrides,
@@ -421,6 +424,7 @@ export default function Index() {
 
   useEffect(() => {
     if (!cloudSyncReady || !profileReady) return
+    if (isH5Runtime) return
     if (!isAdminUser && !boundPersonName) return
 
     const syncedPersonName = boundPersonName
@@ -659,8 +663,29 @@ export default function Index() {
 
     if (shouldUseBaseShift && overtimeHours <= 0 && !isLegalOvertime && !leaveDuration) {
       markOverrideDeleted(key)
+      if (isH5Runtime) {
+        deleteCloudDayRecord(shiftEditor.personName, shiftEditor.date).catch(error => {
+          console.warn('云端排班记录删除失败', error)
+          Taro.showToast({ title: '云端保存失败', icon: 'none' })
+        })
+      }
     } else {
       unmarkOverrideDeleted(key)
+      if (isH5Runtime) {
+        const nextRecord: CloudDayRecord = {
+          personName: shiftEditor.personName,
+          date: shiftEditor.date,
+          ...(!shouldUseBaseShift ? { shiftOverride: resolvedShift } : {}),
+          overtimeHours,
+          ...(isLegalOvertime ? { isLegalOvertime } : {}),
+          ...(leaveDuration ? { leaveDuration } : {})
+        }
+
+        saveCloudDayRecord(nextRecord).catch(error => {
+          console.warn('云端排班记录保存失败', error)
+          Taro.showToast({ title: '云端保存失败', icon: 'none' })
+        })
+      }
     }
 
     setShiftEditor(null)
@@ -780,6 +805,14 @@ export default function Index() {
                 <View className="user-picker-button" onClick={openStatsPage}>
                   <Text>统计</Text>
                 </View>
+                {isH5Runtime && (
+                  <View
+                    className={`user-picker-button sync-button ${cloudRefreshing ? 'loading' : ''}`}
+                    onClick={refreshCloudOverrides}
+                  >
+                    <Text>{cloudRefreshing ? '同步中' : '同步'}</Text>
+                  </View>
+                )}
                 <Picker
                   mode="selector"
                   range={userPickerOptions}
@@ -802,6 +835,14 @@ export default function Index() {
                 <View className="user-picker-button" onClick={openStatsPage}>
                   <Text>统计</Text>
                 </View>
+                {isH5Runtime && (
+                  <View
+                    className={`user-picker-button sync-button ${cloudRefreshing ? 'loading' : ''}`}
+                    onClick={refreshCloudOverrides}
+                  >
+                    <Text>{cloudRefreshing ? '同步中' : '同步'}</Text>
+                  </View>
+                )}
                 <View className="user-picker-button locked">
                   <Text>{userPickerButtonText}</Text>
                 </View>

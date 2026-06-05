@@ -1,5 +1,7 @@
 import { isH5Runtime } from './runtime'
 
+const pwaThemeColor = '#eef4fb'
+
 function upsertLink(rel: string, href: string) {
   const existing = document.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`)
   if (existing) {
@@ -32,11 +34,12 @@ export function setupPwa() {
   document.title = '倒班表'
   upsertLink('manifest', '/manifest.webmanifest')
   upsertLink('apple-touch-icon', '/icons/icon-192.png')
-  upsertMeta('theme-color', '#f5f7fb')
+  upsertMeta('theme-color', pwaThemeColor)
+  upsertMeta('msapplication-navbutton-color', pwaThemeColor)
   upsertMeta('mobile-web-app-capable', 'yes')
   upsertMeta('apple-mobile-web-app-capable', 'yes')
   upsertMeta('apple-mobile-web-app-title', '倒班表')
-  upsertMeta('apple-mobile-web-app-status-bar-style', 'default')
+  upsertMeta('apple-mobile-web-app-status-bar-style', 'black-translucent')
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

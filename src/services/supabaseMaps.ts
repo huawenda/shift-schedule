@@ -17,6 +17,28 @@ export interface SupabaseDayRecordRow {
   updated_at_text?: string | null
 }
 
+export interface SupabaseShiftOverrideRow {
+  id?: number | string
+  person_name: string
+  record_date: string
+  shift_override: string | null
+  created_at_ms?: number | string | null
+  created_at_text?: string | null
+  updated_at_ms?: number | string | null
+  updated_at_text?: string | null
+}
+
+export interface SupabasePrivateDayRecordRow {
+  id?: number | string
+  person_name: string
+  record_date: string
+  overtime_hours: number | string | null
+  is_legal_overtime: boolean | null
+  leave_duration: string | null
+  updated_at_ms?: number | string | null
+  updated_at_text?: string | null
+}
+
 export interface SupabaseSalaryInputRow {
   person_name: string
   month: string
@@ -24,6 +46,15 @@ export interface SupabaseSalaryInputRow {
   performance_allowance: string | null
   position_allowance: string | null
   other_deductions: string | null
+}
+
+export function getCurrentUserAccountFilter(authUserId: string): { column: 'auth_user_id'; value: string } {
+  if (!authUserId) throw new Error('Missing Supabase auth user id')
+
+  return {
+    column: 'auth_user_id',
+    value: authUserId
+  }
 }
 
 export function webUsernameToSupabaseEmail(username: string): string {
@@ -66,6 +97,85 @@ export function cloudDayRecordToSupabaseRow(record: CloudDayRecord): SupabaseDay
       ? record.leaveDuration
       : null
   }
+}
+
+export function cloudDayRecordToSupabaseRows(record: CloudDayRecord): {
+  shiftRow: SupabaseShiftOverrideRow | null
+  privateRow: SupabasePrivateDayRecordRow | null
+} {
+  const shiftOverride = isShiftType(record.shiftOverride) ? record.shiftOverride : null
+  const overtimeHours = Number(record.overtimeHours || 0)
+  const isLegalOvertime = record.isLegalOvertime === true
+  const leaveDuration = shiftOverride === '事假' && isLeaveDuration(record.leaveDuration)
+    ? record.leaveDuration
+    : null
+
+  return {
+    shiftRow: shiftOverride
+      ? {
+        person_name: record.personName,
+        record_date: record.date,
+        shift_override: shiftOverride
+      }
+      : null,
+    privateRow: overtimeHours > 0 || isLegalOvertime || leaveDuration
+      ? {
+        person_name: record.personName,
+        record_date: record.date,
+        overtime_hours: overtimeHours,
+        is_legal_overtime: isLegalOvertime,
+        leave_duration: leaveDuration
+      }
+      : null
+  }
+}
+
+export function mergeSupabaseDayRecordRows(
+  shiftRows: SupabaseShiftOverrideRow[],
+  privateRows: SupabasePrivateDayRecordRow[]
+): CloudDayRecord[] {
+  const recordsByKey = new Map<string, CloudDayRecord>()
+
+  const getKey = (personName: string, date: string) => `${personName}::${date}`
+  const upsertBaseRecord = (personName: string, date: string): CloudDayRecord => {
+    const key = getKey(personName, date)
+    const existingRecord = recordsByKey.get(key)
+    if (existingRecord) return existingRecord
+
+    const nextRecord: CloudDayRecord = { personName, date }
+    recordsByKey.set(key, nextRecord)
+    return nextRecord
+  }
+
+  shiftRows.forEach(row => {
+    const record = upsertBaseRecord(row.person_name, row.record_date)
+    const shiftOverride = isShiftType(row.shift_override) ? row.shift_override : undefined
+    if (shiftOverride) record.shiftOverride = shiftOverride
+    if (row.id !== undefined) record._id = `shift:${row.id}`
+    if (row.created_at_ms != null) record.createdAt = Number(row.created_at_ms)
+    if (row.created_at_text) record.createdAtText = row.created_at_text
+    if (row.updated_at_ms != null) record.updatedAt = Number(row.updated_at_ms)
+    if (row.updated_at_text) record.updatedAtText = row.updated_at_text
+  })
+
+  privateRows.forEach(row => {
+    const record = upsertBaseRecord(row.person_name, row.record_date)
+    const overtimeHours = Number(row.overtime_hours || 0)
+    const leaveDuration = isLeaveDuration(row.leave_duration) ? row.leave_duration : undefined
+    record.overtimeHours = overtimeHours
+    if (row.is_legal_overtime === true) record.isLegalOvertime = true
+    if (leaveDuration) record.leaveDuration = leaveDuration
+    if (!record._id && row.id !== undefined) record._id = `private:${row.id}`
+    if (row.updated_at_ms != null && record.updatedAt == null) record.updatedAt = Number(row.updated_at_ms)
+    if (row.updated_at_text && !record.updatedAtText) record.updatedAtText = row.updated_at_text
+  })
+
+  return Array.from(recordsByKey.values())
+    .filter(record => isShiftType(record.shiftOverride) || Number(record.overtimeHours || 0) > 0 || record.isLegalOvertime === true || isLeaveDuration(record.leaveDuration))
+    .sort((left, right) => (
+      left.personName.localeCompare(right.personName, 'zh-Hans-CN') ||
+      left.date.localeCompare(right.date)
+    ))
 }
 
 export function supabaseSalaryRowsToRecords(rows: SupabaseSalaryInputRow[]): SalaryInputRecords {

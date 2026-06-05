@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   cloudDayRecordToSupabaseRow,
+  cloudDayRecordToSupabaseRows,
+  mergeSupabaseDayRecordRows,
+  getCurrentUserAccountFilter,
   supabaseDayRecordToCloudRecord,
   salaryEntryToSupabaseRow,
   supabaseSalaryRowsToRecords,
@@ -50,6 +53,98 @@ describe('supabase data mapping', () => {
       updatedAt: 1780000000000,
       updatedAtText: '2026-06-01 08:00:00'
     })
+  })
+
+  it('splits shared shift data from private attendance data for Supabase', () => {
+    expect(cloudDayRecordToSupabaseRows({
+      personName: '华文达',
+      date: '06/01',
+      shiftOverride: '白特',
+      overtimeHours: 3.5,
+      isLegalOvertime: true
+    })).toEqual({
+      shiftRow: {
+        person_name: '华文达',
+        record_date: '06/01',
+        shift_override: '白特'
+      },
+      privateRow: {
+        person_name: '华文达',
+        record_date: '06/01',
+        overtime_hours: 3.5,
+        is_legal_overtime: true,
+        leave_duration: null
+      }
+    })
+
+    expect(cloudDayRecordToSupabaseRows({
+      personName: '华文达',
+      date: '06/02',
+      overtimeHours: 0
+    })).toEqual({
+      shiftRow: null,
+      privateRow: null
+    })
+  })
+
+  it('merges shared shift rows and visible private rows into app records', () => {
+    expect(mergeSupabaseDayRecordRows(
+      [
+        {
+          id: 1,
+          person_name: '华文达',
+          record_date: '06/01',
+          shift_override: '白特',
+          created_at_ms: 1780000000000,
+          created_at_text: '2026-06-01 08:00:00',
+          updated_at_ms: 1780000000000,
+          updated_at_text: '2026-06-01 08:00:00'
+        },
+        {
+          id: 2,
+          person_name: '张舒祺',
+          record_date: '06/01',
+          shift_override: '夜班'
+        }
+      ],
+      [
+        {
+          id: 9,
+          person_name: '华文达',
+          record_date: '06/01',
+          overtime_hours: '3.5',
+          is_legal_overtime: true,
+          leave_duration: null
+        }
+      ]
+    )).toEqual([
+      {
+        _id: 'shift:1',
+        personName: '华文达',
+        date: '06/01',
+        shiftOverride: '白特',
+        overtimeHours: 3.5,
+        isLegalOvertime: true,
+        createdAt: 1780000000000,
+        createdAtText: '2026-06-01 08:00:00',
+        updatedAt: 1780000000000,
+        updatedAtText: '2026-06-01 08:00:00'
+      },
+      {
+        _id: 'shift:2',
+        personName: '张舒祺',
+        date: '06/01',
+        shiftOverride: '夜班'
+      }
+    ])
+  })
+
+  it('requires account lookups to target the current Supabase auth user', () => {
+    expect(getCurrentUserAccountFilter('auth-user-1')).toEqual({
+      column: 'auth_user_id',
+      value: 'auth-user-1'
+    })
+    expect(() => getCurrentUserAccountFilter('')).toThrow('Missing Supabase auth user id')
   })
 
   it('maps salary rows to keyed salary input records', () => {

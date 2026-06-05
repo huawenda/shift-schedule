@@ -1,7 +1,6 @@
 # Cloudflare Pages + Supabase Deployment
 
-This project can run without the old Express/PostgreSQL server when the H5 build
-is configured with Supabase.
+This project uses Supabase as the serverless backend for the H5 build.
 
 ## 1. Create the Supabase project
 
@@ -70,8 +69,8 @@ Then start H5 development:
 pnpm dev:h5
 ```
 
-Without these variables, H5 falls back to the legacy `/api` backend. That is
-only useful when the old Express server is running locally.
+Without these variables, H5 uses local browser storage only and Web account
+login/registration is unavailable.
 
 ### Preview PWA on a phone
 
