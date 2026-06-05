@@ -476,12 +476,9 @@ h2 {
 
 .calendar-cell {
   position: relative;
-  display: grid;
+  display: block;
   min-width: 0;
   min-height: 76px;
-  align-content: center;
-  justify-items: center;
-  gap: 4px;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-control);
   background: #fbfcff;
@@ -517,31 +514,32 @@ h2 {
 .edited-marker,
 .overtime-marker {
   position: absolute;
-  left: 6px;
-  width: 6px;
-  height: 6px;
+  left: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: var(--radius-pill);
   z-index: 1;
 }
 
 .edited-marker {
-  top: 6px;
+  top: 4px;
   background: var(--warning);
 }
 
 .overtime-marker {
-  bottom: 6px;
+  bottom: 4px;
   background: var(--success);
 }
 
-.calendar-date-wrap {
-  display: inline-grid;
-  grid-template-columns: auto 12px;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  min-width: 0;
-  min-height: 22px;
+.calendar-center-stack {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  transform: translate(-50%, -50%);
 }
 
 .calendar-day {
@@ -556,9 +554,13 @@ h2 {
 }
 
 .calendar-lunar {
-  display: inline-flex;
-  max-width: 12px;
-  max-height: 30px;
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  z-index: 1;
+  display: flex;
+  width: 10px;
+  max-height: 32px;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
@@ -568,13 +570,14 @@ h2 {
   line-height: 1;
   text-overflow: ellipsis;
   white-space: normal;
+  transform: translateY(-50%);
 }
 
 .calendar-lunar span {
   display: block;
-  width: 12px;
-  height: 10px;
-  line-height: 10px;
+  width: 10px;
+  height: 9px;
+  line-height: 9px;
   text-align: center;
 }
 
@@ -582,33 +585,90 @@ h2 {
   color: #e76f51;
 }
 
-.calendar-shift-row {
-  display: inline-flex;
-  max-width: 100%;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-}
-
-.calendar-shift-row .shift-chip {
-  min-width: 48px;
+.calendar-center-stack .shift-chip {
+  min-width: 42px;
   height: 24px;
   font-size: 12px;
 }
 
 .legal-shift-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
   border-radius: var(--radius-pill);
   background: var(--danger);
   color: #ffffff;
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 900;
   line-height: 1;
+}
+
+.table-toolbar {
+  display: grid;
+  gap: 8px;
+}
+
+.table-toolbar-main,
+.table-toolbar-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.table-view-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: #eef3f9;
+}
+
+.table-view-option {
+  min-width: 58px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.table-view-option.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-raised-control);
+}
+
+.legend {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.legend-item {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.legend .shift-chip {
+  min-width: auto;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
 }
 
 .schedule-grid {
@@ -644,6 +704,25 @@ h2 {
   font-weight: 850;
 }
 
+.identity-head {
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.identity-head strong {
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.identity-head span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .date-head {
   flex-direction: column;
   gap: 4px;
@@ -674,10 +753,11 @@ h2 {
 }
 
 .person-cell {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   justify-content: center;
+  justify-items: center;
   padding: 0 12px;
+  text-align: center;
 }
 
 .current-person-cell {
@@ -707,6 +787,21 @@ h2 {
   border-left: 0;
   color: inherit;
   cursor: pointer;
+}
+
+.name-view-person-name {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 26px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .shift-cell:focus-visible {
@@ -765,6 +860,36 @@ h2 {
 }
 
 .shift-leave {
+  background: #e5e7eb;
+  color: #475467;
+}
+
+.name-shift-day {
+  background: #dff3ff;
+  color: #02689f;
+}
+
+.name-shift-night {
+  background: #eee9ff;
+  color: #5b21b6;
+}
+
+.name-shift-rest {
+  background: #dcfce7;
+  color: #047857;
+}
+
+.name-shift-special-day {
+  background: #fff0c2;
+  color: #b45309;
+}
+
+.name-shift-special-night {
+  background: #fde7c7;
+  color: #9a3412;
+}
+
+.name-shift-leave {
   background: #e5e7eb;
   color: #475467;
 }
@@ -1323,6 +1448,11 @@ h2 {
     padding: 14px;
   }
 
+  .calendar-card {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
   .current-user-card .section-header {
     align-items: flex-start;
   }
@@ -1366,7 +1496,7 @@ h2 {
   }
 
   .calendar-weekdays {
-    gap: 5px;
+    gap: 6px;
     margin-top: 12px;
   }
 
@@ -1375,13 +1505,12 @@ h2 {
   }
 
   .calendar-grid {
-    gap: 5px;
+    gap: 6px;
   }
 
   .calendar-cell {
-    min-height: 58px;
+    min-height: 60px;
     border-radius: 8px;
-    gap: 3px;
   }
 
   .calendar-day {
@@ -1389,23 +1518,51 @@ h2 {
   }
 
   .calendar-lunar {
-    max-width: 12px;
+    right: 2px;
+    width: 9px;
     max-height: 26px;
+    font-size: 8px;
+  }
+
+  .calendar-lunar span {
+    width: 9px;
+    height: 8px;
+    line-height: 8px;
+  }
+
+  .calendar-center-stack {
+    gap: 3px;
+  }
+
+  .calendar-center-stack .shift-chip {
+    min-width: 34px;
+    height: 18px;
+    padding: 0 5px;
     font-size: 9px;
   }
 
-  .calendar-shift-row .shift-chip {
-    min-width: 38px;
-    height: 20px;
-    padding: 0 5px;
-    font-size: 10px;
+  .legal-shift-badge {
+    top: 2px;
+    right: 2px;
+    min-width: 13px;
+    height: 13px;
+    padding: 0 3px;
+    font-size: 8px;
   }
 
-  .legal-shift-badge {
-    min-width: 18px;
-    height: 18px;
-    padding: 0 4px;
-    font-size: 10px;
+  .edited-marker,
+  .overtime-marker {
+    left: 3px;
+    width: 4px;
+    height: 4px;
+  }
+
+  .edited-marker {
+    top: 3px;
+  }
+
+  .overtime-marker {
+    bottom: 3px;
   }
 
   .auth-form {
@@ -1443,13 +1600,38 @@ h2 {
     padding-bottom: 0;
   }
 
-  .schedule-card .section-header {
+  .schedule-card .section-header,
+  .table-toolbar {
     padding: 0 14px;
+  }
+
+  .table-toolbar-main {
+    gap: 8px;
+  }
+
+  .table-toolbar-sub {
+    gap: 8px;
+  }
+
+  .table-view-option {
+    min-width: 48px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .legend {
+    gap: 4px;
+  }
+
+  .legend .shift-chip {
+    height: 20px;
+    padding: 0 6px;
+    font-size: 10px;
   }
 
   .schedule-grid {
     --schedule-name-column: 82px;
-    --schedule-date-column: 54px;
+    --schedule-date-column: 52px;
     margin-top: 10px;
     border-right: 0;
     border-left: 0;
@@ -1493,17 +1675,24 @@ h2 {
   }
 
   .shift-chip {
-    min-width: 46px;
-    height: 24px;
-    padding: 0 7px;
-    font-size: 12px;
+    min-width: 40px;
+    height: 22px;
+    padding: 0 6px;
+    font-size: 11px;
+  }
+
+  .name-view-person-name {
+    width: 44px;
+    height: 22px;
+    font-size: 10px;
   }
 
   .edited-dot {
-    top: 4px;
-    left: 50%;
-    width: 5px;
-    height: 5px;
+    top: 3px;
+    left: 6px;
+    width: 4px;
+    height: 4px;
+    transform: none;
   }
 
   .editor-backdrop {
