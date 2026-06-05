@@ -274,10 +274,12 @@ export default function Index() {
   const [monthScrollLeft, setMonthScrollLeft] = useState(() => (
     getMonthTargetScrollLeft(currentScheduleMonth ?? '05', 0) ?? 0
   ))
-  const [tableScrollLeft, setTableScrollLeft] = useState(0)
+  const [tableScrollLeft, setTableScrollLeft] = useState<number | undefined>(undefined)
   const calendarTouchStart = useRef<{ x: number; y: number } | null>(null)
   const calendarAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const monthScrollLeftRef = useRef(monthScrollLeft)
+  const tableScrollLeftRef = useRef(0)
+  const tableScrollResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [currentUserProfile, setCurrentUserProfile] = useState<CurrentUserProfile | null>(null)
   const [profileReady, setProfileReady] = useState(false)
   const [profilePickerIndex, setProfilePickerIndex] = useState(0)
@@ -323,19 +325,33 @@ export default function Index() {
   const dateLabels = getDateLabels(activeScheduleData.startDate, activeScheduleData.dates)
   const scheduleTableStyle = `width: ${dateLabels.length * dateColumnWidth}rpx`
   const activeMonthIndex = monthOptions.findIndex(option => option.value === activeMonth)
-  const activeMonthLabel = monthOptions[activeMonthIndex]?.label ?? `${Number(activeMonth)}月`
+  const setProgrammaticTableScrollLeft = (scrollLeft: number) => {
+    tableScrollLeftRef.current = scrollLeft
+    setTableScrollLeft(scrollLeft)
+
+    if (tableScrollResetTimer.current) {
+      clearTimeout(tableScrollResetTimer.current)
+    }
+    tableScrollResetTimer.current = setTimeout(() => {
+      setTableScrollLeft(undefined)
+      tableScrollResetTimer.current = null
+    }, 320)
+  }
 
   useEffect(() => {
     if (activeScheduleData.dates.includes(todayMonthDay)) {
-      setTableScrollLeft(getCenteredTableScrollLeft(todayMonthDay, activeScheduleData.dates))
+      setProgrammaticTableScrollLeft(getCenteredTableScrollLeft(todayMonthDay, activeScheduleData.dates))
     } else {
-      setTableScrollLeft(0)
+      setProgrammaticTableScrollLeft(0)
     }
   }, [activeMonth, todayMonthDay])
 
   useEffect(() => () => {
     if (calendarAnimationTimer.current) {
       clearTimeout(calendarAnimationTimer.current)
+    }
+    if (tableScrollResetTimer.current) {
+      clearTimeout(tableScrollResetTimer.current)
     }
   }, [])
 
@@ -533,19 +549,17 @@ export default function Index() {
   }
 
   const jumpTableToDate = (date: string) => {
-    setTableScrollLeft(getCenteredTableScrollLeft(date, activeScheduleData.dates))
+    setProgrammaticTableScrollLeft(getCenteredTableScrollLeft(date, activeScheduleData.dates))
   }
 
   const scrollTableByDays = (direction: 'previous' | 'next') => {
     const step = dateColumnWidth * 4 * getRpxScale()
     const maxScrollLeft = getMaxTableScrollLeft(activeScheduleData.dates)
-    setTableScrollLeft(currentScrollLeft => {
-      const nextScrollLeft = direction === 'next'
-        ? currentScrollLeft + step
-        : currentScrollLeft - step
+    const nextScrollLeft = direction === 'next'
+      ? tableScrollLeftRef.current + step
+      : tableScrollLeftRef.current - step
 
-      return Math.min(Math.max(nextScrollLeft, 0), maxScrollLeft)
-    })
+    setProgrammaticTableScrollLeft(Math.min(Math.max(nextScrollLeft, 0), maxScrollLeft))
   }
 
   const openShiftEditor = (date: string, personName = currentUser?.name) => {
@@ -733,10 +747,6 @@ export default function Index() {
                 <Text className="subtitle">{dateRangeText}</Text>
               </View>
             </View>
-          </View>
-          <View className="header-month-chip">
-            <Text className="header-month-value">{activeMonthLabel}</Text>
-            <Text className="header-month-label">当前</Text>
           </View>
         </View>
 
@@ -1065,7 +1075,7 @@ export default function Index() {
             showScrollbar={false}
             onScroll={event => {
               const scrollLeft = Number((event as unknown as { detail?: { scrollLeft?: number } }).detail?.scrollLeft)
-              if (Number.isFinite(scrollLeft)) setTableScrollLeft(scrollLeft)
+              if (Number.isFinite(scrollLeft)) tableScrollLeftRef.current = scrollLeft
             }}
           >
             <View className="schedule-table" style={scheduleTableStyle}>

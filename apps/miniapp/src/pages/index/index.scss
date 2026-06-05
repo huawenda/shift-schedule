@@ -71,7 +71,7 @@
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16px;
   min-height: 74px;
   margin-bottom: 12px;
@@ -450,7 +450,7 @@
 
 .upcoming-card {
   padding: 16px;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
   overflow: hidden;
 }
 
