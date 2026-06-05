@@ -19,20 +19,16 @@ import {
 } from '../../utils/schedule'
 import {
   getOverrideKey,
-  deleteCloudDayRecord,
   loadCloudOverrides,
-  saveCloudDayRecord,
   syncCloudOverrides,
-  type CloudDayRecord,
   type LeaveDurationOverrides,
   type LegalOverrides,
   type OvertimeOverrides,
   type ShiftOverrides
 } from '../../services/cloudRecords'
 import {
+  bindCurrentUserProfile,
   loadCurrentUserProfile,
-  loginWebAccount,
-  registerWebAccount,
   UserProfileError,
   type CurrentUserProfile
 } from '../../services/userProfile'
@@ -51,7 +47,6 @@ import {
   shiftOverridesStorageKey,
   writePersistence
 } from '../../services/localOverrides'
-import { isH5Runtime } from '../../services/runtime'
 import './index.scss'
 
 const defaultCurrentUserName = '华文达'
@@ -85,9 +80,7 @@ function openStatsPage() {
 }
 
 function isDesktopPointerRuntime(): boolean {
-  if (!isH5Runtime || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
-
-  return window.matchMedia('(min-width: 900px) and (pointer: fine)').matches
+  return false
 }
 
 const tableViewOptions: Array<{ label: string; value: TableView }> = [
@@ -136,8 +129,6 @@ function getMaxTableScrollLeft(dates: string[]): number {
 }
 
 function getHeaderTopPadding(): string {
-  if (isH5Runtime) return '8px'
-
   try {
     const menuButton = Taro.getMenuButtonBoundingClientRect()
     const windowWidth = getWindowWidth()
@@ -280,11 +271,7 @@ export default function Index() {
   const monthScrollLeftRef = useRef(monthScrollLeft)
   const [currentUserProfile, setCurrentUserProfile] = useState<CurrentUserProfile | null>(null)
   const [profileReady, setProfileReady] = useState(false)
-  const [profileAuthMode, setProfileAuthMode] = useState<'login' | 'register'>('login')
   const [profilePickerIndex, setProfilePickerIndex] = useState(0)
-  const [profileUsername, setProfileUsername] = useState('')
-  const [profilePassword, setProfilePassword] = useState('')
-  const [profileInviteCode, setProfileInviteCode] = useState('')
   const [profileBinding, setProfileBinding] = useState(false)
   const [cloudSyncReady, setCloudSyncReady] = useState(false)
   const [cloudRefreshing, setCloudRefreshing] = useState(false)
@@ -434,7 +421,6 @@ export default function Index() {
 
   useEffect(() => {
     if (!cloudSyncReady || !profileReady) return
-    if (isH5Runtime) return
     if (!isAdminUser && !boundPersonName) return
 
     const syncedPersonName = boundPersonName
@@ -673,29 +659,8 @@ export default function Index() {
 
     if (shouldUseBaseShift && overtimeHours <= 0 && !isLegalOvertime && !leaveDuration) {
       markOverrideDeleted(key)
-      if (isH5Runtime) {
-        deleteCloudDayRecord(shiftEditor.personName, shiftEditor.date).catch(error => {
-          console.warn('云端排班记录删除失败', error)
-          Taro.showToast({ title: '云端保存失败', icon: 'none' })
-        })
-      }
     } else {
       unmarkOverrideDeleted(key)
-      if (isH5Runtime) {
-        const nextRecord: CloudDayRecord = {
-          personName: shiftEditor.personName,
-          date: shiftEditor.date,
-          ...(!shouldUseBaseShift ? { shiftOverride: resolvedShift } : {}),
-          overtimeHours,
-          ...(isLegalOvertime ? { isLegalOvertime } : {}),
-          ...(leaveDuration ? { leaveDuration } : {})
-        }
-
-        saveCloudDayRecord(nextRecord).catch(error => {
-          console.warn('云端排班记录保存失败', error)
-          Taro.showToast({ title: '云端保存失败', icon: 'none' })
-        })
-      }
     }
 
     setShiftEditor(null)
@@ -720,33 +685,24 @@ export default function Index() {
 
   const bindProfile = () => {
     const selectedPerson = scheduleData.people[profilePickerIndex]
-    if (profileAuthMode === 'register' && !selectedPerson) return
+    if (!selectedPerson || profileBinding) return
 
     setProfileBinding(true)
-    const authRequest = profileAuthMode === 'login'
-      ? loginWebAccount({
-        username: profileUsername,
-        password: profilePassword
-      })
-      : registerWebAccount({
-        username: profileUsername,
-        password: profilePassword,
-        personName: selectedPerson.name,
-        inviteCode: profileInviteCode
-      })
-
-    authRequest
+    bindCurrentUserProfile(selectedPerson.name)
       .then(profile => {
-        setCurrentUserProfile(profile)
-        if (profile.profile?.personName) {
-          setCurrentUserName(profile.profile.personName)
+        const nextProfile = {
+          openid: currentUserProfile?.openid ?? profile._openid ?? null,
+          isAdmin: currentUserProfile?.isAdmin ?? false,
+          profile
         }
+        setCurrentUserProfile(nextProfile)
+        setCurrentUserName(profile.personName)
       })
       .catch(error => {
-        console.warn('账号登录失败', error)
+        console.warn('用户绑定失败', error)
         const message = error instanceof UserProfileError
           ? error.message
-          : '登录失败，请稍后重试'
+          : '绑定失败，请稍后重试'
         Taro.showToast({ title: message, icon: 'none' })
       })
       .finally(() => {
@@ -755,7 +711,7 @@ export default function Index() {
   }
 
   return (
-    <View className={`page ${isH5Runtime ? 'page-h5' : ''}`}>
+    <View className="page">
       <View className="frozen-panel">
         <View className="header" style={{ paddingTop: headerTopPadding }}>
           <View className="header-main">
@@ -815,14 +771,6 @@ export default function Index() {
                 <View className="user-picker-button" onClick={openStatsPage}>
                   <Text>统计</Text>
                 </View>
-                {isH5Runtime && (
-                  <View
-                    className={`user-picker-button sync-button ${cloudRefreshing ? 'loading' : ''}`}
-                    onClick={refreshCloudOverrides}
-                  >
-                    <Text>{cloudRefreshing ? '同步中' : '同步'}</Text>
-                  </View>
-                )}
                 <Picker
                   mode="selector"
                   range={userPickerOptions}
@@ -845,14 +793,6 @@ export default function Index() {
                 <View className="user-picker-button" onClick={openStatsPage}>
                   <Text>统计</Text>
                 </View>
-                {isH5Runtime && (
-                  <View
-                    className={`user-picker-button sync-button ${cloudRefreshing ? 'loading' : ''}`}
-                    onClick={refreshCloudOverrides}
-                  >
-                    <Text>{cloudRefreshing ? '同步中' : '同步'}</Text>
-                  </View>
-                )}
                 <View className="user-picker-button locked">
                   <Text>{userPickerButtonText}</Text>
                 </View>
@@ -922,21 +862,21 @@ export default function Index() {
         enableFlex
         enhanced
         showScrollbar={false}
-        refresherEnabled={!isH5Runtime}
+        refresherEnabled
         refresherTriggered={cloudRefreshing}
         refresherDefaultStyle="none"
         refresherBackground="#f5f7fb"
         onRefresherPulling={() => {
-          if (!isH5Runtime) setRefreshHintVisible(true)
+          setRefreshHintVisible(true)
         }}
         onRefresherRestore={() => {
-          if (!isH5Runtime && !cloudRefreshing) setRefreshHintVisible(false)
+          if (!cloudRefreshing) setRefreshHintVisible(false)
         }}
         onRefresherAbort={() => {
-          if (!isH5Runtime && !cloudRefreshing) setRefreshHintVisible(false)
+          if (!cloudRefreshing) setRefreshHintVisible(false)
         }}
         onRefresherRefresh={() => {
-          if (!isH5Runtime) refreshCloudOverrides()
+          refreshCloudOverrides()
         }}
       >
         <View className="scrollable-content-inner">
@@ -1312,73 +1252,28 @@ export default function Index() {
       {needsProfileBinding && (
         <View className="editor-mask profile-binding-mask">
           <View className="profile-binding">
-            <Text className="profile-binding-title">{profileAuthMode === 'login' ? '账号登录' : '注册账号'}</Text>
+            <Text className="profile-binding-title">绑定姓名</Text>
             <Text className="profile-binding-desc">
-              {profileAuthMode === 'login'
-                ? '使用你的账号登录。登录后权限会绑定到账号和对应姓名。'
-                : '创建账号并绑定姓名。注册后只能修改该姓名的排班和加班记录。'}
+              绑定后只能修改本人排班和加班记录。
             </Text>
-            <View className="profile-auth-tabs">
-              <View
-                className={`profile-auth-tab ${profileAuthMode === 'login' ? 'active' : ''}`}
-                onClick={() => setProfileAuthMode('login')}
-              >
-                <Text>登录</Text>
+            <Picker
+              mode="selector"
+              range={userPickerOptions}
+              value={profilePickerIndex}
+              onChange={event => setProfilePickerIndex(Number(event.detail.value))}
+            >
+              <View className="profile-binding-picker">
+                <Text>{userPickerOptions[profilePickerIndex]}</Text>
               </View>
-              <View
-                className={`profile-auth-tab ${profileAuthMode === 'register' ? 'active' : ''}`}
-                onClick={() => setProfileAuthMode('register')}
-              >
-                <Text>注册</Text>
-              </View>
-            </View>
-            <Input
-              className="profile-binding-input"
-              placeholder="账号"
-              value={profileUsername}
-              onInput={event => setProfileUsername(String(event.detail.value ?? ''))}
-            />
-            <Input
-              className="profile-binding-input"
-              password
-              placeholder="密码"
-              value={profilePassword}
-              onInput={event => setProfilePassword(String(event.detail.value ?? ''))}
-            />
-            {profileAuthMode === 'register' && (
-              <>
-                <Picker
-                  mode="selector"
-                  range={userPickerOptions}
-                  value={profilePickerIndex}
-                  onChange={event => setProfilePickerIndex(Number(event.detail.value))}
-                >
-                  <View className="profile-binding-picker">
-                    <Text>{userPickerOptions[profilePickerIndex]}</Text>
-                  </View>
-                </Picker>
-                <Input
-                  className="profile-binding-input"
-                  password
-                  placeholder="邀请码"
-                  value={profileInviteCode}
-                  onInput={event => setProfileInviteCode(String(event.detail.value ?? ''))}
-                />
-              </>
-            )}
+            </Picker>
             <View className="profile-binding-actions">
               <View
-                className={`profile-binding-confirm ${profileBinding || !profileUsername || !profilePassword || (profileAuthMode === 'register' && !profileInviteCode) ? 'disabled' : ''}`}
+                className={`profile-binding-confirm ${profileBinding ? 'disabled' : ''}`}
                 onClick={() => {
-                  if (
-                    !profileBinding
-                    && profileUsername
-                    && profilePassword
-                    && (profileAuthMode === 'login' || profileInviteCode)
-                  ) bindProfile()
+                  if (!profileBinding) bindProfile()
                 }}
               >
-                <Text>{profileBinding ? '处理中' : (profileAuthMode === 'login' ? '登录' : '注册')}</Text>
+                <Text>{profileBinding ? '处理中' : '绑定'}</Text>
               </View>
             </View>
           </View>

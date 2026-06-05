@@ -16,6 +16,9 @@
     "typecheck:core": "pnpm --filter @shift-schedule/core typecheck",
     "typecheck": "pnpm typecheck:miniapp",
     "typecheck:all": "pnpm typecheck:miniapp && pnpm typecheck:core && pnpm typecheck:web",
-    "test": "pnpm test:miniapp && pnpm test:core"
+    "test": "pnpm test:miniapp && pnpm test:core",
+    "verify:web": "pnpm typecheck:web && pnpm build:web",
+    "verify:miniapp": "pnpm typecheck:miniapp && pnpm test:miniapp && pnpm build:weapp",
+    "verify:all": "pnpm typecheck:all && pnpm test && pnpm build:web && pnpm build:weapp"
   }
 }

@@ -29,10 +29,6 @@ export async function loadSalaryInputs(): Promise<SalaryInputRecords> {
   return readSalaryInputsFromStorage()
 }
 
-export async function syncSalaryInputs(records: SalaryInputRecords): Promise<void> {
-  writeSalaryInputsToStorage(records)
-}
-
 export async function saveSalaryInput(key: string, values: SalaryInputValues): Promise<void> {
   const records = readSalaryInputsFromStorage()
   writeSalaryInputsToStorage({

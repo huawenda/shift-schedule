@@ -6,7 +6,7 @@
 
 **Architecture:** Use a workspace layout with `apps/web` for pure Vite React Web development, `apps/miniapp` for the optional WeChat mini program, and `packages/core` for platform-neutral schedule logic. Web and miniapp are intentionally separate product lines.
 
-**Tech Stack:** Vite, React, TypeScript, Supabase, Cloudflare Pages, Taro legacy app, pnpm workspaces.
+**Tech Stack:** Vite, React, TypeScript, Supabase, Cloudflare Pages, Taro miniapp, WeChat cloud development, pnpm workspaces.
 
 ---
 
@@ -44,23 +44,18 @@
 
 ## Phase 4: Cleanup
 
-- [ ] Remove duplicate Web logic from the legacy Taro app.
+- [x] Remove duplicate Web logic from the Taro miniapp app.
 - [x] Remove Supabase dependencies from miniapp package if no longer used there.
-- [ ] Update docs to make Web the primary development path.
-- [ ] Add CI-style commands for `typecheck:all`, `test:core`, and `build:web`.
+- [x] Update docs to make Web the primary development path.
+- [x] Add CI-style commands for `typecheck:all`, `test:core`, and `build:web`.
 
 ## Verification Commands
 
-Run these after Phase 1:
+Run these after the migration:
 
 ```bash
 pnpm install
-pnpm test:core
-pnpm typecheck:core
-pnpm typecheck:web
-pnpm build:web
-pnpm typecheck:miniapp
-pnpm build:weapp
+pnpm verify:all
 ```
 
-Expected result: all commands pass. Existing bundle-size warnings from Taro builds are acceptable until the legacy app is moved or frozen.
+Expected result: all commands pass. Existing bundle-size warnings from Taro miniapp builds are acceptable while the optional miniapp line remains Taro-based.

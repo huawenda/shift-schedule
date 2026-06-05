@@ -29,7 +29,7 @@ Design direction: light, friendly, practical.
 ### 3. Standardization Applied
 
 - Added `apps/miniapp/src/styles/design-tokens.scss` as the shared SCSS token and mixin layer.
-- Connected global background and H5 app shell to shared canvas and shadow tokens.
+- Connected global background and app shell to shared canvas and shadow tokens.
 - Connected home and statistics page shells to a shared `page-shell` mixin.
 - Connected primary/secondary/sync pill buttons to a shared `pill-control` mixin where safe.
 - Connected cards to a shared `card-surface` mixin for major page surfaces.
@@ -41,7 +41,7 @@ Design direction: light, friendly, practical.
 
 Keep the SCSS token layer small and practical:
 
-- Use SCSS variables and mixins because they compile cleanly for both H5 and WeChat mini program outputs.
+- Use SCSS variables and mixins because they compile cleanly for the WeChat mini program output.
 - Do not introduce a new component library for this Taro app.
 - Use shared mixins for stable product primitives: page shell, cards, pill controls, fields, spinners, semantic chips.
 - Keep highly contextual table layout rules inside page SCSS until the repeated patterns are clearer.
@@ -52,7 +52,7 @@ Keep the SCSS token layer small and practical:
 2. Extract segmented controls for month tabs, view tabs, auth tabs, and table view toggles.
 3. Normalize status text styles for sync, salary save, loading, error, and empty states.
 4. Reduce remaining hard-coded neutrals in table rows, dividers, and secondary labels.
-5. Review mobile spacing after tokenization with H5 and WeChat devtools screenshots.
+5. Review mobile spacing after tokenization with WeChat devtools screenshots.
 
 ## Rules For Future UI Changes
 
@@ -60,4 +60,4 @@ Keep the SCSS token layer small and practical:
 - Prefer `apps/miniapp/src/styles/design-tokens.scss` for product primitives.
 - If a selector duplicates a button, card, chip, field, or spinner pattern, add or reuse a mixin instead of hard-coding.
 - Preserve the semantic shift color mapping across home, statistics, salary, and future pages.
-- Keep visual changes incremental and verified on both H5 and mini program builds.
+- Keep visual changes incremental and verified on mini program builds.

@@ -12,7 +12,7 @@ Users open the app in short sessions, often on a phone, to answer practical ques
 
 ## Product Purpose
 
-The product exists to make rotating-shift information easier to read, update, and trust across WeChat mini program and Web/H5 surfaces.
+The product exists to make rotating-shift information easier to read, update, and trust across the Web app and the optional WeChat mini program.
 
 Success means the current month, current user, shift changes, team schedule, overtime, leave, and salary calculations are all discoverable without training. The interface should reduce second-guessing: users should know what data is local, what is synced, and what actions are available to their role.
 

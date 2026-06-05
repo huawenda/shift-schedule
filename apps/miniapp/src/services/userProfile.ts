@@ -42,16 +42,6 @@ interface UserProfileFunctionResult {
   profile?: unknown
 }
 
-interface WebAccountLoginInput {
-  username: string
-  password: string
-}
-
-interface WebAccountRegisterInput extends WebAccountLoginInput {
-  personName: string
-  inviteCode: string
-}
-
 export class UserProfileError extends Error {
   code: string
 
@@ -133,16 +123,6 @@ export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
     isAdmin: resolvedOpenid ? adminOpenidSet.has(resolvedOpenid.trim().toLowerCase()) : false,
     profile
   }
-}
-
-export async function loginWebAccount(input: WebAccountLoginInput): Promise<CurrentUserProfile> {
-  void input
-  throw new UserProfileError('WEB_LOGIN_UNAVAILABLE', '账号登录仅用于 Web 端')
-}
-
-export async function registerWebAccount(input: WebAccountRegisterInput): Promise<CurrentUserProfile> {
-  void input
-  throw new UserProfileError('WEB_REGISTER_UNAVAILABLE', '账号注册仅用于 Web 端')
 }
 
 export async function bindCurrentUserProfile(personName: string, accessCode?: string): Promise<UserProfile> {

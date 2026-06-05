@@ -179,7 +179,7 @@ The palette is a cool, airy product palette with one command color and a separat
 The system uses a hybrid of tonal layering and very restrained shadows. Cards are mostly separated by white surfaces and soft borders. Shadows should be used to clarify sticky/floating layers, not to decorate every card.
 
 ### Shadow Vocabulary
-- **Mobile Shell** (`0 22px 58px rgba(15, 23, 42, 0.16)`): only for the H5 app frame when rendered inside a wide desktop browser.
+- **Mobile Shell** (`0 22px 58px rgba(15, 23, 42, 0.16)`): only for framed mobile previews when a phone-sized app surface is rendered inside a wide desktop browser.
 - **Raised Control** (`0 4px 12px rgba(25, 39, 70, 0.08)`): selected segmented controls and small floating controls.
 - **Sticky Column** (`8px 0 16px rgba(25, 39, 70, 0.08)`): frozen table columns when horizontal scrolling needs edge separation.
 - **Resting Card** (`none` or `0 1px 2px rgba(15, 23, 42, 0.04)`): default card depth on mobile.
@@ -219,7 +219,7 @@ The system uses a hybrid of tonal layering and very restrained shadows. Cards ar
 ### Inputs / Fields
 
 - **Style:** Surface Muted fill, Strong or Soft Border, `10px-12px` radius.
-- **Focus:** Action Blue border with a subtle blue background shift. Keep focus visible on H5.
+- **Focus:** Action Blue border with a subtle blue background shift. Keep focus visible on Web and miniapp form controls.
 - **Error:** Danger text and a light red background only for the affected field or row.
 - **Disabled:** lower contrast surface, but labels must remain readable.
 

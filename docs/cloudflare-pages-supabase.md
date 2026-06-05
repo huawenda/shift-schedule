@@ -1,8 +1,7 @@
 # Cloudflare Pages + Supabase Deployment
 
 This project now treats the pure Web app in `apps/web` as the primary
-Cloudflare Pages target. The legacy Taro H5 build is no longer the recommended
-Web deployment path.
+Cloudflare Pages target. The Taro miniapp line is not a Web deployment target.
 
 ## 1. Supabase project
 
@@ -112,7 +111,8 @@ where person_name = '张舒祺';
 Disabled accounts cannot read or write app data because public tables use RLS
 policies tied to an enabled account.
 
-## Legacy Taro H5 note
+## Miniapp note
 
-The old Taro H5 scripts still exist while the miniapp line is being contained,
-but Cloudflare Pages should use `pnpm build:web` and `apps/web/dist`.
+The WeChat mini program is isolated under `apps/miniapp` and is not deployed to
+Cloudflare Pages. Cloudflare Pages should use `pnpm build:web` and
+`apps/web/dist`.

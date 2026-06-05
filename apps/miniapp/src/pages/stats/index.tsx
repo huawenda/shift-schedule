@@ -14,7 +14,6 @@ import {
   loadSalaryInputs,
   readSalaryInputsFromStorage,
   saveSalaryInput,
-  syncSalaryInputs,
   type SalaryInputRecords
 } from '../../services/salaryInputs'
 import { loadCurrentUserProfile, type CurrentUserProfile } from '../../services/userProfile'
@@ -38,7 +37,6 @@ import {
   getPersonMonthlyStats,
   type PersonOvertimeStats
 } from '../../utils/statistics'
-import { isH5Runtime } from '../../services/runtime'
 import './index.scss'
 
 const defaultPersonName = '华文达'
@@ -68,8 +66,6 @@ function getWindowWidth(): number {
 }
 
 function getHeaderTopPadding(): string {
-  if (isH5Runtime) return '8px'
-
   try {
     const menuButton = Taro.getMenuButtonBoundingClientRect()
     const windowWidth = getWindowWidth()
@@ -386,41 +382,35 @@ export default function StatsPage() {
 
   useEffect(() => {
     if (!salarySyncReady) return
-    if (isH5Runtime) {
-      const key = editedSalaryKey.current
-      if (!key) return
+    const key = editedSalaryKey.current
+    if (!key) return undefined
 
-      if (salarySaveTimer.current) clearTimeout(salarySaveTimer.current)
-      const saveVersion = salaryEditVersion.current
-      salarySaveTimer.current = setTimeout(() => {
-        const values = salaryInputRecords[key] ?? emptySalaryInputs
-        setSalarySaveStatus('saving')
-        saveSalaryInput(key, values)
-          .then(() => {
-            if (editedSalaryKey.current === key && salaryEditVersion.current === saveVersion) {
-              editedSalaryKey.current = null
-              setSalarySaveStatus('saved')
-            }
-          })
-          .catch(error => {
-            console.warn('薪资输入保存失败', error)
-            if (salaryEditVersion.current === saveVersion) {
-              setSalarySaveStatus('error')
-            }
-          })
-      }, 700)
+    if (salarySaveTimer.current) clearTimeout(salarySaveTimer.current)
+    const saveVersion = salaryEditVersion.current
+    salarySaveTimer.current = setTimeout(() => {
+      const values = salaryInputRecords[key] ?? emptySalaryInputs
+      setSalarySaveStatus('saving')
+      saveSalaryInput(key, values)
+        .then(() => {
+          if (editedSalaryKey.current === key && salaryEditVersion.current === saveVersion) {
+            editedSalaryKey.current = null
+            setSalarySaveStatus('saved')
+          }
+        })
+        .catch(error => {
+          console.warn('薪资输入保存失败', error)
+          if (salaryEditVersion.current === saveVersion) {
+            setSalarySaveStatus('error')
+          }
+        })
+    }, 700)
 
-      return () => {
-        if (salarySaveTimer.current) {
-          clearTimeout(salarySaveTimer.current)
-          salarySaveTimer.current = null
-        }
+    return () => {
+      if (salarySaveTimer.current) {
+        clearTimeout(salarySaveTimer.current)
+        salarySaveTimer.current = null
       }
     }
-
-    syncSalaryInputs(salaryInputRecords).catch(error => {
-      console.warn('薪资输入同步失败', error)
-    })
   }, [salaryInputRecords, salarySyncReady])
 
   const setSalaryInputValue = (field: SalaryInputField, value: string) => {
@@ -513,7 +503,7 @@ export default function StatsPage() {
 
   if (!profileReady || !cloudStatsReady) {
     return (
-      <View className={`stats-page ${isH5Runtime ? 'stats-page-h5' : ''}`}>
+      <View className="stats-page">
         <View className="stats-header" style={{ paddingTop: headerTopPadding }}>
           <View className="stats-back-button" onClick={goBackToIndexPage}>
             <Text>返回</Text>
@@ -540,7 +530,7 @@ export default function StatsPage() {
   }
 
   return (
-    <View className={`stats-page ${isH5Runtime ? 'stats-page-h5' : ''}`}>
+    <View className="stats-page">
       <View className="stats-header" style={{ paddingTop: headerTopPadding }}>
         <View className="stats-back-button" onClick={goBackToIndexPage}>
           <Text>返回</Text>
@@ -551,14 +541,12 @@ export default function StatsPage() {
             {activeScheduleData.startDate.replace(/-/g, '/')} - {activeScheduleData.endDate.replace(/-/g, '/')}
           </Text>
         </View>
-        {isH5Runtime && (
-          <View
-            className={`stats-sync-button ${cloudStatsRefreshing ? 'loading' : ''}`}
-            onClick={refreshStatsCloudData}
-          >
-            <Text>{cloudStatsRefreshing ? '同步中' : '同步'}</Text>
-          </View>
-        )}
+        <View
+          className={`stats-sync-button ${cloudStatsRefreshing ? 'loading' : ''}`}
+          onClick={refreshStatsCloudData}
+        >
+          <Text>{cloudStatsRefreshing ? '同步中' : '同步'}</Text>
+        </View>
       </View>
 
       <View className="stats-view-tabs">
@@ -718,7 +706,7 @@ export default function StatsPage() {
                 <View className="stats-card salary-card">
               <View className="stats-section-title-row salary-title-row">
                 <Text className="stats-section-title">薪资计算</Text>
-                {isH5Runtime && salarySaveStatusLabel && (
+                {salarySaveStatusLabel && (
                   <Text className={`salary-save-status ${salarySaveStatus}`}>{salarySaveStatusLabel}</Text>
                 )}
               </View>
