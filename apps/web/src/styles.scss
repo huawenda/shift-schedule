@@ -268,6 +268,18 @@ h2 {
   cursor: pointer;
 }
 
+.ghost-button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
 .current-user-card,
 .schedule-card {
   margin-top: 14px;
@@ -378,6 +390,22 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.shift-cell:hover {
+  background: var(--primary-soft);
+}
+
+.shift-cell:focus-visible {
+  z-index: 3;
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 
 .edited-dot {
@@ -432,6 +460,115 @@ h2 {
   color: #475467;
 }
 
+.editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.30);
+}
+
+.shift-editor {
+  width: min(560px, 100%);
+  max-height: min(720px, calc(100vh - 36px));
+  overflow: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 18px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
+}
+
+.editor-group {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.editor-label {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.editor-options,
+.segmented-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editor-option,
+.segmented-row button {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: #fbfcff;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.editor-option.active,
+.segmented-row button.active {
+  border-color: #93c5fd;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.editor-option:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+  opacity: 0.48;
+}
+
+.editor-muted {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.overtime-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(220px, 100%);
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: #fbfcff;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.overtime-input-row input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.editor-actions .primary-button {
+  min-width: 120px;
+  padding: 0 18px;
+}
+
 @media (max-width: 720px) {
   .app-shell {
     padding-top: 12px;
@@ -456,5 +593,13 @@ h2 {
 
   .schedule-card .section-header {
     padding: 0 18px;
+  }
+
+  .editor-backdrop {
+    padding: 10px;
+  }
+
+  .shift-editor {
+    border-radius: 14px;
   }
 }

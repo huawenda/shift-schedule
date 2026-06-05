@@ -1,15 +1,21 @@
 import { Fragment, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
+  canMarkLegalShift,
+  getEditableShiftOptionsForBase,
   getCurrentScheduleMonth,
   getMonthScheduleView,
+  getOvertimePresetOptions,
   getOverrideKey,
   getPersonShiftSummary,
+  normalizeLegalOverride,
+  normalizeOvertimeHours,
   scheduleData,
+  type LeaveDuration,
   type ScheduleMonth,
   type ShiftType
 } from '@shift-schedule/core'
 import { isSupabaseConfigured } from './services/env'
-import type { CloudOverrides } from './services/cloudRecords'
+import type { CloudDayRecord, CloudOverrides } from './services/cloudRecords'
 import type { CurrentUserProfile } from './services/userProfile'
 
 const defaultCurrentUserName = '华文达'
@@ -24,6 +30,7 @@ const monthOptions: Array<{ label: string; value: ScheduleMonth }> = [
   { label: '12月', value: '12' }
 ]
 const shiftLabels: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特', '事假']
+const leaveDurationOptions: LeaveDuration[] = ['半天', '一天']
 const formatDateForDisplay = (date: string) => date.split('-').join('/')
 
 const emptyOverrides: CloudOverrides = {
@@ -50,6 +57,88 @@ function getInitialMonth(): ScheduleMonth {
 
 type AuthMode = 'login' | 'register'
 
+interface ShiftEditorState {
+  personName: string
+  date: string
+  baseShift: ShiftType
+  selectedShift: ShiftType | 'default'
+  overtimeInput: string
+  isLegal: boolean
+  leaveDuration: LeaveDuration
+}
+
+function getBaseShift(personName: string, date: string): ShiftType | null {
+  const person = scheduleData.people.find(item => item.name === personName)
+  const dateIndex = scheduleData.dates.indexOf(date)
+  if (!person || dateIndex < 0) return null
+
+  return person.shifts[dateIndex]
+}
+
+function formatOvertimeHours(hours: number): string {
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
+}
+
+function canRecordOvertime(shift: ShiftType): boolean {
+  return shift !== '休息' && shift !== '事假'
+}
+
+function getEditorEffectiveShift(editor: ShiftEditorState): ShiftType {
+  return editor.selectedShift === 'default' ? editor.baseShift : editor.selectedShift
+}
+
+function applyRecordToOverrides(overrides: CloudOverrides, record: CloudDayRecord, baseShift: ShiftType): CloudOverrides {
+  const key = getOverrideKey(record.personName, record.date)
+  const nextOverrides: CloudOverrides = {
+    shiftOverrides: { ...overrides.shiftOverrides },
+    overtimeOverrides: { ...overrides.overtimeOverrides },
+    legalOverrides: { ...overrides.legalOverrides },
+    leaveDurationOverrides: { ...overrides.leaveDurationOverrides }
+  }
+
+  if (record.shiftOverride && record.shiftOverride !== baseShift) {
+    nextOverrides.shiftOverrides[key] = record.shiftOverride
+  } else {
+    delete nextOverrides.shiftOverrides[key]
+  }
+
+  if ((record.overtimeHours ?? 0) > 0) {
+    nextOverrides.overtimeOverrides[key] = record.overtimeHours ?? 0
+  } else {
+    delete nextOverrides.overtimeOverrides[key]
+  }
+
+  if (record.isLegalOvertime === true) {
+    nextOverrides.legalOverrides[key] = true
+  } else {
+    delete nextOverrides.legalOverrides[key]
+  }
+
+  if (record.shiftOverride === '事假' && record.leaveDuration) {
+    nextOverrides.leaveDurationOverrides[key] = record.leaveDuration
+  } else {
+    delete nextOverrides.leaveDurationOverrides[key]
+  }
+
+  return nextOverrides
+}
+
+function deleteRecordFromOverrides(overrides: CloudOverrides, personName: string, date: string): CloudOverrides {
+  const key = getOverrideKey(personName, date)
+  const nextOverrides: CloudOverrides = {
+    shiftOverrides: { ...overrides.shiftOverrides },
+    overtimeOverrides: { ...overrides.overtimeOverrides },
+    legalOverrides: { ...overrides.legalOverrides },
+    leaveDurationOverrides: { ...overrides.leaveDurationOverrides }
+  }
+
+  delete nextOverrides.shiftOverrides[key]
+  delete nextOverrides.overtimeOverrides[key]
+  delete nextOverrides.legalOverrides[key]
+  delete nextOverrides.leaveDurationOverrides[key]
+  return nextOverrides
+}
+
 export function App() {
   const [selectedMonth, setSelectedMonth] = useState<ScheduleMonth>(getInitialMonth)
   const [profile, setProfile] = useState<CurrentUserProfile | null>(null)
@@ -62,6 +151,8 @@ export function App() {
   const [isBooting, setIsBooting] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false)
+  const [isSavingRecord, setIsSavingRecord] = useState(false)
+  const [shiftEditor, setShiftEditor] = useState<ShiftEditorState | null>(null)
   const [statusText, setStatusText] = useState('准备同步')
   const [errorText, setErrorText] = useState('')
 
@@ -158,6 +249,100 @@ export function App() {
     setProfile({ openid: null, isAdmin: false, profile: null })
     setOverrides(emptyOverrides)
     setStatusText('已退出登录')
+  }
+
+  function openShiftEditor(personName: string, date: string) {
+    if (isConfigured && !profile?.profile) {
+      setErrorText('请先登录后再编辑排班')
+      return
+    }
+
+    const boundPersonName = profile?.profile?.personName
+    if (profile && !profile.isAdmin && boundPersonName && personName !== boundPersonName) {
+      setErrorText('普通用户只能修改本人记录')
+      return
+    }
+
+    const baseShift = getBaseShift(personName, date)
+    if (!baseShift) return
+
+    const key = getOverrideKey(personName, date)
+    setShiftEditor({
+      personName,
+      date,
+      baseShift,
+      selectedShift: overrides.shiftOverrides[key] ?? 'default',
+      overtimeInput: overrides.overtimeOverrides[key]?.toString() ?? '',
+      isLegal: overrides.legalOverrides[key] === true,
+      leaveDuration: overrides.leaveDurationOverrides[key] ?? '一天'
+    })
+    setErrorText('')
+  }
+
+  function selectShiftEdit(nextShift: ShiftType | 'default') {
+    setShiftEditor(editor => {
+      if (!editor) return editor
+      const effectiveShift = nextShift === 'default' ? editor.baseShift : nextShift
+      return {
+        ...editor,
+        selectedShift: nextShift,
+        isLegal: normalizeLegalOverride(effectiveShift, editor.isLegal),
+        leaveDuration: effectiveShift === '事假' ? editor.leaveDuration : '一天'
+      }
+    })
+  }
+
+  function setShiftEditorLegal(isLegal: boolean) {
+    setShiftEditor(editor => {
+      if (!editor) return editor
+      return {
+        ...editor,
+        isLegal: normalizeLegalOverride(getEditorEffectiveShift(editor), isLegal)
+      }
+    })
+  }
+
+  async function saveShiftEditor() {
+    if (!shiftEditor || isSavingRecord) return
+
+    const resolvedShift = getEditorEffectiveShift(shiftEditor)
+    const shouldUseBaseShift = resolvedShift === shiftEditor.baseShift
+    const overtimeHours = canRecordOvertime(resolvedShift)
+      ? normalizeOvertimeHours(shiftEditor.overtimeInput)
+      : 0
+    const isLegalOvertime = normalizeLegalOverride(resolvedShift, shiftEditor.isLegal)
+    const leaveDuration = resolvedShift === '事假' ? shiftEditor.leaveDuration : undefined
+    const shouldDeleteRecord = shouldUseBaseShift && overtimeHours <= 0 && !isLegalOvertime && !leaveDuration
+
+    setIsSavingRecord(true)
+    setErrorText('')
+    setStatusText('保存中')
+
+    try {
+      const { deleteCloudDayRecord, saveCloudDayRecord } = await import('./services/cloudRecords')
+      if (shouldDeleteRecord) {
+        await deleteCloudDayRecord(shiftEditor.personName, shiftEditor.date)
+        setOverrides(current => deleteRecordFromOverrides(current, shiftEditor.personName, shiftEditor.date))
+      } else {
+        const record: CloudDayRecord = {
+          personName: shiftEditor.personName,
+          date: shiftEditor.date,
+          ...(!shouldUseBaseShift ? { shiftOverride: resolvedShift } : {}),
+          overtimeHours,
+          ...(isLegalOvertime ? { isLegalOvertime } : {}),
+          ...(leaveDuration ? { leaveDuration } : {})
+        }
+        await saveCloudDayRecord(record)
+        setOverrides(current => applyRecordToOverrides(current, record, shiftEditor.baseShift))
+      }
+      setShiftEditor(null)
+      setStatusText(isConfigured ? '已保存到云端' : '已保存到本地视图')
+    } catch (error) {
+      setErrorText(error instanceof Error ? error.message : '保存失败，请稍后重试')
+      setStatusText('保存失败')
+    } finally {
+      setIsSavingRecord(false)
+    }
   }
 
   return (
@@ -272,18 +457,134 @@ export function App() {
               </div>
               {visibleDates.map((date, index) => {
                 const shift = person.shifts[index]
-                const isEdited = Boolean(overrides.shiftOverrides[getOverrideKey(person.name, date)])
+                const key = getOverrideKey(person.name, date)
+                const isEdited = Boolean(
+                  overrides.shiftOverrides[key] ||
+                  overrides.overtimeOverrides[key] ||
+                  overrides.legalOverrides[key] ||
+                  overrides.leaveDurationOverrides[key]
+                )
                 return (
-                  <div className="shift-cell" key={`${person.name}-${date}`}>
+                  <button className="shift-cell" key={`${person.name}-${date}`} type="button" onClick={() => openShiftEditor(person.name, date)}>
                     {isEdited ? <span className="edited-dot" /> : null}
                     <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
-                  </div>
+                  </button>
                 )
               })}
             </Fragment>
           ))}
         </div>
       </section>
+
+      {shiftEditor ? (
+        <div className="editor-backdrop" role="presentation" onClick={() => setShiftEditor(null)}>
+          <section className="shift-editor" role="dialog" aria-modal="true" aria-labelledby="shift-editor-title" onClick={event => event.stopPropagation()}>
+            <div className="section-header">
+              <div>
+                <span className="muted-label">{shiftEditor.personName} / {shiftEditor.date}</span>
+                <h2 id="shift-editor-title">编辑排班</h2>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setShiftEditor(null)}>关闭</button>
+            </div>
+
+            <div className="editor-group">
+              <span className="editor-label">默认班次</span>
+              <button className={`editor-option ${shiftEditor.selectedShift === 'default' ? 'active' : ''}`} type="button" onClick={() => selectShiftEdit('default')}>
+                <span className={`shift-chip ${getShiftClassName(shiftEditor.baseShift)}`}>{shiftEditor.baseShift}</span>
+              </button>
+            </div>
+
+            <div className="editor-group">
+              <span className="editor-label">修改为</span>
+              <div className="editor-options">
+                {getEditableShiftOptionsForBase(shiftEditor.baseShift).map(shift => {
+                  const effectiveShift = getEditorEffectiveShift(shiftEditor)
+                  const isDisabled = shiftEditor.isLegal && shift === '事假'
+                  return (
+                    <button
+                      className={`editor-option ${effectiveShift === shift ? 'active' : ''}`}
+                      disabled={isDisabled}
+                      key={shift}
+                      type="button"
+                      onClick={() => selectShiftEdit(shift === shiftEditor.baseShift ? 'default' : shift)}
+                    >
+                      <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {getEditorEffectiveShift(shiftEditor) === '事假' ? (
+              <div className="editor-group">
+                <span className="editor-label">事假时长</span>
+                <div className="segmented-row">
+                  {leaveDurationOptions.map(duration => (
+                    <button
+                      className={shiftEditor.leaveDuration === duration ? 'active' : ''}
+                      key={duration}
+                      type="button"
+                      onClick={() => setShiftEditor(editor => editor ? { ...editor, leaveDuration: duration } : editor)}
+                    >
+                      {duration}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="editor-group">
+              <span className="editor-label">法定</span>
+              {canMarkLegalShift(getEditorEffectiveShift(shiftEditor)) ? (
+                <div className="segmented-row">
+                  <button className={!shiftEditor.isLegal ? 'active' : ''} type="button" onClick={() => setShiftEditorLegal(false)}>否</button>
+                  <button className={shiftEditor.isLegal ? 'active' : ''} type="button" onClick={() => setShiftEditorLegal(true)}>是</button>
+                </div>
+              ) : (
+                <span className="editor-muted">该班次不可标记法定</span>
+              )}
+            </div>
+
+            <div className="editor-group">
+              <span className="editor-label">加班时长</span>
+              {canRecordOvertime(getEditorEffectiveShift(shiftEditor)) ? (
+                <>
+                  <div className="segmented-row">
+                    {getOvertimePresetOptions(getEditorEffectiveShift(shiftEditor), shiftEditor.isLegal).map(hours => (
+                      <button
+                        className={normalizeOvertimeHours(shiftEditor.overtimeInput) === hours ? 'active' : ''}
+                        key={hours}
+                        type="button"
+                        onClick={() => setShiftEditor(editor => editor ? { ...editor, overtimeInput: formatOvertimeHours(hours) } : editor)}
+                      >
+                        {formatOvertimeHours(hours)}h
+                      </button>
+                    ))}
+                  </div>
+                  <label className="overtime-input-row">
+                    <input
+                      inputMode="decimal"
+                      value={shiftEditor.overtimeInput}
+                      onChange={event => setShiftEditor(editor => editor ? { ...editor, overtimeInput: event.target.value } : editor)}
+                      placeholder="0"
+                    />
+                    <span>小时</span>
+                  </label>
+                </>
+              ) : (
+                <span className="editor-muted">该班次不记录加班</span>
+              )}
+            </div>
+
+            <div className="editor-actions">
+              <button className="primary-button" type="button" disabled={isSavingRecord} onClick={saveShiftEditor}>
+                {isSavingRecord ? '保存中' : '保存'}
+              </button>
+              <button className="ghost-button" type="button" onClick={() => setShiftEditor(null)}>取消</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   )
 }

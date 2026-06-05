@@ -1,4 +1,5 @@
 import {
+  type CloudDayRecord,
   cloudRecordsToOverrides,
   type LeaveDurationOverrides,
   type LegalOverrides,
@@ -8,6 +9,7 @@ import {
 import { isSupabaseConfigured } from './env'
 import { getSupabaseClient } from './supabaseClient'
 import {
+  cloudDayRecordToSupabaseRows,
   mergeSupabaseDayRecordRows,
   type SupabasePrivateDayRecordRow,
   type SupabaseShiftOverrideRow
@@ -20,11 +22,69 @@ export interface CloudOverrides {
   leaveDurationOverrides: LeaveDurationOverrides
 }
 
+export type { CloudDayRecord }
+
 export async function loadCloudOverrides(): Promise<CloudOverrides> {
   if (!isSupabaseConfigured()) return emptyCloudOverrides()
 
   const records = await loadSupabaseDayRecords()
   return cloudRecordsToOverrides(records)
+}
+
+export async function saveCloudDayRecord(record: CloudDayRecord): Promise<void> {
+  if (!isSupabaseConfigured()) return
+
+  const supabase = getSupabaseClient()
+  const { shiftRow, privateRow } = cloudDayRecordToSupabaseRows(record)
+
+  if (shiftRow) {
+    const { error } = await supabase
+      .from('day_shift_overrides')
+      .upsert(shiftRow, { onConflict: 'person_name,record_date' })
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('day_shift_overrides')
+      .delete()
+      .eq('person_name', record.personName)
+      .eq('record_date', record.date)
+    if (error) throw error
+  }
+
+  if (privateRow) {
+    const { error } = await supabase
+      .from('day_private_records')
+      .upsert(privateRow, { onConflict: 'person_name,record_date' })
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('day_private_records')
+      .delete()
+      .eq('person_name', record.personName)
+      .eq('record_date', record.date)
+    if (error) throw error
+  }
+}
+
+export async function deleteCloudDayRecord(personName: string, date: string): Promise<void> {
+  if (!isSupabaseConfigured()) return
+
+  const supabase = getSupabaseClient()
+  const [{ error: shiftError }, { error: privateError }] = await Promise.all([
+    supabase
+      .from('day_shift_overrides')
+      .delete()
+      .eq('person_name', personName)
+      .eq('record_date', date),
+    supabase
+      .from('day_private_records')
+      .delete()
+      .eq('person_name', personName)
+      .eq('record_date', date)
+  ])
+
+  if (shiftError) throw shiftError
+  if (privateError) throw privateError
 }
 
 function emptyCloudOverrides(): CloudOverrides {

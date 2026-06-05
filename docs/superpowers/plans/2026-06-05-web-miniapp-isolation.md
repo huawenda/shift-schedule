@@ -31,7 +31,7 @@
 
 - [x] Move Web-only Supabase client logic from root `src/services` into `apps/web/src/services`.
 - [x] Rebuild Web authentication using Supabase Auth only.
-- [ ] Rebuild cloud sync as Web-only Supabase sync.
+- [x] Rebuild cloud sync as Web-only Supabase sync.
 - [ ] Rebuild statistics and salary pages as Web-only React components.
 - [ ] Rebuild PWA registration and Cloudflare Pages deployment docs for `apps/web`.
 
