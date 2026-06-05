@@ -107,6 +107,16 @@ interface ShiftEditorState {
   leaveDuration: LeaveDuration
 }
 
+function getWindowWidth(): number {
+  const taroWithWindowInfo = Taro as typeof Taro & {
+    getWindowInfo?: () => { windowWidth?: number }
+  }
+  const windowWidth = taroWithWindowInfo.getWindowInfo?.().windowWidth
+  if (typeof windowWidth === 'number' && windowWidth > 0) return windowWidth
+
+  return Taro.getSystemInfoSync().windowWidth
+}
+
 function getCenteredTableScrollLeft(date: string, dates: string[]): number {
   const dateIndex = dates.indexOf(date)
   if (dateIndex < 0) return 0
@@ -130,14 +140,14 @@ function getHeaderTopPadding(): string {
 
   try {
     const menuButton = Taro.getMenuButtonBoundingClientRect()
-    const systemInfo = Taro.getSystemInfoSync()
+    const windowWidth = getWindowWidth()
     if (
       typeof menuButton?.top === 'number'
       && typeof menuButton?.height === 'number'
       && menuButton.top > 0
-      && systemInfo.windowWidth > 0
+      && windowWidth > 0
     ) {
-      const rpxScale = systemInfo.windowWidth / 750
+      const rpxScale = windowWidth / 750
       const titleLineHeight = 32 * 1.2 * rpxScale
       const alignedTop = menuButton.top + ((menuButton.height - titleLineHeight) / 2)
       return `${Math.max(alignedTop, 0)}px`
@@ -150,7 +160,7 @@ function getHeaderTopPadding(): string {
 }
 
 function getRpxScale(): number {
-  return Taro.getSystemInfoSync().windowWidth / 750
+  return getWindowWidth() / 750
 }
 
 function getMonthTargetScrollLeft(month: ScheduleMonth, currentScrollLeftPx: number): number | null {
