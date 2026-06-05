@@ -1,6 +1,10 @@
 import { Fragment } from 'react'
 import {
+  formatScheduleMonthDay,
+  getDateLabels,
   getOverrideKey,
+  getPersonMonthCalendarCells,
+  scheduleData,
   type ShiftSummary,
   type ShiftType,
   type ScheduleMonth
@@ -38,10 +42,14 @@ export function ScheduleView({
   appliedMonthView,
   overrides,
   profile,
+  selectedMonth,
   summary,
   onOpenShiftEditor
 }: ScheduleViewProps) {
   const visibleDates = appliedMonthView.dates
+  const dateLabels = getDateLabels(appliedMonthView.startDate, visibleDates)
+  const calendarCells = getPersonMonthCalendarCells(scheduleData, selectedMonth, appliedCurrentUser.name)
+  const todayMonthDay = formatScheduleMonthDay(new Date())
 
   return (
     <>
@@ -64,19 +72,77 @@ export function ScheduleView({
         </div>
       </section>
 
+      <section className="calendar-card">
+        <div className="section-header">
+          <h2>排班日历</h2>
+          <span className="muted-label">2026年{Number(selectedMonth)}月</span>
+        </div>
+
+        <div className="calendar-weekdays" aria-hidden="true">
+          {['日', '一', '二', '三', '四', '五', '六'].map(weekday => (
+            <span key={weekday}>{weekday}</span>
+          ))}
+        </div>
+
+        <div className="calendar-grid">
+          {calendarCells.map(cell => {
+            const overrideKey = getOverrideKey(appliedCurrentUser.name, cell.key)
+            const shift = overrides.shiftOverrides[overrideKey] ?? cell.shift
+            const isEdited = Boolean(overrides.shiftOverrides[overrideKey])
+            const hasOvertime = (overrides.overtimeOverrides[overrideKey] ?? 0) > 0
+            const isLegal = overrides.legalOverrides[overrideKey] === true
+
+            return (
+              <button
+                className={`calendar-cell ${cell.inCurrentMonth ? '' : 'calendar-cell-empty'} ${cell.key === todayMonthDay ? 'today-calendar-cell' : ''} ${isEdited ? 'edited-calendar-cell' : ''}`}
+                disabled={!cell.inCurrentMonth}
+                key={cell.key}
+                type="button"
+                onClick={() => {
+                  if (cell.inCurrentMonth) onOpenShiftEditor(appliedCurrentUser.name, cell.key)
+                }}
+              >
+                {cell.inCurrentMonth && isEdited ? <span className="edited-marker" /> : null}
+                {cell.inCurrentMonth && hasOvertime && !isLegal ? <span className="overtime-marker" /> : null}
+                <span className="calendar-date-wrap">
+                  <span className="calendar-day">{cell.day}</span>
+                  <span className={`calendar-lunar ${cell.meta.isHoliday ? 'calendar-lunar-holiday' : ''}`}>
+                    {cell.meta.label}
+                  </span>
+                </span>
+                {shift ? (
+                  <span className="calendar-shift-row">
+                    <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
+                    {cell.inCurrentMonth && isLegal ? <span className="legal-shift-badge">法</span> : null}
+                  </span>
+                ) : null}
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
       <section className="schedule-card">
         <div className="section-header">
           <h2>多视图</h2>
           <span className="muted-label">左右滑动查看更多日期</span>
         </div>
 
-        <div className="schedule-grid" style={{ gridTemplateColumns: `128px repeat(${visibleDates.length}, 76px)` }}>
+        <div
+          className="schedule-grid"
+          style={{ gridTemplateColumns: `var(--schedule-name-column, 128px) repeat(${visibleDates.length}, var(--schedule-date-column, 76px))` }}
+        >
           <div className="table-head sticky-name">姓名</div>
-          {visibleDates.map(date => <div className="table-head" key={date}>{date.slice(3)}</div>)}
+          {dateLabels.map(label => (
+            <div className={`table-head date-head ${label.date === todayMonthDay ? 'today-date-head' : ''}`} key={label.date}>
+              <strong>{label.date.slice(3)}</strong>
+              <span>{label.weekday}</span>
+            </div>
+          ))}
 
-          {appliedMonthView.people.slice(0, 8).map(person => (
+          {appliedMonthView.people.map(person => (
             <Fragment key={person.name}>
-              <div className="person-cell sticky-name">
+              <div className={`person-cell sticky-name ${person.name === appliedCurrentUser.name ? 'current-person-cell' : ''}`}>
                 <strong>{person.name}</strong>
                 <span>{person.group}</span>
               </div>
