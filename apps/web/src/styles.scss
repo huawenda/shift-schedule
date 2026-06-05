@@ -162,6 +162,36 @@ h2 {
   cursor: pointer;
 }
 
+.view-tabs,
+.stats-mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 6px;
+  border-radius: 12px;
+  background: #e9eef7;
+}
+
+.view-tabs button,
+.stats-mode-tabs button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #526071;
+  font-size: 15px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.view-tabs button.active,
+.stats-mode-tabs button.active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 4px 12px rgba(25, 39, 70, 0.08);
+}
+
 .error-banner,
 .demo-notice {
   margin: 12px 0 0;
@@ -460,6 +490,289 @@ h2 {
   color: #475467;
 }
 
+.stats-view {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.stats-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stats-toolbar .stats-mode-tabs {
+  margin-top: 0;
+}
+
+.person-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.person-select select {
+  height: 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.stats-card {
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 18px;
+}
+
+.stats-total {
+  color: #047857;
+  font-size: 15px;
+}
+
+.overview-table,
+.daily-list,
+.team-ranking {
+  display: grid;
+  gap: 0;
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+}
+
+.overview-row,
+.daily-row,
+.team-ranking-row {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface);
+}
+
+.overview-row:last-child,
+.daily-row:last-child,
+.team-ranking-row:last-child {
+  border-bottom: 0;
+}
+
+.overview-row {
+  grid-template-columns: minmax(82px, 1fr) 64px 78px;
+}
+
+.overview-row strong,
+.overview-row > span:last-child,
+.daily-row strong,
+.team-ranking-row > span:last-child {
+  justify-self: end;
+  font-weight: 900;
+}
+
+.overtime-bars {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.overtime-bar-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.overtime-bar-row strong {
+  justify-self: end;
+  color: var(--ink);
+}
+
+.overtime-track,
+.team-track {
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf2f8;
+}
+
+.overtime-track {
+  height: 18px;
+}
+
+.overtime-fill {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+}
+
+.overtime-平日,
+.team-segment.weekday {
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+}
+
+.overtime-特勤,
+.team-segment.special {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+
+.overtime-法定,
+.team-segment.legal {
+  background: linear-gradient(90deg, #fb7185, #ef4444);
+}
+
+.salary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.salary-input-item {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.salary-input-item input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: #fbfcff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+  outline: none;
+  padding: 0 12px;
+}
+
+.salary-input-item input:focus {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.salary-status {
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #edf2f8;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.salary-status.saved {
+  background: #dcfce7;
+  color: #047857;
+}
+
+.salary-status.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.salary-results,
+.team-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.salary-results div,
+.team-summary-grid div {
+  display: grid;
+  gap: 6px;
+  min-height: 72px;
+  align-content: center;
+  border-radius: 12px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.salary-results span,
+.team-summary-grid span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.salary-results strong,
+.team-summary-grid strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.salary-results .primary {
+  background: var(--primary-soft);
+}
+
+.salary-results .primary strong {
+  color: var(--primary);
+}
+
+.daily-row {
+  grid-template-columns: 96px minmax(74px, 1fr) 80px 56px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.team-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.team-ranking-row {
+  grid-template-columns: 42px minmax(86px, 128px) minmax(0, 1fr) 64px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.top-rank {
+  color: var(--primary);
+}
+
+.team-person {
+  display: grid;
+  gap: 2px;
+}
+
+.team-person span {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.team-person small {
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.team-track {
+  display: flex;
+  height: 18px;
+}
+
+.team-segment {
+  min-width: 0;
+}
+
 .editor-backdrop {
   position: fixed;
   inset: 0;
@@ -584,6 +897,25 @@ h2 {
 
   .auth-form {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .salary-grid,
+  .salary-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-row {
+    grid-template-columns: minmax(78px, 1fr) 48px 64px;
+  }
+
+  .daily-row {
+    grid-template-columns: 78px minmax(64px, 1fr) 68px 44px;
+    padding: 10px 8px;
+  }
+
+  .team-ranking-row {
+    grid-template-columns: 34px minmax(72px, 90px) minmax(110px, 1fr) 54px;
+    padding: 10px 8px;
   }
 
   .schedule-card {

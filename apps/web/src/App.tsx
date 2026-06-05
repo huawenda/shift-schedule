@@ -1,21 +1,30 @@
 import { Fragment, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
   canMarkLegalShift,
+  calculateOvertimePay,
+  calculateSalary,
+  emptySalaryInputs,
+  formatMoney,
+  getAllPeopleMonthlyOvertimeStats,
   getEditableShiftOptionsForBase,
   getCurrentScheduleMonth,
   getMonthScheduleView,
+  getOvertimeChartItems,
   getOvertimePresetOptions,
   getOverrideKey,
   getPersonShiftSummary,
+  getPersonMonthlyStats,
   normalizeLegalOverride,
   normalizeOvertimeHours,
   scheduleData,
   type LeaveDuration,
+  type SalaryInputValues,
   type ScheduleMonth,
   type ShiftType
 } from '@shift-schedule/core'
 import { isSupabaseConfigured } from './services/env'
 import type { CloudDayRecord, CloudOverrides } from './services/cloudRecords'
+import type { SalaryInputRecords } from './services/salaryInputs'
 import type { CurrentUserProfile } from './services/userProfile'
 
 const defaultCurrentUserName = '华文达'
@@ -56,6 +65,10 @@ function getInitialMonth(): ScheduleMonth {
 }
 
 type AuthMode = 'login' | 'register'
+type AppView = 'schedule' | 'stats'
+type StatsViewMode = 'personal' | 'team'
+type SalaryInputField = keyof SalaryInputValues
+type SalarySaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
 
 interface ShiftEditorState {
   personName: string
@@ -81,6 +94,18 @@ function formatOvertimeHours(hours: number): string {
 
 function canRecordOvertime(shift: ShiftType): boolean {
   return shift !== '休息' && shift !== '事假'
+}
+
+function getOvertimeHoursByType(items: ReturnType<typeof getOvertimeChartItems>, type: '平日' | '特勤' | '法定'): number {
+  return items.find(item => item.type === type)?.hours ?? 0
+}
+
+function getDailyOvertimeMultiplier(record: { shift: ShiftType; isLegal?: boolean }): number {
+  if (record.isLegal) return 3
+  if (record.shift === '白特' || record.shift === '夜特') return 2
+  if (record.shift === '白班' || record.shift === '夜班') return 1.5
+
+  return 0
 }
 
 function getEditorEffectiveShift(editor: ShiftEditorState): ShiftType {
@@ -148,15 +173,21 @@ export function App() {
   const [password, setPassword] = useState('')
   const [personName, setPersonName] = useState(defaultCurrentUserName)
   const [inviteCode, setInviteCode] = useState('')
+  const [appView, setAppView] = useState<AppView>('schedule')
+  const [statsViewMode, setStatsViewMode] = useState<StatsViewMode>('personal')
+  const [statsPersonName, setStatsPersonName] = useState(defaultCurrentUserName)
+  const [salaryInputRecords, setSalaryInputRecords] = useState<SalaryInputRecords>({})
   const [isBooting, setIsBooting] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false)
   const [isSavingRecord, setIsSavingRecord] = useState(false)
+  const [salarySaveStatus, setSalarySaveStatus] = useState<SalarySaveStatus>('idle')
   const [shiftEditor, setShiftEditor] = useState<ShiftEditorState | null>(null)
   const [statusText, setStatusText] = useState('准备同步')
   const [errorText, setErrorText] = useState('')
 
   const isConfigured = isSupabaseConfigured()
+  const isAdminUser = profile?.isAdmin === true
   const monthView = useMemo(() => getMonthScheduleView(scheduleData, selectedMonth), [selectedMonth])
   const currentUserName = profile?.profile?.personName || defaultCurrentUserName
   const currentUser = monthView.people.find(person => person.name === currentUserName) ?? monthView.people[0]
@@ -174,6 +205,34 @@ export function App() {
   const currentUserOvertimeHours = appliedMonthView.dates.map(date => overrides.overtimeOverrides[getOverrideKey(appliedCurrentUser.name, date)] ?? 0)
   const summary = getPersonShiftSummary(appliedCurrentUser, currentUserOvertimeHours, currentUserLegalFlags)
   const visibleDates = appliedMonthView.dates.slice(0, 7)
+  const statsPerson = isAdminUser
+    ? scheduleData.people.find(person => person.name === statsPersonName) ?? appliedCurrentUser
+    : appliedCurrentUser
+  const personalStats = getPersonMonthlyStats(
+    appliedMonthView,
+    statsPerson.name,
+    overrides.overtimeOverrides,
+    overrides.shiftOverrides,
+    overrides.legalOverrides,
+    overrides.leaveDurationOverrides
+  )
+  const overtimeChartItems = personalStats ? getOvertimeChartItems(personalStats.shiftSummary.加班) : []
+  const overtimeChartMax = Math.max(...overtimeChartItems.map(item => item.hours), 0)
+  const salaryInputKey = `${statsPerson.name}::${selectedMonth}`
+  const salaryInputs = salaryInputRecords[salaryInputKey] ?? emptySalaryInputs
+  const salaryCalculation = calculateSalary(salaryInputs, {
+    weekdayHours: getOvertimeHoursByType(overtimeChartItems, '平日'),
+    specialHours: getOvertimeHoursByType(overtimeChartItems, '特勤'),
+    legalHours: getOvertimeHoursByType(overtimeChartItems, '法定'),
+    leaveHours: personalStats?.leaveSummary.hours ?? 0
+  })
+  const teamStats = getAllPeopleMonthlyOvertimeStats(
+    appliedMonthView,
+    overrides.overtimeOverrides,
+    overrides.shiftOverrides,
+    overrides.legalOverrides
+  )
+  const teamChartMax = Math.max(...teamStats.people.map(person => person.totalHours), 0)
 
   useEffect(() => {
     void boot()
@@ -193,8 +252,9 @@ export function App() {
       const { loadCurrentUserProfile } = await import('./services/userProfile')
       const loadedProfile = await loadCurrentUserProfile()
       setProfile(loadedProfile)
+      setStatsPersonName(loadedProfile.profile?.personName || defaultCurrentUserName)
       if (loadedProfile.profile) {
-        await refreshCloudData('已同步云端数据')
+        await refreshCloudData('已同步云端数据', true)
       } else {
         setStatusText(isConfigured ? '请登录后同步' : '演示模式')
       }
@@ -206,13 +266,20 @@ export function App() {
     }
   }
 
-  async function refreshCloudData(successText = '同步完成') {
+  async function refreshCloudData(successText = '同步完成', includeSalary = appView === 'stats') {
     setIsSyncing(true)
     setErrorText('')
 
     try {
       const { loadCloudOverrides } = await import('./services/cloudRecords')
-      setOverrides(await loadCloudOverrides())
+      const [nextOverrides, nextSalaryInputs] = await Promise.all([
+        loadCloudOverrides(),
+        includeSalary
+          ? import('./services/salaryInputs').then(module => module.loadSalaryInputs())
+          : Promise.resolve<SalaryInputRecords | null>(null)
+      ])
+      setOverrides(nextOverrides)
+      if (nextSalaryInputs) setSalaryInputRecords(nextSalaryInputs)
       setStatusText(successText)
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : '同步失败，请稍后重试')
@@ -233,8 +300,9 @@ export function App() {
         ? await loginWebAccount({ username, password })
         : await registerWebAccount({ username, password, personName, inviteCode })
       setProfile(nextProfile)
+      setStatsPersonName(nextProfile.profile?.personName || defaultCurrentUserName)
       setStatusText('登录成功')
-      await refreshCloudData('已同步云端数据')
+      await refreshCloudData('已同步云端数据', true)
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : '登录失败')
       setStatusText('登录失败')
@@ -248,7 +316,38 @@ export function App() {
     await logoutWebAccount()
     setProfile({ openid: null, isAdmin: false, profile: null })
     setOverrides(emptyOverrides)
+    setSalaryInputRecords({})
     setStatusText('已退出登录')
+  }
+
+  async function openStatsView() {
+    setAppView('stats')
+    await refreshCloudData('统计数据已同步', true)
+  }
+
+  async function setSalaryInputValue(field: SalaryInputField, value: string) {
+    const nextValues = {
+      ...salaryInputs,
+      [field]: value
+    }
+
+    setSalaryInputRecords(records => ({
+      ...records,
+      [salaryInputKey]: nextValues
+    }))
+    setSalarySaveStatus('saving')
+    setErrorText('')
+
+    try {
+      const { saveSalaryInput } = await import('./services/salaryInputs')
+      await saveSalaryInput(salaryInputKey, nextValues)
+      setSalarySaveStatus('saved')
+      setStatusText(isConfigured ? '薪资已保存到云端' : '薪资已保存到本地')
+    } catch (error) {
+      setSalarySaveStatus('error')
+      setErrorText(error instanceof Error ? error.message : '薪资保存失败')
+      setStatusText('薪资保存失败')
+    }
   }
 
   function openShiftEditor(personName: string, date: string) {
@@ -378,6 +477,15 @@ export function App() {
         ) : null}
       </section>
 
+      <nav className="view-tabs" aria-label="切换视图">
+        <button className={appView === 'schedule' ? 'active' : ''} type="button" onClick={() => setAppView('schedule')}>
+          排班
+        </button>
+        <button className={appView === 'stats' ? 'active' : ''} type="button" onClick={openStatsView}>
+          统计
+        </button>
+      </nav>
+
       {errorText ? <p className="error-banner">{errorText}</p> : null}
 
       {!profile?.profile && isConfigured ? (
@@ -420,6 +528,8 @@ export function App() {
         </section>
       ) : null}
 
+      {appView === 'schedule' ? (
+      <>
       <section className="current-user-card">
         <div className="section-header">
           <div>
@@ -438,7 +548,10 @@ export function App() {
           ))}
         </div>
       </section>
+      </>
+      ) : null}
 
+      {appView === 'schedule' ? (
       <section className="schedule-card">
         <div className="section-header">
           <h2>近期排班</h2>
@@ -475,6 +588,184 @@ export function App() {
           ))}
         </div>
       </section>
+      ) : null}
+
+      {appView === 'stats' ? (
+        <section className="stats-view">
+          <div className="stats-toolbar">
+            <div className="stats-mode-tabs">
+              <button className={statsViewMode === 'personal' ? 'active' : ''} type="button" onClick={() => setStatsViewMode('personal')}>
+                个人统计
+              </button>
+              {isAdminUser ? (
+                <button className={statsViewMode === 'team' ? 'active' : ''} type="button" onClick={() => setStatsViewMode('team')}>
+                  全员统计
+                </button>
+              ) : null}
+            </div>
+            {isAdminUser && statsViewMode === 'personal' ? (
+              <label className="person-select">
+                <span>用户</span>
+                <select value={statsPerson.name} onChange={event => setStatsPersonName(event.target.value)}>
+                  {scheduleData.people.map(person => (
+                    <option key={person.name} value={person.name}>{person.name} / {person.group}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+
+          {statsViewMode === 'personal' && personalStats ? (
+            <>
+              <section className="stats-card">
+                <div className="section-header">
+                  <div>
+                    <span className="muted-label">{statsPerson.name} / {statsPerson.group}</span>
+                    <h2>月度概览</h2>
+                  </div>
+                  <strong className="stats-total">加班 {formatOvertimeHours(personalStats.overtimeTotal)}h</strong>
+                </div>
+                <div className="overview-table">
+                  {[
+                    { label: '白班', value: personalStats.shiftSummary.白班, hours: personalStats.shiftSummary.加班?.白班 ?? 0, shift: '白班' as const },
+                    { label: '夜班', value: personalStats.shiftSummary.夜班, hours: personalStats.shiftSummary.加班?.夜班 ?? 0, shift: '夜班' as const },
+                    { label: '休息', value: personalStats.shiftSummary.休息, hours: 0, shift: '休息' as const },
+                    { label: '白特', value: personalStats.shiftSummary.白特, hours: personalStats.shiftSummary.加班?.白特 ?? 0, shift: '白特' as const },
+                    { label: '夜特', value: personalStats.shiftSummary.夜特, hours: personalStats.shiftSummary.加班?.夜特 ?? 0, shift: '夜特' as const },
+                    { label: '事假', value: personalStats.leaveSummary.days, hours: personalStats.leaveSummary.hours, shift: '事假' as const }
+                  ].map(row => (
+                    <div className="overview-row" key={row.label}>
+                      <span className={`shift-chip ${getShiftClassName(row.shift)}`}>{row.label}</span>
+                      <strong>{row.value}</strong>
+                      <span>{formatOvertimeHours(row.hours)}h</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="stats-card">
+                <div className="section-header">
+                  <h2>加班分布</h2>
+                  <span className="muted-label">平日 / 特勤 / 法定</span>
+                </div>
+                <div className="overtime-bars">
+                  {overtimeChartItems.map(item => {
+                    const width = overtimeChartMax > 0
+                      ? Math.max((item.hours / overtimeChartMax) * 100, item.hours > 0 ? 8 : 0)
+                      : 0
+
+                    return (
+                      <div className="overtime-bar-row" key={item.type}>
+                        <span>{item.type}</span>
+                        <div className="overtime-track">
+                          <div className={`overtime-fill overtime-${item.type}`} style={{ width: `${width}%` }} />
+                        </div>
+                        <strong>{formatOvertimeHours(item.hours)}h</strong>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+
+              <section className="stats-card salary-card">
+                <div className="section-header">
+                  <h2>薪资计算</h2>
+                  {salarySaveStatus !== 'idle' ? <span className={`salary-status ${salarySaveStatus}`}>{salarySaveStatus === 'saving' ? '保存中' : salarySaveStatus === 'saved' ? '已保存' : salarySaveStatus === 'error' ? '保存失败' : '待保存'}</span> : null}
+                </div>
+                <div className="salary-grid">
+                  {[
+                    { label: '底薪', field: 'baseSalary' as const },
+                    { label: '绩效津贴', field: 'performanceAllowance' as const },
+                    { label: '岗位津贴', field: 'positionAllowance' as const },
+                    { label: '其他扣款', field: 'otherDeductions' as const }
+                  ].map(item => (
+                    <label className="salary-input-item" key={item.field}>
+                      <span>{item.label}</span>
+                      <input
+                        inputMode="decimal"
+                        value={salaryInputs[item.field]}
+                        placeholder="0"
+                        onChange={event => void setSalaryInputValue(item.field, event.target.value)}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <div className="salary-results">
+                  <div><span>时薪</span><strong>¥{formatMoney(salaryCalculation.hourlyWage)}</strong></div>
+                  <div><span>基本项</span><strong>¥{formatMoney(salaryCalculation.basicPayTotal)}</strong></div>
+                  <div><span>加班工资</span><strong>¥{formatMoney(salaryCalculation.overtimePayTotal)}</strong></div>
+                  <div><span>扣款项</span><strong>¥{formatMoney(salaryCalculation.deductionTotal)}</strong></div>
+                  <div className="primary"><span>实付工资</span><strong>¥{formatMoney(salaryCalculation.netSalary)}</strong></div>
+                </div>
+              </section>
+
+              <section className="stats-card">
+                <div className="section-header">
+                  <h2>每日明细</h2>
+                  <span className="muted-label">{monthView.startDate.slice(5)} - {monthView.endDate.slice(5)}</span>
+                </div>
+                <div className="daily-list">
+                  {personalStats.dailyRecords.map(record => {
+                    const dailyOvertimePay = calculateOvertimePay(
+                      salaryInputs,
+                      record.overtimeHours,
+                      getDailyOvertimeMultiplier(record)
+                    )
+
+                    return (
+                      <div className="daily-row" key={record.date}>
+                        <span>{record.date}</span>
+                        <span className={`shift-chip ${getShiftClassName(record.shift)}`}>{record.isLegal ? '法 ' : ''}{record.shift}</span>
+                        <strong>{record.overtimeHours > 0 ? `+${formatMoney(dailyOvertimePay)}` : '+0.00'}</strong>
+                        <span>{formatOvertimeHours(record.overtimeHours)}h</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            </>
+          ) : null}
+
+          {statsViewMode === 'team' && isAdminUser ? (
+            <>
+              <section className="stats-card">
+                <div className="section-header">
+                  <h2>全员概览</h2>
+                  <span className="muted-label">共 {teamStats.people.length} 人</span>
+                </div>
+                <div className="team-summary-grid">
+                  <div><strong>{formatOvertimeHours(teamStats.maxOvertime)}h</strong><span>最高</span></div>
+                  <div><strong>{formatOvertimeHours(teamStats.averageOvertime)}h</strong><span>平均</span></div>
+                  <div><strong>{formatOvertimeHours(teamStats.minOvertime)}h</strong><span>最低</span></div>
+                </div>
+              </section>
+              <section className="stats-card">
+                <div className="section-header">
+                  <h2>加班排名</h2>
+                  <span className="muted-label">平日 / 特勤 / 法定</span>
+                </div>
+                <div className="team-ranking">
+                  {teamStats.ranking.map(person => (
+                    <div className="team-ranking-row" key={person.personName}>
+                      <strong className={person.rank <= 3 ? 'top-rank' : ''}>{person.rank}</strong>
+                      <div className="team-person">
+                        <span>{person.personName}</span>
+                        <small>{person.group}</small>
+                      </div>
+                      <div className="team-track">
+                        <span className="team-segment weekday" style={{ width: `${teamChartMax > 0 ? (person.weekdayHours / teamChartMax) * 100 : 0}%` }} />
+                        <span className="team-segment special" style={{ width: `${teamChartMax > 0 ? (person.specialHours / teamChartMax) * 100 : 0}%` }} />
+                        <span className="team-segment legal" style={{ width: `${teamChartMax > 0 ? (person.legalHours / teamChartMax) * 100 : 0}%` }} />
+                      </div>
+                      <span>{formatOvertimeHours(person.totalHours)}h</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          ) : null}
+        </section>
+      ) : null}
 
       {shiftEditor ? (
         <div className="editor-backdrop" role="presentation" onClick={() => setShiftEditor(null)}>
