@@ -61,6 +61,7 @@ export function App() {
   const [password, setPassword] = useState('')
   const [personName, setPersonName] = useState(defaultCurrentUserName)
   const [inviteCode, setInviteCode] = useState('')
+  const [schedulePersonName, setSchedulePersonName] = useState(defaultCurrentUserName)
   const [statsViewMode, setStatsViewMode] = useState<StatsViewMode>('personal')
   const [statsPersonName, setStatsPersonName] = useState(defaultCurrentUserName)
   const [salaryInputRecords, setSalaryInputRecords] = useState<SalaryInputRecords>({})
@@ -77,7 +78,9 @@ export function App() {
   const isStatsRoute = location.pathname.startsWith('/stats')
   const isAdminUser = profile?.isAdmin === true
   const monthView = useMemo(() => getMonthScheduleView(scheduleData, selectedMonth), [selectedMonth])
-  const currentUserName = profile?.profile?.personName || defaultCurrentUserName
+  const currentUserName = isAdminUser
+    ? schedulePersonName
+    : profile?.profile?.personName || defaultCurrentUserName
   const currentUser = monthView.people.find(person => person.name === currentUserName) ?? monthView.people[0]
   const appliedMonthView = useMemo(() => ({
     ...monthView,
@@ -145,6 +148,7 @@ export function App() {
       const { loadCurrentUserProfile } = await import('./services/userProfile')
       const loadedProfile = await loadCurrentUserProfile()
       setProfile(loadedProfile)
+      setSchedulePersonName(loadedProfile.profile?.personName || defaultCurrentUserName)
       setStatsPersonName(loadedProfile.profile?.personName || defaultCurrentUserName)
       if (loadedProfile.profile) {
         await refreshCloudData('已同步云端数据', true)
@@ -194,6 +198,7 @@ export function App() {
         ? await loginWebAccount({ username, password })
         : await registerWebAccount({ username, password, personName, inviteCode })
       setProfile(nextProfile)
+      setSchedulePersonName(nextProfile.profile?.personName || defaultCurrentUserName)
       setStatsPersonName(nextProfile.profile?.personName || defaultCurrentUserName)
       setStatusText('登录成功')
       await refreshCloudData('已同步云端数据', true)
@@ -212,6 +217,7 @@ export function App() {
     setProfile({ openid: null, isAdmin: false, profile: null })
     setOverrides(emptyOverrides)
     setSalaryInputRecords({})
+    setSchedulePersonName(defaultCurrentUserName)
     setStatusText('已退出登录')
     if (isConfigured) navigate('/login')
   }
@@ -395,9 +401,11 @@ export function App() {
               appliedCurrentUser={appliedCurrentUser}
               appliedMonthView={appliedMonthView}
               overrides={overrides}
+              people={appliedMonthView.people}
               profile={profile}
               selectedMonth={selectedMonth}
               summary={summary}
+              onCurrentUserChange={setSchedulePersonName}
               onOpenShiftEditor={openShiftEditor}
             />
           )}

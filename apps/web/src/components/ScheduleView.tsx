@@ -31,9 +31,11 @@ interface ScheduleViewProps {
   appliedCurrentUser: PersonSchedule
   appliedMonthView: MonthScheduleView
   overrides: CloudOverrides
+  people: PersonSchedule[]
   profile: CurrentUserProfile | null
   selectedMonth: ScheduleMonth
   summary: ShiftSummary
+  onCurrentUserChange: (personName: string) => void
   onOpenShiftEditor: (personName: string, date: string) => void
 }
 
@@ -41,9 +43,11 @@ export function ScheduleView({
   appliedCurrentUser,
   appliedMonthView,
   overrides,
+  people,
   profile,
   selectedMonth,
   summary,
+  onCurrentUserChange,
   onOpenShiftEditor
 }: ScheduleViewProps) {
   const visibleDates = appliedMonthView.dates
@@ -59,7 +63,18 @@ export function ScheduleView({
             <span className="muted-label">当前用户</span>
             <h2>{appliedCurrentUser.name} / {appliedCurrentUser.group}</h2>
           </div>
-          {profile?.isAdmin ? <span className="admin-badge">管理员</span> : null}
+          {profile?.isAdmin ? (
+            <label className="user-switch-control">
+              <span className="admin-badge">管理员</span>
+              <select value={appliedCurrentUser.name} onChange={event => onCurrentUserChange(event.target.value)}>
+                {people.map(person => (
+                  <option key={person.name} value={person.name}>
+                    {person.name} / {person.group}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </div>
 
         <div className="summary-grid">
@@ -88,13 +103,15 @@ export function ScheduleView({
           {calendarCells.map(cell => {
             const overrideKey = getOverrideKey(appliedCurrentUser.name, cell.key)
             const shift = overrides.shiftOverrides[overrideKey] ?? cell.shift
-            const isEdited = Boolean(overrides.shiftOverrides[overrideKey])
+            const hasShiftChange = Boolean(overrides.shiftOverrides[overrideKey])
             const hasOvertime = (overrides.overtimeOverrides[overrideKey] ?? 0) > 0
             const isLegal = overrides.legalOverrides[overrideKey] === true
+            const hasLeaveDuration = Boolean(overrides.leaveDurationOverrides[overrideKey])
+            const hasRecord = hasShiftChange || hasOvertime || isLegal || hasLeaveDuration
 
             return (
               <button
-                className={`calendar-cell ${cell.inCurrentMonth ? '' : 'calendar-cell-empty'} ${cell.key === todayMonthDay ? 'today-calendar-cell' : ''} ${isEdited ? 'edited-calendar-cell' : ''}`}
+                className={`calendar-cell ${cell.inCurrentMonth ? '' : 'calendar-cell-empty'} ${cell.key === todayMonthDay ? 'today-calendar-cell' : ''} ${hasRecord ? 'record-calendar-cell' : ''} ${hasShiftChange ? 'edited-calendar-cell' : ''}`}
                 disabled={!cell.inCurrentMonth}
                 key={cell.key}
                 type="button"
@@ -102,12 +119,14 @@ export function ScheduleView({
                   if (cell.inCurrentMonth) onOpenShiftEditor(appliedCurrentUser.name, cell.key)
                 }}
               >
-                {cell.inCurrentMonth && isEdited ? <span className="edited-marker" /> : null}
+                {cell.inCurrentMonth && hasShiftChange ? <span className="edited-marker" /> : null}
                 {cell.inCurrentMonth && hasOvertime && !isLegal ? <span className="overtime-marker" /> : null}
                 <span className="calendar-date-wrap">
                   <span className="calendar-day">{cell.day}</span>
                   <span className={`calendar-lunar ${cell.meta.isHoliday ? 'calendar-lunar-holiday' : ''}`}>
-                    {cell.meta.label}
+                    {cell.meta.label.split('').map((char, charIndex) => (
+                      <span key={`${cell.key}-${charIndex}`}>{char}</span>
+                    ))}
                   </span>
                 </span>
                 {shift ? (

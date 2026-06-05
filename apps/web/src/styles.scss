@@ -47,6 +47,9 @@ body {
   margin: 0;
   background:
     linear-gradient(180deg, var(--canvas) 0%, var(--canvas-soft) 320px, var(--canvas-soft) 100%);
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 button {
@@ -68,6 +71,14 @@ a:focus:not(:focus-visible) {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.68;
+}
+
+input,
+select,
+textarea {
+  -webkit-touch-callout: default;
+  -webkit-user-select: auto;
+  user-select: auto;
 }
 
 .app-shell {
@@ -384,6 +395,31 @@ h2 {
   font-weight: 850;
 }
 
+.user-switch-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.user-switch-control select {
+  max-width: 168px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 850;
+  outline: none;
+  padding: 0 10px;
+}
+
+.user-switch-control select:focus {
+  border-color: var(--primary);
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -451,6 +487,7 @@ h2 {
   background: #fbfcff;
   color: var(--ink);
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .calendar-cell:disabled {
@@ -469,16 +506,42 @@ h2 {
   background: #e6f7ff;
 }
 
+.record-calendar-cell {
+  border-color: #cfe3fb;
+}
+
 .edited-calendar-cell {
   border-color: #f7c56b;
 }
 
+.edited-marker,
+.overtime-marker {
+  position: absolute;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  z-index: 1;
+}
+
+.edited-marker {
+  top: 6px;
+  background: var(--warning);
+}
+
+.overtime-marker {
+  bottom: 6px;
+  background: var(--success);
+}
+
 .calendar-date-wrap {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: auto 12px;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 3px;
   min-width: 0;
+  min-height: 22px;
 }
 
 .calendar-day {
@@ -493,14 +556,26 @@ h2 {
 }
 
 .calendar-lunar {
-  max-width: 32px;
+  display: inline-flex;
+  max-width: 12px;
+  max-height: 30px;
+  flex-direction: column;
+  align-items: center;
   overflow: hidden;
   color: #98a2b3;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 800;
   line-height: 1;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+}
+
+.calendar-lunar span {
+  display: block;
+  width: 12px;
+  height: 10px;
+  line-height: 10px;
+  text-align: center;
 }
 
 .calendar-lunar-holiday {
@@ -642,12 +717,14 @@ h2 {
 
 .edited-dot {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 4px;
+  left: 50%;
   width: 7px;
   height: 7px;
   border-radius: 999px;
   background: var(--warning);
+  transform: translateX(-50%);
+  z-index: 1;
 }
 
 .shift-chip {
@@ -1138,10 +1215,10 @@ h2 {
   margin-top: 20px;
 }
 
-  .editor-actions .primary-button {
-    min-width: 120px;
-    padding: 0 18px;
-  }
+.editor-actions .primary-button {
+  min-width: 120px;
+  padding: 0 18px;
+}
 
 @media (hover: hover) and (pointer: fine) {
   .calendar-cell:not(:disabled):hover {
@@ -1246,6 +1323,23 @@ h2 {
     padding: 14px;
   }
 
+  .current-user-card .section-header {
+    align-items: flex-start;
+  }
+
+  .user-switch-control {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .user-switch-control select {
+    max-width: 126px;
+    height: 32px;
+    font-size: 12px;
+    padding: 0 8px;
+  }
+
   .view-tabs a,
   .view-tabs button,
   .stats-mode-tabs button {
@@ -1295,7 +1389,8 @@ h2 {
   }
 
   .calendar-lunar {
-    max-width: 26px;
+    max-width: 12px;
+    max-height: 26px;
     font-size: 9px;
   }
 
@@ -1405,10 +1500,10 @@ h2 {
   }
 
   .edited-dot {
-    top: 8px;
-    left: 8px;
-    width: 6px;
-    height: 6px;
+    top: 4px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
   }
 
   .editor-backdrop {
