@@ -41,7 +41,7 @@ export function ScheduleView({
   summary,
   onOpenShiftEditor
 }: ScheduleViewProps) {
-  const visibleDates = appliedMonthView.dates.slice(0, 7)
+  const visibleDates = appliedMonthView.dates
 
   return (
     <>
@@ -66,11 +66,11 @@ export function ScheduleView({
 
       <section className="schedule-card">
         <div className="section-header">
-          <h2>近期排班</h2>
-          <span className="muted-label">Web / Supabase</span>
+          <h2>多视图</h2>
+          <span className="muted-label">左右滑动查看更多日期</span>
         </div>
 
-        <div className="schedule-grid" style={{ gridTemplateColumns: `120px repeat(${visibleDates.length}, minmax(72px, 1fr))` }}>
+        <div className="schedule-grid" style={{ gridTemplateColumns: `128px repeat(${visibleDates.length}, 76px)` }}>
           <div className="table-head sticky-name">姓名</div>
           {visibleDates.map(date => <div className="table-head" key={date}>{date.slice(3)}</div>)}
 

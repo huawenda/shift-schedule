@@ -4,10 +4,12 @@ import {
   formatMoney,
   type OvertimeChartItem,
   type PersonMonthlyStats,
+  type SalaryCalculation,
   scheduleData,
   type SalaryInputValues,
   type ShiftType
 } from '@shift-schedule/core'
+import type { ReactNode } from 'react'
 import type { SalaryInputField, SalarySaveStatus, StatsViewMode } from '../appTypes'
 import { formatOvertimeHours, getShiftClassName } from '../scheduleHelpers'
 
@@ -15,14 +17,6 @@ interface PersonSchedule {
   group: string
   name: string
   shifts: ShiftType[]
-}
-
-interface SalaryCalculation {
-  basicPayTotal: number
-  deductionTotal: number
-  hourlyWage: number
-  netSalary: number
-  overtimePayTotal: number
 }
 
 interface StatsViewProps {
@@ -152,7 +146,7 @@ function PersonalStatsSections({
       <section className="stats-card">
         <div className="section-header">
           <h2>加班分布</h2>
-          <span className="muted-label">平日 / 特勤 / 法定</span>
+          <span className="muted-label">按类型统计</span>
         </div>
         <div className="overtime-bars">
           {overtimeChartItems.map(item => {
@@ -225,32 +219,77 @@ function SalarySection({
         <h2>薪资计算</h2>
         {salarySaveStatus !== 'idle' ? <span className={`salary-status ${salarySaveStatus}`}>{salarySaveStatus === 'saving' ? '保存中' : salarySaveStatus === 'saved' ? '已保存' : salarySaveStatus === 'error' ? '保存失败' : '待保存'}</span> : null}
       </div>
-      <div className="salary-grid">
-        {[
-          { label: '底薪', field: 'baseSalary' as const },
-          { label: '绩效津贴', field: 'performanceAllowance' as const },
-          { label: '岗位津贴', field: 'positionAllowance' as const },
-          { label: '其他扣款', field: 'otherDeductions' as const }
-        ].map(item => (
-          <label className="salary-input-item" key={item.field}>
-            <span>{item.label}</span>
+      <SalaryBlock title="基本项" total={`小计 ¥${formatMoney(salaryCalculation.basicPayTotal)}`}>
+        <div className="salary-grid">
+          {[
+            { label: '底薪', field: 'baseSalary' as const },
+            { label: '绩效津贴', field: 'performanceAllowance' as const },
+            { label: '岗位津贴', field: 'positionAllowance' as const }
+          ].map(item => (
+            <label className="salary-input-item" key={item.field}>
+              <span>{item.label}</span>
+              <input
+                inputMode="decimal"
+                value={salaryInputs[item.field]}
+                placeholder="0"
+                onChange={event => onSalaryInputChange(item.field, event.target.value)}
+              />
+            </label>
+          ))}
+        </div>
+        <p className="salary-rate-line">时薪 ¥{formatMoney(salaryCalculation.hourlyWage)}</p>
+      </SalaryBlock>
+
+      <SalaryBlock title="加班工资" total={`小计 ¥${formatMoney(salaryCalculation.overtimePayTotal)}`}>
+        <div className="salary-results">
+          <div><span>平日加班</span><strong>¥{formatMoney(salaryCalculation.weekdayOvertimePay)}</strong></div>
+          <div><span>周末加班</span><strong>¥{formatMoney(salaryCalculation.specialOvertimePay)}</strong></div>
+          <div className="legal"><span>法定加班</span><strong>¥{formatMoney(salaryCalculation.legalOvertimePay)}</strong></div>
+        </div>
+      </SalaryBlock>
+
+      <SalaryBlock title="扣款项" total={`小计 ¥${formatMoney(salaryCalculation.deductionTotal)}`}>
+        <div className="salary-results salary-deduction-grid">
+          <div className="deduction"><span>事假扣款</span><strong>¥{formatMoney(salaryCalculation.leaveDeduction)}</strong></div>
+          <label className="salary-input-item">
+            <span>其他扣款</span>
             <input
               inputMode="decimal"
-              value={salaryInputs[item.field]}
+              value={salaryInputs.otherDeductions}
               placeholder="0"
-              onChange={event => onSalaryInputChange(item.field, event.target.value)}
+              onChange={event => onSalaryInputChange('otherDeductions', event.target.value)}
             />
           </label>
-        ))}
-      </div>
-      <div className="salary-results">
-        <div><span>时薪</span><strong>¥{formatMoney(salaryCalculation.hourlyWage)}</strong></div>
-        <div><span>基本项</span><strong>¥{formatMoney(salaryCalculation.basicPayTotal)}</strong></div>
-        <div><span>加班工资</span><strong>¥{formatMoney(salaryCalculation.overtimePayTotal)}</strong></div>
-        <div><span>扣款项</span><strong>¥{formatMoney(salaryCalculation.deductionTotal)}</strong></div>
-        <div className="primary"><span>实付工资</span><strong>¥{formatMoney(salaryCalculation.netSalary)}</strong></div>
-      </div>
+        </div>
+      </SalaryBlock>
+
+      <SalaryBlock title="汇总">
+        <div className="salary-results salary-final-grid">
+          <div><span>应付工资</span><strong>¥{formatMoney(salaryCalculation.payableSalary)}</strong></div>
+          <div className="primary"><span>实付工资</span><strong>¥{formatMoney(salaryCalculation.netSalary)}</strong></div>
+        </div>
+      </SalaryBlock>
     </section>
+  )
+}
+
+function SalaryBlock({
+  children,
+  title,
+  total
+}: {
+  children: ReactNode
+  title: string
+  total?: string
+}) {
+  return (
+    <div className="salary-section">
+      <div className="salary-section-head">
+        <h3>{title}</h3>
+        {total ? <span>{total}</span> : null}
+      </div>
+      {children}
+    </div>
   )
 }
 

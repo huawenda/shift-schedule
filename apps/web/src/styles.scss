@@ -12,9 +12,28 @@
   --border-soft: #eef2f7;
   --border-strong: #cdd7e5;
   --ink: #172033;
+  --ink-soft: #526071;
   --muted: #667085;
   --primary: #2563eb;
   --primary-soft: #eff6ff;
+  --primary-border: #bfdbfe;
+  --success: #15803d;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 18px;
+  --space-6: 24px;
+  --radius-sm: 8px;
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-sheet: 16px;
+  --radius-pill: 999px;
+  --shadow-raised-control: 0 4px 12px rgba(25, 39, 70, 0.08);
+  --shadow-sticky: 8px 0 16px rgba(25, 39, 70, 0.08);
+  --tap-target: 44px;
 }
 
 * {
@@ -26,9 +45,7 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at 20% 4%, rgba(37, 99, 235, 0.10), transparent 28%),
-    radial-gradient(circle at 82% 14%, rgba(20, 184, 166, 0.08), transparent 26%),
-    var(--canvas);
+    linear-gradient(180deg, var(--canvas) 0%, var(--canvas-soft) 320px, var(--canvas-soft) 100%);
 }
 
 button {
@@ -41,26 +58,30 @@ button:disabled {
 }
 
 .app-shell {
-  width: min(1120px, 100%);
+  width: min(1240px, 100%);
   min-height: 100vh;
   margin: 0 auto;
-  padding: 24px 18px 40px;
+  padding: var(--space-6) var(--space-5) 44px;
 }
 
 .hero-panel,
 .current-user-card,
-.schedule-card {
+.schedule-card,
+.stats-card,
+.auth-card {
   border: 1px solid var(--border-soft);
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .hero-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 18px;
+  gap: var(--space-5);
+  min-height: 82px;
+  padding: var(--space-5);
 }
 
 .eyebrow,
@@ -80,7 +101,6 @@ h2 {
 }
 
 h1 {
-  margin-top: 4px;
   font-size: 32px;
   font-weight: 900;
 }
@@ -98,9 +118,9 @@ h2 {
 .sync-button {
   min-width: 88px;
   height: 48px;
-  padding: 0 18px;
-  border: 1px solid #bfdbfe;
-  border-radius: 999px;
+  padding: 0 var(--space-5);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-pill);
   background: var(--primary-soft);
   color: var(--primary);
   font-size: 18px;
@@ -110,12 +130,17 @@ h2 {
 
 .month-tabs {
   display: flex;
-  gap: 8px;
-  margin-top: 14px;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
   padding: 6px;
   overflow-x: auto;
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   background: #e9eef7;
+  scrollbar-width: none;
+}
+
+.month-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .month-tab {
@@ -123,7 +148,7 @@ h2 {
   height: 46px;
   padding: 0 16px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: #526071;
   font-size: 17px;
@@ -134,7 +159,7 @@ h2 {
 .month-tab.active {
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 4px 12px rgba(25, 39, 70, 0.08);
+  box-shadow: var(--shadow-raised-control);
 }
 
 .status-strip {
@@ -143,12 +168,12 @@ h2 {
   justify-content: space-between;
   gap: 12px;
   min-height: 42px;
-  margin-top: 12px;
+  margin-top: var(--space-3);
   padding: 0 14px;
   border: 1px solid var(--border-soft);
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: rgba(255, 255, 255, 0.74);
-  color: #526071;
+  color: var(--ink-soft);
   font-size: 14px;
   font-weight: 800;
 }
@@ -165,10 +190,10 @@ h2 {
 .view-tabs,
 .stats-mode-tabs {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
   padding: 6px;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: #e9eef7;
 }
 
@@ -181,9 +206,9 @@ h2 {
   min-height: 40px;
   padding: 0 18px;
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #526071;
+  color: var(--ink-soft);
   font-size: 15px;
   font-weight: 850;
   text-decoration: none;
@@ -195,7 +220,7 @@ h2 {
 .stats-mode-tabs button.active {
   background: var(--surface);
   color: var(--primary);
-  box-shadow: 0 4px 12px rgba(25, 39, 70, 0.08);
+  box-shadow: var(--shadow-raised-control);
 }
 
 .error-banner,
@@ -226,10 +251,8 @@ h2 {
 }
 
 .auth-card {
-  margin-top: 14px;
-  padding: 18px;
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
+  margin-top: var(--space-3);
+  padding: var(--space-5);
   background: var(--surface);
 }
 
@@ -318,8 +341,8 @@ h2 {
 
 .current-user-card,
 .schedule-card {
-  margin-top: 14px;
-  padding: 18px;
+  margin-top: var(--space-3);
+  padding: var(--space-5);
 }
 
 .section-header {
@@ -327,6 +350,11 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
+}
+
+.section-header > div {
+  min-width: 0;
 }
 
 .admin-badge {
@@ -334,7 +362,7 @@ h2 {
   align-items: center;
   height: 26px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--primary);
   color: #ffffff;
   font-size: 13px;
@@ -345,7 +373,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 .summary-item {
@@ -354,7 +382,7 @@ h2 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
 }
 
 .summary-item strong {
@@ -374,9 +402,13 @@ h2 {
 
 .schedule-grid {
   display: grid;
-  min-width: 720px;
-  margin-top: 14px;
+  max-width: 100%;
+  margin-top: var(--space-3);
   overflow: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  scrollbar-width: thin;
 }
 
 .table-head,
@@ -401,6 +433,7 @@ h2 {
   position: sticky;
   left: 0;
   z-index: 2;
+  box-shadow: var(--shadow-sticky);
 }
 
 .person-cell {
@@ -427,6 +460,7 @@ h2 {
   align-items: center;
   justify-content: center;
   width: 100%;
+  min-height: 52px;
   border-top: 0;
   border-right: 0;
   border-left: 0;
@@ -451,7 +485,7 @@ h2 {
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: #f59e0b;
+  background: var(--warning);
 }
 
 .shift-chip {
@@ -461,7 +495,7 @@ h2 {
   min-width: 54px;
   height: 30px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 14px;
   font-weight: 850;
 }
@@ -498,8 +532,8 @@ h2 {
 
 .stats-view {
   display: grid;
-  gap: 14px;
-  margin-top: 14px;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 .stats-toolbar {
@@ -535,14 +569,11 @@ h2 {
 }
 
 .stats-card {
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
-  padding: 18px;
+  padding: var(--space-5);
 }
 
 .stats-total {
-  color: #047857;
+  color: var(--success);
   font-size: 15px;
 }
 
@@ -551,10 +582,10 @@ h2 {
 .team-ranking {
   display: grid;
   gap: 0;
-  margin-top: 14px;
+  margin-top: var(--space-3);
   overflow: hidden;
   border: 1px solid var(--border-soft);
-  border-radius: 12px;
+  border-radius: var(--radius-control);
 }
 
 .overview-row,
@@ -590,7 +621,7 @@ h2 {
 .overtime-bars {
   display: grid;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 .overtime-bar-row {
@@ -611,7 +642,7 @@ h2 {
 .overtime-track,
 .team-track {
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: #edf2f8;
 }
 
@@ -643,9 +674,43 @@ h2 {
 
 .salary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 16px;
+  margin-top: var(--space-3);
+}
+
+.salary-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-soft);
+}
+
+.salary-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.salary-section-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.salary-section-head span,
+.salary-rate-line {
+  margin: 0;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.salary-rate-line {
+  margin-top: 10px;
+  color: var(--ink-soft);
 }
 
 .salary-input-item {
@@ -660,7 +725,7 @@ h2 {
   width: 100%;
   height: 46px;
   border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: #fbfcff;
   color: var(--ink);
   font: inherit;
@@ -675,7 +740,7 @@ h2 {
 }
 
 .salary-status {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 5px 10px;
   background: #edf2f8;
   color: var(--muted);
@@ -696,20 +761,43 @@ h2 {
 .salary-results,
 .team-summary-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 14px;
+  margin-top: var(--space-3);
 }
 
 .salary-results div,
+.salary-results .salary-input-item,
 .team-summary-grid div {
   display: grid;
   gap: 6px;
   min-height: 72px;
   align-content: center;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   background: var(--surface-muted);
   padding: 12px;
+}
+
+.salary-results .salary-input-item {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.salary-results .legal {
+  background: #fff1f2;
+}
+
+.salary-results .legal strong {
+  color: var(--danger);
+}
+
+.salary-results .deduction {
+  background: #fff7ed;
+}
+
+.salary-results .deduction strong {
+  color: #c2410c;
 }
 
 .salary-results span,
@@ -742,6 +830,11 @@ h2 {
 
 .team-summary-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.salary-deduction-grid,
+.salary-final-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .team-ranking-row {
@@ -890,11 +983,41 @@ h2 {
 
 @media (max-width: 720px) {
   .app-shell {
-    padding-top: 12px;
+    padding: 12px 12px 32px;
   }
 
   .hero-panel {
     align-items: flex-start;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  h2 {
+    font-size: 22px;
+  }
+
+  .period {
+    font-size: 14px;
+  }
+
+  .sync-button {
+    min-width: 76px;
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .month-tab {
+    min-width: 72px;
+    height: 42px;
+    font-size: 16px;
+  }
+
+  .view-tabs a,
+  .view-tabs button,
+  .stats-mode-tabs button {
+    flex: 1;
   }
 
   .summary-grid {
@@ -906,8 +1029,14 @@ h2 {
   }
 
   .salary-grid,
-  .salary-results {
+  .salary-results,
+  .salary-deduction-grid,
+  .salary-final-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .salary-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .overview-row {
@@ -939,5 +1068,35 @@ h2 {
 
   .shift-editor {
     border-radius: 14px;
+  }
+}
+
+@media (min-width: 960px) {
+  .stats-view {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .stats-toolbar,
+  .salary-card,
+  .stats-card:has(.daily-list) {
+    grid-column: 1 / -1;
+  }
+
+  .salary-card {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-5);
+  }
+
+  .salary-card > .section-header,
+  .salary-card > .salary-section:first-of-type,
+  .salary-card > .salary-section:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .salary-card > .salary-section:nth-of-type(2),
+  .salary-card > .salary-section:nth-of-type(3) {
+    align-self: stretch;
   }
 }

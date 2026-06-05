@@ -34,7 +34,6 @@ export function AppChrome({
     <>
       <section className="hero-panel">
         <div>
-          <p className="eyebrow">Web 主线</p>
           <h1>倒班表</h1>
           <p className="period">{formatDateForDisplay(startDate)} - {formatDateForDisplay(endDate)}</p>
         </div>
