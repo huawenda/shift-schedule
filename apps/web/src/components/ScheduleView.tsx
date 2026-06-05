@@ -69,6 +69,7 @@ export function ScheduleView({
   onOpenShiftEditor
 }: ScheduleViewProps) {
   const [tableView, setTableView] = useState<ScheduleTableView>('shift')
+  const [isUserPickerOpen, setIsUserPickerOpen] = useState(false)
   const visibleDates = appliedMonthView.dates
   const dateLabels = getDateLabels(appliedMonthView.startDate, visibleDates)
   const calendarCells = getPersonMonthCalendarCells(scheduleData, selectedMonth, appliedCurrentUser.name)
@@ -83,16 +84,10 @@ export function ScheduleView({
             <h2>{appliedCurrentUser.name} / {appliedCurrentUser.group}</h2>
           </div>
           {profile?.isAdmin ? (
-            <label className="user-switch-control">
+            <div className="user-switch-control">
               <span className="admin-badge">管理员</span>
-              <select value={appliedCurrentUser.name} onChange={event => onCurrentUserChange(event.target.value)}>
-                {people.map(person => (
-                  <option key={person.name} value={person.name}>
-                    {person.name} / {person.group}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <button className="user-switch-button" type="button" onClick={() => setIsUserPickerOpen(true)}>切换</button>
+            </div>
           ) : null}
         </div>
 
@@ -142,7 +137,6 @@ export function ScheduleView({
                 {cell.inCurrentMonth && hasOvertime && !isLegal ? <span className="overtime-marker" /> : null}
                 <span className="calendar-cell-content">
                   <span className="calendar-date-wrap">
-                    <span className="calendar-lunar-spacer" />
                     <span className="calendar-day">{cell.day}</span>
                     <span className={`calendar-lunar ${cell.meta.isHoliday ? 'calendar-lunar-holiday' : ''}`}>
                       {cell.meta.label.split('').map((char, charIndex) => (
@@ -209,7 +203,7 @@ export function ScheduleView({
             ))}
           </div>
           <div className="table-scroll">
-            <div className="schedule-table" style={{ width: `calc(${visibleDates.length} * var(--schedule-date-column, 76px))` }}>
+            <div className="schedule-table">
               <div className="table-row table-header">
                 {dateLabels.map(label => (
                   <div className={`table-head date-head ${label.date === todayMonthDay ? 'today-date-head' : ''}`} key={label.date}>
@@ -248,6 +242,33 @@ export function ScheduleView({
           </div>
         </div>
       </section>
+
+      {isUserPickerOpen ? (
+        <div className="user-picker-backdrop" role="presentation" onClick={() => setIsUserPickerOpen(false)}>
+          <section className="user-picker" role="dialog" aria-modal="true" aria-label="切换用户" onClick={event => event.stopPropagation()}>
+            <div className="user-picker-header">
+              <h2>切换用户</h2>
+              <button className="ghost-button" type="button" onClick={() => setIsUserPickerOpen(false)}>关闭</button>
+            </div>
+            <div className="user-picker-list">
+              {people.map(person => (
+                <button
+                  className={person.name === appliedCurrentUser.name ? 'active' : ''}
+                  key={person.name}
+                  type="button"
+                  onClick={() => {
+                    onCurrentUserChange(person.name)
+                    setIsUserPickerOpen(false)
+                  }}
+                >
+                  <strong>{person.name}</strong>
+                  <span>{person.group}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </>
   )
 }
