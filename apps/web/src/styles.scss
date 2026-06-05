@@ -172,8 +172,12 @@ h2 {
   background: #e9eef7;
 }
 
+.view-tabs a,
 .view-tabs button,
 .stats-mode-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 40px;
   padding: 0 18px;
   border: 0;
@@ -182,9 +186,11 @@ h2 {
   color: #526071;
   font-size: 15px;
   font-weight: 850;
+  text-decoration: none;
   cursor: pointer;
 }
 
+.view-tabs a.active,
 .view-tabs button.active,
 .stats-mode-tabs button.active {
   background: var(--surface);
