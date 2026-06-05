@@ -4,10 +4,10 @@ This audit records the first pass of standardizing the home and statistics pages
 
 ## Scope
 
-- Home page: `src/pages/index/index.scss`
-- Statistics page: `src/pages/stats/index.scss`
-- Global app shell: `src/app.scss`
-- Shared design tokens: `src/styles/design-tokens.scss`
+- Home page: `apps/miniapp/src/pages/index/index.scss`
+- Statistics page: `apps/miniapp/src/pages/stats/index.scss`
+- Global app shell: `apps/miniapp/src/app.scss`
+- Shared design tokens: `apps/miniapp/src/styles/design-tokens.scss`
 
 ## Findings
 
@@ -28,7 +28,7 @@ Design direction: light, friendly, practical.
 
 ### 3. Standardization Applied
 
-- Added `src/styles/design-tokens.scss` as the shared SCSS token and mixin layer.
+- Added `apps/miniapp/src/styles/design-tokens.scss` as the shared SCSS token and mixin layer.
 - Connected global background and H5 app shell to shared canvas and shadow tokens.
 - Connected home and statistics page shells to a shared `page-shell` mixin.
 - Connected primary/secondary/sync pill buttons to a shared `pill-control` mixin where safe.
@@ -57,7 +57,7 @@ Keep the SCSS token layer small and practical:
 ## Rules For Future UI Changes
 
 - Check `DESIGN.md` before adding a new color, radius, shadow, or font size.
-- Prefer `src/styles/design-tokens.scss` for product primitives.
+- Prefer `apps/miniapp/src/styles/design-tokens.scss` for product primitives.
 - If a selector duplicates a button, card, chip, field, or spinner pattern, add or reuse a mixin instead of hard-coding.
 - Preserve the semantic shift color mapping across home, statistics, salary, and future pages.
 - Keep visual changes incremental and verified on both H5 and mini program builds.
