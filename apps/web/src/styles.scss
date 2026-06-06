@@ -5394,4 +5394,19 @@ h2 {
     min-height: 32px;
     font-size: 12px;
   }
+
+  .stats-overview-header span,
+  .stats-overview-row > .stats-overview-value {
+    text-align: right;
+    justify-self: end;
+  }
+
+  .stats-overview-header span:first-child {
+    text-align: left;
+    justify-self: start;
+  }
+
+  .stats-overview-name {
+    justify-content: flex-start;
+  }
 }
