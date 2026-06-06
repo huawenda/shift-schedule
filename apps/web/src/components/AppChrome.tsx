@@ -34,7 +34,7 @@ export function AppChrome({
     <>
       <section className="hero-panel">
         <div className="hero-title-group">
-          <img className="app-mark" src="/icons/icon-192.png" alt="" aria-hidden="true" />
+          <img className="app-mark" src="/icons/icon2.png" alt="" aria-hidden="true" />
           <div>
             <h1>倒班表</h1>
             <p className="period">{formatDateForDisplay(startDate)} - {formatDateForDisplay(endDate)}</p>

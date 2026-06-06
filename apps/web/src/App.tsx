@@ -351,19 +351,21 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <AppChrome
-        endDate={monthView.endDate}
-        isBooting={isBooting}
-        isSyncing={isSyncing}
-        profile={profile}
-        selectedMonth={selectedMonth}
-        startDate={monthView.startDate}
-        statusText={statusText}
-        onLogout={() => void logout()}
-        onMonthChange={setSelectedMonth}
-        onRefresh={() => void refreshCloudData('同步完成', isStatsRoute)}
-        onStatsOpen={() => void openStatsRoute()}
-      />
+      {!isStatsRoute ? (
+        <AppChrome
+          endDate={monthView.endDate}
+          isBooting={isBooting}
+          isSyncing={isSyncing}
+          profile={profile}
+          selectedMonth={selectedMonth}
+          startDate={monthView.startDate}
+          statusText={statusText}
+          onLogout={() => void logout()}
+          onMonthChange={setSelectedMonth}
+          onRefresh={() => void refreshCloudData('同步完成', isStatsRoute)}
+          onStatsOpen={() => void openStatsRoute()}
+        />
+      ) : null}
 
       {errorText ? <p className="error-banner">{errorText}</p> : null}
 
@@ -415,6 +417,7 @@ export function App() {
           element={requiresLogin ? <Navigate to="/login" replace /> : (
             <StatsView
               isAdminUser={isAdminUser}
+              isSyncing={isSyncing}
               monthEndDate={monthView.endDate}
               monthStartDate={monthView.startDate}
               overtimeChartItems={overtimeChartItems}
@@ -423,10 +426,14 @@ export function App() {
               salaryCalculation={salaryCalculation}
               salaryInputs={salaryInputs}
               salarySaveStatus={salarySaveStatus}
+              selectedMonth={selectedMonth}
               statsPerson={statsPerson}
               statsViewMode={statsViewMode}
               teamChartMax={teamChartMax}
               teamStats={teamStats}
+              onBack={() => navigate('/schedule')}
+              onMonthChange={setSelectedMonth}
+              onRefresh={() => void refreshCloudData('统计数据已同步', true)}
               onSalaryInputChange={(field, value) => void setSalaryInputValue(field, value)}
               onStatsPersonChange={setStatsPersonName}
               onStatsViewModeChange={setStatsViewMode}

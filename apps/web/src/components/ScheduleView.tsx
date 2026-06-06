@@ -135,8 +135,9 @@ export function ScheduleView({
               >
                 {cell.inCurrentMonth && hasShiftChange ? <span className="edited-marker" /> : null}
                 {cell.inCurrentMonth && hasOvertime && !isLegal ? <span className="overtime-marker" /> : null}
-                <span className="calendar-cell-content">
-                  <span className="calendar-date-wrap">
+                  <span className="calendar-cell-content">
+                    <span className="calendar-date-wrap">
+                    <span className="calendar-lunar-spacer" aria-hidden="true" />
                     <span className="calendar-day">{cell.day}</span>
                     <span className={`calendar-lunar ${cell.meta.isHoliday ? 'calendar-lunar-holiday' : ''}`}>
                       {cell.meta.label.split('').map((char, charIndex) => (
@@ -224,14 +225,20 @@ export function ScheduleView({
                       overrides.legalOverrides[key] ||
                       overrides.leaveDurationOverrides[key]
                     )
+                    const hasOvertime = (overrides.overtimeOverrides[key] ?? 0) > 0
+                    const isLegal = overrides.legalOverrides[key] === true
 
                     return (
                       <button className="shift-cell date-cell" key={`${person.name}-${date}`} type="button" onClick={() => onOpenShiftEditor(person.name, date)}>
                         {isEdited ? <span className="edited-dot" /> : null}
+                        {hasOvertime && !isLegal ? <span className="table-overtime-dot" /> : null}
                         {tableView === 'name' ? (
                           <span className={`name-view-person-name ${getNameViewShiftClassName(shift)}`}>{person.name}</span>
                         ) : (
-                          <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
+                          <span className="table-shift-wrap">
+                            <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
+                            {isLegal ? <span className="table-legal-badge">法</span> : null}
+                          </span>
                         )}
                       </button>
                     )
