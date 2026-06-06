@@ -1347,6 +1347,25 @@
     font-size: 10px;
   }
 
+  .editor-default-shift {
+    width: max-content;
+    min-width: 0;
+    align-self: flex-start;
+    padding: 3px;
+  }
+
+  .editor-default-shift.active {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .editor-default-shift.active .shift-chip {
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    box-shadow: 0 2px 8px rgba(21, 32, 54, 0.10);
+  }
+
   .overtime-input-row {
     display: inline-flex;
     width: auto;
@@ -1388,6 +1407,31 @@
     min-width: 56px;
     height: 32px;
     font-size: 12px;
+  }
+
+  .salary-card .salary-basic-input-grid {
+    display: flex;
+    gap: 12px;
+  }
+
+  .salary-card .salary-basic-input-grid .salary-input-item {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .salary-card .salary-basic-input-grid .salary-input-box {
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid #c4d3e5;
+    background: #ffffff;
+    box-shadow: 0 0 0 1px rgba(196, 211, 229, 0.28);
+  }
+
+  .salary-card .salary-basic-input-grid .salary-input {
+    width: 0;
+    min-width: 0;
+    max-width: 100%;
   }
 
 }

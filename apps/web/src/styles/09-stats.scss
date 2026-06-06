@@ -530,9 +530,12 @@
 
 .salary-input-box {
   display: flex;
+  width: 100%;
+  box-sizing: border-box;
   min-height: 54px;
   align-items: center;
   gap: 4px;
+  overflow: hidden;
   padding: 0 12px;
   border: 1px solid #d9e2ef;
   border-radius: 10px;
@@ -546,8 +549,10 @@
 }
 
 .salary-input {
+  width: 0;
   min-width: 0;
   flex: 1;
+  max-width: 100%;
   border: 0;
   outline: none;
   background: transparent;

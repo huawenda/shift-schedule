@@ -134,6 +134,24 @@
   font-size: 15px;
 }
 
+.editor-default-shift {
+  width: max-content;
+  min-width: 0;
+  align-self: flex-start;
+}
+
+.editor-default-shift.active {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.editor-default-shift.active .shift-chip {
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  box-shadow: 0 2px 8px rgba(21, 32, 54, 0.10);
+}
+
 .editor-option:disabled {
   cursor: not-allowed;
   filter: grayscale(0.2);
