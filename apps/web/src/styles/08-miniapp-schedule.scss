@@ -1,0 +1,1014 @@
+/* Miniapp parity layer: keep the Web surface visually aligned with the WeChat UI. */
+:root {
+  --mini-canvas: #f5f7fb;
+  --mini-surface: #ffffff;
+  --mini-surface-muted: #e9eef7;
+  --mini-border: #edf2f7;
+  --mini-ink: #172033;
+  --mini-muted: #667085;
+  --mini-primary: #2563eb;
+  --schedule-name-column: 148px;
+  --schedule-date-column: 74px;
+}
+
+body {
+  background: var(--mini-canvas);
+}
+
+.app-shell {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  padding: 18px 18px calc(88px + env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.10), transparent 34%),
+    radial-gradient(circle at 94% 6%, rgba(20, 184, 166, 0.08), transparent 32%),
+    linear-gradient(180deg, #eef4fb 0%, var(--mini-canvas) 260px, var(--mini-canvas) 100%);
+}
+
+.hero-panel {
+  min-height: 74px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hero-title-group {
+  gap: 10px;
+}
+
+.app-mark {
+  width: 62px;
+  height: 62px;
+  flex-basis: 62px;
+  border-radius: 16px;
+}
+
+h1 {
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+h2 {
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.period {
+  margin-top: 7px;
+  font-size: 20px;
+  color: var(--mini-muted);
+}
+
+.sync-button,
+.ghost-button,
+.user-switch-button {
+  min-width: 86px;
+  height: 48px;
+  border: 1px solid #b8d6ff;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: var(--mini-primary);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.08);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.month-tabs {
+  gap: 0;
+  margin-top: 12px;
+  margin-bottom: 14px;
+  padding: 6px;
+  border: 0;
+  border-radius: 14px;
+  background: #e9eef7;
+  box-shadow: none;
+}
+
+.month-tab {
+  min-width: 104px;
+  height: 56px;
+  margin-right: 8px;
+  padding: 0 20px;
+  border-radius: 10px;
+  color: #526071;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.month-tab.active {
+  color: var(--mini-ink);
+  background: var(--mini-surface);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.status-strip {
+  margin-top: 12px;
+  border-color: var(--mini-border);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.status-strip {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 18px;
+}
+
+.current-user-card,
+.calendar-card,
+.schedule-card {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.current-user-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.current-user-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb 0%, #14b8a6 62%, #f59e0b 100%);
+}
+
+.section-header h2 {
+  font-size: 32px;
+  line-height: 1.12;
+}
+
+.muted-label {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.admin-badge {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 18px;
+}
+
+.user-switch-control {
+  gap: 10px;
+}
+
+.summary-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.summary-item {
+  min-height: 78px;
+  border-radius: 12px;
+}
+
+.summary-item strong {
+  font-size: 26px;
+}
+
+.summary-item span {
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.calendar-card {
+  overflow: hidden;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-weekdays {
+  margin-top: 14px;
+}
+
+.calendar-weekdays span {
+  color: #667085;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.calendar-grid {
+  margin-top: 10px;
+}
+
+.calendar-cell {
+  aspect-ratio: auto;
+  height: 88px;
+  min-height: 0;
+  border: 1px solid #edf2f7;
+  border-radius: 10px;
+  background: #fbfcff;
+  box-shadow: none;
+}
+
+.calendar-cell-content {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  transform: none;
+}
+
+.calendar-date-wrap {
+  display: flex;
+  width: 68px;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 5px;
+}
+
+.calendar-lunar-spacer {
+  width: 22px;
+  flex: 0 0 22px;
+}
+
+.calendar-day {
+  width: 24px;
+  min-width: 24px;
+  flex: 0 0 24px;
+  font-size: 21px;
+  line-height: 1.15;
+}
+
+.calendar-lunar {
+  display: flex;
+  width: 22px;
+  max-height: none;
+  flex: 0 0 22px;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.calendar-lunar span {
+  width: 22px;
+  height: 13px;
+  margin-bottom: 2px;
+  font-size: 13px;
+  line-height: 13px;
+}
+
+.calendar-lunar span:last-child {
+  margin-bottom: 0;
+}
+
+.calendar-shift-row {
+  gap: 4px;
+}
+
+.calendar-shift-row .shift-chip {
+  min-width: 54px;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 18px;
+}
+
+.legal-shift-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.edited-marker {
+  top: 8px;
+  left: 8px;
+  width: 10px;
+  height: 10px;
+}
+
+.overtime-marker {
+  bottom: 8px;
+  left: 8px;
+  width: 10px;
+  height: 10px;
+}
+
+.schedule-card {
+  padding: 0;
+}
+
+.table-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid #edf2f7;
+  background: #ffffff;
+}
+
+.table-toolbar-main,
+.table-toolbar-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.table-toolbar-main h2 {
+  font-size: 26px;
+}
+
+.table-toolbar-sub {
+  height: 32px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.table-toolbar-sub .muted-label {
+  flex: 0 0 auto;
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.legend {
+  flex-wrap: nowrap;
+  gap: 8px;
+  height: 32px;
+  overflow: hidden;
+}
+
+.legend .shift-chip {
+  min-width: 42px;
+  height: 24px;
+  padding: 0 7px;
+  font-size: 14px;
+}
+
+.table-view-switch {
+  padding: 4px;
+}
+
+.table-view-option {
+  min-width: 72px;
+  height: 40px;
+  font-size: 20px;
+}
+
+.table-shell {
+  margin-top: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.identity-column {
+  width: var(--schedule-name-column);
+  flex-basis: var(--schedule-name-column);
+  box-shadow: 8px 0 16px rgba(25, 39, 70, 0.08);
+}
+
+.table-scroll {
+  width: calc(100% - var(--schedule-name-column));
+}
+
+.identity-row,
+.table-row {
+  height: 68px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.identity-header,
+.table-header {
+  height: 72px;
+  background: #e9eef7;
+}
+
+.identity-row {
+  padding: 8px 12px;
+}
+
+.identity-row strong {
+  font-size: 21px;
+}
+
+.identity-row span {
+  margin-top: 5px;
+  font-size: 18px;
+}
+
+.identity-header strong,
+.date-head strong {
+  font-size: 21px;
+}
+
+.identity-header span,
+.date-head span {
+  font-size: 18px;
+}
+
+.table-row {
+  grid-auto-columns: var(--schedule-date-column);
+}
+
+.table-head,
+.shift-cell {
+  min-height: 68px;
+}
+
+.table-header .table-head {
+  min-height: 72px;
+}
+
+.shift-chip {
+  min-width: 54px;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 18px;
+}
+
+.name-view-person-name {
+  width: 62px;
+  height: 32px;
+  font-size: 18px;
+}
+
+.table-shift-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.edited-dot {
+  position: absolute;
+  left: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  z-index: 2;
+}
+
+.edited-dot {
+  top: 8px;
+  background: #f59e0b;
+}
+
+.editor-backdrop {
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  background: rgba(23, 32, 51, 0.46);
+}
+
+.shift-editor {
+  width: 100%;
+  max-width: 620px;
+  max-height: min(88vh, 720px);
+  padding: 26px;
+  border-radius: 18px 18px 0 0;
+  background: #ffffff;
+}
+
+.editor-group {
+  gap: 14px;
+  padding: 18px 0;
+}
+
+.editor-label {
+  font-size: 22px;
+}
+
+.editor-option .shift-chip {
+  min-width: 92px;
+  height: 44px;
+  font-size: 22px;
+}
+
+.segmented-row button {
+  min-width: 72px;
+  height: 42px;
+  font-size: 22px;
+}
+
+.overtime-input-row {
+  min-height: 48px;
+  font-size: 22px;
+}
+
+.editor-actions .primary-button,
+.editor-actions .ghost-button {
+  min-width: 104px;
+  height: 48px;
+  font-size: 22px;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --schedule-name-column: 78px;
+    --schedule-date-column: 48px;
+  }
+
+  body {
+    background: var(--mini-canvas);
+  }
+
+  .app-shell {
+    padding: 8px 8px calc(34px + env(safe-area-inset-bottom, 0px));
+    background:
+      radial-gradient(circle at 12% 0%, rgba(37, 99, 235, 0.10), transparent 38%),
+      radial-gradient(circle at 98% 2%, rgba(20, 184, 166, 0.08), transparent 34%),
+      linear-gradient(180deg, #eef4fb 0%, var(--mini-canvas) 186px, var(--mini-canvas) 100%);
+  }
+
+  .hero-panel {
+    min-height: 54px;
+    padding: 0;
+  }
+
+  .hero-title-group {
+    gap: 8px;
+  }
+
+  .app-mark {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 9px;
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  .period {
+    margin-top: 3px;
+    font-size: 10px;
+  }
+
+  .sync-button {
+    min-width: 54px;
+    height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .month-tabs {
+    margin-top: 8px;
+    margin-bottom: 8px;
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  .month-tab {
+    min-width: 54px;
+    height: 31px;
+    margin-right: 4px;
+    padding: 0 8px;
+    border-radius: 7px;
+    font-size: 12px;
+  }
+
+  .status-strip {
+    min-height: 30px;
+    margin-top: 8px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+
+  .current-user-card,
+  .calendar-card,
+  .schedule-card {
+    margin-top: 8px;
+    border-radius: 10px;
+  }
+
+  .current-user-card,
+  .calendar-card {
+    padding: 10px;
+  }
+
+  .section-header h2 {
+    font-size: 18px;
+  }
+
+  .muted-label {
+    font-size: 10px;
+  }
+
+  .admin-badge {
+    height: 18px;
+    padding: 0 6px;
+    font-size: 9px;
+  }
+
+  .user-switch-control {
+    gap: 6px;
+  }
+
+  .user-switch-button {
+    min-width: 46px;
+    height: 27px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 9px;
+  }
+
+  .summary-item {
+    min-height: 50px;
+    border-radius: 7px;
+  }
+
+  .summary-item strong {
+    font-size: 20px;
+  }
+
+  .summary-item span {
+    margin-top: 3px;
+    font-size: 11px;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    gap: 5px;
+  }
+
+  .calendar-weekdays {
+    margin-top: 9px;
+  }
+
+  .calendar-weekdays span {
+    font-size: 11px;
+  }
+
+  .calendar-grid {
+    margin-top: 6px;
+  }
+
+  .calendar-cell {
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 7px;
+  }
+
+  .calendar-cell-content {
+    min-height: 0;
+  }
+
+  .calendar-date-wrap {
+    width: 34px;
+    min-height: 16px;
+    margin-bottom: 2px;
+  }
+
+  .calendar-lunar-spacer {
+    width: 8px;
+    flex-basis: 8px;
+  }
+
+  .calendar-day {
+    width: 15px;
+    min-width: 15px;
+    flex-basis: 15px;
+    font-size: 13px;
+  }
+
+  .calendar-lunar {
+    width: 9px;
+    flex-basis: 9px;
+    font-size: 6px;
+  }
+
+  .calendar-lunar span {
+    width: 9px;
+    height: 6px;
+    margin-bottom: 0;
+    font-size: 6px;
+    line-height: 6px;
+  }
+
+  .calendar-shift-row {
+    gap: 2px;
+  }
+
+  .calendar-shift-row .shift-chip {
+    min-width: 29px;
+    height: 15px;
+    padding: 0 4px;
+    font-size: 8px;
+  }
+
+  .legal-shift-badge {
+    min-width: 10px;
+    height: 10px;
+    padding: 0;
+    font-size: 7px;
+  }
+
+  .edited-marker,
+  .overtime-marker {
+    left: 4px;
+    width: 4px;
+    height: 4px;
+  }
+
+  .edited-marker {
+    top: 4px;
+  }
+
+  .overtime-marker {
+    bottom: 4px;
+  }
+
+  .schedule-card {
+    padding: 0;
+  }
+
+  .table-toolbar {
+    padding: 10px 10px 8px;
+  }
+
+  .table-toolbar-main h2 {
+    font-size: 18px;
+  }
+
+  .table-view-option {
+    min-width: 44px;
+    height: 26px;
+    font-size: 11px;
+  }
+
+  .table-toolbar-sub {
+    height: 24px;
+    margin-top: 4px;
+  }
+
+  .table-toolbar-sub .muted-label {
+    font-size: 10px;
+  }
+
+  .legend {
+    gap: 4px;
+    height: 22px;
+  }
+
+  .legend .shift-chip {
+    min-width: auto;
+    height: 18px;
+    padding: 0 6px;
+    font-size: 9px;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 38px;
+  }
+
+  .identity-header,
+  .table-header {
+    height: 42px;
+  }
+
+  .identity-row {
+    padding: 0 5px;
+  }
+
+  .identity-row strong {
+    font-size: 11px;
+  }
+
+  .identity-row span {
+    margin-top: 2px;
+    font-size: 9px;
+  }
+
+  .identity-header strong,
+  .date-head strong {
+    font-size: 11px;
+  }
+
+  .identity-header span,
+  .date-head span {
+    font-size: 9px;
+  }
+
+  .table-head,
+  .shift-cell {
+    min-height: 38px;
+  }
+
+  .table-header .table-head {
+    min-height: 42px;
+  }
+
+  .shift-chip {
+    min-width: 34px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 9px;
+  }
+
+  .name-view-person-name {
+    width: 38px;
+    height: 18px;
+    font-size: 9px;
+  }
+
+  .table-shift-wrap {
+    gap: 2px;
+  }
+
+  .edited-dot {
+    left: 5px;
+    width: 4px;
+    height: 4px;
+  }
+
+  .edited-dot {
+    top: 4px;
+  }
+
+  .shift-editor {
+    max-width: none;
+    max-height: calc(88vh - env(safe-area-inset-bottom, 0px));
+    padding: 16px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: 18px 18px 0 0;
+  }
+
+  .shift-editor .section-header h2 {
+    font-size: 20px;
+  }
+
+  .editor-group {
+    gap: 8px;
+    padding: 11px 0;
+  }
+
+  .editor-label {
+    font-size: 14px;
+  }
+
+  .editor-option .shift-chip {
+    min-width: 54px;
+    height: 28px;
+    font-size: 13px;
+  }
+
+  .segmented-row button {
+    min-width: 50px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .overtime-input-row {
+    min-height: 36px;
+    font-size: 14px;
+  }
+
+  .editor-actions .primary-button,
+  .editor-actions .ghost-button {
+    min-width: 78px;
+    height: 36px;
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 900px) {
+  .app-shell {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-right: 32px;
+    padding-left: 32px;
+  }
+
+  .desktop-layout {
+    display: grid;
+    grid-template-columns: minmax(520px, 560px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .calendar-cell {
+    height: 86px;
+  }
+
+  .calendar-date-wrap {
+    width: 64px;
+  }
+
+  .calendar-lunar-spacer,
+  .calendar-lunar,
+  .calendar-lunar span {
+    width: 20px;
+  }
+
+  .calendar-day {
+    width: 22px;
+    min-width: 22px;
+    flex-basis: 22px;
+    font-size: 19px;
+  }
+
+  .calendar-lunar,
+  .calendar-lunar span {
+    font-size: 11px;
+    line-height: 11px;
+  }
+
+  .calendar-lunar span {
+    height: 11px;
+  }
+
+  .calendar-shift-row .shift-chip {
+    min-width: 42px;
+    height: 24px;
+    font-size: 13px;
+  }
+
+  .legal-shift-badge {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    font-size: 11px;
+  }
+
+  :root {
+    --schedule-name-column: 156px;
+    --schedule-date-column: 82px;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 54px;
+  }
+
+  .identity-header,
+  .table-header {
+    height: 60px;
+  }
+
+  .identity-row strong,
+  .identity-header strong,
+  .date-head strong {
+    font-size: 16px;
+  }
+
+  .identity-row span,
+  .identity-header span,
+  .date-head span {
+    font-size: 13px;
+  }
+
+  .table-head,
+  .shift-cell {
+    min-height: 54px;
+  }
+
+  .table-header .table-head {
+    min-height: 60px;
+  }
+
+  .shift-chip {
+    min-width: 42px;
+    height: 24px;
+    font-size: 13px;
+  }
+
+  .name-view-person-name {
+    width: 66px;
+    height: 28px;
+    font-size: 13px;
+  }
+}
+

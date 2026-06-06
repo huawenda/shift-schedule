@@ -1,0 +1,1140 @@
+/* Miniapp stats page parity */
+.stats-page-mini {
+  width: 100%;
+  min-height: 100vh;
+  color: #172033;
+}
+
+.stats-mini-header {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.stats-mini-header .stats-header-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.stats-mini-header h1 {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.stats-mini-header p {
+  margin: 4px 0 0;
+  color: #667085;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.stats-back-button,
+.stats-sync-button {
+  display: inline-flex;
+  min-width: 72px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: 1px solid #cbdcf2;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.08);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.stats-sync-button {
+  margin-left: auto;
+}
+
+.stats-sync-button.loading {
+  color: #526071;
+  background: #f3f6fa;
+}
+
+.stats-view-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  margin: 0 0 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.stats-view-tab {
+  display: flex;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #667085;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.stats-view-tab.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.stats-filter-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.stats-filter-card.has-person-filter {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stats-filter-item {
+  display: flex;
+  min-height: 74px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: #f6f9fd;
+}
+
+.stats-filter-label {
+  margin-bottom: 6px;
+  color: #667085;
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.stats-filter-select,
+.stats-filter-value {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  overflow: hidden;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #172033;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-filter-select::-ms-expand {
+  display: none;
+}
+
+.stats-page-indicator {
+  display: flex;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: -2px 0 10px;
+}
+
+.stats-page-indicator-dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+  opacity: 0.85;
+}
+
+.stats-page-indicator-dot.active {
+  width: 28px;
+  background: #2563eb;
+  opacity: 1;
+}
+
+.stats-personal-pages {
+  margin: 0 -10px;
+  overflow: hidden;
+}
+
+.stats-personal-track {
+  display: flex;
+  width: 200%;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stats-personal-page {
+  width: 50%;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.stats-content-inner {
+  padding-bottom: 28px;
+}
+
+.stats-card {
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+  margin-bottom: 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.stats-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb 0%, #14b8a6 62%, #f59e0b 100%);
+}
+
+.stats-section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stats-section-title {
+  margin: 0;
+  color: #172033;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.stats-person-label,
+.stats-section-hint {
+  color: #667085;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.stats-person-label {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.stats-overview-table,
+.stats-daily-list {
+  overflow: hidden;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+}
+
+.stats-overview-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) 92px 92px;
+  min-height: 58px;
+  align-items: center;
+  padding: 0 14px;
+  border-bottom: 1px solid #edf2f7;
+  background: #ffffff;
+}
+
+.stats-overview-row:last-child {
+  border-bottom: 0;
+}
+
+.stats-overview-header {
+  min-height: 48px;
+  background: #f6f9fd;
+  color: #667085;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.stats-overview-header span {
+  text-align: center;
+}
+
+.stats-overview-header span:first-child {
+  grid-column: 1;
+}
+
+.stats-overview-header span:nth-child(2) {
+  grid-column: 3;
+}
+
+.stats-overview-header span:nth-child(3) {
+  grid-column: 4;
+}
+
+.stats-overview-name {
+  display: flex;
+  justify-content: center;
+}
+
+.stats-overview-tag,
+.stats-shift {
+  display: inline-flex;
+  min-width: 58px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.stats-overview-value {
+  color: #172033;
+  font-size: 22px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.stats-overview-value.active {
+  color: #15803d;
+}
+
+.stats-shift-day,
+.stats-overtime-weekday {
+  background: var(--day-bg);
+  color: var(--day-text);
+}
+
+.stats-shift-night {
+  background: var(--night-bg);
+  color: var(--night-text);
+}
+
+.stats-shift-rest {
+  background: var(--rest-bg);
+  color: var(--rest-text);
+}
+
+.stats-shift-special-day {
+  background: var(--special-day-bg);
+  color: var(--special-day-text);
+}
+
+.stats-shift-special-night,
+.stats-overtime-special {
+  background: var(--special-night-bg);
+  color: var(--special-night-text);
+}
+
+.stats-shift-legal,
+.stats-overtime-legal {
+  background: var(--legal-bg);
+  color: var(--legal-text);
+}
+
+.stats-shift-leave {
+  background: var(--leave-bg);
+  color: var(--leave-text);
+}
+
+.stats-bar-chart {
+  display: grid;
+  min-height: 230px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 18px;
+  padding: 10px 6px 0;
+}
+
+.stats-bar-item {
+  display: grid;
+  grid-template-rows: 30px 150px 30px;
+  align-items: end;
+  justify-items: center;
+}
+
+.stats-bar-value {
+  color: #98a2b3;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.stats-bar-value.active {
+  color: #15803d;
+}
+
+.stats-bar-track {
+  position: relative;
+  width: 42px;
+  height: 150px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f3f6fa;
+}
+
+.stats-bar-fill {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  min-height: 0;
+  border-radius: 999px 999px 0 0;
+}
+
+.stats-bar-fill.stats-overtime-weekday {
+  background: #8bd8ff;
+}
+
+.stats-bar-fill.stats-overtime-special {
+  background: #f9ad65;
+}
+
+.stats-bar-fill.stats-overtime-legal {
+  background: #f87171;
+}
+
+.stats-bar-label {
+  margin-top: 10px;
+  color: #5b6678;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.salary-title-row {
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.salary-save-status {
+  margin-left: auto;
+  color: #667085;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.salary-save-status.pending,
+.salary-save-status.saving {
+  color: #2563eb;
+}
+
+.salary-save-status.saved {
+  color: #15803d;
+}
+
+.salary-save-status.error {
+  color: #b42318;
+}
+
+.salary-section {
+  padding: 14px 0 16px;
+  border-top: 1px solid #edf2f7;
+}
+
+.salary-title-row + .salary-section {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.salary-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.salary-block-title {
+  margin: 0;
+  color: #172033;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.salary-section-total {
+  color: #2563eb;
+  font-size: 18px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.salary-section-total.deduction {
+  color: #b45309;
+}
+
+.salary-input-grid,
+.salary-result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.salary-deduction-grid,
+.salary-final-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.salary-input-label,
+.salary-result-label,
+.salary-summary-label {
+  display: block;
+  margin-bottom: 7px;
+  overflow: hidden;
+  color: #667085;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.salary-input-box {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: 1px solid #d9e2ef;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.salary-input-prefix {
+  color: #98a2b3;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.salary-input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #172033;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.salary-rate-line {
+  display: block;
+  margin-top: 10px;
+  color: #667085;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.salary-result-item,
+.salary-summary-item {
+  display: flex;
+  min-height: 70px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: #f6f9fd;
+}
+
+.salary-result-item.legal {
+  background: #fff1f2;
+}
+
+.salary-result-item.deduction {
+  background: #fff7ed;
+}
+
+.salary-result-value,
+.salary-summary-value {
+  overflow: hidden;
+  color: #172033;
+  font-size: 20px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.salary-summary-item {
+  min-height: 78px;
+}
+
+.salary-summary-item.primary {
+  background: #eff6ff;
+}
+
+.salary-summary-item.primary .salary-summary-value {
+  color: #2563eb;
+}
+
+.stats-daily-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 88px 44px;
+  min-height: 64px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-bottom: 1px solid #edf2f7;
+  background: #ffffff;
+}
+
+.stats-daily-row:last-child {
+  border-bottom: 0;
+}
+
+.stats-daily-header {
+  min-height: 48px;
+  background: #f6f9fd;
+  color: #667085;
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.stats-daily-date {
+  color: #172033;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.stats-daily-shift-cell {
+  display: flex;
+  justify-content: center;
+}
+
+.stats-shift.has-legal {
+  position: relative;
+}
+
+.stats-legal-shift-badge {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 4px);
+  display: inline-flex;
+  min-width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 900;
+  transform: translateY(-50%);
+}
+
+.stats-daily-pay,
+.stats-daily-overtime {
+  color: #172033;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.stats-daily-pay {
+  display: inline-flex;
+  min-width: 72px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #ecfdf3;
+  color: #15803d;
+  font-size: 18px;
+}
+
+.stats-daily-pay.placeholder {
+  visibility: hidden;
+}
+
+.stats-daily-pay.special {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.stats-daily-pay.legal {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.stats-daily-overtime {
+  color: #98a2b3;
+}
+
+.stats-daily-overtime.active {
+  color: #15803d;
+}
+
+.stats-team-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stats-team-overview-item {
+  display: flex;
+  min-height: 84px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #f6f9fd;
+}
+
+.stats-team-overview-item strong {
+  color: #172033;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.stats-team-overview-item span {
+  margin-top: 6px;
+  color: #667085;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.stats-team-legend {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stats-team-legend-item {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.stats-team-legend-item.weekday {
+  background: #dff3ff;
+  color: #0369a1;
+}
+
+.stats-team-legend-item.special {
+  background: #fde7c7;
+  color: #9a3412;
+}
+
+.stats-team-legend-item.legal {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.stats-team-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stats-team-chart-row {
+  display: grid;
+  grid-template-columns: 40px 88px minmax(0, 1fr) 58px;
+  align-items: center;
+  gap: 10px;
+}
+
+.stats-ranking-rank {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f3f6fa;
+  color: #667085;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.stats-ranking-rank.top {
+  background: #fff0c2;
+  color: #b45309;
+}
+
+.stats-team-chart-name {
+  display: block;
+  overflow: hidden;
+  color: #172033;
+  font-size: 21px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-team-chart-group {
+  display: block;
+  margin-top: 4px;
+  color: #667085;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.stats-team-chart-track {
+  display: flex;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f3f6fa;
+}
+
+.stats-team-chart-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-team-chart-segment span {
+  overflow: hidden;
+  max-width: 100%;
+  padding: 0 4px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-team-chart-segment.stats-overtime-weekday {
+  background: #8bd8ff;
+}
+
+.stats-team-chart-segment.stats-overtime-special {
+  background: #f9ad65;
+}
+
+.stats-team-chart-segment.stats-overtime-legal {
+  background: #f87171;
+}
+
+.stats-team-chart-total {
+  color: #172033;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.stats-team-chart-segment.stats-overtime-weekday,
+.stats-bar-fill.stats-overtime-weekday {
+  background: #8bd8ff;
+}
+
+.stats-team-chart-segment.stats-overtime-special,
+.stats-bar-fill.stats-overtime-special {
+  background: #f9ad65;
+}
+
+.stats-team-chart-segment.stats-overtime-legal,
+.stats-bar-fill.stats-overtime-legal {
+  background: #f87171;
+}
+
+@media (max-width: 720px) {
+  .stats-mini-header {
+    min-height: 46px;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .stats-mini-header h1 {
+    font-size: 20px;
+  }
+
+  .stats-mini-header p {
+    margin-top: 2px;
+    font-size: 10px;
+  }
+
+  .stats-back-button,
+  .stats-sync-button {
+    min-width: 48px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .stats-view-tabs {
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+  }
+
+  .stats-view-tab {
+    height: 30px;
+    border-radius: 7px;
+    font-size: 13px;
+  }
+
+  .stats-filter-card {
+    gap: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+  }
+
+  .stats-filter-card.has-person-filter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-filter-item {
+    min-height: 50px;
+    padding: 0 10px;
+    border-radius: 8px;
+  }
+
+  .stats-filter-label {
+    margin-bottom: 3px;
+    font-size: 10px;
+  }
+
+  .stats-filter-select,
+  .stats-filter-value {
+    font-size: 15px;
+  }
+
+  .stats-page-indicator {
+    height: 18px;
+    margin: -2px 0 6px;
+  }
+
+  .stats-page-indicator-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .stats-page-indicator-dot.active {
+    width: 20px;
+  }
+
+  .stats-personal-pages {
+    margin: 0 -5px;
+  }
+
+  .stats-personal-page {
+    padding: 0 5px;
+  }
+
+  .stats-content-inner {
+    padding-bottom: 18px;
+  }
+
+  .stats-card {
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+  }
+
+  .stats-section-title-row {
+    margin-bottom: 10px;
+  }
+
+  .stats-section-title {
+    font-size: 18px;
+  }
+
+  .stats-person-label,
+  .stats-section-hint {
+    font-size: 11px;
+  }
+
+  .stats-overview-row {
+    grid-template-columns: 72px minmax(0, 1fr) 52px 52px;
+    min-height: 42px;
+    padding: 0 8px;
+  }
+
+  .stats-overview-header {
+    min-height: 34px;
+    font-size: 11px;
+  }
+
+  .stats-overview-tag,
+  .stats-shift {
+    min-width: 38px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+
+  .stats-overview-value {
+    font-size: 14px;
+  }
+
+  .stats-bar-chart {
+    min-height: 154px;
+    gap: 10px;
+    padding-top: 6px;
+  }
+
+  .stats-bar-item {
+    grid-template-rows: 22px 100px 22px;
+  }
+
+  .stats-bar-track {
+    width: 28px;
+    height: 100px;
+  }
+
+  .stats-bar-value,
+  .stats-bar-label {
+    font-size: 11px;
+  }
+
+  .salary-section {
+    padding: 10px 0 11px;
+  }
+
+  .salary-section-head {
+    margin-bottom: 8px;
+  }
+
+  .salary-block-title {
+    font-size: 14px;
+  }
+
+  .salary-section-total,
+  .salary-save-status {
+    font-size: 11px;
+  }
+
+  .salary-input-grid,
+  .salary-result-grid {
+    gap: 6px;
+  }
+
+  .salary-input-label,
+  .salary-result-label,
+  .salary-summary-label {
+    margin-bottom: 5px;
+    font-size: 10px;
+  }
+
+  .salary-input-box {
+    min-height: 38px;
+    padding: 0 8px;
+    border-radius: 7px;
+  }
+
+  .salary-input-prefix,
+  .salary-input,
+  .salary-result-value,
+  .salary-summary-value {
+    font-size: 13px;
+  }
+
+  .salary-rate-line {
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  .salary-result-item,
+  .salary-summary-item {
+    min-height: 46px;
+    padding: 0 8px;
+    border-radius: 7px;
+  }
+
+  .stats-daily-row {
+    grid-template-columns: minmax(0, 1fr) 54px 58px 34px;
+    min-height: 44px;
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  .stats-daily-header {
+    min-height: 34px;
+    font-size: 11px;
+  }
+
+  .stats-daily-date,
+  .stats-daily-pay,
+  .stats-daily-overtime {
+    font-size: 12px;
+  }
+
+  .stats-daily-pay {
+    min-width: 48px;
+    height: 20px;
+    font-size: 10px;
+  }
+
+  .stats-legal-shift-badge {
+    min-width: 14px;
+    height: 14px;
+    padding: 0;
+    font-size: 9px;
+  }
+
+  .stats-team-overview-grid {
+    gap: 6px;
+  }
+
+  .stats-team-overview-item {
+    min-height: 56px;
+    border-radius: 8px;
+  }
+
+  .stats-team-overview-item strong {
+    font-size: 18px;
+  }
+
+  .stats-team-overview-item span,
+  .stats-team-legend-item,
+  .stats-team-chart-group {
+    font-size: 10px;
+  }
+
+  .stats-team-chart-row {
+    grid-template-columns: 26px 60px minmax(0, 1fr) 42px;
+    gap: 7px;
+    min-height: 38px;
+  }
+
+  .stats-ranking-rank {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+
+  .stats-team-chart-name,
+  .stats-team-chart-total {
+    font-size: 12px;
+  }
+
+  .stats-team-chart-track {
+    height: 20px;
+  }
+
+  .stats-team-chart-segment span {
+    font-size: 9px;
+  }
+}
+

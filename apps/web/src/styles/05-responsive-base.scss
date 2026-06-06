@@ -1,0 +1,399 @@
+@media (hover: hover) and (pointer: fine) {
+  .sync-button:hover,
+  .user-switch-button:hover,
+  .ghost-button:hover,
+  .month-tab:hover,
+  .table-view-option:hover {
+    transform: translateY(-1px);
+  }
+
+  .calendar-cell:not(:disabled):hover,
+  .shift-cell:hover {
+    background: var(--primary-soft);
+    border-color: var(--primary-line);
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --schedule-name-column: 74px;
+    --schedule-date-column: 46px;
+  }
+
+  body {
+    background: linear-gradient(180deg, #eaf3ff 0, var(--canvas) 112px, var(--canvas-soft) 260px, var(--canvas-soft) 100%);
+  }
+
+  .app-shell {
+    padding: 7px 8px 22px;
+  }
+
+  .hero-panel {
+    min-height: 62px;
+    padding: 9px 10px;
+  }
+
+  .hero-title-group {
+    gap: 8px;
+  }
+
+  .app-mark {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+    border-radius: 10px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  .period,
+  .muted-label,
+  .eyebrow {
+    font-size: 11px;
+  }
+
+  .sync-button {
+    min-width: 62px;
+    height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .month-tabs {
+    gap: 4px;
+    margin-top: 8px;
+    padding: 4px;
+    border-radius: 12px;
+  }
+
+  .month-tab {
+    min-width: 56px;
+    height: 31px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .status-strip {
+    min-height: 30px;
+    margin-top: 8px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .auth-tabs button {
+    flex: 1;
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .current-user-card,
+  .calendar-card,
+  .schedule-card,
+  .stats-card,
+  .auth-card {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .section-header {
+    gap: 8px;
+  }
+
+  .section-header h2 {
+    margin-top: 1px;
+  }
+
+  .user-switch-control {
+    gap: 6px;
+  }
+
+  .admin-badge {
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .user-switch-button {
+    min-width: 52px;
+    height: 29px;
+    padding: 0 9px;
+    font-size: 12px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 9px;
+  }
+
+  .summary-item {
+    min-height: 51px;
+    border-radius: 9px;
+  }
+
+  .summary-item strong {
+    font-size: 19px;
+  }
+
+  .summary-item span {
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    gap: 6px;
+  }
+
+  .calendar-weekdays {
+    margin-top: 9px;
+  }
+
+  .calendar-weekdays span {
+    font-size: 11px;
+  }
+
+  .calendar-grid {
+    margin-top: 6px;
+  }
+
+  .calendar-cell {
+    min-height: 0;
+    border-radius: 7px;
+  }
+
+  .calendar-cell-content {
+    width: 100%;
+    gap: 2px;
+    transform: translateY(1px);
+  }
+
+  .calendar-date-wrap {
+    grid-template-columns: 14px 8px;
+    column-gap: 1px;
+    min-width: 23px;
+    min-height: 13px;
+  }
+
+  .calendar-day {
+    min-width: 14px;
+    font-size: 12px;
+  }
+
+  .calendar-lunar {
+    width: 8px;
+    max-height: 18px;
+    font-size: 6px;
+  }
+
+  .calendar-lunar span {
+    width: 8px;
+    height: 6px;
+    line-height: 6px;
+  }
+
+  .calendar-shift-row {
+    gap: 2px;
+  }
+
+  .calendar-shift-row .shift-chip {
+    min-width: 29px;
+    height: 15px;
+    padding: 0 4px;
+    font-size: 8px;
+  }
+
+  .legal-shift-badge {
+    min-width: 10px;
+    height: 10px;
+    font-size: 7px;
+  }
+
+  .edited-marker,
+  .overtime-marker {
+    left: 4px;
+    width: 4px;
+    height: 4px;
+  }
+
+  .edited-marker {
+    top: 4px;
+  }
+
+  .overtime-marker {
+    bottom: 4px;
+  }
+
+  .schedule-card {
+    padding-right: 0;
+    padding-left: 0;
+    padding-bottom: 0;
+  }
+
+  .table-toolbar {
+    padding: 0 10px;
+  }
+
+  .table-toolbar-main {
+    gap: 8px;
+  }
+
+  .table-toolbar-sub {
+    gap: 8px;
+  }
+
+  .table-view-option {
+    min-width: 44px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .legend {
+    gap: 4px;
+  }
+
+  .legend .shift-chip {
+    height: 18px;
+    padding: 0 6px;
+    font-size: 9px;
+  }
+
+  .table-shell {
+    margin-top: 8px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0 0 12px 12px;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 36px;
+  }
+
+  .table-head,
+  .shift-cell {
+    min-height: 36px;
+  }
+
+  .identity-row {
+    padding: 0 8px;
+  }
+
+  .identity-row strong {
+    font-size: 11px;
+  }
+
+  .identity-row span {
+    font-size: 9px;
+  }
+
+  .date-head strong {
+    font-size: 12px;
+  }
+
+  .date-head span {
+    font-size: 9px;
+  }
+
+  .shift-chip {
+    min-width: 34px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 9px;
+  }
+
+  .name-view-person-name {
+    width: 38px;
+    height: 18px;
+    font-size: 9px;
+  }
+
+  .edited-dot {
+    top: 4px;
+    left: 6px;
+    width: 4px;
+    height: 4px;
+  }
+
+  .user-picker-backdrop {
+    align-items: flex-end;
+    padding: 8px;
+  }
+
+  .user-picker {
+    border-radius: 14px;
+  }
+
+  .editor-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .shift-editor {
+    width: 100%;
+    max-height: calc(88vh - env(safe-area-inset-bottom, 0px));
+    padding: 16px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: 18px 18px 0 0;
+  }
+
+  .shift-editor .section-header h2 {
+    font-size: 20px;
+  }
+
+  .editor-group {
+    gap: 8px;
+    padding: 11px 0;
+  }
+
+  .editor-label {
+    font-size: 14px;
+  }
+
+  .editor-options,
+  .segmented-row {
+    gap: 7px;
+  }
+
+  .editor-option .shift-chip {
+    min-width: 54px;
+    height: 28px;
+    font-size: 13px;
+  }
+
+  .segmented-row button {
+    min-width: 50px;
+    min-height: 30px;
+    padding: 0 11px;
+    font-size: 13px;
+  }
+
+  .overtime-input-row {
+    min-height: 36px;
+    font-size: 14px;
+  }
+
+  .editor-actions {
+    gap: 8px;
+    padding-top: 12px;
+  }
+
+  .editor-actions .primary-button,
+  .editor-actions .ghost-button {
+    min-width: 78px;
+    min-height: 36px;
+    font-size: 14px;
+  }
+
+  .auth-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

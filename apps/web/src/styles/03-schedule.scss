@@ -1,0 +1,472 @@
+.calendar-card,
+.schedule-card {
+  overflow: hidden;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-weekdays {
+  margin-top: 14px;
+}
+
+.calendar-weekdays span {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+}
+
+.calendar-grid {
+  margin-top: 8px;
+}
+
+.calendar-cell {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  min-height: 74px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #e6edf5;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  color: var(--ink);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.calendar-cell:disabled {
+  cursor: default;
+  opacity: 0.44;
+}
+
+.calendar-cell:focus-visible,
+.shift-cell:focus-visible,
+.user-switch-button:focus-visible,
+.primary-button:focus-visible,
+.ghost-button:focus-visible,
+.sync-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.today-calendar-cell {
+  border-color: #38a3ff;
+  background: linear-gradient(180deg, #edf8ff 0%, #e3f4ff 100%);
+  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.edited-calendar-cell {
+  border-color: #f3bd4d;
+  background: linear-gradient(180deg, #fffaf0 0%, #fff4df 100%);
+}
+
+.edited-marker,
+.overtime-marker {
+  position: absolute;
+  left: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  z-index: 2;
+}
+
+.edited-marker {
+  top: 7px;
+  background: var(--warning);
+}
+
+.overtime-marker {
+  bottom: 7px;
+  background: var(--success);
+}
+
+.calendar-cell-content {
+  display: grid;
+  width: min(100%, 72px);
+  justify-items: center;
+  gap: 5px;
+}
+
+.calendar-date-wrap {
+  display: grid;
+  grid-template-columns: minmax(18px, auto) 12px;
+  align-items: center;
+  justify-content: center;
+  column-gap: 3px;
+  min-width: 34px;
+  min-height: 20px;
+}
+
+.calendar-day {
+  min-width: 18px;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+}
+
+.today-calendar-cell .calendar-day {
+  color: #0284c7;
+}
+
+.calendar-lunar {
+  display: flex;
+  width: 12px;
+  max-height: 25px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #8b98aa;
+  font-size: 8px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.calendar-lunar span {
+  display: block;
+  width: 12px;
+  height: 8px;
+  line-height: 8px;
+  text-align: center;
+}
+
+.calendar-lunar-holiday {
+  color: #e05743;
+}
+
+.calendar-shift-row {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.calendar-shift-row .shift-chip {
+  min-width: 42px;
+  height: 20px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
+.legal-shift-badge {
+  display: inline-flex;
+  min-width: 14px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--legal-bg);
+  color: var(--legal-text);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.table-toolbar {
+  display: grid;
+  gap: 8px;
+}
+
+.table-toolbar-main,
+.table-toolbar-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.table-toolbar-sub {
+  align-items: flex-start;
+}
+
+.table-view-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: #eef4fb;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.table-view-option {
+  min-width: 56px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.table-view-option.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-raised);
+}
+
+.legend {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-item {
+  display: inline-flex;
+}
+
+.legend .shift-chip {
+  min-width: auto;
+  height: 20px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
+.table-shell {
+  display: flex;
+  width: 100%;
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.identity-column {
+  position: relative;
+  z-index: 2;
+  width: var(--schedule-name-column);
+  flex: 0 0 var(--schedule-name-column);
+  background: var(--surface);
+  box-shadow: var(--shadow-sticky);
+}
+
+.table-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.schedule-table {
+  display: grid;
+  width: max-content;
+  min-width: max-content;
+}
+
+.identity-row,
+.table-row {
+  height: 48px;
+  border-bottom: 1px solid var(--line);
+}
+
+.identity-row:last-child,
+.table-row:last-child {
+  border-bottom: 0;
+}
+
+.table-row {
+  display: grid;
+  grid-auto-columns: var(--schedule-date-column);
+  grid-auto-flow: column;
+  width: max-content;
+}
+
+.identity-row {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: 0 10px;
+  text-align: center;
+}
+
+.identity-row strong {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identity-row span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.identity-header,
+.table-header {
+  background: #eef4fb;
+}
+
+.identity-header strong {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.identity-header span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.current-person-cell,
+.current-person-row .shift-cell {
+  background: #fff9ec;
+}
+
+.table-head,
+.shift-cell {
+  display: flex;
+  min-width: 0;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-right: 0;
+  background: var(--surface);
+}
+
+.table-head {
+  flex-direction: column;
+  gap: 3px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.date-head strong {
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.date-head span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.today-date-head strong {
+  color: var(--primary);
+}
+
+.shift-cell {
+  position: relative;
+  padding: 0;
+  cursor: pointer;
+}
+
+.name-view-person-name {
+  display: inline-flex;
+  width: 54px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edited-dot {
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--warning);
+  z-index: 1;
+}
+
+.shift-chip {
+  display: inline-flex;
+  min-width: 50px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.shift-day,
+.summary-day,
+.name-shift-day {
+  background: var(--day-bg);
+  color: var(--day-text);
+}
+
+.shift-night,
+.summary-night,
+.name-shift-night {
+  background: var(--night-bg);
+  color: var(--night-text);
+}
+
+.shift-rest,
+.summary-rest,
+.name-shift-rest {
+  background: var(--rest-bg);
+  color: var(--rest-text);
+}
+
+.shift-special-day,
+.summary-special-day,
+.name-shift-special-day {
+  background: var(--special-day-bg);
+  color: var(--special-day-text);
+}
+
+.shift-special-night,
+.summary-special-night,
+.name-shift-special-night {
+  background: var(--special-night-bg);
+  color: var(--special-night-text);
+}
+
+.shift-leave,
+.summary-leave,
+.name-shift-leave {
+  background: var(--leave-bg);
+  color: var(--leave-text);
+}
+
