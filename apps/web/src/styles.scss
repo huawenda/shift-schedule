@@ -5450,4 +5450,121 @@ h2 {
   .stats-daily-row > .stats-daily-overtime {
     grid-column: 5;
   }
+
+  .editor-backdrop {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+    background: rgba(23, 32, 51, 0.46);
+  }
+
+  .shift-editor {
+    width: 100%;
+    max-width: 430px;
+    max-height: min(82vh, 620px);
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    overflow: auto;
+    border-radius: 16px 16px 0 0;
+    background: #ffffff;
+    box-shadow: 0 -12px 32px rgba(15, 23, 42, 0.18);
+  }
+
+  .shift-editor .section-header {
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+
+  .shift-editor .section-header .muted-label {
+    display: block;
+    margin-bottom: 2px;
+    color: #667085;
+    font-size: 10px;
+  }
+
+  .shift-editor .section-header h2 {
+    font-size: 18px;
+  }
+
+  .editor-group {
+    gap: 8px;
+    padding: 11px 0;
+    border-top: 1px solid #e4edf7;
+  }
+
+  .editor-label {
+    color: #526071;
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  .editor-options,
+  .segmented-row {
+    gap: 8px;
+  }
+
+  .editor-option,
+  .segmented-row button {
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #f1f6fc;
+    color: #526071;
+    font-size: 12px;
+  }
+
+  .editor-group:first-of-type .editor-option {
+    width: 100%;
+    min-height: 36px;
+    border: 1px solid #cbdcf2;
+    background: #ffffff;
+    box-shadow: inset 0 0 0 3px rgba(37, 99, 235, 0.10);
+  }
+
+  .editor-option.active,
+  .segmented-row button.active {
+    border-color: #b8d6ff;
+    background: #ffffff;
+    color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+  }
+
+  .editor-option .shift-chip,
+  .editor-group:first-of-type .editor-option .shift-chip {
+    min-width: 48px;
+    height: 22px;
+    font-size: 10px;
+  }
+
+  .segmented-row button {
+    min-width: 48px;
+    height: 28px;
+  }
+
+  .overtime-input-row {
+    width: 152px;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid #cbdcf2;
+    border-radius: 7px;
+    background: #f8fbff;
+    font-size: 12px;
+  }
+
+  .overtime-input-row input {
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  .editor-actions {
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #e4edf7;
+  }
+
+  .editor-actions .primary-button,
+  .editor-actions .ghost-button {
+    min-width: 56px;
+    height: 32px;
+    font-size: 12px;
+  }
 }

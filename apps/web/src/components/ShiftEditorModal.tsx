@@ -46,7 +46,6 @@ export function ShiftEditorModal({
             <span className="muted-label">{editor.personName} / {editor.date}</span>
             <h2 id="shift-editor-title">编辑排班</h2>
           </div>
-          <button className="ghost-button" type="button" onClick={onCancel}>关闭</button>
         </div>
 
         <div className="editor-group">

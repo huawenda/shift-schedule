@@ -225,25 +225,16 @@ export function ScheduleView({
                   {visibleDates.map((date, index) => {
                     const shift = person.shifts[index]
                     const key = getOverrideKey(person.name, date)
-                    const isEdited = Boolean(
-                      overrides.shiftOverrides[key] ||
-                      overrides.overtimeOverrides[key] ||
-                      overrides.legalOverrides[key] ||
-                      overrides.leaveDurationOverrides[key]
-                    )
-                    const hasOvertime = (overrides.overtimeOverrides[key] ?? 0) > 0
-                    const isLegal = overrides.legalOverrides[key] === true
+                    const isEdited = Boolean(overrides.shiftOverrides[key])
 
                     return (
                       <button className="shift-cell date-cell" key={`${person.name}-${date}`} type="button" onClick={() => onOpenShiftEditor(person.name, date)}>
                         {isEdited ? <span className="edited-dot" /> : null}
-                        {hasOvertime && !isLegal ? <span className="table-overtime-dot" /> : null}
                         {tableView === 'name' ? (
                           <span className={`name-view-person-name ${getNameViewShiftClassName(shift)}`}>{person.name}</span>
                         ) : (
                           <span className="table-shift-wrap">
                             <span className={`shift-chip ${getShiftClassName(shift)}`}>{shift}</span>
-                            {isLegal ? <span className="table-legal-badge">法</span> : null}
                           </span>
                         )}
                       </button>
