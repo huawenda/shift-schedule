@@ -1389,5 +1389,14 @@
     height: 32px;
     font-size: 12px;
   }
+
+  .salary-card .salary-input-grid {
+    column-gap: 12px;
+  }
+
+  .salary-card .salary-input-box {
+    border-color: #cdd7e5;
+    background: #fbfcff;
+  }
 }
 
