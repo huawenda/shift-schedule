@@ -5420,4 +5420,34 @@ h2 {
   .stats-overview-row > .stats-overview-value:nth-child(3) {
     grid-column: 4;
   }
+
+  .stats-daily-row {
+    grid-template-columns: 60px minmax(0, 1fr) 42px 50px 32px;
+  }
+
+  .stats-daily-header span,
+  .stats-daily-row > * {
+    justify-self: center;
+    text-align: center;
+  }
+
+  .stats-daily-header span:first-child,
+  .stats-daily-row > .stats-daily-date {
+    grid-column: 1;
+  }
+
+  .stats-daily-header span:nth-child(2),
+  .stats-daily-row > .stats-daily-shift-cell {
+    grid-column: 3;
+  }
+
+  .stats-daily-header span:nth-child(3),
+  .stats-daily-row > .stats-daily-pay {
+    grid-column: 4;
+  }
+
+  .stats-daily-header span:nth-child(4),
+  .stats-daily-row > .stats-daily-overtime {
+    grid-column: 5;
+  }
 }
