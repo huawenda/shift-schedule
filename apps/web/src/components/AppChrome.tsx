@@ -28,7 +28,7 @@ export function AppChrome({
   onRefresh
 }: AppChromeProps) {
   return (
-    <>
+    <div className="app-chrome-sticky">
       <section className="hero-panel">
         <div className="hero-title-group">
           <img className="app-mark" src="/icons/icon2.png" alt="" aria-hidden="true" />
@@ -61,6 +61,6 @@ export function AppChrome({
           <button type="button" onClick={onLogout}>退出</button>
         ) : null}
       </section>
-    </>
+    </div>
   )
 }

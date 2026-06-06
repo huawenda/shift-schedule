@@ -454,17 +454,16 @@
 
   .stats-personal-pages {
     margin: 0;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .stats-personal-track {
-    display: block;
-    width: auto;
-    transform: none !important;
+    display: flex;
+    width: 200%;
   }
 
   .stats-personal-page {
-    width: 100%;
+    width: 50%;
     padding: 0;
   }
 
@@ -656,17 +655,16 @@
 
   .stats-personal-pages {
     margin: 0;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .stats-personal-track {
-    display: block;
-    width: auto;
-    transform: none !important;
+    display: flex;
+    width: 200%;
   }
 
   .stats-personal-page {
-    width: 100%;
+    width: 50%;
     padding: 0;
   }
 
@@ -684,6 +682,22 @@
 
   .app-shell {
     padding: 7px 7px calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-chrome-sticky {
+    top: 0;
+    margin: -7px -7px 0;
+    padding: 7px 7px 1px;
+  }
+
+  .schedule-user-sticky {
+    top: 118px;
+  }
+
+  .stats-sticky-top {
+    top: 0;
+    margin: -7px -7px 0;
+    padding: 7px 7px 1px;
   }
 
   .hero-panel,

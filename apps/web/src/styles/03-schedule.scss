@@ -352,8 +352,13 @@
   align-items: center;
   justify-content: center;
   border: 0;
+  border-bottom: 1px solid var(--line);
   border-right: 0;
   background: var(--surface);
+}
+
+.schedule-table .table-row:last-child .shift-cell {
+  border-bottom: 0;
 }
 
 .table-head {
@@ -385,6 +390,10 @@
   position: relative;
   padding: 0;
   cursor: pointer;
+}
+
+.calendar-card {
+  touch-action: pan-y;
 }
 
 .name-view-person-name {

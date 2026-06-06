@@ -412,6 +412,7 @@ export function App() {
               selectedMonth={selectedMonth}
               summary={summary}
               onCurrentUserChange={setSchedulePersonName}
+              onMonthChange={setSelectedMonth}
               onOpenShiftEditor={openShiftEditor}
               onStatsOpen={() => {
                 void openStatsRoute()

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState, type TouchEvent } from 'react'
 import {
   formatScheduleMonthDay,
   getDateLabels,
@@ -54,9 +54,13 @@ interface ScheduleViewProps {
   selectedMonth: ScheduleMonth
   summary: ShiftSummary
   onCurrentUserChange: (personName: string) => void
+  onMonthChange: (month: ScheduleMonth) => void
   onOpenShiftEditor: (personName: string, date: string) => void
   onStatsOpen: () => void
 }
+
+type TouchPoint = { x: number; y: number }
+const scheduleMonthOrder: ScheduleMonth[] = ['05', '06', '07', '08', '09', '10', '11', '12']
 
 export function ScheduleView({
   appliedCurrentUser,
@@ -67,19 +71,49 @@ export function ScheduleView({
   selectedMonth,
   summary,
   onCurrentUserChange,
+  onMonthChange,
   onOpenShiftEditor,
   onStatsOpen
 }: ScheduleViewProps) {
   const [tableView, setTableView] = useState<ScheduleTableView>('shift')
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false)
+  const calendarTouchStart = useRef<TouchPoint | null>(null)
+  const calendarSwipeHandled = useRef(false)
   const visibleDates = appliedMonthView.dates
   const dateLabels = getDateLabels(appliedMonthView.startDate, visibleDates)
   const calendarCells = getPersonMonthCalendarCells(scheduleData, selectedMonth, appliedCurrentUser.name)
   const todayMonthDay = formatScheduleMonthDay(new Date())
 
+  function handleCalendarTouchStart(event: TouchEvent<HTMLElement>) {
+    const touch = event.touches[0]
+    calendarTouchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null
+  }
+
+  function handleCalendarTouchEnd(event: TouchEvent<HTMLElement>) {
+    const start = calendarTouchStart.current
+    const touch = event.changedTouches[0]
+    calendarTouchStart.current = null
+    if (!start || !touch) return
+
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (Math.abs(deltaX) <= 56 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) return
+
+    const currentIndex = scheduleMonthOrder.indexOf(selectedMonth)
+    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1
+    const nextMonth = scheduleMonthOrder[nextIndex]
+    if (nextMonth) {
+      calendarSwipeHandled.current = true
+      onMonthChange(nextMonth)
+      window.setTimeout(() => {
+        calendarSwipeHandled.current = false
+      }, 0)
+    }
+  }
+
   return (
     <>
-      <section className="current-user-card">
+      <section className="current-user-card schedule-user-sticky">
         <div className="section-header">
           <div>
             <span className="muted-label">当前用户</span>
@@ -107,7 +141,7 @@ export function ScheduleView({
         </div>
       </section>
 
-      <section className="calendar-card">
+      <section className="calendar-card" onTouchStart={handleCalendarTouchStart} onTouchEnd={handleCalendarTouchEnd}>
         <div className="section-header">
           <h2>排班日历</h2>
           <span className="muted-label">2026年{Number(selectedMonth)}月</span>
@@ -136,6 +170,7 @@ export function ScheduleView({
                 key={cell.key}
                 type="button"
                 onClick={() => {
+                  if (calendarSwipeHandled.current) return
                   if (cell.inCurrentMonth) onOpenShiftEditor(appliedCurrentUser.name, cell.key)
                 }}
               >

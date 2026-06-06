@@ -104,82 +104,84 @@ export function StatsView({
 
   return (
     <section className="stats-page-mini">
-      <header className="stats-mini-header">
-        <button className="stats-back-button" type="button" onClick={onBack}>返回</button>
-        <div className="stats-header-copy">
-          <h1>统计</h1>
-          <p>{formatDateForDisplay(monthStartDate)} - {formatDateForDisplay(monthEndDate)}</p>
+      <div className="stats-sticky-top">
+        <header className="stats-mini-header">
+          <button className="stats-back-button" type="button" onClick={onBack}>返回</button>
+          <div className="stats-header-copy">
+            <h1>统计</h1>
+            <p>{formatDateForDisplay(monthStartDate)} - {formatDateForDisplay(monthEndDate)}</p>
+          </div>
+          <button className={`stats-sync-button ${isSyncing ? 'loading' : ''}`} type="button" disabled={isSyncing} onClick={onRefresh}>
+            {isSyncing ? '同步中' : '同步'}
+          </button>
+        </header>
+
+        <div className="stats-view-tabs">
+          {isAdminUser ? (
+            <>
+              <button className={`stats-view-tab ${statsViewMode === 'personal' ? 'active' : ''}`} type="button" onClick={switchToPersonal}>
+                个人统计
+              </button>
+              <button className={`stats-view-tab ${statsViewMode === 'team' ? 'active' : ''}`} type="button" onClick={() => onStatsViewModeChange('team')}>
+                全员统计
+              </button>
+            </>
+          ) : (
+            <>
+              <button className={`stats-view-tab ${statsViewMode === 'personal' && personalPage === 0 ? 'active' : ''}`} type="button" onClick={switchToPersonal}>
+                综合统计
+              </button>
+              <button className={`stats-view-tab ${statsViewMode === 'personal' && personalPage === 1 ? 'active' : ''}`} type="button" onClick={switchToDaily}>
+                每日明细
+              </button>
+            </>
+          )}
         </div>
-        <button className={`stats-sync-button ${isSyncing ? 'loading' : ''}`} type="button" disabled={isSyncing} onClick={onRefresh}>
-          {isSyncing ? '同步中' : '同步'}
-        </button>
-      </header>
 
-      <div className="stats-view-tabs">
-        {isAdminUser ? (
-          <>
-            <button className={`stats-view-tab ${statsViewMode === 'personal' ? 'active' : ''}`} type="button" onClick={switchToPersonal}>
-              个人统计
-            </button>
-            <button className={`stats-view-tab ${statsViewMode === 'team' ? 'active' : ''}`} type="button" onClick={() => onStatsViewModeChange('team')}>
-              全员统计
-            </button>
-          </>
-        ) : (
-          <>
-            <button className={`stats-view-tab ${statsViewMode === 'personal' && personalPage === 0 ? 'active' : ''}`} type="button" onClick={switchToPersonal}>
-              综合统计
-            </button>
-            <button className={`stats-view-tab ${statsViewMode === 'personal' && personalPage === 1 ? 'active' : ''}`} type="button" onClick={switchToDaily}>
-              每日明细
-            </button>
-          </>
-        )}
-      </div>
-
-      <div className={`stats-filter-card ${statsViewMode === 'personal' ? 'has-person-filter' : ''}`}>
-        <label className="stats-filter-item">
-          <span className="stats-filter-label">月份</span>
-          <select className="stats-filter-select" value={selectedMonth} onChange={event => onMonthChange(event.target.value as ScheduleMonth)}>
-            {monthOptions.map(month => (
-              <option key={month.value} value={month.value}>{month.label}</option>
-            ))}
-          </select>
-        </label>
-        {statsViewMode === 'personal' ? (
+        <div className={`stats-filter-card ${statsViewMode === 'personal' ? 'has-person-filter' : ''}`}>
           <label className="stats-filter-item">
-            <span className="stats-filter-label">用户</span>
-            {isAdminUser ? (
-              <select className="stats-filter-select" value={statsPerson.name} onChange={event => onStatsPersonChange(event.target.value)}>
-                {scheduleData.people.map(person => (
-                  <option key={person.name} value={person.name}>{person.name} / {person.group}</option>
-                ))}
-              </select>
-            ) : (
-              <strong className="stats-filter-value">{statsPerson.name} / {statsPerson.group}</strong>
-            )}
+            <span className="stats-filter-label">月份</span>
+            <select className="stats-filter-select" value={selectedMonth} onChange={event => onMonthChange(event.target.value as ScheduleMonth)}>
+              {monthOptions.map(month => (
+                <option key={month.value} value={month.value}>{month.label}</option>
+              ))}
+            </select>
           </label>
+          {statsViewMode === 'personal' ? (
+            <label className="stats-filter-item">
+              <span className="stats-filter-label">用户</span>
+              {isAdminUser ? (
+                <select className="stats-filter-select" value={statsPerson.name} onChange={event => onStatsPersonChange(event.target.value)}>
+                  {scheduleData.people.map(person => (
+                    <option key={person.name} value={person.name}>{person.name} / {person.group}</option>
+                  ))}
+                </select>
+              ) : (
+                <strong className="stats-filter-value">{statsPerson.name} / {statsPerson.group}</strong>
+              )}
+            </label>
+          ) : null}
+        </div>
+
+        {isAdminUser && statsViewMode === 'personal' ? (
+          <div className="stats-page-indicator">
+            {[0, 1].map(index => (
+              <button
+                aria-label={`第 ${index + 1} 页`}
+                className={`stats-page-indicator-dot ${personalPage === index ? 'active' : ''}`}
+                key={index}
+                type="button"
+                onClick={() => setPersonalPage(index as PersonalPage)}
+              />
+            ))}
+          </div>
         ) : null}
       </div>
 
-      {isAdminUser && statsViewMode === 'personal' ? (
-        <div className="stats-page-indicator">
-          {[0, 1].map(index => (
-            <button
-              aria-label={`第 ${index + 1} 页`}
-              className={`stats-page-indicator-dot ${personalPage === index ? 'active' : ''}`}
-              key={index}
-              type="button"
-              onClick={() => setPersonalPage(index as PersonalPage)}
-            />
-          ))}
-        </div>
-      ) : null}
-
       {statsViewMode === 'personal' && personalStats ? (
         <div className="stats-personal-pages" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-          <div className="stats-personal-page">
-            {personalPage === 0 ? (
+          <div className="stats-personal-track" style={{ transform: `translateX(-${personalPage * 50}%)` }}>
+            <div className="stats-personal-page">
               <PersonalSummary
                 overtimeChartItems={overtimeChartItems}
                 overtimeChartMax={overtimeChartMax}
@@ -190,14 +192,15 @@ export function StatsView({
                 statsPerson={statsPerson}
                 onSalaryInputChange={onSalaryInputChange}
               />
-            ) : (
+            </div>
+            <div className="stats-personal-page">
               <DailyDetails
                 monthEndDate={monthEndDate}
                 monthStartDate={monthStartDate}
                 personalStats={personalStats}
                 salaryInputs={salaryInputs}
               />
-            )}
+            </div>
           </div>
         </div>
       ) : null}
