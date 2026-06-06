@@ -1391,7 +1391,13 @@
   }
 
   .salary-card .salary-input-grid {
-    column-gap: 12px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .salary-card .salary-input-item {
+    min-width: 0;
+    flex: 1 1 0;
   }
 
   .salary-card .salary-input-box {
