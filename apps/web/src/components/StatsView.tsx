@@ -178,8 +178,8 @@ export function StatsView({
 
       {statsViewMode === 'personal' && personalStats ? (
         <div className="stats-personal-pages" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-          <div className="stats-personal-track" style={{ transform: `translate3d(-${personalPage * 50}%, 0, 0)` }}>
-            <div className="stats-personal-page">
+          <div className="stats-personal-page">
+            {personalPage === 0 ? (
               <PersonalSummary
                 overtimeChartItems={overtimeChartItems}
                 overtimeChartMax={overtimeChartMax}
@@ -190,15 +190,14 @@ export function StatsView({
                 statsPerson={statsPerson}
                 onSalaryInputChange={onSalaryInputChange}
               />
-            </div>
-            <div className="stats-personal-page">
+            ) : (
               <DailyDetails
                 monthEndDate={monthEndDate}
                 monthStartDate={monthStartDate}
                 personalStats={personalStats}
                 salaryInputs={salaryInputs}
               />
-            </div>
+            )}
           </div>
         </div>
       ) : null}
