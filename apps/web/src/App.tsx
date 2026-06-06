@@ -76,6 +76,7 @@ export function App() {
 
   const isConfigured = isSupabaseConfigured()
   const isStatsRoute = location.pathname.startsWith('/stats')
+  const isLoginRoute = location.pathname.startsWith('/login')
   const isAdminUser = profile?.isAdmin === true
   const monthView = useMemo(() => getMonthScheduleView(scheduleData, selectedMonth), [selectedMonth])
   const currentUserName = isAdminUser
@@ -350,8 +351,8 @@ export function App() {
   const requiresLogin = isConfigured && !profile?.profile && !isBooting
 
   return (
-    <main className="app-shell">
-      {!isStatsRoute ? (
+    <main className={`app-shell ${isLoginRoute ? 'auth-shell' : ''}`}>
+      {!isStatsRoute && !isLoginRoute ? (
         <AppChrome
           endDate={monthView.endDate}
           isBooting={isBooting}
@@ -366,9 +367,9 @@ export function App() {
         />
       ) : null}
 
-      {errorText ? <p className="error-banner">{errorText}</p> : null}
+      {errorText && !isLoginRoute ? <p className="error-banner">{errorText}</p> : null}
 
-      {!isConfigured ? (
+      {!isConfigured && !isLoginRoute ? (
         <section className="demo-notice">
           当前未配置 Supabase，Web 端以演示数据运行。复制 <code>apps/web/.env.example</code> 为 <code>apps/web/.env.local</code> 后可连接云端。
         </section>
@@ -379,20 +380,24 @@ export function App() {
         <Route
           path="/login"
           element={profile?.profile ? <Navigate to="/schedule" replace /> : (
-            <AuthPanel
-              authMode={authMode}
-              inviteCode={inviteCode}
-              isSubmittingAuth={isSubmittingAuth}
-              password={password}
-              personName={personName}
-              username={username}
-              onAuthModeChange={setAuthMode}
-              onInviteCodeChange={setInviteCode}
-              onPasswordChange={setPassword}
-              onPersonNameChange={setPersonName}
-              onSubmit={submitAuth}
-              onUsernameChange={setUsername}
-            />
+            <section className="auth-page" aria-label="账号登录">
+              <AuthPanel
+                authMode={authMode}
+                errorText={errorText}
+                inviteCode={inviteCode}
+                isSubmittingAuth={isSubmittingAuth}
+                password={password}
+                people={scheduleData.people}
+                personName={personName}
+                username={username}
+                onAuthModeChange={setAuthMode}
+                onInviteCodeChange={setInviteCode}
+                onPasswordChange={setPassword}
+                onPersonNameChange={setPersonName}
+                onSubmit={submitAuth}
+                onUsernameChange={setUsername}
+              />
+            </section>
           )}
         />
         <Route

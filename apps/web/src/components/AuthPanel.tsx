@@ -1,11 +1,14 @@
 import type { FormEvent } from 'react'
+import type { SchedulePerson } from '@shift-schedule/core'
 import type { AuthMode } from '../appTypes'
 
 interface AuthPanelProps {
   authMode: AuthMode
+  errorText?: string
   inviteCode: string
   isSubmittingAuth: boolean
   password: string
+  people: SchedulePerson[]
   personName: string
   username: string
   onAuthModeChange: (mode: AuthMode) => void
@@ -18,9 +21,11 @@ interface AuthPanelProps {
 
 export function AuthPanel({
   authMode,
+  errorText,
   inviteCode,
   isSubmittingAuth,
   password,
+  people,
   personName,
   username,
   onAuthModeChange,
@@ -36,6 +41,7 @@ export function AuthPanel({
         <button className={authMode === 'login' ? 'active' : ''} type="button" onClick={() => onAuthModeChange('login')}>登录</button>
         <button className={authMode === 'register' ? 'active' : ''} type="button" onClick={() => onAuthModeChange('register')}>注册</button>
       </div>
+      {errorText ? <p className="error-banner auth-error">{errorText}</p> : null}
       <form className="auth-form" onSubmit={onSubmit}>
         <label>
           <span>账号</span>
@@ -49,7 +55,13 @@ export function AuthPanel({
           <>
             <label>
               <span>绑定姓名</span>
-              <input value={personName} onChange={event => onPersonNameChange(event.target.value)} />
+              <select value={personName} onChange={event => onPersonNameChange(event.target.value)}>
+                {people.map(person => (
+                  <option key={person.name} value={person.name}>
+                    {person.name} / {person.group}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               <span>邀请码</span>
