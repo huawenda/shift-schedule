@@ -2420,7 +2420,7 @@ h2 {
 @media (max-width: 720px) {
   :root {
     --schedule-name-column: 78px;
-    --schedule-date-column: 46px;
+    --schedule-date-column: 48px;
   }
 
   body {
@@ -2436,7 +2436,7 @@ h2 {
   }
 
   .hero-panel {
-    min-height: 52px;
+    min-height: 54px;
     padding: 0;
   }
 
@@ -2472,15 +2472,15 @@ h2 {
   }
 
   .month-tabs {
-    margin-top: 7px;
+    margin-top: 8px;
     margin-bottom: 8px;
     padding: 4px;
     border-radius: 10px;
   }
 
   .month-tab {
-    min-width: 52px;
-    height: 29px;
+    min-width: 54px;
+    height: 31px;
     margin-right: 4px;
     padding: 0 8px;
     border-radius: 7px;
@@ -2488,7 +2488,7 @@ h2 {
   }
 
   .status-strip {
-    min-height: 28px;
+    min-height: 30px;
     margin-top: 8px;
     padding: 0 10px;
     font-size: 10px;
@@ -2502,7 +2502,7 @@ h2 {
 
   .view-tabs a {
     min-width: 62px;
-    min-height: 28px;
+    min-height: 30px;
     border-radius: 7px;
     font-size: 12px;
   }
@@ -2551,7 +2551,7 @@ h2 {
   }
 
   .summary-item {
-    min-height: 49px;
+    min-height: 50px;
     border-radius: 7px;
   }
 
@@ -2670,7 +2670,7 @@ h2 {
 
   .table-view-option {
     min-width: 44px;
-    height: 24px;
+    height: 26px;
     font-size: 11px;
   }
 
@@ -2697,7 +2697,7 @@ h2 {
 
   .identity-row,
   .table-row {
-    height: 36px;
+    height: 38px;
   }
 
   .identity-header,
@@ -2730,7 +2730,7 @@ h2 {
 
   .table-head,
   .shift-cell {
-    min-height: 36px;
+    min-height: 38px;
   }
 
   .table-header .table-head {
@@ -3059,6 +3059,8 @@ h2 {
 
 .stats-filter-select,
 .stats-filter-value {
+  appearance: none;
+  -webkit-appearance: none;
   width: 100%;
   overflow: hidden;
   border: 0;
@@ -3070,6 +3072,10 @@ h2 {
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.stats-filter-select::-ms-expand {
+  display: none;
 }
 
 .stats-page-indicator {
@@ -3766,6 +3772,21 @@ h2 {
   text-align: right;
 }
 
+.stats-team-chart-segment.stats-overtime-weekday,
+.stats-bar-fill.stats-overtime-weekday {
+  background: #8bd8ff;
+}
+
+.stats-team-chart-segment.stats-overtime-special,
+.stats-bar-fill.stats-overtime-special {
+  background: #f9ad65;
+}
+
+.stats-team-chart-segment.stats-overtime-legal,
+.stats-bar-fill.stats-overtime-legal {
+  background: #f87171;
+}
+
 @media (max-width: 720px) {
   .stats-mini-header {
     min-height: 46px;
@@ -3877,7 +3898,7 @@ h2 {
 
   .stats-overview-row {
     grid-template-columns: 72px minmax(0, 1fr) 52px 52px;
-    min-height: 40px;
+    min-height: 42px;
     padding: 0 8px;
   }
 
@@ -3899,18 +3920,18 @@ h2 {
   }
 
   .stats-bar-chart {
-    min-height: 150px;
+    min-height: 154px;
     gap: 10px;
     padding-top: 6px;
   }
 
   .stats-bar-item {
-    grid-template-rows: 22px 96px 22px;
+    grid-template-rows: 22px 100px 22px;
   }
 
   .stats-bar-track {
     width: 28px;
-    height: 96px;
+    height: 100px;
   }
 
   .stats-bar-value,
@@ -3974,7 +3995,7 @@ h2 {
 
   .stats-daily-row {
     grid-template-columns: minmax(0, 1fr) 54px 58px 34px;
-    min-height: 42px;
+    min-height: 44px;
     gap: 6px;
     padding: 0 8px;
   }
@@ -4023,8 +4044,9 @@ h2 {
   }
 
   .stats-team-chart-row {
-    grid-template-columns: 26px 58px minmax(0, 1fr) 38px;
-    gap: 6px;
+    grid-template-columns: 26px 60px minmax(0, 1fr) 42px;
+    gap: 7px;
+    min-height: 38px;
   }
 
   .stats-ranking-rank {
@@ -4039,7 +4061,7 @@ h2 {
   }
 
   .stats-team-chart-track {
-    height: 18px;
+    height: 20px;
   }
 
   .stats-team-chart-segment span {

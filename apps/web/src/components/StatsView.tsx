@@ -448,6 +448,10 @@ function DailyDetails({
   personalStats: PersonMonthlyStats
   salaryInputs: SalaryInputValues
 }) {
+  const dailyRecords = Array.from(
+    new Map(personalStats.dailyRecords.map(record => [record.date, record])).values()
+  )
+
   return (
     <div className="stats-content-inner">
       <section className="stats-card">
@@ -462,7 +466,7 @@ function DailyDetails({
             <span>金额</span>
             <span>小时</span>
           </div>
-          {personalStats.dailyRecords.map(record => {
+          {dailyRecords.map(record => {
             const dailyOvertimePay = calculateOvertimePay(
               salaryInputs,
               record.overtimeHours,
