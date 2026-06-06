@@ -43,8 +43,8 @@ export function ShiftEditorModal({
       <section className="shift-editor" role="dialog" aria-modal="true" aria-labelledby="shift-editor-title" onClick={event => event.stopPropagation()}>
         <div className="section-header">
           <div>
-            <span className="muted-label">{editor.personName} / {editor.date}</span>
-            <h2 id="shift-editor-title">编辑排班</h2>
+            <h2 id="shift-editor-title">编辑</h2>
+            <span className="muted-label">{editor.personName} · {editor.date}</span>
           </div>
         </div>
 
@@ -130,6 +130,7 @@ export function ShiftEditorModal({
                   placeholder="0"
                 />
                 <span>小时</span>
+                <span className="overtime-hint">最小单位0.5</span>
               </label>
             </>
           ) : (
