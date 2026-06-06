@@ -491,6 +491,22 @@
   gap: 10px;
 }
 
+.salary-basic-input-grid {
+  display: flex;
+  gap: 12px;
+}
+
+.salary-basic-input-grid .salary-input-item {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.salary-basic-input-grid .salary-input-box {
+  border-color: #c4d3e5;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(196, 211, 229, 0.22);
+}
+
 .salary-deduction-grid,
 .salary-final-grid {
   display: grid;

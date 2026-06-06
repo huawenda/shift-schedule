@@ -341,7 +341,7 @@ function SalarySection({
           <h3 className="salary-block-title">基本项</h3>
           <span className="salary-section-total">小计 ¥{formatMoney(salaryCalculation.basicPayTotal)}</span>
         </div>
-        <div className="salary-input-grid">
+        <div className="salary-input-grid salary-basic-input-grid">
           <SalaryInput label="底薪" field="baseSalary" value={salaryInputs.baseSalary} onChange={onSalaryInputChange} />
           <SalaryInput label="绩效津贴" field="performanceAllowance" value={salaryInputs.performanceAllowance} onChange={onSalaryInputChange} />
           <SalaryInput label="岗位津贴" field="positionAllowance" value={salaryInputs.positionAllowance} onChange={onSalaryInputChange} />
