@@ -4633,17 +4633,17 @@ h2 {
   }
 
   .stats-page-indicator {
-    height: 18px;
-    margin: -1px 0 6px;
+    height: 12px;
+    margin: -2px 0 4px;
   }
 
   .stats-page-indicator-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   .stats-page-indicator-dot.active {
-    width: 20px;
+    width: 18px;
   }
 
   .stats-personal-pages {
@@ -4668,7 +4668,7 @@ h2 {
 
   .stats-card {
     padding: 12px;
-    margin-bottom: 8px;
+    margin-bottom: 7px;
   }
 
   .stats-section-title-row {
@@ -4685,14 +4685,25 @@ h2 {
   }
 
   .stats-overview-row {
-    grid-template-columns: 72px minmax(0, 1fr) 52px 52px;
+    grid-template-columns: minmax(0, 1fr) 56px 56px;
     min-height: 42px;
     padding: 0 8px;
   }
 
   .stats-overview-header {
+    grid-template-columns: minmax(0, 1fr) 56px 56px;
     min-height: 34px;
     font-size: 11px;
+  }
+
+  .stats-overview-header span:first-child,
+  .stats-overview-header span:nth-child(2),
+  .stats-overview-header span:nth-child(3) {
+    grid-column: auto;
+  }
+
+  .stats-overview-name {
+    justify-content: center;
   }
 
   .stats-overview-tag,
@@ -4728,11 +4739,11 @@ h2 {
   }
 
   .salary-section {
-    padding: 9px 0 10px;
+    padding: 8px 0 9px;
   }
 
   .salary-section-head {
-    margin-bottom: 7px;
+    margin-bottom: 6px;
   }
 
   .salary-block-title {
@@ -4748,7 +4759,7 @@ h2 {
   .salary-result-grid,
   .salary-deduction-grid,
   .salary-final-grid {
-    gap: 6px;
+    gap: 5px;
   }
 
   .salary-input-label,
@@ -4759,9 +4770,17 @@ h2 {
   }
 
   .salary-input-box {
-    min-height: 36px;
-    padding: 0 8px;
+    min-height: 34px;
+    padding: 0 7px;
+    border: 0;
     border-radius: 7px;
+    background: #f6f9fd;
+    box-shadow: none;
+  }
+
+  .salary-input {
+    outline: none;
+    box-shadow: none;
   }
 
   .salary-input-prefix,
@@ -4778,8 +4797,8 @@ h2 {
 
   .salary-result-item,
   .salary-summary-item {
-    min-height: 44px;
-    padding: 0 8px;
+    min-height: 42px;
+    padding: 0 7px;
     border-radius: 7px;
   }
 
