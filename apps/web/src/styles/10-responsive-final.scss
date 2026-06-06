@@ -6,7 +6,7 @@
   }
 
   body {
-    background: linear-gradient(180deg, #eaf5ff 0, #f5f7fb 168px, #f5f7fb 100%);
+    background: var(--canvas);
   }
 
   .app-shell {
@@ -14,10 +14,7 @@
     max-width: 430px;
     margin: 0 auto;
     padding: 8px 8px calc(22px + env(safe-area-inset-bottom, 0px));
-    background:
-      radial-gradient(circle at 6% 0%, rgba(37, 99, 235, 0.10), transparent 40%),
-      radial-gradient(circle at 95% 4%, rgba(20, 184, 166, 0.08), transparent 36%),
-      linear-gradient(180deg, #eaf5ff 0, #f5f7fb 178px, #f5f7fb 100%);
+    background: var(--canvas);
   }
 
   .hero-panel {
@@ -684,16 +681,22 @@
     padding: 7px 7px calc(18px + env(safe-area-inset-bottom, 0px));
   }
 
-  .app-chrome-sticky {
+  .schedule-sticky-top {
     top: 0;
     margin: -7px -7px 0;
     padding: 7px 7px 1px;
+    background: var(--canvas);
+  }
+
+  .app-chrome-sticky {
+    background: var(--canvas);
   }
 
   .stats-sticky-top {
     top: 0;
     margin: -7px -7px 0;
     padding: 7px 7px 1px;
+    background: var(--canvas);
   }
 
   .hero-panel,

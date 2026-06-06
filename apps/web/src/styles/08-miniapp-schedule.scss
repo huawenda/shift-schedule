@@ -20,10 +20,7 @@ body {
   max-width: none;
   min-height: 100vh;
   padding: 18px 18px calc(88px + env(safe-area-inset-bottom, 0px));
-  background:
-    radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.10), transparent 34%),
-    radial-gradient(circle at 94% 6%, rgba(20, 184, 166, 0.08), transparent 32%),
-    linear-gradient(180deg, #eef4fb 0%, var(--mini-canvas) 260px, var(--mini-canvas) 100%);
+  background: var(--mini-canvas);
 }
 
 .hero-panel {

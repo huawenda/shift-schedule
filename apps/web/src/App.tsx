@@ -352,21 +352,6 @@ export function App() {
 
   return (
     <main className={`app-shell ${isLoginRoute ? 'auth-shell' : ''}`}>
-      {!isStatsRoute && !isLoginRoute ? (
-        <AppChrome
-          endDate={monthView.endDate}
-          isBooting={isBooting}
-          isSyncing={isSyncing}
-          profile={profile}
-          selectedMonth={selectedMonth}
-          startDate={monthView.startDate}
-          statusText={statusText}
-          onLogout={() => void logout()}
-          onMonthChange={setSelectedMonth}
-          onRefresh={() => void refreshCloudData('同步完成', isStatsRoute)}
-        />
-      ) : null}
-
       {errorText && !isLoginRoute ? <p className="error-banner">{errorText}</p> : null}
 
       {!isConfigured && !isLoginRoute ? (
@@ -406,6 +391,20 @@ export function App() {
             <ScheduleView
               appliedCurrentUser={appliedCurrentUser}
               appliedMonthView={appliedMonthView}
+              chrome={(
+                <AppChrome
+                  endDate={monthView.endDate}
+                  isBooting={isBooting}
+                  isSyncing={isSyncing}
+                  profile={profile}
+                  selectedMonth={selectedMonth}
+                  startDate={monthView.startDate}
+                  statusText={statusText}
+                  onLogout={() => void logout()}
+                  onMonthChange={setSelectedMonth}
+                  onRefresh={() => void refreshCloudData('同步完成', isStatsRoute)}
+                />
+              )}
               overrides={overrides}
               people={appliedMonthView.people}
               profile={profile}

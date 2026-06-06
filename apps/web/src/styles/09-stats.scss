@@ -10,8 +10,7 @@
   top: 0;
   z-index: 22;
   padding-bottom: 1px;
-  background:
-    linear-gradient(180deg, #deecfd 0, #eef4fb 72%, #eef4fb 100%);
+  background: var(--canvas);
 }
 
 .stats-mini-header {
@@ -182,6 +181,7 @@
 }
 
 .stats-personal-pages {
+  position: relative;
   margin: 0 -10px;
   overflow: hidden;
   touch-action: pan-y;
@@ -189,7 +189,10 @@
 }
 
 .stats-personal-track {
+  position: absolute;
+  inset: 0 auto auto 0;
   display: flex;
+  align-items: flex-start;
   width: 200%;
   will-change: transform;
   transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -198,6 +201,7 @@
 .stats-personal-page {
   width: 50%;
   min-width: 0;
+  align-self: flex-start;
   padding: 0 10px;
 }
 

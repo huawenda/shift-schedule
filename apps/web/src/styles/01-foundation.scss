@@ -1,12 +1,12 @@
 :root {
   color: #142033;
-  background: #eef4fb;
+  background: #f5f7fb;
   font-family: "WeChat Sans Std", "WeChat Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
-  --canvas: #eef4fb;
+  --canvas: #f5f7fb;
   --canvas-soft: #f6f9fd;
   --surface: #ffffff;
   --surface-strong: #fbfdff;
@@ -66,8 +66,7 @@ body {
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
-  background:
-    linear-gradient(180deg, rgba(222, 236, 253, 0.9) 0, var(--canvas) 112px, var(--canvas-soft) 360px, var(--canvas-soft) 100%);
+  background: var(--canvas);
   color: var(--ink);
   -webkit-touch-callout: none;
   -webkit-user-select: none;

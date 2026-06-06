@@ -1,4 +1,4 @@
-import { useRef, useState, type TouchEvent } from 'react'
+import { useRef, useState, type ReactNode, type TouchEvent } from 'react'
 import {
   formatScheduleMonthDay,
   getDateLabels,
@@ -48,6 +48,7 @@ interface MonthScheduleView {
 interface ScheduleViewProps {
   appliedCurrentUser: PersonSchedule
   appliedMonthView: MonthScheduleView
+  chrome?: ReactNode
   overrides: CloudOverrides
   people: PersonSchedule[]
   profile: CurrentUserProfile | null
@@ -65,6 +66,7 @@ const scheduleMonthOrder: ScheduleMonth[] = ['05', '06', '07', '08', '09', '10',
 export function ScheduleView({
   appliedCurrentUser,
   appliedMonthView,
+  chrome,
   overrides,
   people,
   profile,
@@ -113,33 +115,16 @@ export function ScheduleView({
 
   return (
     <>
-      <section className="current-user-card">
-        <div className="section-header">
-          <div>
-            <span className="muted-label">当前用户</span>
-            <h2 className="current-user-title">
-              <span>{appliedCurrentUser.name}</span>
-              {profile?.isAdmin ? <span className="admin-badge inline">管理员</span> : null}
-              <span>{appliedCurrentUser.group}</span>
-            </h2>
-          </div>
-          <div className="user-switch-control">
-            <button className="user-switch-button stats-entry-button" type="button" onClick={onStatsOpen}>统计</button>
-            {profile?.isAdmin ? (
-              <button className="user-switch-button" type="button" onClick={() => setIsUserPickerOpen(true)}>切换</button>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="summary-grid">
-          {shiftLabels.map(shift => (
-            <div className={`summary-item ${getShiftClassName(shift)}`} key={shift}>
-              <strong>{summary[shift] ?? 0}</strong>
-              <span>{shift}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      <div className="schedule-sticky-top">
+        {chrome}
+        <CurrentUserCard
+          appliedCurrentUser={appliedCurrentUser}
+          isAdmin={profile?.isAdmin === true}
+          summary={summary}
+          onOpenStats={onStatsOpen}
+          onOpenUserPicker={() => setIsUserPickerOpen(true)}
+        />
+      </div>
 
       <section className="calendar-card" onTouchStart={handleCalendarTouchStart} onTouchEnd={handleCalendarTouchEnd}>
         <div className="section-header">
@@ -309,5 +294,49 @@ export function ScheduleView({
         </div>
       ) : null}
     </>
+  )
+}
+
+export function CurrentUserCard({
+  appliedCurrentUser,
+  isAdmin,
+  summary,
+  onOpenStats,
+  onOpenUserPicker
+}: {
+  appliedCurrentUser: PersonSchedule
+  isAdmin: boolean
+  summary: ShiftSummary
+  onOpenStats: () => void
+  onOpenUserPicker: () => void
+}) {
+  return (
+    <section className="current-user-card">
+      <div className="section-header">
+        <div>
+          <span className="muted-label">当前用户</span>
+          <h2 className="current-user-title">
+            <span>{appliedCurrentUser.name}</span>
+            {isAdmin ? <span className="admin-badge inline">管理员</span> : null}
+            <span>{appliedCurrentUser.group}</span>
+          </h2>
+        </div>
+        <div className="user-switch-control">
+          <button className="user-switch-button stats-entry-button" type="button" onClick={onOpenStats}>统计</button>
+          {isAdmin ? (
+            <button className="user-switch-button" type="button" onClick={onOpenUserPicker}>切换</button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="summary-grid">
+        {shiftLabels.map(shift => (
+          <div className={`summary-item ${getShiftClassName(shift)}`} key={shift}>
+            <strong>{summary[shift] ?? 0}</strong>
+            <span>{shift}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }

@@ -5,13 +5,17 @@
   padding: 20px 18px 40px;
 }
 
-.app-chrome-sticky {
+.schedule-sticky-top {
   position: sticky;
   top: 0;
   z-index: 20;
-  padding-bottom: 1px;
-  background:
-    linear-gradient(180deg, #deecfd 0, #eef4fb 72%, #eef4fb 100%);
+  margin: -20px -18px 0;
+  padding: 20px 18px 1px;
+  background: var(--canvas);
+}
+
+.app-chrome-sticky {
+  background: var(--canvas);
 }
 
 .hero-panel,
