@@ -11,7 +11,7 @@
   z-index: 22;
   padding-bottom: 1px;
   background:
-    linear-gradient(180deg, rgba(222, 236, 253, 0.96) 0, rgba(238, 244, 251, 0.96) 72%, rgba(238, 244, 251, 0.84) 100%);
+    linear-gradient(180deg, #deecfd 0, #eef4fb 72%, #eef4fb 100%);
 }
 
 .stats-mini-header {
@@ -185,6 +185,7 @@
   margin: 0 -10px;
   overflow: hidden;
   touch-action: pan-y;
+  transition: height 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .stats-personal-track {

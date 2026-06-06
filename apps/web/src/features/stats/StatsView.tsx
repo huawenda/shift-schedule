@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import {
   type AllPeopleMonthlyOvertimeStats,
   calculateOvertimePay,
@@ -72,7 +72,22 @@ export function StatsView({
   onStatsViewModeChange
 }: StatsViewProps) {
   const [personalPage, setPersonalPage] = useState<PersonalPage>(0)
+  const [personalTrackHeight, setPersonalTrackHeight] = useState<number | null>(null)
   const touchStart = useRef<TouchPoint | null>(null)
+  const personalPageRefs = useRef<Array<HTMLDivElement | null>>([])
+
+  useLayoutEffect(() => {
+    const page = personalPageRefs.current[personalPage]
+    if (!page) return
+
+    const updateHeight = () => setPersonalTrackHeight(page.scrollHeight)
+    updateHeight()
+
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(page)
+    return () => observer.disconnect()
+  }, [personalPage, personalStats, salaryCalculation, salaryInputs, statsPerson.name, statsViewMode])
 
   function switchToPersonal() {
     onStatsViewModeChange('personal')
@@ -179,9 +194,14 @@ export function StatsView({
       </div>
 
       {statsViewMode === 'personal' && personalStats ? (
-        <div className="stats-personal-pages" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <div
+          className="stats-personal-pages"
+          style={personalTrackHeight ? { height: personalTrackHeight } : undefined}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="stats-personal-track" style={{ transform: `translateX(-${personalPage * 50}%)` }}>
-            <div className="stats-personal-page">
+            <div className="stats-personal-page" ref={node => { personalPageRefs.current[0] = node }}>
               <PersonalSummary
                 overtimeChartItems={overtimeChartItems}
                 overtimeChartMax={overtimeChartMax}
@@ -193,7 +213,7 @@ export function StatsView({
                 onSalaryInputChange={onSalaryInputChange}
               />
             </div>
-            <div className="stats-personal-page">
+            <div className="stats-personal-page" ref={node => { personalPageRefs.current[1] = node }}>
               <DailyDetails
                 monthEndDate={monthEndDate}
                 monthStartDate={monthStartDate}

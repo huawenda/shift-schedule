@@ -113,7 +113,7 @@ export function ScheduleView({
 
   return (
     <>
-      <section className="current-user-card schedule-user-sticky">
+      <section className="current-user-card">
         <div className="section-header">
           <div>
             <span className="muted-label">当前用户</span>

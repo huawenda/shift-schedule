@@ -11,7 +11,7 @@
   z-index: 20;
   padding-bottom: 1px;
   background:
-    linear-gradient(180deg, rgba(222, 236, 253, 0.96) 0, rgba(238, 244, 251, 0.96) 72%, rgba(238, 244, 251, 0.82) 100%);
+    linear-gradient(180deg, #deecfd 0, #eef4fb 72%, #eef4fb 100%);
 }
 
 .hero-panel,
@@ -226,12 +226,6 @@ h2 {
 .auth-card {
   margin-top: 10px;
   padding: 14px;
-}
-
-.schedule-user-sticky {
-  position: sticky;
-  top: 152px;
-  z-index: 18;
 }
 
 .section-header {
