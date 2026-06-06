@@ -4671,12 +4671,20 @@ h2 {
     margin-bottom: 7px;
   }
 
+  .salary-card {
+    padding: 10px 10px 9px;
+  }
+
   .stats-section-title-row {
     margin-bottom: 10px;
   }
 
   .stats-section-title {
     font-size: 18px;
+  }
+
+  .salary-card .stats-section-title {
+    font-size: 16px;
   }
 
   .stats-person-label,
@@ -4739,20 +4747,20 @@ h2 {
   }
 
   .salary-section {
-    padding: 8px 0 9px;
+    padding: 7px 0 8px;
   }
 
   .salary-section-head {
-    margin-bottom: 6px;
+    margin-bottom: 5px;
   }
 
   .salary-block-title {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .salary-section-total,
   .salary-save-status {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .salary-input-grid,
@@ -4765,21 +4773,26 @@ h2 {
   .salary-input-label,
   .salary-result-label,
   .salary-summary-label {
-    margin-bottom: 5px;
-    font-size: 10px;
+    margin-bottom: 3px;
+    font-size: 9px;
   }
 
   .salary-input-box {
-    min-height: 34px;
-    padding: 0 7px;
-    border: 0;
-    border-radius: 7px;
+    min-height: 29px;
+    padding: 0 6px;
+    border: 1px solid #e4edf7;
+    border-radius: 6px;
     background: #f6f9fd;
     box-shadow: none;
   }
 
-  .salary-input {
+  .salary-input-item .salary-input {
+    min-height: 0;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
     outline: none;
+    background: transparent;
     box-shadow: none;
   }
 
@@ -4787,19 +4800,19 @@ h2 {
   .salary-input,
   .salary-result-value,
   .salary-summary-value {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .salary-rate-line {
-    margin-top: 7px;
-    font-size: 11px;
+    margin-top: 5px;
+    font-size: 10px;
   }
 
   .salary-result-item,
   .salary-summary-item {
-    min-height: 42px;
-    padding: 0 7px;
-    border-radius: 7px;
+    min-height: 36px;
+    padding: 0 6px;
+    border-radius: 6px;
   }
 
   .stats-daily-row {
