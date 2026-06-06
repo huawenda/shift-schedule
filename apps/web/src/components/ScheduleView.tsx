@@ -55,6 +55,7 @@ interface ScheduleViewProps {
   summary: ShiftSummary
   onCurrentUserChange: (personName: string) => void
   onOpenShiftEditor: (personName: string, date: string) => void
+  onStatsOpen: () => void
 }
 
 export function ScheduleView({
@@ -66,7 +67,8 @@ export function ScheduleView({
   selectedMonth,
   summary,
   onCurrentUserChange,
-  onOpenShiftEditor
+  onOpenShiftEditor,
+  onStatsOpen
 }: ScheduleViewProps) {
   const [tableView, setTableView] = useState<ScheduleTableView>('shift')
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false)
@@ -81,14 +83,18 @@ export function ScheduleView({
         <div className="section-header">
           <div>
             <span className="muted-label">当前用户</span>
-            <h2>{appliedCurrentUser.name} / {appliedCurrentUser.group}</h2>
+            <h2 className="current-user-title">
+              <span>{appliedCurrentUser.name}</span>
+              {profile?.isAdmin ? <span className="admin-badge inline">管理员</span> : null}
+              <span>{appliedCurrentUser.group}</span>
+            </h2>
           </div>
-          {profile?.isAdmin ? (
-            <div className="user-switch-control">
-              <span className="admin-badge">管理员</span>
+          <div className="user-switch-control">
+            <button className="user-switch-button stats-entry-button" type="button" onClick={onStatsOpen}>统计</button>
+            {profile?.isAdmin ? (
               <button className="user-switch-button" type="button" onClick={() => setIsUserPickerOpen(true)}>切换</button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
 
         <div className="summary-grid">

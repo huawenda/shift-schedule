@@ -363,7 +363,6 @@ export function App() {
           onLogout={() => void logout()}
           onMonthChange={setSelectedMonth}
           onRefresh={() => void refreshCloudData('同步完成', isStatsRoute)}
-          onStatsOpen={() => void openStatsRoute()}
         />
       ) : null}
 
@@ -409,6 +408,10 @@ export function App() {
               summary={summary}
               onCurrentUserChange={setSchedulePersonName}
               onOpenShiftEditor={openShiftEditor}
+              onStatsOpen={() => {
+                void openStatsRoute()
+                navigate('/stats')
+              }}
             />
           )}
         />

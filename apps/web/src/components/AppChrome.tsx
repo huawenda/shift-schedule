@@ -1,4 +1,3 @@
-import { NavLink } from 'react-router-dom'
 import type { ScheduleMonth } from '@shift-schedule/core'
 import { formatDateForDisplay, monthOptions } from '../appConstants'
 import type { CurrentUserProfile } from '../services/userProfile'
@@ -14,7 +13,6 @@ interface AppChromeProps {
   onLogout: () => void
   onMonthChange: (month: ScheduleMonth) => void
   onRefresh: () => void
-  onStatsOpen: () => void
 }
 
 export function AppChrome({
@@ -27,8 +25,7 @@ export function AppChrome({
   statusText,
   onLogout,
   onMonthChange,
-  onRefresh,
-  onStatsOpen
+  onRefresh
 }: AppChromeProps) {
   return (
     <>
@@ -64,15 +61,6 @@ export function AppChrome({
           <button type="button" onClick={onLogout}>退出</button>
         ) : null}
       </section>
-
-      <nav className="view-tabs" aria-label="切换视图">
-        <NavLink className={({ isActive }) => (isActive ? 'active' : '')} to="/schedule">
-          排班
-        </NavLink>
-        <NavLink className={({ isActive }) => (isActive ? 'active' : '')} to="/stats" onClick={onStatsOpen}>
-          统计
-        </NavLink>
-      </nav>
     </>
   )
 }
