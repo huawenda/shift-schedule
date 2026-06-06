@@ -11,9 +11,9 @@ import {
   type ScheduleMonth,
   type ShiftType
 } from '@shift-schedule/core'
-import type { SalaryInputField, SalarySaveStatus, StatsViewMode } from '../appTypes'
-import { formatOvertimeHours, getShiftClassName } from '../scheduleHelpers'
-import { formatDateForDisplay, monthOptions } from '../appConstants'
+import type { SalaryInputField, SalarySaveStatus, StatsViewMode } from '../../appTypes'
+import { formatOvertimeHours, getShiftClassName } from '../../scheduleHelpers'
+import { formatDateForDisplay, monthOptions } from '../../appConstants'
 
 interface PersonSchedule {
   group: string

@@ -6,14 +6,14 @@ import {
   type LeaveDuration,
   type ShiftType
 } from '@shift-schedule/core'
-import { leaveDurationOptions } from '../appConstants'
-import type { ShiftEditorState } from '../appTypes'
+import { leaveDurationOptions } from '../../appConstants'
+import type { ShiftEditorState } from '../../appTypes'
 import {
   canRecordOvertime,
   formatOvertimeHours,
   getEditorEffectiveShift,
   getShiftClassName
-} from '../scheduleHelpers'
+} from '../../scheduleHelpers'
 
 interface ShiftEditorModalProps {
   editor: ShiftEditorState

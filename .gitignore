@@ -14,3 +14,4 @@ yarn-error.log*
 pnpm-debug.log*
 h5-dev.log
 web-dev*.log
+.codex-dev-web.*.log

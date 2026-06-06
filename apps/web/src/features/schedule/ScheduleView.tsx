@@ -9,10 +9,10 @@ import {
   type ShiftType,
   type ScheduleMonth
 } from '@shift-schedule/core'
-import { shiftLabels } from '../appConstants'
-import { getShiftClassName } from '../scheduleHelpers'
-import type { CloudOverrides } from '../services/cloudRecords'
-import type { CurrentUserProfile } from '../services/userProfile'
+import { shiftLabels } from '../../appConstants'
+import { getShiftClassName } from '../../scheduleHelpers'
+import type { CloudOverrides } from '../../services/cloudRecords'
+import type { CurrentUserProfile } from '../../services/userProfile'
 
 type ScheduleTableView = 'shift' | 'name'
 

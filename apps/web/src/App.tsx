@@ -19,10 +19,10 @@ import {
   type ShiftType
 } from '@shift-schedule/core'
 import { AppChrome } from './components/AppChrome'
-import { AuthPanel } from './components/AuthPanel'
-import { ScheduleView } from './components/ScheduleView'
-import { ShiftEditorModal } from './components/ShiftEditorModal'
-import { StatsView } from './components/StatsView'
+import { AuthPanel } from './features/auth/AuthPanel'
+import { ScheduleView } from './features/schedule/ScheduleView'
+import { ShiftEditorModal } from './features/schedule/ShiftEditorModal'
+import { StatsView } from './features/stats/StatsView'
 import { defaultCurrentUserName } from './appConstants'
 import type { AuthMode, SalaryInputField, SalarySaveStatus, ShiftEditorState, StatsViewMode } from './appTypes'
 import {

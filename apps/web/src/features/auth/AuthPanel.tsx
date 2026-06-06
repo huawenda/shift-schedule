@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import type { SchedulePerson } from '@shift-schedule/core'
-import type { AuthMode } from '../appTypes'
+import type { AuthMode } from '../../appTypes'
 
 interface AuthPanelProps {
   authMode: AuthMode
