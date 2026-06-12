@@ -10,6 +10,7 @@ import {
   type ScheduleMonth
 } from '@shift-schedule/core'
 import { shiftLabels } from '../../appConstants'
+import { useBackDismiss } from '../../hooks/useBackDismiss'
 import { getShiftClassName } from '../../scheduleHelpers'
 import type { CloudOverrides } from '../../services/cloudRecords'
 import type { CurrentUserProfile } from '../../services/userProfile'
@@ -85,6 +86,8 @@ export function ScheduleView({
   const dateLabels = getDateLabels(appliedMonthView.startDate, visibleDates)
   const calendarCells = getPersonMonthCalendarCells(scheduleData, selectedMonth, appliedCurrentUser.name)
   const todayMonthDay = formatScheduleMonthDay(new Date())
+
+  useBackDismiss(isUserPickerOpen, () => setIsUserPickerOpen(false))
 
   function handleCalendarTouchStart(event: TouchEvent<HTMLElement>) {
     const touch = event.touches[0]

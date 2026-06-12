@@ -12,6 +12,7 @@ import {
   type ShiftType
 } from '@shift-schedule/core'
 import type { SalaryInputField, SalarySaveStatus, StatsViewMode } from '../../appTypes'
+import { useBackDismiss } from '../../hooks/useBackDismiss'
 import { formatOvertimeHours, getShiftClassName } from '../../scheduleHelpers'
 import { formatDateForDisplay, monthOptions } from '../../appConstants'
 
@@ -77,6 +78,9 @@ export function StatsView({
   const [isStatsPersonPickerOpen, setIsStatsPersonPickerOpen] = useState(false)
   const touchStart = useRef<TouchPoint | null>(null)
   const personalPageRefs = useRef<Array<HTMLDivElement | null>>([])
+
+  useBackDismiss(isMonthPickerOpen, () => setIsMonthPickerOpen(false))
+  useBackDismiss(isStatsPersonPickerOpen, () => setIsStatsPersonPickerOpen(false))
 
   useLayoutEffect(() => {
     const page = personalPageRefs.current[personalPage]

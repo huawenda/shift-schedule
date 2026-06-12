@@ -23,6 +23,7 @@ import { AuthPanel } from './features/auth/AuthPanel'
 import { ScheduleView } from './features/schedule/ScheduleView'
 import { ShiftEditorModal } from './features/schedule/ShiftEditorModal'
 import { StatsView } from './features/stats/StatsView'
+import { useBackDismiss } from './hooks/useBackDismiss'
 import { defaultCurrentUserName } from './appConstants'
 import type { AuthMode, SalaryInputField, SalarySaveStatus, ShiftEditorState, StatsViewMode } from './appTypes'
 import {
@@ -78,6 +79,9 @@ export function App() {
   const isStatsRoute = location.pathname.startsWith('/stats')
   const isLoginRoute = location.pathname.startsWith('/login')
   const isAdminUser = profile?.isAdmin === true
+
+  useBackDismiss(Boolean(shiftEditor), () => setShiftEditor(null))
+
   const monthView = useMemo(() => getMonthScheduleView(scheduleData, selectedMonth), [selectedMonth])
   const currentUserName = isAdminUser
     ? schedulePersonName
