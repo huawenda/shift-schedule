@@ -1489,3 +1489,89 @@
 
 }
 
+@media (min-width: 1024px) {
+  .app-shell {
+    width: min(1200px, calc(100% - 48px));
+    max-width: 1200px;
+    padding: 24px 24px 48px;
+  }
+
+  .schedule-sticky-top {
+    margin: -24px -24px 0;
+    padding: 24px 24px 1px;
+  }
+
+  .hero-panel {
+    min-height: 64px;
+    padding: 10px 12px;
+  }
+
+  .month-tabs {
+    gap: 8px;
+    padding: 6px;
+  }
+
+  .month-tab {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .current-user-card,
+  .calendar-card,
+  .schedule-card {
+    margin-top: 14px;
+  }
+
+  .current-user-card {
+    padding: 18px;
+  }
+
+  .summary-grid {
+    gap: 14px;
+  }
+
+  .summary-item {
+    min-height: 70px;
+  }
+
+  .calendar-card {
+    padding: 18px;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    gap: 10px;
+  }
+
+  .calendar-cell {
+    height: 86px;
+    border-radius: 12px;
+  }
+
+  .schedule-card {
+    padding: 0;
+  }
+
+  .table-toolbar {
+    padding: 16px 18px 14px;
+  }
+
+  .table-shell {
+    max-width: 100%;
+  }
+
+  .table-scroll {
+    scrollbar-width: thin;
+  }
+
+  .table-scroll::-webkit-scrollbar {
+    display: block;
+    height: 8px;
+  }
+
+  .table-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c8d3e1;
+  }
+}
+
