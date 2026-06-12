@@ -439,7 +439,7 @@ export function App() {
               statsViewMode={statsViewMode}
               teamChartMax={teamChartMax}
               teamStats={teamStats}
-              onBack={() => navigate('/schedule')}
+              onBack={() => navigate('/schedule', { replace: true })}
               onMonthChange={setSelectedMonth}
               onRefresh={() => void refreshCloudData('统计数据已同步', true)}
               onSalaryInputChange={(field, value) => void setSalaryInputValue(field, value)}

@@ -50,9 +50,11 @@ export function ShiftEditorModal({
 
         <div className="editor-group">
           <span className="editor-label">默认班次</span>
-          <button className={`editor-option ${editor.selectedShift === 'default' ? 'active' : ''}`} type="button" onClick={() => onShiftChange('default')}>
-            <span className={`shift-chip ${getShiftClassName(editor.baseShift)}`}>{editor.baseShift}</span>
-          </button>
+          <div className="editor-options">
+            <button className={`editor-option ${editor.selectedShift === 'default' ? 'active' : ''}`} type="button" onClick={() => onShiftChange('default')}>
+              <span className={`shift-chip ${getShiftClassName(editor.baseShift)}`}>{editor.baseShift}</span>
+            </button>
+          </div>
         </div>
 
         <div className="editor-group">

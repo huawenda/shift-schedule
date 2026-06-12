@@ -997,43 +997,59 @@
 
   .stats-picker-backdrop,
   .user-picker-backdrop {
-    padding: 8px;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
   }
 
   .stats-picker,
   .user-picker {
     width: 100%;
     max-width: 430px;
-    max-height: calc(100vh - 72px);
-    border-radius: 18px;
+    max-height: min(82vh, 620px);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 32px rgba(15, 23, 42, 0.18);
   }
 
   .stats-picker .user-picker-header,
   .user-picker .user-picker-header {
-    padding: 10px 12px;
+    padding: 12px 14px;
+  }
+
+  .stats-picker .user-picker-header h2,
+  .user-picker .user-picker-header h2 {
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  .stats-picker .user-picker-header .ghost-button,
+  .user-picker .user-picker-header .ghost-button {
+    min-width: 48px;
+    height: 30px;
+    font-size: 11px;
   }
 
   .stats-picker-list,
   .user-picker-list {
-    max-height: calc(100vh - 128px);
+    max-height: calc(82vh - 56px);
   }
 
   .stats-picker-list button,
   .user-picker-list button {
-    min-height: 64px;
+    min-height: 52px;
     padding: 0 14px;
   }
 
   .stats-picker-list strong,
   .user-picker-list strong {
-    font-size: 20px;
-    font-weight: 750;
+    font-size: 17px;
+    font-weight: 850;
   }
 
   .picker-check {
-    width: 20px;
-    height: 20px;
-    flex-basis: 20px;
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
   }
 
   .stats-page-indicator {
