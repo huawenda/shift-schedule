@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
   type AllPeopleMonthlyOvertimeStats,
   calculateOvertimePay,
@@ -73,6 +73,8 @@ export function StatsView({
 }: StatsViewProps) {
   const [personalPage, setPersonalPage] = useState<PersonalPage>(0)
   const [personalTrackHeight, setPersonalTrackHeight] = useState<number | null>(null)
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false)
+  const [isStatsPersonPickerOpen, setIsStatsPersonPickerOpen] = useState(false)
   const touchStart = useRef<TouchPoint | null>(null)
   const personalPageRefs = useRef<Array<HTMLDivElement | null>>([])
 
@@ -154,27 +156,23 @@ export function StatsView({
         </div>
 
         <div className={`stats-filter-card ${statsViewMode === 'personal' ? 'has-person-filter' : ''}`}>
-          <label className="stats-filter-item">
+          <div className="stats-filter-item">
             <span className="stats-filter-label">月份</span>
-            <select className="stats-filter-select" value={selectedMonth} onChange={event => onMonthChange(event.target.value as ScheduleMonth)}>
-              {monthOptions.map(month => (
-                <option key={month.value} value={month.value}>{month.label}</option>
-              ))}
-            </select>
-          </label>
+            <button className="stats-filter-trigger" type="button" onClick={() => setIsMonthPickerOpen(true)}>
+              {monthOptions.find(month => month.value === selectedMonth)?.label ?? `${Number(selectedMonth)}月`}
+            </button>
+          </div>
           {statsViewMode === 'personal' ? (
-            <label className="stats-filter-item">
+            <div className="stats-filter-item">
               <span className="stats-filter-label">用户</span>
               {isAdminUser ? (
-                <select className="stats-filter-select" value={statsPerson.name} onChange={event => onStatsPersonChange(event.target.value)}>
-                  {scheduleData.people.map(person => (
-                    <option key={person.name} value={person.name}>{person.name} / {person.group}</option>
-                  ))}
-                </select>
+                <button className="stats-filter-trigger" type="button" onClick={() => setIsStatsPersonPickerOpen(true)}>
+                  {statsPerson.name} / {statsPerson.group}
+                </button>
               ) : (
                 <strong className="stats-filter-value">{statsPerson.name} / {statsPerson.group}</strong>
               )}
-            </label>
+            </div>
           ) : null}
         </div>
 
@@ -228,7 +226,69 @@ export function StatsView({
       {statsViewMode === 'team' && isAdminUser ? (
         <TeamStatsSections teamChartMax={teamChartMax} teamStats={teamStats} />
       ) : null}
+
+      {isMonthPickerOpen ? (
+        <PickerOverlay title="选择月份" onClose={() => setIsMonthPickerOpen(false)}>
+          {monthOptions.map(month => (
+            <button
+              className={selectedMonth === month.value ? 'active' : ''}
+              key={month.value}
+              type="button"
+              onClick={() => {
+                onMonthChange(month.value)
+                setIsMonthPickerOpen(false)
+              }}
+            >
+              <strong>{month.label}</strong>
+              <span className="picker-check" aria-hidden="true" />
+            </button>
+          ))}
+        </PickerOverlay>
+      ) : null}
+
+      {isStatsPersonPickerOpen ? (
+        <PickerOverlay title="切换用户" onClose={() => setIsStatsPersonPickerOpen(false)}>
+          {scheduleData.people.map(person => (
+            <button
+              className={person.name === statsPerson.name ? 'active' : ''}
+              key={person.name}
+              type="button"
+              onClick={() => {
+                onStatsPersonChange(person.name)
+                setIsStatsPersonPickerOpen(false)
+              }}
+            >
+              <strong>{person.name} / {person.group}</strong>
+              <span className="picker-check" aria-hidden="true" />
+            </button>
+          ))}
+        </PickerOverlay>
+      ) : null}
     </section>
+  )
+}
+
+function PickerOverlay({
+  children,
+  title,
+  onClose
+}: {
+  children: ReactNode
+  title: string
+  onClose: () => void
+}) {
+  return (
+    <div className="user-picker-backdrop stats-picker-backdrop" role="presentation" onClick={onClose}>
+      <section className="user-picker stats-picker" role="dialog" aria-modal="true" aria-label={title} onClick={event => event.stopPropagation()}>
+        <div className="user-picker-header">
+          <h2>{title}</h2>
+          <button className="ghost-button" type="button" onClick={onClose}>关闭</button>
+        </div>
+        <div className="user-picker-list stats-picker-list">
+          {children}
+        </div>
+      </section>
+    </div>
   )
 }
 

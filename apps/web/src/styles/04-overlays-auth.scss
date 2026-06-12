@@ -50,8 +50,8 @@
 }
 
 .user-picker-list button.active {
-  background: var(--primary-soft);
-  color: var(--primary);
+  background: var(--surface);
+  color: var(--ink);
 }
 
 .user-picker-list strong {
@@ -63,6 +63,25 @@
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
+}
+
+.picker-check {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border: 2px solid #4d5562;
+  border-radius: 999px;
+  box-sizing: border-box;
+}
+
+.user-picker-list button.active .picker-check {
+  border: 3px solid #506aa5;
+  box-shadow: inset 0 0 0 4px #ffffff;
+  background: #506aa5;
+}
+
+.stats-picker {
+  overflow: hidden;
 }
 
 .shift-editor {
@@ -132,24 +151,6 @@
   min-width: 64px;
   height: 32px;
   font-size: 15px;
-}
-
-.editor-default-shift {
-  width: max-content;
-  min-width: 0;
-  align-self: flex-start;
-}
-
-.editor-default-shift.active {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-  transform: none;
-}
-
-.editor-default-shift.active .shift-chip {
-  border: 1px solid rgba(37, 99, 235, 0.22);
-  box-shadow: 0 2px 8px rgba(21, 32, 54, 0.10);
 }
 
 .editor-option:disabled {

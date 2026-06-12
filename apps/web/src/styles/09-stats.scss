@@ -135,10 +135,13 @@
 }
 
 .stats-filter-select,
+.stats-filter-trigger,
 .stats-filter-value {
   appearance: none;
   -webkit-appearance: none;
   width: 100%;
+  min-height: 30px;
+  padding: 0;
   overflow: hidden;
   border: 0;
   outline: none;
@@ -147,8 +150,10 @@
   font-size: 24px;
   font-weight: 900;
   line-height: 1.2;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .stats-filter-select::-ms-expand {
@@ -953,6 +958,7 @@
   }
 
   .stats-filter-select,
+  .stats-filter-trigger,
   .stats-filter-value {
     font-size: 15px;
   }

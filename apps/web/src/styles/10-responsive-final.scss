@@ -431,6 +431,7 @@
   }
 
   .stats-filter-select,
+  .stats-filter-trigger,
   .stats-filter-value {
     font-size: 15px;
   }
@@ -989,8 +990,50 @@
   }
 
   .stats-filter-select,
+  .stats-filter-trigger,
   .stats-filter-value {
     font-size: 13px;
+  }
+
+  .stats-picker-backdrop,
+  .user-picker-backdrop {
+    padding: 8px;
+  }
+
+  .stats-picker,
+  .user-picker {
+    width: 100%;
+    max-width: 430px;
+    max-height: calc(100vh - 72px);
+    border-radius: 18px;
+  }
+
+  .stats-picker .user-picker-header,
+  .user-picker .user-picker-header {
+    padding: 10px 12px;
+  }
+
+  .stats-picker-list,
+  .user-picker-list {
+    max-height: calc(100vh - 128px);
+  }
+
+  .stats-picker-list button,
+  .user-picker-list button {
+    min-height: 64px;
+    padding: 0 14px;
+  }
+
+  .stats-picker-list strong,
+  .user-picker-list strong {
+    font-size: 20px;
+    font-weight: 750;
+  }
+
+  .picker-check {
+    width: 20px;
+    height: 20px;
+    flex-basis: 20px;
   }
 
   .stats-page-indicator {
@@ -1358,25 +1401,6 @@
     min-width: 44px;
     height: 22px;
     font-size: 10px;
-  }
-
-  .editor-default-shift {
-    width: max-content;
-    min-width: 0;
-    align-self: flex-start;
-    padding: 3px;
-  }
-
-  .editor-default-shift.active {
-    border-color: transparent;
-    background: transparent;
-    box-shadow: none;
-    transform: none;
-  }
-
-  .editor-default-shift.active .shift-chip {
-    border: 1px solid rgba(37, 99, 235, 0.22);
-    box-shadow: 0 2px 8px rgba(21, 32, 54, 0.10);
   }
 
   .overtime-input-row {

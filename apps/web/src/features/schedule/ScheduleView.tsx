@@ -285,8 +285,8 @@ export function ScheduleView({
                     setIsUserPickerOpen(false)
                   }}
                 >
-                  <strong>{person.name}</strong>
-                  <span>{person.group}</span>
+                  <strong>{person.name} / {person.group}</strong>
+                  <span className="picker-check" aria-hidden="true" />
                 </button>
               ))}
             </div>
