@@ -1126,11 +1126,12 @@
   .salary-input-label,
   .salary-result-label,
   .salary-summary-label {
+    margin-bottom: 2px;
     font-size: 8px;
   }
 
   .salary-input-box {
-    min-height: 27px;
+    min-height: 31px;
     padding: 0 5px;
     border-radius: 6px;
   }
