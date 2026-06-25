@@ -62,6 +62,7 @@ interface ScheduleViewProps {
 }
 
 type TouchPoint = { x: number; y: number }
+type CalendarSlideDirection = 'next' | 'prev' | null
 const scheduleMonthOrder: ScheduleMonth[] = ['05', '06', '07', '08', '09', '10', '11', '12']
 
 export function ScheduleView({
@@ -80,6 +81,7 @@ export function ScheduleView({
 }: ScheduleViewProps) {
   const [tableView, setTableView] = useState<ScheduleTableView>('shift')
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false)
+  const [calendarSlideDirection, setCalendarSlideDirection] = useState<CalendarSlideDirection>(null)
   const calendarTouchStart = useRef<TouchPoint | null>(null)
   const calendarSwipeHandled = useRef(false)
   const visibleDates = appliedMonthView.dates
@@ -109,6 +111,7 @@ export function ScheduleView({
     const nextMonth = scheduleMonthOrder[nextIndex]
     if (nextMonth) {
       calendarSwipeHandled.current = true
+      setCalendarSlideDirection(deltaX < 0 ? 'next' : 'prev')
       onMonthChange(nextMonth)
       window.setTimeout(() => {
         calendarSwipeHandled.current = false
@@ -130,7 +133,12 @@ export function ScheduleView({
       </div>
 
       <div className="schedule-content-grid">
-        <section className="calendar-card" onTouchStart={handleCalendarTouchStart} onTouchEnd={handleCalendarTouchEnd}>
+        <section
+          className={`calendar-card ${calendarSlideDirection ? `calendar-slide-${calendarSlideDirection}` : ''}`}
+          onAnimationEnd={() => setCalendarSlideDirection(null)}
+          onTouchStart={handleCalendarTouchStart}
+          onTouchEnd={handleCalendarTouchEnd}
+        >
           <div className="section-header">
             <h2>排班日历</h2>
             <span className="muted-label">2026年{Number(selectedMonth)}月</span>
@@ -142,7 +150,7 @@ export function ScheduleView({
             ))}
           </div>
 
-          <div className="calendar-grid">
+          <div className="calendar-grid" key={selectedMonth}>
             {calendarCells.map(cell => {
               const overrideKey = getOverrideKey(appliedCurrentUser.name, cell.key)
               const shift = overrides.shiftOverrides[overrideKey] ?? cell.shift

@@ -78,6 +78,8 @@ export function App() {
   const isConfigured = isSupabaseConfigured()
   const isStatsRoute = location.pathname.startsWith('/stats')
   const isLoginRoute = location.pathname.startsWith('/login')
+  const locationState = location.state as { fromSchedule?: boolean } | null
+  const hasAppHistoryEntry = location.key !== 'default'
   const isAdminUser = profile?.isAdmin === true
 
   useBackDismiss(Boolean(shiftEditor), () => setShiftEditor(null))
@@ -224,7 +226,7 @@ export function App() {
     setSalaryInputRecords({})
     setSchedulePersonName(defaultCurrentUserName)
     setStatusText('已退出登录')
-    if (isConfigured) navigate('/login')
+    if (isConfigured) navigate('/login', { replace: true })
   }
 
   async function openStatsRoute() {
@@ -260,7 +262,7 @@ export function App() {
   function openShiftEditor(personName: string, date: string) {
     if (isConfigured && !profile?.profile) {
       setErrorText('请先登录后再编辑排班')
-      navigate('/login')
+      navigate('/login', { replace: true })
       return
     }
 
@@ -419,7 +421,7 @@ export function App() {
               onOpenShiftEditor={openShiftEditor}
               onStatsOpen={() => {
                 void openStatsRoute()
-                navigate('/stats')
+                navigate('/stats', { state: { fromSchedule: true } })
               }}
             />
           )}
@@ -439,11 +441,18 @@ export function App() {
               salaryInputs={salaryInputs}
               salarySaveStatus={salarySaveStatus}
               selectedMonth={selectedMonth}
+              shouldAnimateEntry={locationState?.fromSchedule === true}
               statsPerson={statsPerson}
               statsViewMode={statsViewMode}
               teamChartMax={teamChartMax}
               teamStats={teamStats}
-              onBack={() => navigate('/schedule', { replace: true })}
+              onBack={() => {
+                if (hasAppHistoryEntry) {
+                  navigate(-1)
+                } else {
+                  navigate('/schedule', { replace: true })
+                }
+              }}
               onMonthChange={setSelectedMonth}
               onRefresh={() => void refreshCloudData('统计数据已同步', true)}
               onSalaryInputChange={(field, value) => void setSalaryInputValue(field, value)}

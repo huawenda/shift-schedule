@@ -34,6 +34,7 @@ interface StatsViewProps {
   salaryInputs: SalaryInputValues
   salarySaveStatus: SalarySaveStatus
   selectedMonth: ScheduleMonth
+  shouldAnimateEntry?: boolean
   statsPerson: PersonSchedule
   statsViewMode: StatsViewMode
   teamChartMax: number
@@ -61,6 +62,7 @@ export function StatsView({
   salaryInputs,
   salarySaveStatus,
   selectedMonth,
+  shouldAnimateEntry = false,
   statsPerson,
   statsViewMode,
   teamChartMax,
@@ -124,7 +126,7 @@ export function StatsView({
   }
 
   return (
-    <section className="stats-page-mini">
+    <section className={`stats-page-mini ${shouldAnimateEntry ? 'stats-page-enter' : ''}`}>
       <div className="stats-sticky-top">
         <header className="stats-mini-header">
           <button className="stats-back-button" type="button" onClick={onBack}>返回</button>

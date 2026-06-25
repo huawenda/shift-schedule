@@ -5,6 +5,7 @@
   "description": "倒班表 Web/PWA 主线与小程序旁支",
   "scripts": {
     "dev:web": "pnpm --filter @shift-schedule/web dev",
+    "dev:web:https": "node scripts/dev-web-https.mjs",
     "build:web": "pnpm --filter @shift-schedule/web build",
     "preview:web": "pnpm --filter @shift-schedule/web preview",
     "typecheck:web": "pnpm --filter @shift-schedule/web typecheck",
