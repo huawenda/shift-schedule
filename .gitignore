@@ -15,3 +15,10 @@ pnpm-debug.log*
 h5-dev.log
 web-dev*.log
 .codex-dev-web.*.log
+
+# Android / 便携工具链
+.tooling/
+.gradle/
+**/build/
+local.properties
+*.keystore
