@@ -10,8 +10,8 @@ describe('scheduleData', () => {
     expect(scheduleData.dates[244]).toBe('12/19')
   })
 
-  it('contains all 14 people and 245 shifts per person', () => {
-    expect(scheduleData.people).toHaveLength(14)
+  it('contains all 13 people and 245 shifts per person', () => {
+    expect(scheduleData.people).toHaveLength(13)
     expect(scheduleData.people.every(person => person.shifts.length === 245)).toBe(true)
   })
 

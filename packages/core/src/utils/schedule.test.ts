@@ -178,7 +178,7 @@ describe('schedule utilities', () => {
     expect(mayView.startDate).toBe('2026-04-20')
     expect(mayView.endDate).toBe('2026-05-19')
     expect(mayView.dates).toHaveLength(30)
-    expect(mayView.people).toHaveLength(14)
+    expect(mayView.people).toHaveLength(13)
     expect(mayView.people[0]).toEqual(
       expect.objectContaining({
         name: '华文达',
