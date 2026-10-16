@@ -13,6 +13,10 @@
   flex: 0 0 auto;
   overflow: hidden;
   border: 1px solid var(--rule);
+  /* 外框保持 --rule。踩过的坑：曾经把它改成 --ink 想「加重底线」，
+     但 --ink 是 #aebac7 —— 浅灰白，不是黑色，改完整条矩阵下框线变成
+     一道刺眼的白边，比原来的浅灰更糟。加重 ≠ 提亮，
+     这个深色界面里最重的颜色是 --face-0(#0e1216)。 */
   border-radius: var(--r-panel);
   background: var(--face-1);
 }
@@ -96,8 +100,15 @@
   flex-direction: column;
   justify-content: center;
   gap: 1px;
-  border-right: 1px solid var(--rule);
   color: var(--ink-lo);
+}
+
+/* 日期表头刻意不画竖线。
+   竖线是数据区的分隔工具 —— 下面 13 行 × 30 列需要它才读得出「哪一格
+   对哪一天」。表头只有一行，下面密密的竖线已经说明了列的边界，表头再画
+   一遍是重复。密集网格里少一层线，表头反而更清楚。 */
+.roster-row > :last-child {
+  border-right: 0;
 }
 
 .date-head-day {
@@ -124,7 +135,10 @@
   justify-content: space-between;
   gap: var(--sp-1);
   padding: 0 var(--sp-2);
-  border-bottom: 1px solid var(--rule);
+  /* 与 .roster-cell 的行分隔线同色（--face-0）。两侧一旦不同色，
+     矩阵底部就会出现「左半浅灰、右半发黑」的分界 —— 分界正好落在
+     姓名轨右缘，是最容易被当成 bug 的那种视觉断裂。 */
+  box-shadow: inset 0 -1px 0 var(--face-0);
 }
 
 .rail-head {
@@ -162,17 +176,15 @@
   grid-auto-columns: minmax(var(--cell-w), 1fr);
   grid-auto-flow: column;
   grid-template-rows: 1fr;
-  border-bottom: 1px solid var(--rule);
 }
 
-/* 「按姓名」视图不需要单独降字号了：列宽下限已经提到 40px，
-   3 个汉字 × 12px = 36px 放得下。低于 40px 就会折行 —— 那才是真正要避免的。 */
-.roster-row:last-child {
-  border-bottom: 0;
-}
+/* 班次块之间画一条明确的黑色分隔线。
+   用 --face-0（#0e1216），不是 --ink（#aebac7，那是浅灰白）。
+   这个深色界面里最重的颜色就是画布色，它压在任何班次底色之上都读得出
+   「这里是行的边界」，而发丝线 --rule 压在色块上会发灰、读不出来。
 
-/* nowrap 是硬要求：格子里是「白班」或「华文达」这类 2~3 字标签，
-   一旦列宽不足就会折行，行高被撑高，整张表参差。宁可横向滚动。 */
+   用 inset box-shadow 而不是 border-bottom：阴影画在格子内侧，不占布局
+   高度，所以 .has-overtime 那条 2px 加班标记仍然画在格子外缘，两者不打架。 */
 .roster-cell {
   position: relative;
   display: grid;
@@ -181,6 +193,7 @@
   border: 0;
   border-right: 1px solid rgba(10, 14, 18, 0.55);
   background: var(--shift-fill, var(--face-2));
+  box-shadow: inset 0 -1px 0 var(--face-0);
   color: var(--shift-ink, var(--ink));
   font-size: 12px;
   font-weight: 600;
@@ -222,9 +235,13 @@
 
 /* 有加班时长：底缘 2px 条。
    刻意用中性 --ink 而不是 --signal：白色只保留给「今天 / 当前 / 主操作」，
-   一个信号色只能有一个含义，否则读图的人必须查表。 */
+   一个信号色只能有一个含义，否则读图的人必须查表。
+
+   用 inset shadow 叠在 1px 黑线之上（而不是 border-bottom），这样它不占
+   布局高度，行高不会被撑大 —— border-bottom: 2px 会把每行 28px 顶到 30px，
+   13 行累积下来整表错位 26px。 */
 .roster-cell.has-overtime {
-  border-bottom: 2px solid var(--ink);
+  box-shadow: inset 0 -1px 0 var(--face-0), inset 0 -3px 0 var(--ink);
 }
 
 /* 保存确认：该格闪一下（动效唯一出现在「回答用户动作」上） */
@@ -338,23 +355,22 @@
   line-height: 1;
 }
 
-.calendar-lunar {
-  color: var(--ink-lo);
-  font-size: 9px;
+/* 日历格子里直接写班次名，不再用农历/色条。
+   农历和节假日对这个工具没有决策价值：倒班表回答的是「这天谁上什么班」，
+   农历占了同样的位置却回答不了这个问题。腾出来的空间给班次名 ——
+   排班表里是「文字 + 底色」，日历改成同一套语言，两处读法一致，
+   也符合全局那条规则：颜色只能配着班次名出现，不能单独承载信息。 */
+.calendar-shift {
+  color: var(--shift-ink, var(--ink));
+  font-size: 10px;
+  font-weight: 600;
   line-height: 1;
+  white-space: nowrap;
 }
 
-.calendar-lunar.is-festival {
-  color: var(--specday-ink);
-}
-
-/* 班次色条：日历用色条，表格用文字，同一套语义色 */
-.calendar-bar {
-  width: 60%;
-  height: 3px;
-  margin-top: 2px;
-  background: var(--shift-fill);
-  box-shadow: inset 0 0 0 1px var(--shift-ink);
+/* 周期外日期的班次名同样降调，跟着 opacity 一起走 */
+.calendar-cell.is-outside .calendar-shift {
+  opacity: 0.8;
 }
 
 .calendar-cell.is-empty {
@@ -371,13 +387,20 @@
   opacity: 0.62;
 }
 
+/* 特勤格在周期外时同样降调，否则 is-outside 的 22% 底色会盖掉
+   is-special-* 的底色，那些天就退回普通灰格，看不出是特勤。
+   权重 60% → 13%，与本月保持同一个比例关系，只是整体压暗。 */
+.calendar-cell.is-outside.is-special-day {
+  background: color-mix(in srgb, var(--specday-fill) 13%, var(--face-0));
+}
+
+.calendar-cell.is-outside.is-special-night {
+  background: color-mix(in srgb, var(--specnight-fill) 13%, var(--face-0));
+}
+
 .calendar-cell.is-outside .calendar-day {
   color: var(--ink);
   font-weight: 500;
-}
-
-.calendar-cell.is-outside .calendar-bar {
-  opacity: 0.55;
 }
 
 .calendar-cell.is-outside:hover {
@@ -397,11 +420,34 @@
   background: var(--legal-fill);
 }
 
+/* 特勤（白特 / 夜特）在日历里也给底色，和法定一样属于「不常规的班次」。
+   权重定 60%（不是原样铺 --specday-fill）—— 浏览器实测各权重的色相分离度：
+     30%: 白vs夜 70°  夜vs法  7°   ← 夜特和法定几乎同色，分不出
+     60%: 白vs夜 29°  夜vs法 17°   ← 采用：三个色块都能互认
+     90%: 白vs夜 24°  夜vs法 20°   ← 特勤已接近法定本体的浓度
+   法定是 --legal-fill 原色（饱和度 51.8%），特勤压到 41% / 38.5%，
+   浓淡有序：普通 < 特勤 < 法定。
+   区分靠色相：金黄 = 白特，橙红 = 夜特，暗酒红 = 法定。
+   颜色始终与班次名同时出现，不单独承载信息。 */
+.calendar-cell.is-special-day {
+  background: color-mix(in srgb, var(--specday-fill) 60%, var(--face-1));
+}
+
+.calendar-cell.is-special-night {
+  background: color-mix(in srgb, var(--specnight-fill) 60%, var(--face-1));
+}
+
+/* 标记点钉在左上角，不再参与流式排版。
+   之前它是 flex 流里的一个元素（排在日期、班次之后），于是：
+     - 有标记的格子内容多一行，日期和班次被整体挤偏，和旁边没标记的格子对不齐；
+     - 标记落在格子底部中央，视觉上像是属于下面那一行。
+   改成绝对定位后，日期与班次始终居中，有无标记的格子完全一致。 */
 .calendar-marks {
+  position: absolute;
+  top: 3px;
+  left: 3px;
   display: flex;
   gap: 2px;
-  height: 4px;
-  margin-top: 1px;
 }
 
 .calendar-mark {

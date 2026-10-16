@@ -383,7 +383,7 @@ function CalendarCell({
   onOpen,
   onSkip
 }: {
-  cell: { day: string; inCurrentMonth: boolean; key: string; meta: { isHoliday: boolean; label: string }; shift?: ShiftType }
+  cell: { day: string; inCurrentMonth: boolean; key: string; shift?: ShiftType }
   confirmed: boolean
   overrides: DayOverrides
   personName: string
@@ -395,10 +395,17 @@ function CalendarCell({
   const shift = overrides.shiftOverrides[key] ?? cell.shift
   const isLegal = overrides.legalOverrides[key] === true
   const hasOvertime = (overrides.overtimeOverrides[key] ?? 0) > 0
+  /* 特勤两班在日历里也给底色，和法定一样归为「不常规班次」。
+     只认白特 / 夜特，其余班次维持面板底色 —— 给所有班次都上色，
+     日历会变成一块碎花，反而看不出哪个才是需要注意的。 */
+  const specialClass = shift === '白特'
+    ? 'is-special-day'
+    : shift === '夜特'
+      ? 'is-special-night'
+      : ''
 
   if (!cell.inCurrentMonth) {
-    /* 周期外日期照常渲染，只是整体降调：去掉班次色块和可点性，
-       只留下日期数字与淡色标记 —— 这些天不是本月排班范围，
+    /* 周期外日期照常渲染，只是整体降调 —— 这些天不是本月排班范围，
        颜色给足了会让人以为它们也参与统计。 */
     return (
       <button
@@ -406,6 +413,7 @@ function CalendarCell({
           'calendar-cell',
           'is-outside',
           shift ? getShiftClassName(shift) : '',
+          specialClass,
           isLegal ? 'is-legal' : '',
           today ? 'is-today' : ''
         ].filter(Boolean).join(' ')}
@@ -417,10 +425,7 @@ function CalendarCell({
         }}
       >
         <span className="calendar-day">{cell.day}</span>
-        <span className={`calendar-lunar ${cell.meta.isHoliday ? 'is-festival' : ''}`}>
-          {cell.meta.label}
-        </span>
-        {shift ? <span className="calendar-bar" /> : null}
+        {shift ? <span className="calendar-shift">{shift}</span> : null}
       </button>
     )
   }
@@ -430,6 +435,7 @@ function CalendarCell({
       className={[
         'calendar-cell',
         shift ? getShiftClassName(shift) : '',
+        specialClass,
         isLegal ? 'is-legal' : '',
         today ? 'is-today' : '',
         confirmed ? 'is-confirmed' : ''
@@ -442,10 +448,7 @@ function CalendarCell({
       }}
     >
       <span className="calendar-day">{cell.day}</span>
-      <span className={`calendar-lunar ${cell.meta.isHoliday ? 'is-festival' : ''}`}>
-        {cell.meta.label}
-      </span>
-      {shift ? <span className="calendar-bar" /> : null}
+      {shift ? <span className="calendar-shift">{shift}</span> : null}
       {hasOvertime || isLegal ? (
         <span className="calendar-marks">
           {hasOvertime ? <span className="calendar-mark" /> : null}

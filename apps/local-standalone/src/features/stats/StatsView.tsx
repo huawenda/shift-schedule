@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import {
   calculateOvertimePay,
+  type DailyAttendanceRecord,
   type OvertimeChartItem,
   type PersonMonthlyStats,
   type SalaryCalculation,
@@ -11,7 +12,7 @@ import {
 import type { SalaryInputField, SalarySaveStatus } from '../../appTypes'
 import { monthOptions } from '../../appConstants'
 import { useDialog } from '../../hooks/useDialog'
-import { formatMoney, formatOvertimeHours } from '../../scheduleHelpers'
+import { formatMoney, formatOvertimeHours, canRecordOvertime } from '../../scheduleHelpers'
 
 type StatsTab = 'overview' | 'daily'
 
@@ -135,12 +136,16 @@ export function StatsView({
           ) : null}
 
           {activeTab === 'daily' && personalStats ? (
-            <div className="panel" style={{ padding: 'var(--sp-3)' }}>
+            <div className="panel stats-fill">
               <div className="section-head">
                 <h2 className="section-title">每日明细</h2>
                 <span className="section-meta">{personalStats.dailyRecords.length} 条</span>
               </div>
-              <DailyDetails personalStats={personalStats} salaryInputs={salaryInputs} />
+              <DailyDetails
+                personalStats={personalStats}
+                salaryInputs={salaryInputs}
+                monthStartDate={monthStartDate}
+              />
             </div>
           ) : null}
         </div>
@@ -420,45 +425,218 @@ function Readout({
 
 function DailyDetails({
   personalStats,
-  salaryInputs
+  salaryInputs,
+  monthStartDate
 }: {
   personalStats: PersonMonthlyStats
   salaryInputs: SalaryInputValues
+  monthStartDate: string
 }) {
   const records = Array.from(
     new Map(personalStats.dailyRecords.map(record => [record.date, record])).values()
   )
+  const year = Number(monthStartDate.slice(0, 4))
+
+  /* 月历网格：一个结算周期恒为 30 天（20 号–次月 19 号），补齐首尾空位后
+     最多 6 行 × 7 列。30 天一次看全，不再纵向滚动 960px。 */
+  const leadingCount = records.length > 0 ? weekdayIndexOf(records[0].date, year) : 0
+  const trailingCount = (7 - ((leadingCount + records.length) % 7)) % 7
+  const cells: Array<typeof records[number] | null> = [
+    ...Array.from({ length: leadingCount }, () => null),
+    ...records,
+    ...Array.from({ length: trailingCount }, () => null)
+  ]
+
+  /* 合计与上面的「按班次汇总」必须用同一条筛选规则，否则两处对不上：
+     实测种子数据里有一条休息日带 3h 加班，合计算了它（18.5h），
+     汇总不算它（15.5h），同一页上两个数打架。 */
+  const payableRecords = records.filter(record => canRecordOvertime(record.shift) && record.overtimeHours > 0)
+  const totalHours = payableRecords.reduce((total, record) => total + record.overtimeHours, 0)
+  const totalPay = payableRecords.reduce(
+    (total, record) => total + calculateOvertimePay(salaryInputs, record.overtimeHours, multiplierOf(record)),
+    0
+  )
 
   return (
     <div className="daily">
-      <div className="daily-row daily-head">
-        <span>日期</span>
-        <span>班次</span>
-        <span>加班类型</span>
-        <span style={{ justifyContent: 'flex-end' }}>金额</span>
+      <div className="daily-grid-wrap">
+        <div className="daily-weekdays" aria-hidden="true">
+          {WEEKDAY_LABELS.map(day => (
+            <span className="daily-weekday" key={day}>{day}</span>
+          ))}
+        </div>
+
+        <div className="daily-grid">
+          {cells.map((record, index) => (
+            record ? (
+              <DailyCell
+                hours={record.overtimeHours}
+                isLegal={record.isLegal === true}
+                key={record.date}
+                pay={calculateOvertimePay(salaryInputs, record.overtimeHours, multiplierOf(record))}
+                record={record}
+                today={record.date === todayDate()}
+              />
+            ) : (
+              <div className="daily-cell is-blank" key={`blank-${index}`} aria-hidden="true" />
+            )
+          ))}
+        </div>
       </div>
-      {records.map(record => {
-        const pay = calculateOvertimePay(salaryInputs, record.overtimeHours, multiplierOf(record))
-        const isZero = record.overtimeHours <= 0
-        return (
-          <div className={`daily-row ${isZero ? 'is-muted' : ''}`} key={record.date}>
-            <span className="daily-date">{record.date}</span>
-            <span className={`shift-option ${shiftClass(record.shift)}`} style={{ minHeight: 22, padding: '0 6px' }}>
-              {record.shift}
-            </span>
-            <span className="daily-date">
-              {record.isLegal ? '法定 ×3' : record.shift === '白特' || record.shift === '夜特' ? '特勤 ×2' : isZero ? '—' : '平日 ×1.5'}
-            </span>
-            <span className={`daily-pay ${isZero ? 'is-zero' : ''}`}>
-              {isZero ? '—' : `¥${formatMoney(pay)}`}
-            </span>
-          </div>
-        )
-      })}
+
+      <ShiftBreakdown records={records} salaryInputs={salaryInputs} />
+
+      <footer className="daily-foot">
+        <span className="daily-foot-item">
+          <span className="daily-foot-key">加班合计</span>
+          <strong className="daily-foot-value">{formatOvertimeHours(totalHours)}h</strong>
+        </span>
+        <span className="daily-foot-item">
+          <span className="daily-foot-key">金额合计</span>
+          <strong className="daily-foot-value">¥{formatMoney(totalPay)}</strong>
+        </span>
+        <span className="daily-foot-item">
+          <span className="daily-foot-key">加班天数</span>
+          <strong className="daily-foot-value">
+            {payableRecords.length} / {records.length} 天
+          </strong>
+        </span>
+      </footer>
     </div>
   )
 }
 
+const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
+
+/** 明细表只回答「哪一天」，回答不了「这个月一共上了几个白班、
+ *  加班都摊在哪一班上」——这些问题以前得切回月度概览去找。
+ *  网格在宽屏上必然多出高度，与其让格子空着，不如把这块高度
+ *  换成一张按班次归拢的汇总：一眼看完，不必来回切标签页。 */function ShiftBreakdown({
+  records,
+  salaryInputs
+}: {
+  records: DailyAttendanceRecord[]
+  salaryInputs: SalaryInputValues
+}) {
+  /* 这张表只回答「加班的时间和钱摊在哪一班上」，两行都不合格就不该出现：
+     - 休息 / 事假：这两班根本不产生加班（App 在保存时就把小时数清零，
+       这里直接复用同一条判定 canRecordOvertime，不另写一份名单，
+       免得以后加班规则改了、这张表还按老名单筛）；
+     - 白班 / 夜班：能产生加班，但本月一次都没加。
+     休息天数、月度概览里都数得到，不需要在这里占一行。 */
+  const groups = new Map<ShiftType, { days: number; hours: number; pay: number }>()
+
+  records.forEach(record => {
+    if (!canRecordOvertime(record.shift)) return
+    const current = groups.get(record.shift) ?? { days: 0, hours: 0, pay: 0 }
+    groups.set(record.shift, {
+      days: current.days + 1,
+      hours: current.hours + record.overtimeHours,
+      pay: current.pay + calculateOvertimePay(salaryInputs, record.overtimeHours, multiplierOf(record))
+    })
+  })
+
+  const rows = SHIFT_ORDER
+    .map(shift => ({ shift, ...(groups.get(shift) ?? { days: 0, hours: 0, pay: 0 }) }))
+    .filter(row => row.hours > 0)
+  const maxHours = Math.max(...rows.map(row => row.hours), 1)
+
+  if (rows.length === 0) {
+    return (
+      <section className="daily-breakdown is-empty">
+        <div className="section-head">
+          <h3 className="daily-breakdown-title">按班次汇总</h3>
+        </div>
+        <p className="daily-breakdown-empty">本月没有加班记录。</p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="daily-breakdown">
+      <div className="section-head">
+        <h3 className="daily-breakdown-title">按班次汇总</h3>
+        <span className="section-meta">{rows.length} 类</span>
+      </div>
+      <ul className="breakdown-list">
+        {rows.map(row => (
+          <li className="breakdown-item" key={row.shift}>
+            <span className={`breakdown-shift ${shiftClass(row.shift)}`}>{row.shift}</span>
+            <span className="breakdown-bar">
+              <span className="breakdown-fill" style={{ width: `${(row.hours / maxHours) * 100}%` }} />
+            </span>
+            <span className="breakdown-days">{row.days} 天</span>
+            <span className="breakdown-hours">{formatOvertimeHours(row.hours)}h</span>
+            <span className="breakdown-pay">¥{formatMoney(row.pay)}</span>
+            <span className="breakdown-pad" aria-hidden="true" />
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+const SHIFT_ORDER: ShiftType[] = ['白班', '夜班', '白特', '夜特', '事假', '休息']
+
+function DailyCell({
+  hours,
+  isLegal,
+  pay,
+  record,
+  today
+}: {
+  hours: number
+  isLegal: boolean
+  pay: number
+  record: DailyAttendanceRecord
+  today: boolean
+}) {
+  /* isZero 同时覆盖「没有加班」和「这一班根本不产生加班」两种情况 ——
+     休息日挂着 3h / ¥xxx 是没有意义的显示，存档里的脏数据不该
+     渲染成一个看起来合法的小时数。 */
+  const isZero = hours <= 0 || !canRecordOvertime(record.shift)
+  const multiplier = multiplierOf(record)
+  const specialClass = record.shift === '白特'
+    ? 'is-special-day'
+    : record.shift === '夜特' ? 'is-special-night' : ''
+
+  return (
+    <div
+      className={`daily-cell ${specialClass} ${today ? 'is-today' : ''} ${isZero ? 'is-zero' : ''}`}
+    >
+      <span className="daily-cell-when">
+        <span className="daily-cell-date">{record.date}</span>
+        {isZero ? null : (
+          <span className={`daily-cell-mult ${isLegal ? 'is-legal' : multiplier === 2 ? 'is-special' : ''}`}>
+            ×{multiplier === 1.5 ? '1.5' : multiplier}
+          </span>
+        )}
+      </span>
+
+      <span className={`daily-cell-shift ${shiftClass(record.shift)}`}>{record.shift}</span>
+
+      {isZero ? null : (
+        <span className="daily-cell-foot">
+          <span className="daily-cell-hours">{formatOvertimeHours(hours)}h</span>
+          <span className="daily-cell-pay">¥{formatMoney(pay)}</span>
+        </span>
+      )}
+    </div>
+  )
+}
+
+function weekdayIndexOf(date: string, year: number): number {
+  const month = Number(date.slice(0, 2))
+  const day = Number(date.slice(3, 5))
+  return new Date(year, month - 1, day).getDay()
+}
+
+function todayDate(): string {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${month}/${day}`
+}
 
 function multiplierOf(record: { shift: ShiftType; isLegal?: boolean }) {
   if (record.isLegal) return 3

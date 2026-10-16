@@ -72,6 +72,19 @@ export default defineConfig({
     }
   },
   plugins: [fileProtocolFriendlyPlugin(), serviceWorkerBuildIdPlugin()],
+
+  // dev server 默认监听整个项目目录，于是这些「产物目录」一有变动就触发整页 reload：
+  //   - dist/       ：跑 `pnpm build` 时每个文件都会落盘，实测每次都会 `page reload`，
+  //                   把浏览器里正在看的月份、滚动位置、弹窗状态全冲掉；
+  //   - screenshots/：`screenshot:dist` 一次产出几十张 PNG，dev 页会被连续刷屏几十次；
+  //   - *.zip       ：重新打包静态站点时同理。
+  // 这些目录都不是源码，排除后 HMR 只对 src/ 与 public/ 的真实改动生效。
+  server: {
+    watch: {
+      ignored: ['**/dist/**', '**/screenshots/**', '**/*.zip']
+    }
+  },
+
   build: {
     outDir: 'dist',
     emptyOutDir: true,

@@ -156,7 +156,6 @@ export function ShiftEditorModal({
                   ))}
                 </div>
                 <label className="hours-row">
-                  <span className="hours-unit" aria-hidden="true">h</span>
                   <input
                     className="hours-input"
                     type="number"
@@ -169,6 +168,7 @@ export function ShiftEditorModal({
                     value={editor.overtimeInput}
                     onChange={event => onOvertimeInputChange(event.target.value)}
                   />
+                  <span className="hours-unit" aria-hidden="true">h</span>
                   <span className="hours-hint">最小单位 0.5</span>
                 </label>
               </>
