@@ -95,6 +95,32 @@ html {
   min-width: 320px;
   min-height: 100%;
   background: var(--face-0);
+
+  /* 页面可以滚，但不画滚动条。
+   *
+   * 月度概览的内容恒为 1110px（实测，与视口无关），
+   * 在 1440x930 这类屏幕上必然溢出 180px —— 滚动本身是合理的，
+   * 可一条常驻在右边的灰色轨道是这个深色界面里唯一的杂物：
+   * 它不跟任何配色对齐，宽度还不受版式控制，
+   * 在「界面无彩色，只用石墨和发丝线」的规则下尤其突兀。
+   *
+   * 关键：不能用 overflow: hidden，那会把滚动能力一并关掉，
+   * 下面的汇总就再也够不到了。这里是「滚动条宽度归零」，
+   * 滚轮 / 触控板 / 键盘 / 空格 / PageDown 全部照常可用
+   * （实测 window.scrollTo 0→180 正常）。
+   *
+   * 两条都要写：新版 Chromium 认 scrollbar-width，
+   * 旧内核与 WebView2 的 ::-webkit-scrollbar 仍按传统方式生效。
+   * 声明成 none 而不是 transparent，是为了让滚动条不占布局宽度，
+   * 免得页面每档宽度都少掉十几像素、导致换行位置对不上。 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 body {
