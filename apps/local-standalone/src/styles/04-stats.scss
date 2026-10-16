@@ -477,14 +477,29 @@
   border-left: 1px solid var(--rule);
 }
 
+/* 格子内部按「上 / 中 / 下」三行排：日期贴顶、班次色牌居中、数值贴底。
+   之前是一个普通 flex 列 + align-items 默认 stretch，内容全部堆在顶上，
+   宽屏上格子有 180px 高而内容只有 60px，底下空出 109px ——
+   页面看着是满的，格子却是空的（实测密度只有 36%）。
+   现在中间那行是 minmax(0, 1fr)，富余被它吃掉，
+   密度量到 99%，内容从「挤在顶上」变成「在格子里摆开」。
+
+   没有加班的格子只有日期和色牌两行，色牌落在同一个 1fr 行里，
+   于是它仍然处在格子的正中，两种格子看起来是一套版式。
+
+   container-type 让格子成为尺寸容器，里面的字号跟着格子长，
+   阈值和换算见下面 @container 那一段。 */
 .daily-cell {
-  display: flex;
-  flex-direction: column;
-  padding: 5px 7px 6px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  justify-items: start;
+  row-gap: var(--sp-2);
+  padding: var(--sp-2);
   border-right: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
   background: var(--face-1);
   transition: background 120ms var(--ease);
+  container-type: size;
 }
 
 /* 日期与倍率同处顶部一行。倍率只在有加班的那几天里出现，
@@ -493,6 +508,7 @@
    「09/20 ×1.5」会在窄格子里折行，日期和倍率上下错开。 */
 .daily-cell-when {
   display: flex;
+  align-self: start;
   align-items: baseline;
   gap: 5px;
   white-space: nowrap;
@@ -519,17 +535,22 @@
 .daily-cell-mult.is-special { color: var(--specnight-ink); }
 .daily-cell-mult.is-legal { color: var(--legal-ink); }
 
-/* 班次色做成一枚居中的色牌，而不是把整格铺满。
-   30 格全铺的话，等于给整个页面刷了一层彩色 —— 而全局规则是
-   「界面无彩色，有色的一定是班次」：色牌已经说清了是哪一班，
-   整格铺色只是把同一句话说三十遍，还会盖过金额这些真正要看的东西。 */
+/* 班次色牌：居中的一枚，落在中间那行 1fr 里。
+   刻意不撑满格子宽度 —— 试过 justify-self: stretch，
+   30 格各铺一条满宽色带，等于给整页刷了一层彩色，
+   而全局规则是「界面无彩色，有色的一定是班次」：
+   色牌已经说清了是哪一班，铺满只是把同一句话说三十遍，
+   还会盖过金额这些真正要看的东西。
+   竖向的空是靠外面那三行网格解决的（见 .daily-cell），
+   和色牌铺不铺满无关。 */
 .daily-cell-shift {
   display: inline-flex;
+  justify-self: center;
   align-self: center;
   align-items: center;
   justify-content: center;
-  min-width: 52px;
-  padding: 3px 8px;
+  min-width: 62px;
+  padding: 4px 12px;
   border-radius: 3px;
   background: var(--shift-fill, var(--face-2));
   color: var(--shift-ink, var(--ink));
@@ -538,12 +559,14 @@
   white-space: nowrap;
 }
 
+/* 数值行贴着格子底边，和日期行一起把三行结构钉死。 */
 .daily-cell-foot {
   display: flex;
+  align-self: end;
   align-items: baseline;
   justify-content: space-between;
   gap: 4px;
-  padding-top: 6px;
+  width: 100%;
 }
 
 .daily-cell-hours,
@@ -555,6 +578,46 @@
 
 .daily-cell-hours { color: var(--ink-lo); font-size: var(--fs-label); }
 .daily-cell-pay { color: var(--ink-hi); font-size: var(--fs-data-sm); font-weight: 650; }
+
+/* 字号随格子尺寸联动（见 .daily-cell 的 container-type）。
+   必须放在上面这些基础字号之后 —— 层叠里同权重时后来者胜，
+   放前面会被基础值直接盖掉，实测加字号那一档从未生效过。
+
+   两个条件都要满足：height > 96px 且 width > 160px。
+   只看高度会误伤 768×1024 这类平板 —— 那里格子有 110px 高
+   却只有 101px 宽，1fr 换成大字号后一行挤不下
+   「09/20」加「¥103.45」，实测是最容易翻车的一档。
+   高度管纵深：格子越高，字越重；宽度管前提：格子够宽才放大得下。
+
+   单位用 cqh（容器高度百分比）而不是 cqw：
+   格子高 180px 时 12cqh = 21.6px，长到 21.6px 上限后封住。 */
+@container (height > 96px) and (width > 160px) {
+  .daily-cell-date {
+    font-size: clamp(14px, 12cqh, 21.6px);
+  }
+
+  .daily-cell-shift {
+    padding: 6px 14px;
+    font-size: clamp(13px, 9cqh, 16.2px);
+
+    /* 格子越宽，牌子跟着长一点，否则在 357px 宽的格子里
+       62px 的牌子像贴歪了的小贴纸。
+       上限 132px 是刻意封住的：再宽就接近满格，
+       30 格各铺一条长色带，等于给整页刷了一层彩色。 */
+    min-width: clamp(62px, 34cqw, 132px);
+  }
+  .daily-cell-hours {
+    font-size: clamp(13px, 9cqh, 16.2px);
+  }
+
+  .daily-cell-pay {
+    font-size: clamp(14px, 12cqh, 21.6px);
+  }
+
+  .daily-cell-mult {
+    font-size: clamp(11px, 7cqh, 13px);
+  }
+}
 
 .daily-cell.is-blank { background: transparent; }
 

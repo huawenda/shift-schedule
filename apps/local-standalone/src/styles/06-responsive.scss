@@ -105,14 +105,23 @@
     max-height: none;
   }
 
+  /* 手机档是一行一天：三个内容块并排成一条，
+     所以行模板要退回单行（桌面档是「上/中/下」三行）。
+     另关掉尺寸容器 —— 行高由内容决定，@container 的加字号档
+     在这里既没必要也会让文字挤进 47px 的格子里。 */
   .daily-cell {
     display: grid;
     align-items: center;
     grid-template-columns: 76px auto minmax(0, 1fr);
+    grid-template-rows: auto;
     gap: var(--sp-2);
+    container-type: normal;
   }
 
+  /* 色牌不再撑满宽度：单行布局下横跨三列会顶掉后面的金额，
+     回到「只包住班次两个字」的宽度。 */
   .daily-cell-shift {
+    justify-self: start;
     align-self: center;
   }
 
