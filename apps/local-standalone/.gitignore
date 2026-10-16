@@ -5,6 +5,10 @@ shots-daily/
 # 打包产物，不入库
 shift-schedule-local-static.zip
 
+# 交付用包：绿色版单文件 exe 与可直接分发的 zip
+dist-package/
+*.zip
+
 # Tauri 壳的产物线：dist-tauri/ 是 desktop 构建的前端产物，
 # src-tauri/target/ 是 Rust 编译产物（含数 GB 中间文件）。
 # 两者的 .gitignore 只在 desktop/src-tauri/ 内生效，

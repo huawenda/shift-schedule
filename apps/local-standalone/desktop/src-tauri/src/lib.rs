@@ -6,6 +6,9 @@
 // 数据仍然存在前端页面的 localStorage 里（键 shift-schedule:local:*），
 // 落在 WebView2 的用户数据目录下。本 crate 不读写任何排班数据 ——
 // 真要读写，权限与校验都该在前端数据层收口，而不是散在壳里。
+//
+// release 版不弹命令行窗口，属性在 main.rs 上（那是应用二进制的入口）；
+// debug 构建（tauri dev）保留控制台，便于看启动日志与报错。
 
 use tauri_plugin_dialog::init as init_dialog;
 use tauri_plugin_fs::init as init_fs;
