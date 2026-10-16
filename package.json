@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "description": "倒班表 Web/PWA 主线与小程序旁支",
+  "packageManager": "pnpm@11.28.6",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev:web": "pnpm --filter @shift-schedule/web dev",
     "dev:web:https": "node scripts/dev-web-https.mjs",
