@@ -1,0 +1,415 @@
+/* ==========================================================================
+   矩阵：人员排班表 + 排班日历（同一矩阵的两种缩放）+ 今天游标
+   ========================================================================== */
+
+/* --- 外壳：左轨冻结 + 右侧横向滚动 ------------------------------------- */
+
+.matrix {
+  display: flex;
+  min-width: 0;
+  /* 不拉伸：13 行撑满 1200px 高的显示器会变成松垮的空气行，
+     而 stretch 之后面板内部会出现一大块「空的面板」，比留白更糟。
+     面板按内容高度，多出来的空间留作画布。 */
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-panel);
+  background: var(--face-1);
+}
+
+/* 冻结的姓名轨 —— 唯一的 shadow 用在这里：横向滚动时需要边缘分隔 */
+.matrix-rail {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  width: var(--rail-w);
+  flex: 0 0 var(--rail-w);
+  flex-direction: column;
+  border-right: 1px solid var(--rule-hot);
+  background: var(--face-1);
+  box-shadow: 8px 0 14px rgba(0, 0, 0, 0.34);
+}
+
+.matrix-scroll {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-color: var(--rule-hot) var(--face-1);
+  scrollbar-width: thin;
+}
+
+.matrix-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.matrix-scroll::-webkit-scrollbar-track {
+  background: var(--face-1);
+}
+
+.matrix-scroll::-webkit-scrollbar-thumb {
+  border-radius: 0;
+  background: var(--rule-hot);
+}
+
+.matrix-grid {
+  display: grid;
+  min-width: max-content;
+  grid-auto-columns: var(--cell-w);
+  grid-auto-flow: column;
+  grid-template-rows: var(--cell-h);
+}
+
+/* --- 日期表头 ------------------------------------------------------------ */
+
+/* 显式 flex-basis（而不是 auto）：border-box 下 flex-basis 才把 1px
+   边框算进行高。用 auto 时行高 = grid 行高 + 边框 = 29px，
+   与姓名轨的 28px 逐行累积，13 行错位 13px。 */
+/* 列宽用 minmax(下限, 1fr) 而不是定值：
+   - 容器够宽时 1fr 把余量均分，表格填满，不会右侧空一大块；
+   - 容器不够宽时轨道被 --cell-w 下限顶住，grid 溢出，交给 .matrix-scroll 横滚。
+   行与表头都取 width: 100%（而非 min-width: max-content），保证各行拿到
+   完全相同的宽度，各自算出的 1fr 结果一致，表头与数据行才逐列对齐。 */
+/* 表头与数据行同底色（--face-1）。
+   原本这里用 --face-2，整条日期表头比姓名轨和数据行亮一档，
+   于是同一行表头被拆成两种底色，看起来像多出一条色带。
+   分区交给发丝线（.matrix-head 的 border-bottom）去表达，
+   不靠亮度差 —— 亮度留给数据（.is-current）才有意义。 */
+.matrix-head {
+  display: grid;
+  width: 100%;
+  flex: 0 0 36px;
+  grid-auto-columns: minmax(var(--cell-w), 1fr);
+  grid-auto-flow: column;
+  grid-template-rows: 1fr;
+  border-bottom: 1px solid var(--rule);
+  background: var(--face-1);
+}
+
+.date-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  border-right: 1px solid var(--rule);
+  color: var(--ink-lo);
+}
+
+.date-head-day {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.date-head-week {
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* --- 姓名轨单元格 -------------------------------------------------------- */
+
+.rail-cell {
+  display: flex;
+  min-width: 0;
+  flex: 0 0 var(--cell-h);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-1);
+  padding: 0 var(--sp-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.rail-head {
+  flex: 0 0 36px;
+  max-height: 36px;
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.rail-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-hi);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail-group {
+  color: var(--ink-lo);
+  font-family: var(--font-data);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+/* --- 排班格：整个应用的记忆点 ------------------------------------------ */
+
+.roster-row {
+  display: grid;
+  width: 100%;
+  flex: 0 0 var(--cell-h);
+  grid-auto-columns: minmax(var(--cell-w), 1fr);
+  grid-auto-flow: column;
+  grid-template-rows: 1fr;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* 「按姓名」视图不需要单独降字号了：列宽下限已经提到 40px，
+   3 个汉字 × 12px = 36px 放得下。低于 40px 就会折行 —— 那才是真正要避免的。 */
+.roster-row:last-child {
+  border-bottom: 0;
+}
+
+/* nowrap 是硬要求：格子里是「白班」或「华文达」这类 2~3 字标签，
+   一旦列宽不足就会折行，行高被撑高，整张表参差。宁可横向滚动。 */
+.roster-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid rgba(10, 14, 18, 0.55);
+  background: var(--shift-fill, var(--face-2));
+  color: var(--shift-ink, var(--ink));
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition: filter 120ms var(--ease);
+}
+
+.roster-cell:hover {
+  filter: brightness(1.35);
+}
+
+.roster-cell.is-current {
+  background: color-mix(in srgb, var(--shift-fill, var(--face-2)) 70%, var(--face-0));
+}
+
+.rail-cell.is-current {
+  background: var(--face-2);
+}
+
+/* 手动改过（覆盖了基础排班）：一圈内描边 */
+.roster-cell.is-edited::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(232, 237, 242, 0.34);
+  pointer-events: none;
+}
+
+/* 法定加班：原本是左缘 3px 红条，已删。
+   排班表是密集网格，一条贯穿整列的红边贴在每行最左侧，
+   13 行连起来像一道"墙"，而且红色与班次色（夜班紫等）争夺注意力。
+   法定加班的信息改由图例里的"左红条 = 法定"承担不准确 ——
+   标记已经没有了，图例文案也随之更新（见 ScheduleView 的图例）。
+   排班表内改为：法定只影响 hover 的 title 提示，不再有常驻色块。 */
+.roster-cell.is-legal {
+  background: color-mix(in srgb, var(--shift-fill, var(--face-2)) 78%, var(--legal-fill));
+}
+
+/* 有加班时长：底缘 2px 条。
+   刻意用中性 --ink 而不是 --signal：白色只保留给「今天 / 当前 / 主操作」，
+   一个信号色只能有一个含义，否则读图的人必须查表。 */
+.roster-cell.has-overtime {
+  border-bottom: 2px solid var(--ink);
+}
+
+/* 保存确认：该格闪一下（动效唯一出现在「回答用户动作」上） */
+.roster-cell.is-confirmed,
+.calendar-cell.is-confirmed {
+  animation: cell-confirm 420ms var(--ease);
+}
+
+/* --- 今天 ---------------------------------------------------------------
+   原本有三层标记：贯穿 13 行的竖线（已删）、日期表头左缘竖线（已删）、
+   日期文字变白 + 2px 白帽（保留）。
+   现在「今天」只有日期表头一处低调节奏的标记 —— 一个视觉信号只说一件事，
+   说两遍就是噪音。 */
+
+.date-head.is-today::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 0;
+  left: 4px;
+  height: 2px;
+  background: var(--signal);
+}
+
+.date-head.is-today .date-head-day,
+.date-head.is-today .date-head-week {
+  color: var(--signal);
+}
+
+/* --- 图例 ---------------------------------------------------------------- */
+
+.matrix-legend {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  padding: var(--sp-2) 0 0;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-lo);
+  font-size: 11px;
+}
+
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  background: var(--shift-fill);
+  border: 1px solid var(--shift-ink);
+}
+
+/* --- 排班日历：同一格子的另一种缩放 ------------------------------------- */
+
+/* 日历按行填（7 列 × 6 行）。矩阵那边用 column 是因为按天分列，
+   这里两套方向相反，必须分开写。 */
+.calendar {
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+}
+
+/* 星期表头：原本一条边框都没有，整行悬在网格上方像是掉了框。
+   补上与日历格同款的右/下边框 + 表头底色，让它读成一个表头带。 */
+.calendar-weekday {
+  padding: var(--sp-1) 0;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--face-2);
+  color: var(--ink-lo);
+  font-size: 10px;
+  text-align: center;
+}
+
+.calendar-cell {
+  position: relative;
+  display: flex;
+  aspect-ratio: 1 / 1.18;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px 0 0;
+  border: 0;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--face-1);
+  color: var(--ink);
+  transition: background 120ms var(--ease);
+}
+
+.calendar-cell:hover:not(:disabled) {
+  background: var(--face-2);
+}
+
+.calendar-cell:disabled {
+  background: transparent;
+}
+
+.calendar-day {
+  color: var(--ink-hi);
+  font-family: var(--font-data);
+  font-size: var(--fs-data-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.calendar-lunar {
+  color: var(--ink-lo);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.calendar-lunar.is-festival {
+  color: var(--specday-ink);
+}
+
+/* 班次色条：日历用色条，表格用文字，同一套语义色 */
+.calendar-bar {
+  width: 60%;
+  height: 3px;
+  margin-top: 2px;
+  background: var(--shift-fill);
+  box-shadow: inset 0 0 0 1px var(--shift-ink);
+}
+
+.calendar-cell.is-empty {
+  background: transparent;
+  cursor: default;
+}
+
+/* 周期外日期：淡出而不是删掉。
+   删掉会让人以为这个月从 1 号才开始 —— 首行之前空着、末行之后空着，
+   读者要自己猜那是"上/下个月被裁掉了"还是"没排班"。
+   保留但整体降调：不抢本月的信息，形状仍然完整。 */
+.calendar-cell.is-outside {
+  background: color-mix(in srgb, var(--shift-fill, var(--face-1)) 22%, var(--face-0));
+  opacity: 0.62;
+}
+
+.calendar-cell.is-outside .calendar-day {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.calendar-cell.is-outside .calendar-bar {
+  opacity: 0.55;
+}
+
+.calendar-cell.is-outside:hover {
+  opacity: 0.85;
+}
+
+.calendar-cell.is-today {
+  background: var(--face-2);
+  box-shadow: inset 0 0 0 1px var(--signal);
+}
+
+.calendar-cell.is-today .calendar-day {
+  color: var(--signal);
+}
+
+.calendar-cell.is-legal {
+  background: var(--legal-fill);
+}
+
+.calendar-marks {
+  display: flex;
+  gap: 2px;
+  height: 4px;
+  margin-top: 1px;
+}
+
+.calendar-mark {
+  width: 4px;
+  height: 4px;
+  background: var(--ink);
+}
+
+.calendar-mark.is-legal {
+  background: var(--legal-ink);
+}

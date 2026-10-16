@@ -1,0 +1,324 @@
+/* ==========================================================================
+   外壳：顶栏、汇总行、面板基座、控件
+   ========================================================================== */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background: var(--face-0);
+}
+
+/* --- 面板基座：整个应用只有一层连续的面，没有卡片套件 ------------------ */
+
+.panel {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-panel);
+  background: var(--face-1);
+}
+
+/* --- 顶栏：唯一允许 sticky 的区域，固定 44px --------------------------- */
+
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  min-height: var(--head-h);
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--face-1);
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.brand-name {
+  color: var(--ink-hi);
+  font-size: var(--fs-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.brand-period {
+  color: var(--ink-lo);
+  font-family: var(--font-data);
+  font-size: var(--fs-data-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.top-bar-spacer {
+  flex: 1 1 auto;
+}
+
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* --- 月份步进器：取代原来 8 个铺满全宽的药丸 tab ------------------------ */
+
+.stepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--rule-hot);
+  border-radius: var(--r-control);
+  background: var(--face-2);
+}
+
+.stepper button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+  transition: background 120ms var(--ease), color 120ms var(--ease);
+}
+
+.stepper button:hover:not(:disabled) {
+  background: var(--face-3);
+  color: var(--ink-hi);
+}
+
+.stepper-value {
+  min-width: 62px;
+  padding: 0 var(--sp-2);
+  color: var(--ink-hi);
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* --- 控件语汇：无彩色，仅靠亮度与描边 --------------------------------- */
+
+.btn {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--rule-hot);
+  border-radius: var(--r-control);
+  background: var(--face-2);
+  color: var(--ink);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease),
+    color 120ms var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--face-3);
+  color: var(--ink-hi);
+}
+
+.btn-primary {
+  border-color: var(--signal);
+  background: var(--signal);
+  color: var(--face-0);
+  font-weight: 700;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #ffffff;
+  color: var(--face-0);
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  border-color: var(--rule);
+  background: var(--face-2);
+}
+
+/* 当前人员选择器 */
+.person-chip {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--rule-hot);
+  border-radius: var(--r-control);
+  background: var(--face-2);
+  color: var(--ink-hi);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  transition: background 120ms var(--ease);
+}
+
+.person-chip:hover {
+  background: var(--face-3);
+}
+
+.person-chip-caret {
+  color: var(--ink-lo);
+  font-size: 9px;
+}
+
+/* --- 汇总行：6 个 190px 巨块 → 一行内联统计 --------------------------- */
+
+.summary-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border-bottom: 1px solid var(--rule);
+  background: var(--face-1);
+}
+
+.summary-item {
+  display: flex;
+  min-width: 92px;
+  flex: 0 1 auto;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3);
+  border-right: 1px solid var(--rule);
+}
+
+.summary-item:last-child {
+  border-right: 0;
+}
+
+.summary-value {
+  color: var(--shift-ink, var(--ink-hi));
+  font-family: var(--font-data);
+  font-size: var(--fs-data-lg);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: var(--summary-h);
+}
+
+.summary-label {
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.summary-rule {
+  flex: 1 1 auto;
+}
+
+/* --- 状态与告示条 -------------------------------------------------------- */
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.notice-error {
+  background: var(--legal-fill);
+  color: var(--legal-ink);
+}
+
+.notice-warn {
+  background: var(--specday-fill);
+  color: var(--specday-ink);
+}
+
+.notice-info {
+  background: var(--face-2);
+  color: var(--ink);
+}
+
+/* --- 主内容 -------------------------------------------------------------- */
+
+.content {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 0;
+}
+
+/* 左栏：排班日历（固定宽）。日历现在在左，所以留白在右边。 */
+.side-col {
+  display: flex;
+  width: 320px;
+  flex: 0 0 320px;
+  flex-direction: column;
+  padding: var(--sp-4) 0 var(--sp-4) var(--sp-4);
+}
+
+/* 右栏：排班表（自适应，吃掉剩余宽度） */
+.main-col {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding: var(--sp-4);
+}
+
+/* min-height = .segmented 的高度（30px 按钮 + 上下 1px 边框）。
+   两栏标题栏内容不等高：有切换器的一栏 32px，只有标题的一栏 27px，
+   baseline 对齐不会把较矮的一栏撑到同样高，于是下方的上框线错开 5px。
+   给出等于最高内容的下限，两栏标题栏等高 → 面板上框线对齐。 */
+.section-head {
+  display: flex;
+  min-height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.section-title {
+  margin: 0;
+  color: var(--ink-hi);
+  font-size: var(--fs-title);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.section-meta {
+  color: var(--ink-lo);
+  font-family: var(--font-data);
+  font-size: var(--fs-data-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 空状态 */
+.empty {
+  margin: 0;
+  padding: var(--sp-5) var(--sp-4);
+  border: 1px dashed var(--rule-hot);
+  border-radius: var(--r-control);
+  background: var(--face-2);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.empty-hint {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+}

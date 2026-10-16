@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   calculateSalary,
   emptySalaryInputs,
-  getAllPeopleMonthlyOvertimeStats,
   getCurrentScheduleMonth,
   getMonthScheduleView,
   getOvertimeChartItems,
@@ -23,7 +22,7 @@ import { ShiftEditorModal } from './features/schedule/ShiftEditorModal'
 import { StatsView } from './features/stats/StatsView'
 import { useBackDismiss } from './hooks/useBackDismiss'
 import { defaultCurrentUserName } from './appConstants'
-import type { SalaryInputField, SalarySaveStatus, ShiftEditorState, StatsViewMode } from './appTypes'
+import type { SalaryInputField, SalarySaveStatus, ShiftEditorState } from './appTypes'
 import {
   applyRecordToOverrides,
   canRecordOvertime,
@@ -58,20 +57,38 @@ function readViewFromHash(): AppView {
   return window.location.hash.startsWith(statsHash) ? 'stats' : 'schedule'
 }
 
-function getInitialPersonName(): string {
-  return readLocalSettings().personName || defaultCurrentUserName
+/** 月份/人员放进 query，保证状态可深链、刷新不丢（见 DESIGN.local.md「状态入 URL」）。 */
+function readHashParams() {
+  const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '')
+  return {
+    month: (params.get('month') ?? '') as ScheduleMonth,
+    person: params.get('person') ?? ''
+  }
 }
 
-function getInitialMonth(): ScheduleMonth {
-  return getCurrentScheduleMonth(scheduleData) ?? '06'
+function writeHash(view: AppView, month: ScheduleMonth, person: string) {
+  const next = `#/${view}?month=${month}&person=${encodeURIComponent(person)}`
+  if (window.location.hash !== next) {
+    window.history.replaceState(null, '', next)
+  }
+}
+
+function isValidMonth(value: string): value is ScheduleMonth {
+  return ['05', '06', '07', '08', '09', '10', '11', '12'].includes(value)
 }
 
 export function App() {
   const [view, setView] = useState<AppView>(readViewFromHash)
-  const [selectedMonth, setSelectedMonth] = useState<ScheduleMonth>(getInitialMonth)
-  const [schedulePersonName, setSchedulePersonName] = useState(getInitialPersonName)
-  const [statsPersonName, setStatsPersonName] = useState(getInitialPersonName)
-  const [statsViewMode, setStatsViewMode] = useState<StatsViewMode>('personal')
+  const [selectedMonth, setSelectedMonth] = useState<ScheduleMonth>(
+    () => {
+      const fromUrl = readHashParams().month
+      if (isValidMonth(fromUrl)) return fromUrl
+      return getCurrentScheduleMonth(scheduleData) ?? '06'
+    }
+  )
+  const [schedulePersonName, setSchedulePersonName] = useState(
+    () => readHashParams().person || readLocalSettings().personName || defaultCurrentUserName
+  )
   const [overrides, setOverrides] = useState<DayOverrides>(emptyDayOverrides)
   const [salaryInputRecords, setSalaryInputRecords] = useState<SalaryInputRecords>({})
   const [isBooting, setIsBooting] = useState(true)
@@ -79,25 +96,29 @@ export function App() {
   const [isSavingRecord, setIsSavingRecord] = useState(false)
   const [salarySaveStatus, setSalarySaveStatus] = useState<SalarySaveStatus>('idle')
   const [shiftEditor, setShiftEditor] = useState<ShiftEditorState | null>(null)
+  const [isPersonPickerOpen, setIsPersonPickerOpen] = useState(false)
+  const [confirmedKey, setConfirmedKey] = useState<string | null>(null)
   const [statusText, setStatusText] = useState('本地模式')
   const [errorText, setErrorText] = useState('')
 
   const isStatsRoute = view === 'stats'
   const canPersist = useMemo(() => isLocalPersistenceAvailable(), [])
 
-  useBackDismiss(Boolean(shiftEditor), () => setShiftEditor(null))
+  useBackDismiss(Boolean(shiftEditor) || isPersonPickerOpen, () => {
+    setShiftEditor(null)
+    setIsPersonPickerOpen(false)
+  })
 
-  // 用 hash 做两个页面之间的切换：file:// 下也能用，而且系统返回手势可以回到排班页。
   useEffect(() => {
     const handleHashChange = () => setView(readViewFromHash())
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  // 记住上次看的是谁，下次打开还是这个人
   useEffect(() => {
     writeLocalSettings({ personName: schedulePersonName })
-  }, [schedulePersonName])
+    writeHash(view, selectedMonth, schedulePersonName)
+  }, [schedulePersonName, selectedMonth, view])
 
   const monthView = useMemo(() => getMonthScheduleView(scheduleData, selectedMonth), [selectedMonth])
   const currentUser = monthView.people.find(person => person.name === schedulePersonName) ?? monthView.people[0]
@@ -110,11 +131,13 @@ export function App() {
       ))
     }))
   }), [monthView, overrides.shiftOverrides])
+
   const appliedCurrentUser = appliedMonthView.people.find(person => person.name === currentUser.name) ?? appliedMonthView.people[0]
-  const currentUserLegalFlags = appliedMonthView.dates.map(date => overrides.legalOverrides[getOverrideKey(appliedCurrentUser.name, date)] === true)
-  const currentUserOvertimeHours = appliedMonthView.dates.map(date => overrides.overtimeOverrides[getOverrideKey(appliedCurrentUser.name, date)] ?? 0)
-  const summary = getPersonShiftSummary(appliedCurrentUser, currentUserOvertimeHours, currentUserLegalFlags)
-  const statsPerson = scheduleData.people.find(person => person.name === statsPersonName) ?? appliedCurrentUser
+  const legalFlags = appliedMonthView.dates.map(date => overrides.legalOverrides[getOverrideKey(appliedCurrentUser.name, date)] === true)
+  const overtimeHours = appliedMonthView.dates.map(date => overrides.overtimeOverrides[getOverrideKey(appliedCurrentUser.name, date)] ?? 0)
+  const summary = getPersonShiftSummary(appliedCurrentUser, overtimeHours, legalFlags)
+
+  const statsPerson = scheduleData.people.find(person => person.name === schedulePersonName) ?? appliedCurrentUser
   const personalStats = getPersonMonthlyStats(
     appliedMonthView,
     statsPerson.name,
@@ -125,6 +148,7 @@ export function App() {
   )
   const overtimeChartItems = personalStats ? getOvertimeChartItems(personalStats.shiftSummary.加班) : []
   const overtimeChartMax = Math.max(...overtimeChartItems.map(item => item.hours), 0)
+
   const salaryInputKey = getSalaryInputKey(statsPerson.name, selectedMonth)
   const salaryInputs = salaryInputRecords[salaryInputKey] ?? emptySalaryInputs
   const salaryCalculation = calculateSalary(salaryInputs, {
@@ -133,13 +157,6 @@ export function App() {
     legalHours: getOvertimeHoursByType(overtimeChartItems, '法定'),
     leaveHours: personalStats?.leaveSummary.hours ?? 0
   })
-  const teamStats = getAllPeopleMonthlyOvertimeStats(
-    appliedMonthView,
-    overrides.overtimeOverrides,
-    overrides.shiftOverrides,
-    overrides.legalOverrides
-  )
-  const teamChartMax = Math.max(...teamStats.people.map(person => person.totalHours), 0)
 
   useEffect(() => {
     void boot()
@@ -148,8 +165,6 @@ export function App() {
   async function boot() {
     setIsBooting(true)
     setErrorText('')
-    setStatusText('本地模式')
-
     try {
       await refreshLocalData('本地模式')
     } finally {
@@ -160,7 +175,6 @@ export function App() {
   async function refreshLocalData(successText = '已读取本地数据', includeSalary = isStatsRoute) {
     setIsRefreshing(true)
     setErrorText('')
-
     try {
       const [nextOverrides, nextSalaryInputs] = await Promise.all([
         loadDayOverrides(),
@@ -179,10 +193,7 @@ export function App() {
 
   function openStatsRoute() {
     void refreshLocalData('统计数据已读取', true)
-    if (readViewFromHash() !== 'stats') {
-      // 产生一条历史记录，系统返回手势可以回到排班页
-      window.location.hash = statsHash
-    }
+    if (readViewFromHash() !== 'stats') window.location.hash = statsHash
     setView('stats')
   }
 
@@ -190,7 +201,6 @@ export function App() {
     setView('schedule')
     if (readViewFromHash() === 'stats') {
       try {
-        // replace 不新增历史记录，避免「返回 → 又回到统计页」
         window.location.replace(scheduleHash)
       } catch {
         window.location.hash = scheduleHash
@@ -200,9 +210,8 @@ export function App() {
 
   function exportBackup() {
     try {
-      const fileName = downloadBackup()
       setErrorText('')
-      setStatusText(`已导出 ${fileName}`)
+      setStatusText(`已导出 ${downloadBackup()}`)
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : '导出备份失败')
     }
@@ -212,8 +221,7 @@ export function App() {
     if (!window.confirm('导入备份会覆盖这台设备上现有的排班记录，确定继续吗？')) return
 
     setErrorText('')
-    setStatusText('正在导入备份')
-
+    setStatusText('正在导入备份…')
     try {
       const result = restoreBackup(await file.text())
       await refreshLocalData(`已恢复 ${result.dayRecords} 条排班记录`)
@@ -224,15 +232,9 @@ export function App() {
   }
 
   async function setSalaryInputValue(field: SalaryInputField, value: string) {
-    const nextValues = {
-      ...salaryInputs,
-      [field]: value
-    }
+    const nextValues = { ...salaryInputs, [field]: value }
 
-    setSalaryInputRecords(records => ({
-      ...records,
-      [salaryInputKey]: nextValues
-    }))
+    setSalaryInputRecords(records => ({ ...records, [salaryInputKey]: nextValues }))
     setSalarySaveStatus('saving')
     setErrorText('')
 
@@ -280,31 +282,31 @@ export function App() {
   function setShiftEditorLegal(isLegal: boolean) {
     setShiftEditor(editor => {
       if (!editor) return editor
-      return {
-        ...editor,
-        isLegal: normalizeLegalOverride(getEditorEffectiveShift(editor), isLegal)
-      }
+      return { ...editor, isLegal: normalizeLegalOverride(getEditorEffectiveShift(editor), isLegal) }
     })
   }
+
+  const flashCell = useCallback((key: string) => {
+    setConfirmedKey(key)
+    window.setTimeout(() => setConfirmedKey(current => (current === key ? null : current)), 500)
+  }, [])
 
   async function saveShiftEditor() {
     if (!shiftEditor || isSavingRecord) return
 
     const resolvedShift = getEditorEffectiveShift(shiftEditor)
     const shouldUseBaseShift = resolvedShift === shiftEditor.baseShift
-    const overtimeHours = canRecordOvertime(resolvedShift)
-      ? normalizeOvertimeHours(shiftEditor.overtimeInput)
-      : 0
+    const hours = canRecordOvertime(resolvedShift) ? normalizeOvertimeHours(shiftEditor.overtimeInput) : 0
     const isLegalOvertime = normalizeLegalOverride(resolvedShift, shiftEditor.isLegal)
     const leaveDuration = resolvedShift === '事假' ? shiftEditor.leaveDuration : undefined
-    const shouldDeleteRecord = shouldUseBaseShift && overtimeHours <= 0 && !isLegalOvertime && !leaveDuration
+    const shouldDelete = shouldUseBaseShift && hours <= 0 && !isLegalOvertime && !leaveDuration
 
     setIsSavingRecord(true)
     setErrorText('')
-    setStatusText('保存中')
+    setStatusText('保存中…')
 
     try {
-      if (shouldDeleteRecord) {
+      if (shouldDelete) {
         await deleteDayRecord(shiftEditor.personName, shiftEditor.date)
         setOverrides(current => deleteRecordFromOverrides(current, shiftEditor.personName, shiftEditor.date))
       } else {
@@ -312,15 +314,17 @@ export function App() {
           personName: shiftEditor.personName,
           date: shiftEditor.date,
           ...(!shouldUseBaseShift ? { shiftOverride: resolvedShift } : {}),
-          overtimeHours,
+          overtimeHours: hours,
           ...(isLegalOvertime ? { isLegalOvertime } : {}),
           ...(leaveDuration ? { leaveDuration } : {})
         }
         await saveDayRecord(record)
         setOverrides(current => applyRecordToOverrides(current, record, shiftEditor.baseShift))
       }
+
       setShiftEditor(null)
       setStatusText('已保存到本机')
+      flashCell(getOverrideKey(shiftEditor.personName, shiftEditor.date))
     } catch (error) {
       setErrorText(error instanceof Error ? error.message : '保存失败，请稍后重试')
       setStatusText('保存失败')
@@ -331,17 +335,8 @@ export function App() {
 
   return (
     <main className="app-shell">
-      {errorText ? <p className="error-banner">{errorText}</p> : null}
-
-      {!canPersist ? (
-        <section className="demo-notice">
-          当前浏览器不允许本机存储，改动只保留在内存里，刷新就会丢失。请用状态栏的「导出备份」及时保存数据。
-        </section>
-      ) : null}
-
       {isStatsRoute ? (
         <StatsView
-          isAdminUser
           isRefreshing={isRefreshing}
           monthEndDate={monthView.endDate}
           monthStartDate={monthView.startDate}
@@ -352,17 +347,10 @@ export function App() {
           salaryInputs={salaryInputs}
           salarySaveStatus={salarySaveStatus}
           selectedMonth={selectedMonth}
-          shouldAnimateEntry
-          statsPerson={statsPerson}
-          statsViewMode={statsViewMode}
-          teamChartMax={teamChartMax}
-          teamStats={teamStats}
           onBack={backToSchedule}
           onMonthChange={setSelectedMonth}
           onRefresh={() => void refreshLocalData('统计数据已读取', true)}
           onSalaryInputChange={(field, value) => void setSalaryInputValue(field, value)}
-          onStatsPersonChange={setStatsPersonName}
-          onStatsViewModeChange={setStatsViewMode}
         />
       ) : (
         <ScheduleView
@@ -373,24 +361,32 @@ export function App() {
               endDate={monthView.endDate}
               isBooting={isBooting}
               isRefreshing={isRefreshing}
+              personGroup={currentUser.group}
+              personName={currentUser.name}
               selectedMonth={selectedMonth}
               startDate={monthView.startDate}
-              statusText={statusText}
               onExportBackup={exportBackup}
               onImportBackup={file => void importBackup(file)}
               onMonthChange={setSelectedMonth}
-              onRefresh={() => void refreshLocalData('已读取本地数据', isStatsRoute)}
+              onOpenPersonPicker={() => setIsPersonPickerOpen(true)}
+              onOpenStats={openStatsRoute}
+              onRefresh={() => void refreshLocalData('已读取本地数据')}
             />
           )}
+          confirmedKey={confirmedKey}
+          errorText={errorText}
           isAdmin
+          isPersonPickerOpen={isPersonPickerOpen}
           overrides={overrides}
           people={appliedMonthView.people}
           selectedMonth={selectedMonth}
+          statusText={statusText}
           summary={summary}
+          warningText={canPersist ? undefined : '当前浏览器不允许本机存储，改动只保留在内存里，刷新就会丢失。请用顶栏「导出」及时保存。'}
           onCurrentUserChange={setSchedulePersonName}
           onMonthChange={setSelectedMonth}
           onOpenShiftEditor={openShiftEditor}
-          onStatsOpen={openStatsRoute}
+          onPersonPickerClose={() => setIsPersonPickerOpen(false)}
         />
       )}
 
@@ -399,9 +395,11 @@ export function App() {
           editor={shiftEditor}
           isSavingRecord={isSavingRecord}
           onCancel={() => setShiftEditor(null)}
-          onLeaveDurationChange={(duration: LeaveDuration) => setShiftEditor(editor => editor ? { ...editor, leaveDuration: duration } : editor)}
+          onLeaveDurationChange={(duration: LeaveDuration) =>
+            setShiftEditor(editor => (editor ? { ...editor, leaveDuration: duration } : editor))}
           onLegalChange={setShiftEditorLegal}
-          onOvertimeInputChange={(value: string) => setShiftEditor(editor => editor ? { ...editor, overtimeInput: value } : editor)}
+          onOvertimeInputChange={value =>
+            setShiftEditor(editor => (editor ? { ...editor, overtimeInput: value } : editor))}
           onSave={() => void saveShiftEditor()}
           onShiftChange={selectShiftEdit}
         />

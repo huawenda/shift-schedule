@@ -1,0 +1,468 @@
+/* ==========================================================================
+   统计页
+   ========================================================================== */
+
+.stats {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.stats-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  min-height: var(--head-h);
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--face-1);
+}
+
+.stats-title-group {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.stats-title {
+  margin: 0;
+  color: var(--ink-hi);
+  font-size: var(--fs-title);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.stats-period {
+  color: var(--ink-lo);
+  font-family: var(--font-data);
+  font-size: var(--fs-data-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --- 分段控件：取代原来两个各占半屏的巨型 tab ------------------------- */
+
+.segmented {
+  display: flex;
+  border: 1px solid var(--rule-hot);
+  border-radius: var(--r-control);
+  background: var(--face-2);
+  overflow: hidden;
+}
+
+.segmented button {
+  min-height: 30px;
+  padding: 0 var(--sp-4);
+  border: 0;
+  border-right: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  transition: background 120ms var(--ease), color 120ms var(--ease);
+}
+
+.segmented button:last-child {
+  border-right: 0;
+}
+
+.segmented button:hover {
+  background: var(--face-3);
+  color: var(--ink-hi);
+}
+
+.segmented button[aria-selected="true"] {
+  background: var(--signal);
+  color: var(--face-0);
+}
+
+/* --- 筛选行 -------------------------------------------------------------- */
+
+.stats-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--face-1);
+}
+
+.filter-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--rule-hot);
+  border-radius: var(--r-control);
+  background: var(--face-2);
+  color: var(--ink-hi);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  transition: background 120ms var(--ease);
+}
+
+.filter-chip:hover {
+  background: var(--face-3);
+}
+
+.filter-key {
+  color: var(--ink-lo);
+  font-weight: 600;
+}
+
+.filter-chip.is-static {
+  color: var(--ink);
+}
+
+/* --- 内容区 -------------------------------------------------------------- */
+
+.stats-body {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 0;
+}
+
+.stats-main {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: var(--sp-4);
+}
+
+.stats-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.stats-row {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* --- 概览表 -------------------------------------------------------------- */
+
+.overview {
+  display: grid;
+  grid-template-columns: 1fr 72px 88px;
+}
+
+.overview-row {
+  display: contents;
+}
+
+.overview-row > * {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  padding: 0 var(--sp-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.overview-head > * {
+  min-height: 28px;
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.overview-head .num,
+.overview-value {
+  justify-content: flex-end;
+}
+
+.overview-tag {
+  display: inline-flex;
+  min-width: 52px;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: var(--r-control);
+  background: var(--shift-fill);
+  color: var(--shift-ink);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.overview-value {
+  color: var(--ink-hi);
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.overview-value.is-zero {
+  color: var(--ink-lo);
+}
+
+/* --- 柱状图 -------------------------------------------------------------- */
+
+.chart {
+  display: grid;
+  height: 200px;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  align-items: end;
+  gap: var(--sp-4);
+  padding-top: var(--sp-3);
+}
+
+/* 注意：.chart-item 上不能设 `justify-items: center` —— 那会让第一行的
+   wrapper 收缩成 0 宽，.chart-track 的 width:100% 于是解析成 0，
+   柱子完全看不见，只剩数值和标签。下面的文案改用 text-align 居中。 */
+.chart-item {
+  display: grid;
+  height: 100%;
+  grid-template-rows: 1fr auto;
+  gap: var(--sp-2);
+}
+
+.chart-item > :last-child {
+  text-align: center;
+}
+
+.chart-value {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.chart-value.is-zero {
+  color: var(--ink-lo);
+}
+
+.chart-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: flex-end;
+  background: linear-gradient(
+    to top,
+    var(--rule) 0 1px,
+    transparent 1px 100%
+  );
+  background-size: 100% 25%;
+}
+
+.chart-fill {
+  width: 100%;
+  min-height: 2px;
+  background: var(--bar-edge, var(--ink-lo));
+}
+
+.chart-label {
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+/* --- 薪资 ---------------------------------------------------------------- */
+
+.salary-block {
+  padding-bottom: var(--sp-4);
+  border-top: 1px solid var(--rule);
+}
+
+.salary-block:first-of-type {
+  border-top: 0;
+}
+
+.salary-block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0 var(--sp-2);
+}
+
+.salary-block-title {
+  margin: 0;
+  color: var(--ink-hi);
+  font-size: var(--fs-body);
+  font-weight: 650;
+}
+
+.salary-block-total {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.salary-grid {
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.salary-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.salary-field-label {
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.salary-input-box {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--rule-hot);
+  border-radius: var(--r-control);
+  background: var(--face-2);
+  transition: border-color 120ms var(--ease), background 120ms var(--ease);
+}
+
+.salary-input-box:focus-within {
+  border-color: var(--signal);
+  background: var(--face-3);
+}
+
+.salary-input-prefix {
+  color: var(--ink-lo);
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.salary-input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink-hi);
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.salary-input::placeholder {
+  color: var(--ink-lo);
+  opacity: 1;
+}
+
+.salary-readout {
+  display: flex;
+  min-height: 44px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-control);
+  background: var(--face-2);
+}
+
+.salary-readout.is-flag {
+  border-color: var(--flag-edge, var(--rule-hot));
+  background: var(--flag-fill, var(--face-2));
+}
+
+.salary-readout-label {
+  color: var(--ink-lo);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.salary-readout-value {
+  color: var(--flag-ink, var(--ink-hi));
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.salary-readout.is-zero .salary-readout-value {
+  color: var(--ink-lo);
+}
+
+.salary-footnote {
+  padding: var(--sp-2) 0 0;
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+}
+
+/* --- 每日明细 ------------------------------------------------------------ */
+
+.daily {
+  display: grid;
+  grid-template-columns: 96px 88px 1fr 72px;
+}
+
+.daily-row {
+  display: contents;
+}
+
+.daily-row > * {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 var(--sp-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.daily-head > * {
+  min-height: 26px;
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.daily-date {
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: var(--fs-data-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.daily-pay,
+.daily-hours {
+  justify-content: flex-end;
+  color: var(--ink-hi);
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.daily-pay.is-zero,
+.daily-hours.is-zero {
+  color: var(--ink-lo);
+  font-weight: 500;
+}
+
+.daily-row.is-muted > * {
+  opacity: 0.55;
+}
+
+/* --- 全员排名 ------------------------------------------------------------ */
+
+.save-status {
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.save-status.is-saved {
+  color: var(--rest-ink);
+}
+
+.save-status.is-error {
+  color: var(--legal-ink);
+}

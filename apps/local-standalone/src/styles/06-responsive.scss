@@ -1,0 +1,167 @@
+/* ==========================================================================
+   断点
+   本应用桌面优先（README：离线版主要在 PC 上用），
+   1280 及以上是主战场；以下档位保证可用的手机/平板体验。
+   ========================================================================== */
+
+@media (max-width: 1279px) {
+  :root {
+    --cell-w: 48px;
+    --rail-w: 100px;
+  }
+
+  .side-col {
+    width: 268px;
+    flex-basis: 268px;
+  }
+
+  .brand-period {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --cell-w: 48px;
+    --rail-w: 104px;
+  }
+
+  /* 两栏堆叠：排班表在上，日历在下 */
+  .content,
+  .stats-body {
+    flex-direction: column;
+  }
+
+  .main-col,
+  .side-col {
+    width: 100%;
+    flex: 1 1 auto;
+    padding: var(--sp-3);
+  }
+
+  .side-col {
+    padding-top: 0;
+  }
+
+  .stats-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --cell-w: 48px;
+    --rail-w: 88px;
+    --head-h: 40px;
+    --summary-h: 36px;
+    --fs-display: 20px;
+    --fs-title: 16px;
+    --fs-data-lg: 18px;
+  }
+
+  .top-bar,
+  .stats-bar {
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .top-bar-spacer {
+    display: none;
+  }
+
+  .summary-bar {
+    overflow-x: auto;
+  }
+
+  .summary-item {
+    min-width: 78px;
+    padding: 0 var(--sp-2);
+  }
+
+  /* 移动端汇总值回到 18px，六个统计项仍在一行内可横向滚动 */
+  .brand-period {
+    display: block;
+  }
+
+  .btn span.btn-label {
+    display: none;
+  }
+
+  .btn {
+    padding: 0 var(--sp-2);
+  }
+
+  .daily {
+    grid-template-columns: 64px 72px 1fr 58px;
+  }
+
+  .ranking-row {
+    grid-template-columns: 22px 84px 1fr 54px;
+  }
+
+  .overview {
+    grid-template-columns: 1fr 56px 72px;
+  }
+
+  .team-stats {
+    gap: var(--sp-2);
+  }
+
+  .month-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sheet {
+    max-height: calc(100vh - var(--sp-3) * 2);
+  }
+
+  .scrim {
+    padding: var(--sp-2);
+  }
+}
+
+/* 大屏：让整月尽量一屏放下。
+   这里 --cell-w 刻意留在 44px：1600 断点可用宽只有 1118px，30 天需要 30×列宽。
+   实测下限 44px 可见 25.4 天，而 48px 反而只有 23.3 天 —— 下限越大，
+   minmax 的 1fr 能分到的实际宽度越小，整月被截掉的天数反而更多。
+   44px 已能让 3 个汉字（39px）放下且不折行，是这一档的最优解。 */
+@media (min-width: 1600px) {
+  :root {
+    --cell-w: 44px;
+    --rail-w: 128px;
+    --cell-h: 30px;
+  }
+}
+
+@media (min-width: 2100px) {
+  :root {
+    --cell-w: 56px;
+    --rail-w: 150px;
+    /* 列宽改成 1fr 均分后，这里列会涨到 ~108px；行高不同步跟上，
+       格子会变成很扁的一条。 */
+    --cell-h: 34px;
+    --fs-display: 32px;
+  }
+
+  .side-col {
+    width: 380px;
+    flex-basis: 380px;
+  }
+}
+
+/* 触摸设备：鼠标悬停高亮会「粘住」，只在真正 hover 的设备上给反馈 */
+@media (hover: none) {
+  .roster-cell:hover {
+    filter: none;
+  }
+
+  .btn:hover,
+  .picker-item:hover,
+  .person-chip:hover,
+  .stepper button:hover,
+  .segmented button:hover {
+    background: var(--face-2);
+    color: inherit;
+  }
+}

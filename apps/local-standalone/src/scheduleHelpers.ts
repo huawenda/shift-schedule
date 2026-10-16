@@ -30,6 +30,22 @@ export function formatOvertimeHours(hours: number): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
 }
 
+/* 金额/日期一律走 Intl：原版用 toFixed(2) 硬编码，
+   ¥12845.50 没有千分位，中文语境下也不好读。 */
+const moneyFormatter = new Intl.NumberFormat('zh-CN', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})
+
+export function formatMoney(value: number): string {
+  return moneyFormatter.format(Number.isFinite(value) ? value : 0)
+}
+
+export function formatMoneyShort(value: number): string {
+  if (!Number.isFinite(value)) return '0'
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
 export function canRecordOvertime(shift: ShiftType): boolean {
   return shift !== '休息' && shift !== '事假'
 }

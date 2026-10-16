@@ -1,0 +1,234 @@
+/* ==========================================================================
+   浮层：班次编辑、选择器、月份步进
+   ========================================================================== */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4);
+  background: rgba(6, 9, 12, 0.72);
+  animation: panel-in 140ms var(--ease);
+}
+
+.sheet {
+  display: flex;
+  width: min(560px, 100%);
+  max-height: calc(100vh - var(--sp-5) * 2);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--rule-hot);
+  border-radius: var(--r-panel);
+  background: var(--face-1);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.sheet-title {
+  margin: 0;
+  color: var(--ink-hi);
+  font-size: var(--fs-title);
+  font-weight: 650;
+}
+
+.sheet-sub {
+  margin-top: 2px;
+  color: var(--ink-lo);
+  font-family: var(--font-data);
+  font-size: var(--fs-data-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--sp-4);
+}
+
+.sheet-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--rule);
+  background: var(--face-1);
+}
+
+/* --- 编辑器字段组 -------------------------------------------------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.field:last-child {
+  border-bottom: 0;
+}
+
+.field-label {
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.field-note {
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+}
+
+.field-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+/* 班次选项：唯一的彩色控件，带中文标签 */
+.shift-option {
+  min-width: 68px;
+  min-height: 36px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--rule-hot);
+  border-radius: var(--r-control);
+  background: var(--shift-fill, var(--face-2));
+  color: var(--shift-ink, var(--ink));
+  font-size: var(--fs-label);
+  font-weight: 600;
+  transition: box-shadow 120ms var(--ease), filter 120ms var(--ease);
+}
+
+.shift-option:hover:not(:disabled) {
+  filter: brightness(1.3);
+}
+
+.shift-option[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 2px var(--signal);
+}
+
+.shift-option.is-base {
+  background: var(--face-2);
+  color: var(--ink);
+}
+
+/* 加班小时输入 */
+.hours-row {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--rule-hot);
+  border-radius: var(--r-control);
+  background: var(--face-2);
+  transition: border-color 120ms var(--ease), background 120ms var(--ease);
+}
+
+.hours-row:focus-within {
+  border-color: var(--signal);
+  background: var(--face-3);
+}
+
+.hours-input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink-hi);
+  font-family: var(--font-data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.hours-unit {
+  color: var(--ink-lo);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.hours-hint {
+  color: var(--ink-lo);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* --- 选择器列表 ---------------------------------------------------------- */
+
+.picker-list {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.picker-item {
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4);
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  text-align: left;
+  transition: background 120ms var(--ease), color 120ms var(--ease);
+}
+
+.picker-item:hover {
+  background: var(--face-2);
+  color: var(--ink-hi);
+}
+
+.picker-item[aria-selected="true"] {
+  color: var(--ink-hi);
+}
+
+.picker-item[aria-selected="true"]::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: var(--signal);
+  flex: 0 0 auto;
+}
+
+.picker-group {
+  color: var(--ink-lo);
+  font-family: var(--font-data);
+  font-size: var(--fs-data-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- 月份步进浮层 -------------------------------------------------------- */
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.month-grid .picker-item {
+  justify-content: center;
+  border-right: 1px solid var(--rule);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}

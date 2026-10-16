@@ -36,6 +36,33 @@ function fileProtocolFriendlyPlugin(): Plugin {
   }
 }
 
+/**
+ * 给 service-worker.js 打上构建指纹。
+ *
+ * SW 的缓存名原本写死 'v1'，而 activate 里的清理逻辑是「删掉所有名字不等于
+ * 当前 CACHE_NAME 的缓存」——名字永远不变，于是**清理永远不会触发**，
+ * 每次发版留下的旧 hash 资源（app-xxxx.js / style-xxxx.css）会无限堆积。
+ *
+ * 这里把构建指纹注入进去，指纹一变，旧缓存就在 activate 时被整体清掉。
+ */
+function serviceWorkerBuildIdPlugin(): Plugin {
+  return {
+    name: 'shift-schedule-local:sw-build-id',
+    apply: 'build',
+    enforce: 'post',
+    writeBundle(options) {
+      const outDir = options.dir ?? path.resolve(__dirname, 'dist')
+      const swPath = path.join(outDir, 'service-worker.js')
+      if (!fs.existsSync(swPath)) return
+
+      const buildId = String(Date.now())
+      const sw = fs.readFileSync(swPath, 'utf8')
+      const patched = sw.replace(/__BUILD_ID__/g, buildId)
+      if (patched !== sw) fs.writeFileSync(swPath, patched, 'utf8')
+    }
+  }
+}
+
 export default defineConfig({
   // 相对路径：dist 放到任意目录、任意子路径下都能用
   base: './',
@@ -44,7 +71,7 @@ export default defineConfig({
       '@local/core': coreEntry
     }
   },
-  plugins: [fileProtocolFriendlyPlugin()],
+  plugins: [fileProtocolFriendlyPlugin(), serviceWorkerBuildIdPlugin()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

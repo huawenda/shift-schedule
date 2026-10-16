@@ -194,10 +194,10 @@ async function waitFor(client, expression, label, timeoutMs = 15000) {
 async function reload(client) {
   await client.send('Page.reload', { ignoreCache: true })
   await waitFor(client, 'document.readyState === "complete"', '页面重新加载')
-  await waitFor(client, 'Boolean(document.querySelector(".calendar-grid .calendar-cell:not(.calendar-cell-empty)"))', '排班表渲染')
+  await waitFor(client, 'Boolean(document.querySelector(".roster-row .roster-cell"))', '排班表渲染')
 }
 
-const cellSelector = '.calendar-grid .calendar-cell:not(.calendar-cell-empty)'
+const cellSelector = '.roster-row .roster-cell'
 
 async function runScenario(name, url, downloadDir) {
   console.log(`\n=== 场景：${name} ===`)
@@ -236,7 +236,7 @@ async function runScenario(name, url, downloadDir) {
       await client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir }).catch(() => {})
     }
 
-    await waitFor(client, 'Boolean(document.querySelector(".calendar-grid .calendar-cell:not(.calendar-cell-empty)"))', '排班表渲染')
+    await waitFor(client, 'Boolean(document.querySelector(".roster-row .roster-cell"))', '排班表渲染')
     check(`${name}: 排班表渲染成功`, true)
 
     const storageState = await client.evaluate(`(() => {
@@ -267,20 +267,19 @@ async function runScenario(name, url, downloadDir) {
     const picked = await client.evaluate(`(() => {
       const cell = document.querySelector(${JSON.stringify(cellSelector)})
       if (!cell) return null
-      const chip = cell.querySelector('.shift-chip')
-      return { day: cell.querySelector('.calendar-day')?.textContent, shift: chip ? chip.textContent : null }
+      return { shift: cell.textContent.trim() }
     })()`)
 
     const nextShift = ['夜班', '白班', '休息', '白特', '夜特'].find(shift => shift !== picked.shift)
-    check(`${name}: 找到可编辑的排班单元格`, Boolean(picked && nextShift), `第${picked?.day}日 当前「${picked?.shift}」→「${nextShift}」`)
+    check(`${name}: 找到可编辑的排班单元格`, Boolean(picked && nextShift), `当前「${picked?.shift}」→「${nextShift}」`)
 
     await client.evaluate(`document.querySelector(${JSON.stringify(cellSelector)}).click(); true`)
-    await waitFor(client, 'Boolean(document.querySelector(".shift-editor"))', '班次编辑弹窗')
+    await waitFor(client, 'Boolean(document.querySelector(".sheet"))', '班次编辑弹窗')
     check(`${name}: 点击单元格能打开编辑弹窗`, true)
 
     const shiftClicked = await client.evaluate(`(() => {
-      const options = Array.from(document.querySelectorAll('.shift-editor .editor-option'))
-      const target = options.find(option => option.querySelector('.shift-chip')?.textContent === ${JSON.stringify(nextShift)})
+      const options = Array.from(document.querySelectorAll('.shift-option'))
+      const target = options.find(option => option.textContent?.trim() === ${JSON.stringify(nextShift)})
       if (!target) return false
       target.click()
       return true
@@ -288,14 +287,14 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 选中目标班次「${nextShift}」`, shiftClicked)
 
     await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.shift-editor .editor-actions button'))
+      const button = Array.from(document.querySelectorAll('.sheet-foot button'))
         .find(item => item.textContent.trim() === '保存')
       if (!button) return false
       button.click()
       return true
     })()`)
 
-    await waitFor(client, '!document.querySelector(".shift-editor")', '弹窗关闭')
+    await waitFor(client, '!document.querySelector(".sheet")', '弹窗关闭')
 
     const storedRaw = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(DAY_RECORDS_KEY)})`)
     let storedRecords = []
@@ -316,12 +315,11 @@ async function runScenario(name, url, downloadDir) {
     await reload(client)
 
     const afterReload = await client.evaluate(`(() => {
-      const cell = Array.from(document.querySelectorAll('.calendar-grid .calendar-cell'))
-        .find(item => item.querySelector('.calendar-day')?.textContent === ${JSON.stringify(picked.day)})
+      const cell = document.querySelector(${JSON.stringify(cellSelector)})
       if (!cell) return null
       return {
-        shift: cell.querySelector('.shift-chip')?.textContent ?? null,
-        marked: cell.classList.contains('edited-calendar-cell')
+        shift: cell.textContent.trim(),
+        marked: cell.classList.contains('is-edited')
       }
     })()`)
 
@@ -333,8 +331,8 @@ async function runScenario(name, url, downloadDir) {
 
     // --- 导出备份真的落文件 ---
     await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.status-strip button'))
-        .find(item => item.textContent.trim() === '导出备份')
+      const button = Array.from(document.querySelectorAll('.top-bar-actions button'))
+        .find(item => item.textContent.trim() === '导出')
       if (!button) return false
       button.click()
       return true
@@ -361,12 +359,12 @@ async function runScenario(name, url, downloadDir) {
 
     // --- 改回默认 -> 记录被删除 ---
     await client.evaluate(`document.querySelector(${JSON.stringify(cellSelector)}).click(); true`)
-    await waitFor(client, 'Boolean(document.querySelector(".shift-editor"))', '班次编辑弹窗')
+    await waitFor(client, 'Boolean(document.querySelector(".sheet"))', '班次编辑弹窗')
     const resetClicked = await client.evaluate(`(() => {
       // 「默认班次」的文案在 editor-label 上，按钮本体只有班次 chip
-      const label = Array.from(document.querySelectorAll('.shift-editor .editor-label'))
+      const label = Array.from(document.querySelectorAll('.field-label'))
         .find(item => item.textContent.trim() === '默认班次')
-      const option = label?.parentElement?.querySelector('.editor-option')
+      const option = label?.parentElement?.querySelector('.shift-option')
       if (!option) return false
       option.click()
       return true
@@ -375,14 +373,14 @@ async function runScenario(name, url, downloadDir) {
     // 保存读到的还是旧 state（React 会批处理）。
     await sleep(200)
     await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.shift-editor .editor-actions button'))
+      const button = Array.from(document.querySelectorAll('.sheet-foot button'))
         .find(item => item.textContent.trim() === '保存')
       if (!button) return false
       button.click()
       return true
     })()`)
     check(`${name}: 选中「默认班次」并保存`, resetClicked)
-    await waitFor(client, '!document.querySelector(".shift-editor")', '弹窗关闭')
+    await waitFor(client, '!document.querySelector(".sheet")', '弹窗关闭')
 
     const afterDelete = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(DAY_RECORDS_KEY)})`)
     let afterDeleteRecords = []
@@ -395,62 +393,67 @@ async function runScenario(name, url, downloadDir) {
 
     // --- 团队统计（本地版视为管理员） ---
     await client.evaluate(`(() => {
-      const button = document.querySelector('.stats-entry-button')
+      const button = Array.from(document.querySelectorAll('.top-bar-actions button')).find(b => b.textContent.trim() === '统计')
       if (!button) return false
       button.click()
       return true
     })()`)
-    await waitFor(client, 'Boolean(document.querySelector(".stats-page-mini"))', '统计页')
+    await waitFor(client, 'Boolean(document.querySelector(".stats"))', '统计页')
     check(`${name}: 能进入统计页`, true)
 
-    const adminTabs = await client.evaluate(`(() => {
-      const labels = Array.from(document.querySelectorAll('.stats-view-tab')).map(item => item.textContent.trim())
+    const statsTabs = await client.evaluate(`(() => {
+      const labels = Array.from(document.querySelectorAll('.stats-filters [role="tablist"] button')).map(item => item.textContent.trim())
       return labels
     })()`)
     check(
-      `${name}: 统计页显示管理员专属标签（个人统计 + 全员统计）`,
-      adminTabs.includes('个人统计') && adminTabs.includes('全员统计'),
-      JSON.stringify(adminTabs)
+      `${name}: 统计页显示两个视图标签（月度概览 / 每日明细）`,
+      statsTabs.includes('月度概览') && statsTabs.includes('每日明细'),
+      JSON.stringify(statsTabs)
     )
 
-    const teamTabClicked = await client.evaluate(`(() => {
-      const tab = Array.from(document.querySelectorAll('.stats-view-tab'))
-        .find(item => item.textContent.includes('全员统计'))
+    const dailyTabClicked = await client.evaluate(`(() => {
+      const tab = Array.from(document.querySelectorAll('.stats-filters [role="tablist"] button'))
+        .find(item => item.textContent.includes('每日明细'))
       if (!tab) return false
       tab.click()
       return true
     })()`)
-    check(`${name}: 能切到全员统计`, teamTabClicked)
+    check(`${name}: 能切到每日明细`, dailyTabClicked)
 
-    if (teamTabClicked) {
-      const hasChart = await waitFor(client, 'Boolean(document.querySelector(".stats-team-chart"))', '团队对比图', 8000)
+    if (dailyTabClicked) {
+      const hasDaily = await waitFor(client, 'Boolean(document.querySelector(".daily"))', '每日明细表', 8000)
         .then(() => true)
         .catch(() => false)
-      check(`${name}: 全员加班对比图渲染`, hasChart)
+      check(`${name}: 每日明细表渲染`, hasDaily)
     }
 
+    /* 全员排名页已按产品决策删除。这里显式断言它不在，
+       免得以后有人「顺手加回来」而没人发现。 */
+    const hasTeamTab = statsTabs.some(label => label.includes('全员'))
+    check(`${name}: 全员排名已移除`, !hasTeamTab, JSON.stringify(statsTabs))
+
     const backClicked = await client.evaluate(`(() => {
-      const button = document.querySelector('.stats-back-button')
+      const button = document.querySelector('.stats-bar .btn-ghost')
       if (!button) return false
       button.click()
       return true
     })()`)
     const backHome = backClicked
-      ? await waitFor(client, 'Boolean(document.querySelector(".calendar-grid"))', '返回排班页', 8000).then(() => true).catch(() => false)
+      ? await waitFor(client, 'Boolean(document.querySelector(".calendar"))', '返回排班页', 8000).then(() => true).catch(() => false)
       : false
     check(`${name}: 从统计页返回排班页`, backHome)
 
     // --- 薪资输入能落盘 ---
     await client.evaluate(`(() => {
-      const button = document.querySelector('.stats-entry-button')
+      const button = Array.from(document.querySelectorAll('.top-bar-actions button')).find(b => b.textContent.trim() === '统计')
       if (button) button.click()
       return true
     })()`)
-    await waitFor(client, 'Boolean(document.querySelector(".stats-page-mini"))', '统计页')
+    await waitFor(client, 'Boolean(document.querySelector(".stats"))', '统计页')
 
     // 统计页会记住上次看的是「全员统计」，薪资输入在「个人统计」页
     await client.evaluate(`(() => {
-      const tab = Array.from(document.querySelectorAll('.stats-view-tab'))
+      const tab = Array.from(document.querySelectorAll('.stats-filters [role="tablist"] button'))
         .find(item => item.textContent.includes('个人统计'))
       if (tab) tab.click()
       return true

@@ -1,13 +1,12 @@
-@use './styles/01-foundation' as *;
-@use './styles/02-app-shell' as *;
-@use './styles/03-schedule' as *;
-@use './styles/04-overlays-auth' as *;
-@use './styles/05-responsive-base' as *;
-@use './styles/06-schedule-corrections' as *;
-@use './styles/07-motion' as *;
-@use './styles/08-miniapp-schedule' as *;
-@use './styles/09-stats' as *;
-@use './styles/10-responsive-final' as *;
-@use './styles/11-auth-page' as *;
-// 大屏（PC）优化必须最后引入：同一个断点下靠文件顺序覆盖前面的规则
-@use './styles/12-desktop' as *;
+/* 倒班表 · 本地版 —— 视觉体系入口
+ *
+ * 规范见 DESIGN.local.md。
+ * 层序即优先级：后面的文件覆盖前面的同名规则。
+ * 文件名以数字开头，Sass 不能拿它当默认命名空间，故一律 `as *`。
+ */
+@use './styles/01-tokens' as *;
+@use './styles/02-shell' as *;
+@use './styles/03-matrix' as *;
+@use './styles/04-stats' as *;
+@use './styles/05-overlays' as *;
+@use './styles/06-responsive' as *;
