@@ -1,0 +1,32 @@
+[package]
+name = "shift-schedule-desktop"
+version = "1.0.0"
+description = "倒班表 · 本地版"
+authors = ["华文达"]
+edition = "2021"
+rust-version = "1.77.2"
+
+# 库与可执行文件名保持一致，Cargo 惯例。
+[lib]
+name = "shift_schedule_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+# 备份导出 / 导入需要落盘与文件选择器。
+# 静态版靠 <a download> + <input type=file>，壳里这两条路都被
+# WebView2 的下载策略挡掉，必须换成 Tauri 的原生对话框。
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+
+[profile.release]
+# 排班表是个纯本地小工具，启动速度比二进制体积重要。
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
