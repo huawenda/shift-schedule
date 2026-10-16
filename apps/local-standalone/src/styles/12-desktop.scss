@@ -1,0 +1,344 @@
+/* ==========================================================================
+   大屏（PC）优化
+   --------------------------------------------------------------------------
+   在 styles.scss 里最后引入，只作用于 ≥1440px，不影响移动端和
+   1024–1439px 的既有观感（那两档实测已经占满 94–97% 视口宽度）。
+
+   分三档：
+     ≥1440   1080p / 普通外接屏
+     ≥1800   2K / 1440p
+     ≥2400   超宽屏
+
+   核心目标：解除原来的 1360px 封顶，并让「多视图」表格的日期列自动吃满
+   可用宽度 —— 原来固定 60px，31 天要 1978px，在任何屏幕上都必然横向滚动。
+   ========================================================================== */
+
+@media (min-width: 1440px) {
+  :root {
+    --schedule-name-column: 108px;
+  }
+
+  /* WP1：解除 width: min(1360px, calc(100% - 40px)) 的封顶
+     1920 下利用率 71% → 98%，2560 下 53% → 98%，3440 下 40% → 76%。
+     上限 2600px：再宽的话「姓名 → 月末」一眼横扫 3000px 以上，反而难跟踪。 */
+  .app-shell {
+    width: min(100% - 48px, 2600px);
+    max-width: 2600px;
+    padding: 20px 24px 40px;
+  }
+
+  .schedule-sticky-top,
+  .stats-sticky-top {
+    margin: -20px -24px 0;
+    padding: 20px 24px 1px;
+  }
+
+  /* WP3：日历固定成左栏，剩余宽度全部让给「多视图」表格。
+     下限 500px 是日历的硬需求：卡片内宽 500-28=472，7 列后单元格约 62px，
+     刚好放得下「日期 + 农历 + 班次标签」（日期行本身要 54px）。
+     再窄就会挤到贴边甚至被裁。 */
+  .schedule-content-grid {
+    grid-template-columns: clamp(500px, 29vw, 620px) minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  /*
+    WP3：列宽自动均分可用宽度。
+    display:block + width:100% 让每一行拿到确定的宽度，于是各行独立计算的
+    1fr 结果完全一致，表头与数据行仍然逐列对齐；低于 minmax 下限时轨道溢出，
+    由 .table-scroll 正常出现横向滚动条。
+  */
+  .schedule-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table-row {
+    width: 100%;
+    grid-auto-columns: minmax(52px, 1fr);
+  }
+
+  /* 表格里的班次标记必须跟着列宽走，否则会溢出到相邻列 */
+  .table-shift-wrap .shift-chip {
+    min-width: 40px;
+    height: 24px;
+    padding: 0 6px;
+    font-size: 13px;
+  }
+
+  .name-view-person-name {
+    width: calc(100% - 8px);
+    min-width: 0;
+  }
+
+  /* WP2：月份与统计的分段控件不再被拉伸到整行（1920 下一个 tab 曾有 151px） */
+  .month-tabs {
+    max-width: 1080px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .stats-view-tabs {
+    max-width: 520px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  /* WP2：字号与控件整体上浮一档（原来 1024 以上全部是同一套写死的 px） */
+  h1,
+  .stats-mini-header h1 {
+    font-size: 26px;
+  }
+
+  .period,
+  .stats-mini-header p {
+    font-size: 17px;
+  }
+
+  .sync-button,
+  .stats-back-button,
+  .stats-sync-button,
+  .ghost-button,
+  .user-switch-button {
+    min-width: 74px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .month-tab {
+    height: 46px;
+    font-size: 21px;
+  }
+
+  .section-header h2,
+  .current-user-title,
+  .table-toolbar-main h2,
+  .stats-section-title {
+    font-size: 24px;
+  }
+
+  .summary-item strong {
+    font-size: 24px;
+  }
+
+  .summary-item span {
+    font-size: 16px;
+  }
+
+  .calendar-cell {
+    height: 72px;
+  }
+
+  .calendar-cell-content {
+    min-height: 52px;
+  }
+
+  .calendar-day {
+    font-size: 18px;
+  }
+
+  .calendar-weekdays span {
+    font-size: 16px;
+  }
+
+  /* 大屏上单元格更宽（62px 起），日期行可以松一点：12+6+20+6+12 = 56px */
+  .calendar-date-wrap {
+    width: 56px;
+    column-gap: 6px;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 46px;
+  }
+
+  .identity-header,
+  .table-header {
+    height: 50px;
+  }
+
+  .identity-row strong,
+  .identity-header strong,
+  .date-head strong {
+    font-size: 14px;
+  }
+
+  .identity-row span,
+  .identity-header span,
+  .date-head span {
+    font-size: 12px;
+  }
+
+  .table-head,
+  .shift-cell {
+    min-height: 46px;
+  }
+
+  .table-header .table-head {
+    min-height: 50px;
+  }
+
+  .stats-view-tab {
+    height: 42px;
+    font-size: 19px;
+  }
+
+  .salary-input-prefix,
+  .salary-input,
+  .salary-result-value,
+  .salary-summary-value {
+    font-size: 16px;
+  }
+
+  .stats-overview-value,
+  .stats-daily-pay,
+  .stats-daily-overtime,
+  .stats-team-chart-total {
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1800px) {
+  :root {
+    --schedule-name-column: 100px;
+  }
+
+  .schedule-content-grid {
+    grid-template-columns: clamp(500px, 26vw, 620px) minmax(0, 1fr);
+  }
+
+  /* 下限降到 34px：1800px 以上整月 31 天可以完整放下，不再横向滚动。
+     同时把日历列保持在 500px 以上，避免为了表格宽度去牺牲日历。 */
+  .table-row {
+    grid-auto-columns: minmax(34px, 1fr);
+  }
+
+  /* 列窄了，班次标签必须同步收窄；在这里用 12px 而不是放大字号，
+     是本轮「一屏看完整月」换来的密度取舍 */
+  .table-shift-wrap .shift-chip {
+    min-width: 30px;
+    height: 22px;
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .name-view-person-name {
+    font-size: 11px;
+  }
+
+  /* 这一档起整月已经能完整放下，滑动提示不再成立 */
+  .table-toolbar-sub > .muted-label {
+    display: none;
+  }
+
+  h1,
+  .stats-mini-header h1 {
+    font-size: 28px;
+  }
+
+  .period,
+  .stats-mini-header p {
+    font-size: 18px;
+  }
+
+  .section-header h2,
+  .current-user-title,
+  .table-toolbar-main h2,
+  .stats-section-title {
+    font-size: 26px;
+  }
+
+  .month-tab {
+    height: 48px;
+    font-size: 22px;
+  }
+
+  .calendar-cell {
+    height: 80px;
+  }
+
+  .calendar-cell-content {
+    min-height: 58px;
+  }
+
+  .calendar-day {
+    font-size: 20px;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 50px;
+  }
+
+  .identity-header,
+  .table-header {
+    height: 54px;
+  }
+
+  .table-head,
+  .shift-cell {
+    min-height: 50px;
+  }
+
+  .table-header .table-head {
+    min-height: 54px;
+  }
+
+  .stats-view-tab {
+    height: 44px;
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 2400px) {
+  :root {
+    --schedule-name-column: 96px;
+  }
+
+  /* 这一档列宽已经回到 48px 以上，班次标签可以再放大一点 */
+  .table-shift-wrap .shift-chip {
+    min-width: 32px;
+    height: 24px;
+    padding: 0 5px;
+    font-size: 13px;
+  }
+
+  .calendar-cell {
+    height: 88px;
+  }
+
+  .calendar-cell-content {
+    min-height: 66px;
+  }
+
+  .calendar-day {
+    font-size: 22px;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 54px;
+  }
+
+  .identity-header,
+  .table-header {
+    height: 58px;
+  }
+
+  .table-head,
+  .shift-cell {
+    min-height: 54px;
+  }
+
+  .table-header .table-head {
+    min-height: 58px;
+  }
+
+  .section-header h2,
+  .current-user-title,
+  .table-toolbar-main h2,
+  .stats-section-title {
+    font-size: 28px;
+  }
+}

@@ -44,3 +44,20 @@ pnpm verify:miniapp
 ```bash
 pnpm verify:all
 ```
+
+## 纯本地静态页（standalone）
+
+`apps/local-standalone` 是一个**完全自包含**的纯本地版本：不联网、不需要登录和鉴权，
+构建产物是一个可以整包拷到其他设备的静态文件夹。
+
+它不依赖 `packages/core`，也不依赖 `apps/web`——逻辑和界面是拷贝过来的独立副本，
+`@shift-schedule/core` 已替换为项目内的 `@local/core` 路径别名。
+
+```bash
+cd apps/local-standalone
+pnpm build        # 产出 dist/，可直接双击 index.html 或挂静态服务器
+pnpm test         # 62 个测试（含拷贝自 core 的 50 个，用于校验副本一致性）
+pnpm verify:dist  # 无头浏览器真实跑一遍：改班次→落盘→刷新→统计页→导出备份
+```
+
+详见 `apps/local-standalone/README.md` 和产物内的 `使用说明.txt`。

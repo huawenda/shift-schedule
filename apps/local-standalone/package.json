@@ -1,0 +1,29 @@
+{
+  "name": "shift-schedule-local",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "倒班表 · 纯本地静态页：无登录、无鉴权、无任何网络请求，数据只存在本机浏览器",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 6180",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 6181",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify:dist": "node scripts/verify-dist.mjs",
+    "screenshot:dist": "node scripts/screenshot-dist.mjs"
+  },
+  "dependencies": {
+    "lunar-javascript": "^1.7.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7",
+    "sass": "^1.95.1",
+    "typescript": "^5.9.3",
+    "vite": "^4.5.14",
+    "vitest": "^0.34.6"
+  }
+}

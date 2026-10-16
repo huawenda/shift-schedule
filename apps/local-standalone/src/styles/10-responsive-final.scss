@@ -1,0 +1,2122 @@
+/* Final miniapp parity overrides. Keep this block at the end of the file. */
+@media (max-width: 720px) {
+  :root {
+    --schedule-name-column: 80px;
+    --schedule-date-column: 48px;
+  }
+
+  html,
+  body,
+  #root,
+  .app-shell {
+    overscroll-behavior: none;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  .app-shell::-webkit-scrollbar,
+  .stats-page-mini::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  body {
+    background: var(--canvas);
+  }
+
+  .app-shell {
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 8px 8px calc(22px + env(safe-area-inset-bottom, 0px));
+    background: var(--canvas);
+  }
+
+  .hero-panel {
+    min-height: 46px;
+  }
+
+  .hero-title-group {
+    gap: 7px;
+  }
+
+  .app-mark {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+    border-radius: 8px;
+  }
+
+  h1 {
+    font-size: 18px;
+    line-height: 1.05;
+  }
+
+  .period {
+    margin-top: 2px;
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  .sync-button {
+    min-width: 52px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .month-tabs {
+    margin: 8px 0;
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  .month-tab {
+    min-width: 56px;
+    height: 31px;
+    margin-right: 4px;
+    padding: 0 8px;
+    border-radius: 7px;
+    font-size: 12px;
+  }
+
+  .status-strip {
+    min-height: 29px;
+    margin-top: 8px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 10px;
+  }
+
+  .current-user-card,
+  .calendar-card,
+  .schedule-card,
+  .stats-card,
+  .stats-view-tabs,
+  .stats-filter-card {
+    border-radius: 10px;
+  }
+
+  .current-user-card,
+  .calendar-card {
+    margin-top: 8px;
+    padding: 10px;
+  }
+
+  .current-user-card::before,
+  .stats-card::before {
+    height: 2px;
+  }
+
+  .current-user-card .section-header {
+    align-items: flex-start;
+  }
+
+  .muted-label {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  .current-user-title,
+  .section-header h2 {
+    gap: 4px;
+    font-size: 18px;
+    line-height: 1.1;
+  }
+
+  .current-user-title .admin-badge.inline,
+  .admin-badge {
+    height: 16px;
+    padding: 0 5px;
+    font-size: 8px;
+  }
+
+  .user-switch-control {
+    gap: 6px;
+  }
+
+  .user-switch-button {
+    min-width: 44px;
+    height: 26px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 9px;
+  }
+
+  .summary-item {
+    min-height: 42px;
+    border-radius: 6px;
+  }
+
+  .summary-item strong {
+    font-size: 17px;
+  }
+
+  .summary-item span {
+    margin-top: 2px;
+    font-size: 10px;
+  }
+
+  .calendar-card .section-header {
+    margin-bottom: 8px;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    gap: 5px;
+  }
+
+  .calendar-weekdays {
+    margin-top: 0;
+  }
+
+  .calendar-weekdays span {
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  .calendar-grid {
+    margin-top: 6px;
+  }
+
+  .calendar-cell {
+    aspect-ratio: 1 / 1;
+    height: auto;
+    min-height: 0;
+    border-radius: 7px;
+  }
+
+  .calendar-cell-content {
+    display: grid;
+    width: 100%;
+    min-height: 0;
+    place-items: center;
+    gap: 1px;
+  }
+
+  .calendar-date-wrap {
+    display: grid;
+    width: 34px;
+    min-width: 34px;
+    min-height: 16px;
+    grid-template-columns: 8px 15px 9px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+  }
+
+  .calendar-lunar-spacer {
+    display: block;
+    width: 8px;
+  }
+
+  .calendar-day {
+    width: 15px;
+    min-width: 15px;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .calendar-lunar {
+    width: 9px;
+    max-height: 16px;
+    font-size: 6px;
+    line-height: 1;
+  }
+
+  .calendar-lunar span {
+    width: 9px;
+    height: 6px;
+    font-size: 6px;
+    line-height: 6px;
+  }
+
+  .calendar-shift-row {
+    gap: 1px;
+    min-height: 15px;
+  }
+
+  .calendar-shift-row .shift-chip {
+    min-width: 29px;
+    height: 14px;
+    padding: 0 4px;
+    font-size: 8px;
+  }
+
+  .legal-shift-badge {
+    min-width: 10px;
+    height: 10px;
+    padding: 0;
+    font-size: 7px;
+  }
+
+  .edited-marker,
+  .overtime-marker {
+    left: 4px;
+    width: 4px;
+    height: 4px;
+  }
+
+  .edited-marker {
+    top: 4px;
+  }
+
+  .overtime-marker {
+    bottom: 4px;
+  }
+
+  .schedule-card {
+    margin-top: 8px;
+    padding: 0;
+    border-radius: 10px;
+  }
+
+  .table-toolbar {
+    padding: 10px 10px 8px;
+  }
+
+  .table-toolbar-main h2 {
+    font-size: 18px;
+  }
+
+  .table-view-switch {
+    padding: 3px;
+  }
+
+  .table-view-option {
+    min-width: 44px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  .table-toolbar-sub {
+    height: 23px;
+    margin-top: 4px;
+  }
+
+  .table-toolbar-sub .muted-label {
+    font-size: 10px;
+  }
+
+  .legend {
+    gap: 4px;
+    height: 20px;
+  }
+
+  .legend .shift-chip {
+    height: 16px;
+    padding: 0 5px;
+    font-size: 8px;
+  }
+
+  .table-shell {
+    margin-top: 0;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 34px;
+  }
+
+  .identity-header,
+  .table-header {
+    height: 40px;
+  }
+
+  .identity-row {
+    padding: 0 5px;
+  }
+
+  .identity-row strong {
+    font-size: 11px;
+    line-height: 1.05;
+  }
+
+  .identity-row span {
+    margin-top: 2px;
+    font-size: 9px;
+  }
+
+  .identity-header strong,
+  .date-head strong {
+    font-size: 11px;
+  }
+
+  .identity-header span,
+  .date-head span {
+    font-size: 9px;
+  }
+
+  .table-head,
+  .shift-cell {
+    min-height: 34px;
+  }
+
+  .table-header .table-head {
+    min-height: 40px;
+  }
+
+  .shift-chip {
+    min-width: 34px;
+    height: 17px;
+    padding: 0 5px;
+    font-size: 8px;
+  }
+
+  .name-view-person-name {
+    width: 38px;
+    height: 17px;
+    font-size: 8px;
+  }
+
+  .table-shift-wrap {
+    gap: 1px;
+  }
+
+  .edited-dot {
+    left: 5px;
+    width: 4px;
+    height: 4px;
+  }
+
+  .edited-dot {
+    top: 4px;
+  }
+
+  .stats-page-mini {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .stats-mini-header {
+    min-height: 44px;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .stats-mini-header h1 {
+    font-size: 18px;
+  }
+
+  .stats-mini-header p {
+    margin-top: 2px;
+    font-size: 10px;
+  }
+
+  .stats-back-button,
+  .stats-sync-button {
+    min-width: 48px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .stats-view-tabs {
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 8px;
+  }
+
+  .stats-view-tab {
+    height: 30px;
+    border-radius: 7px;
+    font-size: 13px;
+  }
+
+  .stats-filter-card {
+    gap: 6px;
+    padding: 8px;
+    margin-bottom: 6px;
+  }
+
+  .stats-filter-item {
+    min-height: 42px;
+    padding: 0 8px;
+    border-radius: 8px;
+  }
+
+  .stats-filter-label {
+    margin-bottom: 3px;
+    font-size: 10px;
+  }
+
+  .stats-filter-select,
+  .stats-filter-trigger,
+  .stats-filter-value {
+    font-size: 15px;
+  }
+
+  .stats-page-indicator {
+    height: 12px;
+    margin: -2px 0 4px;
+  }
+
+  .stats-page-indicator-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  .stats-page-indicator-dot.active {
+    width: 18px;
+  }
+
+  .stats-personal-pages {
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .stats-personal-track {
+    display: flex;
+    width: 200%;
+  }
+
+  .stats-personal-page {
+    width: 50%;
+    padding: 0;
+  }
+
+  .stats-content-inner {
+    padding-bottom: 8px;
+  }
+
+  .stats-card {
+    padding: 10px;
+    margin-bottom: 7px;
+  }
+
+  .salary-card {
+    padding: 10px;
+  }
+
+  .stats-section-title-row {
+    margin-bottom: 7px;
+  }
+
+  .stats-section-title {
+    font-size: 16px;
+  }
+
+  .stats-person-label,
+  .stats-section-hint {
+    font-size: 10px;
+  }
+
+  .stats-overview-row {
+    grid-template-columns: minmax(0, 1fr) 52px 52px;
+    min-height: 36px;
+    padding: 0 7px;
+  }
+
+  .stats-overview-header {
+    grid-template-columns: minmax(0, 1fr) 52px 52px;
+    min-height: 30px;
+    font-size: 10px;
+  }
+
+  .stats-overview-header span:first-child,
+  .stats-overview-header span:nth-child(2),
+  .stats-overview-header span:nth-child(3) {
+    grid-column: auto;
+  }
+
+  .stats-overview-name {
+    justify-content: center;
+  }
+
+  .stats-overview-tag,
+  .stats-shift {
+    min-width: 34px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 9px;
+  }
+
+  .stats-overview-value {
+    font-size: 13px;
+  }
+
+  .stats-bar-chart {
+    min-height: 122px;
+    gap: 8px;
+    padding-top: 2px;
+  }
+
+  .stats-bar-item {
+    grid-template-rows: 18px 78px 18px;
+  }
+
+  .stats-bar-track {
+    width: 23px;
+    height: 78px;
+  }
+
+  .stats-bar-value,
+  .stats-bar-label {
+    font-size: 10px;
+  }
+
+  .salary-section {
+    padding: 7px 0 8px;
+  }
+
+  .salary-section-head {
+    margin-bottom: 5px;
+  }
+
+  .salary-block-title {
+    font-size: 12px;
+  }
+
+  .salary-section-total,
+  .salary-save-status {
+    font-size: 10px;
+  }
+
+  .salary-input-grid,
+  .salary-result-grid,
+  .salary-deduction-grid,
+  .salary-final-grid {
+    gap: 5px;
+  }
+
+  .salary-input-label,
+  .salary-result-label,
+  .salary-summary-label {
+    margin-bottom: 3px;
+    font-size: 9px;
+  }
+
+  .salary-input-box {
+    min-height: 29px;
+    padding: 0 6px;
+    border: 1px solid #e4edf7;
+    border-radius: 6px;
+    background: #f6f9fd;
+    box-shadow: none;
+  }
+
+  .salary-input-item .salary-input {
+    min-height: 0;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    outline: none;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .salary-input-prefix,
+  .salary-input,
+  .salary-result-value,
+  .salary-summary-value {
+    font-size: 12px;
+  }
+
+  .salary-rate-line {
+    margin-top: 5px;
+    font-size: 10px;
+  }
+
+  .salary-result-item,
+  .salary-summary-item {
+    min-height: 36px;
+    padding: 0 6px;
+    border-radius: 6px;
+  }
+
+  .stats-daily-row {
+    grid-template-columns: minmax(0, 1fr) 50px 54px 32px;
+    min-height: 36px;
+    gap: 5px;
+    padding: 0 7px;
+  }
+
+  .stats-daily-header {
+    min-height: 30px;
+    font-size: 10px;
+  }
+
+  .stats-daily-date,
+  .stats-daily-pay,
+  .stats-daily-overtime {
+    font-size: 11px;
+  }
+
+  .stats-daily-pay {
+    min-width: 44px;
+    height: 18px;
+    font-size: 9px;
+  }
+
+  .stats-legal-shift-badge {
+    min-width: 12px;
+    height: 12px;
+    padding: 0;
+    font-size: 8px;
+  }
+}
+
+/*
+  852px 只适用于 721–899 的窄平板区间。
+  这里必须限定上界：本文件的引入顺序晚于 08-miniapp-schedule.scss，
+  原来不限上界时会把 08 里 @media (min-width: 900px) 的 max-width: 1280px
+  压掉，导致 900–1023px 的容器被硬压到 852px（实测 1000px 视口只有 852px 宽）。
+*/
+@media (min-width: 721px) and (max-width: 899px) {
+  .app-shell {
+    max-width: 852px;
+  }
+}
+
+@media (min-width: 721px) {
+  .stats-personal-pages {
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .stats-personal-track {
+    display: flex;
+    width: 200%;
+  }
+
+  .stats-personal-page {
+    width: 50%;
+    padding: 0;
+  }
+
+  .stats-content-inner {
+    padding-bottom: 10px;
+  }
+}
+
+/* Absolute mobile density baseline: every card-like surface follows the miniapp salary-card scale. */
+@media (max-width: 720px) {
+  :root {
+    --schedule-name-column: 76px;
+    --schedule-date-column: 46px;
+  }
+
+  .app-shell {
+    padding: 7px 7px calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .schedule-sticky-top {
+    top: 0;
+    margin: -7px -7px 0;
+    padding: 7px 7px 1px;
+    background: var(--canvas);
+  }
+
+  .app-chrome-sticky {
+    background: var(--canvas);
+  }
+
+  .stats-sticky-top {
+    top: 0;
+    margin: -7px -7px 0;
+    padding: 7px 7px 1px;
+    background: var(--canvas);
+  }
+
+  .hero-panel,
+  .month-tabs,
+  .status-strip,
+  .current-user-card,
+  .calendar-card,
+  .schedule-card,
+  .stats-view-tabs,
+  .stats-filter-card,
+  .stats-card,
+  .auth-card,
+  .user-picker,
+  .shift-editor {
+    border-radius: 9px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .hero-panel {
+    min-height: 40px;
+  }
+
+  .app-mark {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    border-radius: 7px;
+  }
+
+  h1,
+  .stats-mini-header h1 {
+    font-size: 16px;
+  }
+
+  h2,
+  .section-header h2,
+  .table-toolbar-main h2,
+  .stats-section-title,
+  .salary-card .stats-section-title {
+    font-size: 15px;
+    line-height: 1.1;
+  }
+
+  .period,
+  .stats-mini-header p {
+    font-size: 9px;
+  }
+
+  .sync-button,
+  .stats-back-button,
+  .stats-sync-button,
+  .user-switch-button,
+  .ghost-button {
+    min-width: 44px;
+    height: 25px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .month-tabs {
+    margin: 7px 0;
+    padding: 3px;
+  }
+
+  .month-tab {
+    min-width: 52px;
+    height: 28px;
+    margin-right: 3px;
+    border-radius: 6px;
+    font-size: 11px;
+  }
+
+  .status-strip {
+    min-height: 26px;
+    margin-top: 7px;
+    padding: 0 8px;
+    font-size: 9px;
+  }
+
+  .current-user-card,
+  .calendar-card,
+  .auth-card,
+  .stats-filter-card,
+  .stats-card {
+    padding: 9px;
+    margin-top: 7px;
+  }
+
+  .schedule-card {
+    margin-top: 7px;
+  }
+
+  .section-header,
+  .stats-section-title-row,
+  .salary-section-head,
+  .table-toolbar-main,
+  .table-toolbar-sub {
+    gap: 6px;
+  }
+
+  .muted-label,
+  .stats-person-label,
+  .stats-section-hint,
+  .salary-section-total,
+  .salary-save-status,
+  .salary-rate-line {
+    font-size: 9px;
+  }
+
+  .current-user-title {
+    font-size: 16px;
+    gap: 3px;
+  }
+
+  .admin-badge,
+  .current-user-title .admin-badge.inline {
+    height: 14px;
+    padding: 0 4px;
+    font-size: 7px;
+  }
+
+  .summary-grid,
+  .stats-team-overview-grid,
+  .team-summary-grid {
+    gap: 5px;
+  }
+
+  .summary-grid {
+    margin-top: 7px;
+  }
+
+  .summary-item,
+  .stats-team-overview-item,
+  .team-summary-grid div {
+    min-height: 36px;
+    border-radius: 6px;
+  }
+
+  .summary-item strong,
+  .stats-team-overview-item strong,
+  .team-summary-grid strong {
+    font-size: 15px;
+  }
+
+  .summary-item span,
+  .stats-team-overview-item span,
+  .team-summary-grid span {
+    margin-top: 2px;
+    font-size: 9px;
+  }
+
+  .calendar-card .section-header {
+    margin-bottom: 6px;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    gap: 4px;
+  }
+
+  .calendar-weekdays span {
+    font-size: 10px;
+  }
+
+  .calendar-grid {
+    margin-top: 5px;
+  }
+
+  .calendar-cell {
+    border-radius: 6px;
+  }
+
+  .calendar-date-wrap {
+    width: 32px;
+    min-width: 32px;
+    grid-template-columns: 7px 15px 8px;
+  }
+
+  .calendar-day {
+    font-size: 11px;
+  }
+
+  .calendar-lunar,
+  .calendar-lunar span {
+    width: 8px;
+    font-size: 6px;
+  }
+
+  .calendar-shift-row .shift-chip {
+    min-width: 27px;
+    height: 13px;
+    padding: 0 3px;
+    font-size: 7px;
+  }
+
+  .shift-chip,
+  .legend .shift-chip,
+  .stats-overview-tag,
+  .stats-shift,
+  .name-view-person-name {
+    min-width: 32px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 8px;
+  }
+
+  .legal-shift-badge,
+  .stats-legal-shift-badge {
+    min-width: 10px;
+    height: 10px;
+    font-size: 7px;
+  }
+
+  .table-toolbar {
+    padding: 9px 9px 7px;
+  }
+
+  .table-toolbar-sub {
+    height: 20px;
+    margin-top: 3px;
+  }
+
+  .table-toolbar-sub .muted-label {
+    font-size: 9px;
+  }
+
+  .table-view-option {
+    min-width: 40px;
+    height: 22px;
+    font-size: 9px;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 31px;
+  }
+
+  .identity-header,
+  .table-header {
+    height: 36px;
+  }
+
+  .table-head,
+  .shift-cell {
+    min-height: 31px;
+  }
+
+  .table-header .table-head {
+    min-height: 36px;
+  }
+
+  .identity-row strong,
+  .identity-header strong,
+  .date-head strong {
+    font-size: 10px;
+  }
+
+  .identity-row span,
+  .identity-header span,
+  .date-head span {
+    font-size: 8px;
+  }
+
+  .stats-view-tabs {
+    gap: 3px;
+    padding: 3px;
+    margin-bottom: 7px;
+  }
+
+  .stats-view-tab {
+    height: 27px;
+    border-radius: 6px;
+    font-size: 11px;
+  }
+
+  .stats-filter-card {
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+
+  .stats-filter-item {
+    min-height: 38px;
+    padding: 0 7px;
+    border-radius: 7px;
+  }
+
+  .stats-filter-label {
+    margin-bottom: 2px;
+    font-size: 9px;
+  }
+
+  .stats-filter-select,
+  .stats-filter-trigger,
+  .stats-filter-value {
+    font-size: 13px;
+  }
+
+  .stats-picker-backdrop,
+  .user-picker-backdrop {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .stats-picker,
+  .user-picker {
+    width: 100%;
+    max-width: 430px;
+    max-height: min(82vh, 620px);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 32px rgba(15, 23, 42, 0.18);
+  }
+
+  .stats-picker .user-picker-header,
+  .user-picker .user-picker-header {
+    padding: 12px 14px;
+  }
+
+  .stats-picker .user-picker-header h2,
+  .user-picker .user-picker-header h2 {
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  .stats-picker .user-picker-header .ghost-button,
+  .user-picker .user-picker-header .ghost-button {
+    min-width: 48px;
+    height: 30px;
+    font-size: 11px;
+  }
+
+  .stats-picker-list,
+  .user-picker-list {
+    max-height: calc(82vh - 56px);
+  }
+
+  .stats-picker-list button,
+  .user-picker-list button {
+    min-height: 52px;
+    padding: 0 14px;
+  }
+
+  .stats-picker-list strong,
+  .user-picker-list strong {
+    font-size: 17px;
+    font-weight: 850;
+  }
+
+  .picker-check {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+
+  .stats-page-indicator {
+    height: 10px;
+    margin: -2px 0 3px;
+  }
+
+  .stats-page-indicator-dot {
+    width: 4px;
+    height: 4px;
+  }
+
+  .stats-page-indicator-dot.active {
+    width: 16px;
+  }
+
+  .stats-section-title-row {
+    margin-bottom: 6px;
+  }
+
+  .stats-overview-row,
+  .stats-overview-header {
+    grid-template-columns: minmax(0, 1fr) 48px 48px;
+  }
+
+  .stats-overview-row {
+    min-height: 32px;
+    padding: 0 6px;
+  }
+
+  .stats-overview-header {
+    min-height: 28px;
+    font-size: 9px;
+  }
+
+  .stats-overview-value {
+    font-size: 12px;
+  }
+
+  .stats-bar-chart {
+    min-height: 106px;
+    gap: 7px;
+  }
+
+  .stats-bar-item {
+    grid-template-rows: 16px 66px 16px;
+  }
+
+  .stats-bar-track {
+    width: 21px;
+    height: 66px;
+  }
+
+  .stats-bar-value,
+  .stats-bar-label {
+    font-size: 9px;
+  }
+
+  .salary-section {
+    padding: 6px 0 7px;
+  }
+
+  .salary-block-title {
+    font-size: 11px;
+  }
+
+  .salary-input-grid,
+  .salary-result-grid,
+  .salary-deduction-grid,
+  .salary-final-grid {
+    gap: 8px;
+  }
+
+  .salary-input-label,
+  .salary-result-label,
+  .salary-summary-label {
+    margin-bottom: 2px;
+    font-size: 8px;
+  }
+
+  .salary-input-box {
+    min-height: 31px;
+    padding: 0 5px;
+    border-radius: 6px;
+  }
+
+  .salary-input-prefix,
+  .salary-input,
+  .salary-result-value,
+  .salary-summary-value {
+    font-size: 11px;
+  }
+
+  .salary-result-item,
+  .salary-summary-item {
+    min-height: 33px;
+    padding: 0 5px;
+    border-radius: 6px;
+  }
+
+  .stats-daily-row {
+    grid-template-columns: minmax(0, 1fr) 46px 50px 30px;
+    min-height: 32px;
+    gap: 4px;
+    padding: 0 6px;
+  }
+
+  .stats-daily-header {
+    min-height: 28px;
+    font-size: 9px;
+  }
+
+  .stats-daily-date,
+  .stats-daily-pay,
+  .stats-daily-overtime {
+    font-size: 10px;
+  }
+
+  .stats-daily-pay {
+    min-width: 40px;
+    height: 16px;
+    font-size: 8px;
+  }
+
+  .stats-team-legend {
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  .stats-team-legend-item {
+    height: 18px;
+    padding: 0 7px;
+    font-size: 9px;
+  }
+
+  .stats-team-chart {
+    gap: 8px;
+  }
+
+  .stats-team-chart-row {
+    grid-template-columns: 22px 54px minmax(0, 1fr) 36px;
+    gap: 6px;
+    min-height: 32px;
+  }
+
+  .stats-ranking-rank {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+
+  .stats-team-chart-name,
+  .stats-team-chart-total {
+    font-size: 11px;
+  }
+
+  .stats-team-chart-group {
+    font-size: 9px;
+  }
+
+  .stats-team-chart-track {
+    height: 18px;
+  }
+
+  .stats-team-chart-segment span {
+    font-size: 8px;
+  }
+
+  .auth-card {
+    padding: 9px;
+  }
+
+  .auth-tabs button {
+    min-height: 28px;
+    font-size: 11px;
+  }
+
+  .auth-form {
+    gap: 8px;
+  }
+
+  .auth-form label span {
+    font-size: 10px;
+  }
+
+  .auth-form input {
+    min-height: 32px;
+    border-radius: 7px;
+    font-size: 12px;
+  }
+
+  .shift-editor {
+    padding: 12px 10px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .editor-group {
+    gap: 6px;
+    padding: 8px 0;
+  }
+
+  .editor-label {
+    font-size: 12px;
+  }
+
+  .editor-option .shift-chip {
+    min-width: 48px;
+    height: 25px;
+    font-size: 11px;
+  }
+
+  .segmented-row button,
+  .editor-actions .primary-button,
+  .editor-actions .ghost-button {
+    min-width: 44px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .overtime-input-row {
+    min-height: 32px;
+    font-size: 12px;
+  }
+
+  .stats-overview-row,
+  .stats-overview-header {
+    grid-template-columns: 72px minmax(0, 1fr) 48px 48px;
+  }
+
+  .stats-overview-header span,
+  .stats-overview-row > * {
+    justify-self: center;
+    text-align: center;
+  }
+
+  .stats-overview-header span:first-child,
+  .stats-overview-row > .stats-overview-name {
+    grid-column: 1;
+  }
+
+  .stats-overview-header span:nth-child(2),
+  .stats-overview-row > .stats-overview-value:nth-child(2) {
+    grid-column: 3;
+  }
+
+  .stats-overview-header span:nth-child(3),
+  .stats-overview-row > .stats-overview-value:nth-child(3) {
+    grid-column: 4;
+  }
+
+  .stats-daily-row {
+    grid-template-columns: 60px minmax(0, 1fr) 42px 50px 32px;
+  }
+
+  .stats-daily-header span,
+  .stats-daily-row > * {
+    justify-self: center;
+    text-align: center;
+  }
+
+  .stats-daily-header span:first-child,
+  .stats-daily-row > .stats-daily-date {
+    grid-column: 1;
+  }
+
+  .stats-daily-header span:nth-child(2),
+  .stats-daily-row > .stats-daily-shift-cell {
+    grid-column: 3;
+  }
+
+  .stats-daily-header span:nth-child(3),
+  .stats-daily-row > .stats-daily-pay {
+    grid-column: 4;
+  }
+
+  .stats-daily-header span:nth-child(4),
+  .stats-daily-row > .stats-daily-overtime {
+    grid-column: 5;
+  }
+
+  .editor-backdrop {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+    background: rgba(23, 32, 51, 0.46);
+  }
+
+  .shift-editor {
+    width: 100%;
+    max-width: 430px;
+    max-height: min(82vh, 620px);
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    overflow: auto;
+    border-radius: 16px 16px 0 0;
+    background: #ffffff;
+    box-shadow: 0 -12px 32px rgba(15, 23, 42, 0.18);
+  }
+
+  .shift-editor .section-header {
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .shift-editor .section-header .muted-label {
+    display: block;
+    margin-top: 3px;
+    color: #667085;
+    font-size: 11px;
+  }
+
+  .shift-editor .section-header h2 {
+    font-size: 17px;
+  }
+
+  .editor-group {
+    gap: 7px;
+    padding: 10px 0;
+    border-top: 1px solid #edf2f7;
+  }
+
+  .editor-label {
+    color: #526071;
+    font-size: 11px;
+    font-weight: 850;
+  }
+
+  .editor-options,
+  .segmented-row {
+    gap: 7px;
+  }
+
+  .editor-option,
+  .segmented-row button {
+    min-height: 24px;
+    padding: 3px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: #526071;
+    font-size: 11px;
+  }
+
+  .segmented-row {
+    display: inline-flex;
+    width: max-content;
+    padding: 3px;
+    border-radius: 999px;
+    background: #f3f6fa;
+  }
+
+  .segmented-row button {
+    min-width: 40px;
+    height: 24px;
+    padding: 0 10px;
+    background: transparent;
+  }
+
+  .editor-option.active,
+  .segmented-row button.active {
+    border-color: rgba(37, 99, 235, 0.22);
+    background: #ffffff;
+    color: #2563eb;
+    box-shadow: 0 2px 8px rgba(21, 32, 54, 0.12);
+  }
+
+  .editor-option .shift-chip {
+    min-width: 44px;
+    height: 22px;
+    font-size: 10px;
+  }
+
+  .overtime-input-row {
+    display: inline-flex;
+    width: auto;
+    min-height: 28px;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #526071;
+    font-size: 11px;
+  }
+
+  .overtime-input-row input {
+    width: 52px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #cdd7e5;
+    border-radius: 7px;
+    background: #fbfcff;
+    color: #172033;
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  .overtime-hint {
+    color: #667085;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .editor-actions {
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #edf2f7;
+  }
+
+  .editor-actions .primary-button,
+  .editor-actions .ghost-button {
+    min-width: 56px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .salary-card .salary-basic-input-grid {
+    display: flex;
+    gap: 12px;
+  }
+
+  .salary-card .salary-basic-input-grid .salary-input-item {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .salary-card .salary-basic-input-grid .salary-input-box {
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid #c4d3e5;
+    background: #ffffff;
+    box-shadow: 0 0 0 1px rgba(196, 211, 229, 0.28);
+  }
+
+  .salary-card .salary-basic-input-grid .salary-input {
+    width: 0;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --schedule-name-column: 118px;
+    --schedule-date-column: 60px;
+  }
+
+  .app-shell {
+    width: min(1360px, calc(100% - 40px));
+    max-width: 1360px;
+    padding: 18px 20px 36px;
+  }
+
+  .schedule-sticky-top {
+    margin: -18px -20px 0;
+    padding: 18px 20px 1px;
+  }
+
+  .hero-panel {
+    min-height: 52px;
+    padding: 6px 8px;
+  }
+
+  .app-mark {
+    width: 46px;
+    height: 46px;
+    flex-basis: 46px;
+    border-radius: 12px;
+  }
+
+  h1,
+  .stats-mini-header h1 {
+    font-size: 24px;
+  }
+
+  .period,
+  .stats-mini-header p {
+    margin-top: 4px;
+    font-size: 16px;
+  }
+
+  .sync-button,
+  .stats-back-button,
+  .stats-sync-button,
+  .ghost-button,
+  .user-switch-button {
+    min-width: 68px;
+    height: 38px;
+    padding: 0 14px;
+    font-size: 16px;
+  }
+
+  .month-tabs {
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 10px;
+    padding: 5px;
+  }
+
+  .month-tab {
+    flex: 1 1 0;
+    height: 44px;
+    min-width: 0;
+    font-size: 20px;
+  }
+
+  .status-strip {
+    min-height: 34px;
+    margin-top: 8px;
+    padding: 0 12px;
+    font-size: 15px;
+  }
+
+  .schedule-content-grid {
+    display: grid;
+    grid-template-columns: minmax(460px, 0.86fr) minmax(0, 1.14fr);
+    gap: 12px;
+    align-items: start;
+  }
+
+  .current-user-card,
+  .calendar-card,
+  .schedule-card {
+    margin-top: 10px;
+  }
+
+  .current-user-card {
+    padding: 14px;
+  }
+
+  .section-header h2,
+  .current-user-title,
+  .table-toolbar-main h2,
+  .stats-section-title {
+    font-size: 22px;
+  }
+
+  .muted-label,
+  .stats-person-label,
+  .stats-section-hint {
+    font-size: 15px;
+  }
+
+  .admin-badge,
+  .current-user-title .admin-badge.inline {
+    height: 20px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .summary-grid {
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .summary-item {
+    min-height: 56px;
+    border-radius: 10px;
+  }
+
+  .summary-item strong {
+    font-size: 22px;
+  }
+
+  .summary-item span {
+    font-size: 15px;
+  }
+
+  .calendar-card {
+    padding: 14px;
+  }
+
+  .calendar-card .section-header {
+    margin-bottom: 8px;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    gap: 6px;
+  }
+
+  .calendar-weekdays {
+    margin-top: 8px;
+  }
+
+  .calendar-weekdays span {
+    font-size: 15px;
+  }
+
+  .calendar-grid {
+    margin-top: 7px;
+  }
+
+  .calendar-cell {
+    height: 64px;
+    border-radius: 9px;
+    /*
+      .calendar-cell 是 <button>，Chrome 的 UA 样式默认给按钮
+      padding: 1px 6px，而这里所有样式表都没重置过它。
+      单元格本来就只有 56~64px 宽，这 12px 会直接吃掉内容宽度，
+      导致「日期 + 农历」这一行被挤到贴边甚至溢出被裁。
+    */
+    padding: 0;
+  }
+
+  .calendar-cell-content {
+    min-height: 46px;
+  }
+
+  .calendar-date-wrap {
+    /*
+      52px = 12(spacer) + 4(gap) + 20(日期) + 4(gap) + 12(农历)。
+      原值是 48px，比内容窄：flex 居中下向两侧溢出，再被
+      .calendar-cell 的 overflow: hidden 裁掉，农历/节气只剩一道残影。
+      spacer 与农历等宽，这样日期数字在视觉上才是居中的。
+    */
+    width: 52px;
+    min-height: 22px;
+    margin-bottom: 3px;
+    column-gap: 4px;
+  }
+
+  /*
+    必须连 flex-basis 一起重置：08-miniapp-schedule.scss 里这两个元素是
+    `flex: 0 0 22px`（不能收缩），只写 width 的话 flex-basis 仍是 22px，
+    日期行的实际内容宽度会是 22 + 4 + 20 + 4 + 22 = 72px。
+  */
+  .calendar-lunar-spacer {
+    width: 12px;
+    flex: 0 0 12px;
+  }
+
+  .calendar-lunar {
+    width: 12px;
+    flex: 0 0 12px;
+  }
+
+  .calendar-lunar span {
+    width: 12px;
+  }
+
+  .calendar-day {
+    width: 20px;
+    min-width: 20px;
+    flex-basis: 20px;
+    font-size: 17px;
+  }
+
+  .calendar-lunar,
+  .calendar-lunar span {
+    font-size: 9px;
+    line-height: 9px;
+  }
+
+  .calendar-lunar span {
+    height: 9px;
+  }
+
+  .calendar-shift-row .shift-chip {
+    min-width: 34px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 11px;
+  }
+
+  .legal-shift-badge {
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 9px;
+  }
+
+  .edited-marker,
+  .overtime-marker {
+    left: 6px;
+    width: 6px;
+    height: 6px;
+  }
+
+  .edited-marker {
+    top: 6px;
+  }
+
+  .overtime-marker {
+    bottom: 6px;
+  }
+
+  .schedule-card {
+    padding: 0;
+  }
+
+  .table-toolbar {
+    padding: 12px 14px 10px;
+  }
+
+  .table-toolbar-sub {
+    height: 26px;
+    margin-top: 3px;
+  }
+
+  .table-toolbar-sub .muted-label {
+    font-size: 14px;
+  }
+
+  .legend {
+    gap: 6px;
+    height: 24px;
+  }
+
+  .legend .shift-chip,
+  .shift-chip {
+    min-width: 38px;
+    height: 22px;
+    padding: 0 6px;
+    font-size: 12px;
+  }
+
+  .table-view-option {
+    min-width: 56px;
+    height: 32px;
+    font-size: 15px;
+  }
+
+  .table-shell {
+    max-width: 100%;
+  }
+
+  .identity-row,
+  .table-row {
+    height: 42px;
+  }
+
+  .identity-header,
+  .table-header {
+    height: 46px;
+  }
+
+  .identity-row {
+    padding: 4px 8px;
+  }
+
+  .identity-row strong,
+  .identity-header strong,
+  .date-head strong {
+    font-size: 13px;
+  }
+
+  .identity-row span,
+  .identity-header span,
+  .date-head span {
+    margin-top: 2px;
+    font-size: 11px;
+  }
+
+  .table-head,
+  .shift-cell {
+    min-height: 42px;
+  }
+
+  .table-header .table-head {
+    min-height: 46px;
+  }
+
+  .name-view-person-name {
+    width: 50px;
+    height: 22px;
+    font-size: 11px;
+  }
+
+  .table-scroll {
+    scrollbar-width: thin;
+  }
+
+  .table-scroll::-webkit-scrollbar {
+    display: block;
+    height: 8px;
+  }
+
+  .table-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c8d3e1;
+  }
+
+  .stats-sticky-top {
+    margin: -18px -20px 0;
+    padding: 18px 20px 1px;
+  }
+
+  .stats-mini-header {
+    min-height: 52px;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .stats-view-tabs {
+    gap: 5px;
+    padding: 5px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+  }
+
+  .stats-view-tab {
+    height: 40px;
+    border-radius: 9px;
+    font-size: 18px;
+  }
+
+  .stats-filter-card {
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+  }
+
+  .stats-filter-item {
+    min-height: 58px;
+    padding: 0 12px;
+    border-radius: 10px;
+  }
+
+  .stats-filter-label {
+    margin-bottom: 4px;
+    font-size: 15px;
+  }
+
+  .stats-filter-trigger,
+  .stats-filter-value,
+  .stats-filter-select {
+    font-size: 20px;
+  }
+
+  .stats-page-indicator {
+    height: 18px;
+    margin: -1px 0 6px;
+  }
+
+  .stats-page-indicator-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  .stats-page-indicator-dot.active {
+    width: 22px;
+  }
+
+  .stats-content-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+
+  .stats-content-inner > .stats-card {
+    margin-bottom: 0;
+  }
+
+  .stats-content-inner > .salary-card,
+  .stats-content-inner > .stats-card:only-child {
+    grid-column: 1 / -1;
+  }
+
+  .stats-card {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .stats-section-title-row {
+    margin-bottom: 10px;
+  }
+
+  .stats-overview-row {
+    grid-template-columns: 90px minmax(0, 1fr) 68px 68px;
+    min-height: 42px;
+    padding: 0 10px;
+  }
+
+  .stats-overview-header {
+    min-height: 36px;
+    font-size: 14px;
+  }
+
+  .stats-overview-tag,
+  .stats-shift {
+    min-width: 44px;
+    height: 24px;
+    padding: 0 7px;
+    font-size: 13px;
+  }
+
+  .stats-overview-value,
+  .stats-daily-pay,
+  .stats-daily-overtime,
+  .stats-team-chart-total {
+    font-size: 16px;
+  }
+
+  .stats-bar-chart {
+    min-height: 154px;
+    gap: 12px;
+    padding-top: 4px;
+  }
+
+  .stats-bar-item {
+    grid-template-rows: 22px 100px 22px;
+  }
+
+  .stats-bar-track {
+    width: 30px;
+    height: 100px;
+  }
+
+  .stats-bar-value,
+  .stats-bar-label {
+    font-size: 13px;
+  }
+
+  .salary-section {
+    padding: 10px 0 12px;
+  }
+
+  .salary-section-head {
+    margin-bottom: 8px;
+  }
+
+  .salary-block-title {
+    font-size: 16px;
+  }
+
+  .salary-section-total,
+  .salary-save-status {
+    font-size: 14px;
+  }
+
+  .salary-input-label,
+  .salary-result-label,
+  .salary-summary-label {
+    margin-bottom: 5px;
+    font-size: 13px;
+  }
+
+  .salary-input-box {
+    min-height: 38px;
+    padding: 0 8px;
+    border-radius: 8px;
+  }
+
+  .salary-input-prefix,
+  .salary-input,
+  .salary-result-value,
+  .salary-summary-value {
+    font-size: 15px;
+  }
+
+  .salary-rate-line {
+    margin-top: 7px;
+    font-size: 13px;
+  }
+
+  .salary-result-item,
+  .salary-summary-item {
+    min-height: 48px;
+    border-radius: 8px;
+  }
+
+  .stats-daily-row {
+    grid-template-columns: minmax(0, 1fr) 70px 70px 40px;
+    min-height: 44px;
+    gap: 6px;
+    padding: 0 10px;
+  }
+
+  .stats-daily-header {
+    min-height: 36px;
+    font-size: 14px;
+  }
+
+  .stats-daily-date {
+    font-size: 16px;
+  }
+
+  .stats-daily-pay {
+    min-width: 58px;
+    height: 23px;
+    font-size: 13px;
+  }
+
+  .stats-legal-shift-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 11px;
+  }
+
+  .stats-team-overview-item {
+    min-height: 64px;
+  }
+
+  .stats-team-overview-item strong {
+    font-size: 22px;
+  }
+
+  .stats-team-overview-item span {
+    margin-top: 3px;
+    font-size: 15px;
+  }
+
+  .stats-team-legend {
+    margin-bottom: 10px;
+  }
+
+  .stats-team-legend-item {
+    height: 23px;
+    padding: 0 9px;
+    font-size: 13px;
+  }
+
+  .stats-team-chart {
+    gap: 9px;
+  }
+
+  .stats-team-chart-row {
+    grid-template-columns: 30px 76px minmax(0, 1fr) 48px;
+    gap: 8px;
+  }
+
+  .stats-ranking-rank {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  .stats-team-chart-name {
+    font-size: 16px;
+  }
+
+  .stats-team-chart-group {
+    margin-top: 2px;
+    font-size: 13px;
+  }
+
+  .stats-team-chart-track {
+    height: 22px;
+  }
+}
+
