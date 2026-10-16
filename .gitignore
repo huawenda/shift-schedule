@@ -16,9 +16,5 @@ h5-dev.log
 web-dev*.log
 .codex-dev-web.*.log
 
-# Android / 便携工具链
-.tooling/
-.gradle/
+# 构建产物
 **/build/
-local.properties
-*.keystore
