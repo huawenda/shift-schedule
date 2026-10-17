@@ -1,0 +1,389 @@
+{
+  "app": "shift-schedule-local",
+  "version": 1,
+  "exportedAt": "2026-10-01T09:00:00.000Z",
+  "dayRecords": [
+    {
+      "_id": "test-oct-01",
+      "personName": "华文达",
+      "date": "09/23",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 2
+    },
+    {
+      "_id": "test-oct-02",
+      "personName": "华文达",
+      "date": "09/24",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 1.5
+    },
+    {
+      "_id": "test-oct-03",
+      "personName": "华文达",
+      "date": "09/25",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 3
+    },
+    {
+      "_id": "test-oct-04",
+      "personName": "华文达",
+      "date": "09/26",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 0.5
+    },
+    {
+      "_id": "test-oct-05",
+      "personName": "华文达",
+      "date": "09/29",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 4
+    },
+    {
+      "_id": "test-oct-06",
+      "personName": "华文达",
+      "date": "09/20",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 2.5
+    },
+    {
+      "_id": "test-oct-07",
+      "personName": "华文达",
+      "date": "10/05",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 1
+    },
+    {
+      "_id": "test-oct-08",
+      "personName": "华文达",
+      "date": "10/06",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 3.5
+    },
+    {
+      "_id": "test-oct-09",
+      "personName": "华文达",
+      "date": "10/07",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 2
+    },
+    {
+      "_id": "test-oct-10",
+      "personName": "华文达",
+      "date": "09/21",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "白特",
+      "overtimeHours": 4
+    },
+    {
+      "_id": "test-oct-11",
+      "personName": "华文达",
+      "date": "09/22",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "夜特",
+      "overtimeHours": 6
+    },
+    {
+      "_id": "test-oct-12",
+      "personName": "华文达",
+      "date": "09/27",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "白特",
+      "overtimeHours": 2.5
+    },
+    {
+      "_id": "test-oct-13",
+      "personName": "华文达",
+      "date": "09/28",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "夜特",
+      "overtimeHours": 3.5
+    },
+    {
+      "_id": "test-oct-14",
+      "personName": "华文达",
+      "date": "09/30",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 3,
+      "isLegalOvertime": true
+    },
+    {
+      "_id": "test-oct-15",
+      "personName": "华文达",
+      "date": "10/08",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 4,
+      "isLegalOvertime": true
+    },
+    {
+      "_id": "test-oct-16",
+      "personName": "华文达",
+      "date": "10/01",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 8,
+      "isLegalOvertime": true
+    },
+    {
+      "_id": "test-oct-17",
+      "personName": "华文达",
+      "date": "10/03",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "夜特",
+      "overtimeHours": 5,
+      "isLegalOvertime": true
+    },
+    {
+      "_id": "test-oct-18",
+      "personName": "华文达",
+      "date": "10/04",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "事假",
+      "leaveDuration": "半天"
+    },
+    {
+      "_id": "test-oct-19",
+      "personName": "华文达",
+      "date": "10/09",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "事假",
+      "leaveDuration": "一天"
+    },
+    {
+      "_id": "test-oct-20",
+      "personName": "华文达",
+      "date": "10/02",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "事假",
+      "leaveDuration": "一天"
+    },
+    {
+      "_id": "test-oct-21",
+      "personName": "华文达",
+      "date": "10/10",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 3
+    },
+    {
+      "_id": "test-oct-22",
+      "personName": "华文达",
+      "date": "10/15",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 2
+    },
+    {
+      "_id": "test-oct-23",
+      "personName": "华文达",
+      "date": "10/16",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "事假",
+      "overtimeHours": 3,
+      "leaveDuration": "一天"
+    },
+    {
+      "_id": "test-oct-24",
+      "personName": "华文达",
+      "date": "10/17",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "夜班"
+    },
+    {
+      "_id": "test-oct-25",
+      "personName": "华文达",
+      "date": "10/18",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "休息"
+    },
+    {
+      "_id": "test-oct-26",
+      "personName": "张舒棋",
+      "date": "09/24",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 2
+    },
+    {
+      "_id": "test-oct-27",
+      "personName": "张舒棋",
+      "date": "09/20",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 3
+    },
+    {
+      "_id": "test-oct-28",
+      "personName": "张舒棋",
+      "date": "09/22",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "夜特",
+      "overtimeHours": 5
+    },
+    {
+      "_id": "test-oct-29",
+      "personName": "张舒棋",
+      "date": "09/21",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 3,
+      "isLegalOvertime": true
+    },
+    {
+      "_id": "test-oct-30",
+      "personName": "张舒棋",
+      "date": "09/23",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "事假",
+      "leaveDuration": "半天"
+    },
+    {
+      "_id": "test-oct-31",
+      "personName": "陈泳智",
+      "date": "09/25",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 1.5
+    },
+    {
+      "_id": "test-oct-32",
+      "personName": "陈泳智",
+      "date": "09/20",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 4
+    },
+    {
+      "_id": "test-oct-33",
+      "personName": "陈泳智",
+      "date": "09/23",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "shiftOverride": "白特",
+      "overtimeHours": 3
+    },
+    {
+      "_id": "test-oct-34",
+      "personName": "陈泳智",
+      "date": "09/21",
+      "createdAt": 1792253308537,
+      "createdAtText": "2026-10-01 09:00:00",
+      "updatedAt": 1792253308537,
+      "updatedAtText": "2026-10-01 09:00:00",
+      "overtimeHours": 6,
+      "isLegalOvertime": true
+    }
+  ],
+  "salaryInputs": {
+    "华文达::10": {
+      "baseSalary": "5200",
+      "performanceAllowance": "800",
+      "positionAllowance": "600",
+      "otherDeductions": "150"
+    },
+    "张舒棋::10": {
+      "baseSalary": "4800",
+      "performanceAllowance": "600",
+      "positionAllowance": "500",
+      "otherDeductions": ""
+    },
+    "陈泳智::10": {
+      "baseSalary": "4600",
+      "performanceAllowance": "400",
+      "positionAllowance": "500",
+      "otherDeductions": "200"
+    }
+  },
+  "settings": {
+    "personName": "华文达"
+  }
+}
