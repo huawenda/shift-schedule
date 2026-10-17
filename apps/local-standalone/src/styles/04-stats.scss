@@ -301,7 +301,7 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* 640px 起面板至少有 ~600px，两列各 ~290px，
+/* 1280px 起面板至少有 ~1400px，两列各 ~700px，
  * 仍容得下块内 minmax(180px,1fr) 的两到三列金额，不至于挤成一条。 */
 @media (min-width: 1280px) {
   .salary-blocks {
@@ -310,39 +310,43 @@
     row-gap: 0;
   }
 
-  /* 竖向分隔线在两列布局下会指向错的东西 ——
-     .salary-block 的 border-top 是「上一块的结束线」，
-     两列并排时它变成了「本列第二块的起始线」，
-     读起来像两列各自独立、互不相干。
-     改用整组只有外框：横向各一条，竖向两条。 */
+  /* 四块并排后，横向那条分隔线去掉。
+   *
+   * 上一版给第 3/4 块加了 border-top，意图是「分开上下两排」，
+   * 实测出来是断的 —— 而且断得很刺眼：
+   *
+   *   .salary-block 的 border-top 只画在自己那一格的范围内，
+   *   grid 的 colGap 那 24px 不属于任何一格，任何一格的 border 都不伸进去。
+   *   逐像素扫扣款项顶边扫出来是：
+   *     x 29- 727  --rule  (699px)
+   *     x 728- 751 --face-1 (24px，正好一个 colGap，空着)
+   *     x 752-1449  --rule  (698px)
+   *   横线断成两截，中间缺 24px。
+   *
+   * 上一版还用 ::before 补了一条竖线想「接上」，结果更糟：
+   * 那条 1px 竖线落在 x=740，正好从那 24px 缺口正中穿过，
+   * 横线的两个断头各自撞在竖线两侧 —— 视觉上就是一个十字形的破口。
+   * 这就是「双线重合」。
+   *
+   * 修法不是把线接上，是去掉线。
+   * 用户看的就是这个：「含有分隔线很突兀」。
+   * 四块本来就是「从上到下算一遍账」的顺序，并排后靠
+   * 24px column-gap + 各块自带的标题已经读得出分组；
+   * 再压一道横线，反而把上面两个块和下面两个块硬切成两组，
+   * 像是两张不相干的表。留白比线安静。
+   *
+   * 去掉的办法：并排时四个块都不画 border-top，
+   * 行距交给 column-gap 和块内 padding —— 见下面那两条规则。 */
   .salary-blocks .salary-block {
-    padding-bottom: var(--sp-4);
     border-top: 0;
+    padding-top: 0;
+    padding-bottom: var(--sp-4);
   }
 
-  .salary-blocks .salary-block:nth-child(-n + 2) {
-    padding-top: var(--sp-2);
-  }
-
+  /* 上排两块与下排两块之间靠留白分开（上一版这里是 padding-top: var(--sp-2)），
+     下排再补一点上留白，让「下面两个是新的一段」读得出来。 */
   .salary-blocks .salary-block:nth-child(n + 3) {
-    border-top: 1px solid var(--rule);
-  }
-
-  /* 行内的分隔线跟着标题走：块头自带 padding，
-     竖线要画在内容列宽内，不能顶到面板边缘。 */
-  .salary-blocks .salary-block:nth-child(3)::before,
-  .salary-blocks .salary-block:nth-child(4)::before {
-    position: absolute;
-    top: 0;
-    left: calc(var(--sp-5) / -2);
-    width: 1px;
-    height: 100%;
-    background: var(--rule);
-    content: '';
-  }
-
-  .salary-blocks .salary-block:nth-child(n + 3) {
-    position: relative;
+    padding-top: var(--sp-4);
   }
 
   /* 两列布局下不能用 auto-fit 决定块内列数了。

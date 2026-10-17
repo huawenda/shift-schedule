@@ -75,8 +75,11 @@
 /* 列宽用 minmax(下限, 1fr) 而不是定值：
    - 容器够宽时 1fr 把余量均分，表格填满，不会右侧空一大块；
    - 容器不够宽时轨道被 --cell-w 下限顶住，grid 溢出，交给 .matrix-scroll 横滚。
-   行与表头都取 width: 100%（而非 min-width: max-content），保证各行拿到
-   完全相同的宽度，各自算出的 1fr 结果一致，表头与数据行才逐列对齐。 */
+   行与表头都靠同一个下限值算轨宽，表头与数据行才逐列对齐。
+   注意表头取 max-content、数据行取 100%，两者不能统一：
+   见 .matrix-head 里的注释 —— 表头有一条跨格的长边框，
+   它必须按内容宽画，横滚时才不会断在半路；数据行没有这种边框，
+   保持 100% 即可（见下方 .matrix-head 的说明）。 */
 /* 表头与数据行同底色（--face-1）。
    原本这里用 --face-2，整条日期表头比姓名轨和数据行亮一档，
    于是同一行表头被拆成两种底色，看起来像多出一条色带。
@@ -84,7 +87,18 @@
    不靠亮度差 —— 亮度留给数据（.is-current）才有意义。 */
 .matrix-head {
   display: grid;
-  width: 100%;
+  /* 关键：不取 100%。
+     之前取 100%，意思是「和自己的内容一样宽」。内容有 30 列 × 48px
+     = 1440px，而容器（.matrix-scroll）只有 1013px，于是 grid 被裁成
+     1013px 宽 —— 但 border-bottom 画在**布局盒**的底边，底边只会延伸到
+     布局宽 1013px 处；被裁掉的 427px 那一段下面直接是 .matrix-scroll
+     的 --face-1 底色，横线看起来就「断在半路」。
+     取 max-content 后布局宽 = 1440px = 内容宽，border 走完整条 1440px，
+     横滚时它跟着内容一起动，线在任何滚动位置都连续。
+     （.roster-row 同样问题，但它靠 .roster-cell 自己的 inset 阴影
+       逐格画行分隔线，没有跨格的长边框，所以从来没露出来。） */
+  width: max-content;
+  min-width: 100%;
   flex: 0 0 36px;
   grid-auto-columns: minmax(var(--cell-w), 1fr);
   grid-auto-flow: column;
