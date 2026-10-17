@@ -279,6 +279,95 @@
 
 /* --- 薪资 ---------------------------------------------------------------- */
 
+/* 四个块的排布容器。
+ *
+ * 实测：月度概览内容恒为 1110px（与视口无关），
+ * 1440x930 溢出 180px、900 溢出 210px、768 溢出 342px。
+ * 拆开看 1110 是谁撑出来的，答案是薪资区：
+ * 面板 633px 里，四块竖着排了 564px（基本项 181 / 加班 128 /
+ * 扣款 128 / 汇总 127）。
+ *
+ * 而这块面板有 717px 宽 —— 横向空着一半，竖向却溢出了屏幕。
+ * 问题不是「放不下」，是四个语义不同的块被强行串成了一列。
+ *
+ * 现在宽屏并成 2×2：564 → 约 300px，总高降到约 830px，
+ * 1440x930 这档彻底不滚，900 也只剩约 70px。
+ *
+ * 单列时保持原样：四块各带一条分隔线从上到下读下来，
+ * 是这张表原本的语义节奏；强行并排会让「基本项 / 加班工资 /
+ * 扣款项 / 汇总」变成四张互不相干的卡片，失去「算一遍账」的顺序感。 */
+.salary-blocks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 640px 起面板至少有 ~600px，两列各 ~290px，
+ * 仍容得下块内 minmax(180px,1fr) 的两到三列金额，不至于挤成一条。 */
+@media (min-width: 1280px) {
+  .salary-blocks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--sp-5);
+    row-gap: 0;
+  }
+
+  /* 竖向分隔线在两列布局下会指向错的东西 ——
+     .salary-block 的 border-top 是「上一块的结束线」，
+     两列并排时它变成了「本列第二块的起始线」，
+     读起来像两列各自独立、互不相干。
+     改用整组只有外框：横向各一条，竖向两条。 */
+  .salary-blocks .salary-block {
+    padding-bottom: var(--sp-4);
+    border-top: 0;
+  }
+
+  .salary-blocks .salary-block:nth-child(-n + 2) {
+    padding-top: var(--sp-2);
+  }
+
+  .salary-blocks .salary-block:nth-child(n + 3) {
+    border-top: 1px solid var(--rule);
+  }
+
+  /* 行内的分隔线跟着标题走：块头自带 padding，
+     竖线要画在内容列宽内，不能顶到面板边缘。 */
+  .salary-blocks .salary-block:nth-child(3)::before,
+  .salary-blocks .salary-block:nth-child(4)::before {
+    position: absolute;
+    top: 0;
+    left: calc(var(--sp-5) / -2);
+    width: 1px;
+    height: 100%;
+    background: var(--rule);
+    content: '';
+  }
+
+  .salary-blocks .salary-block:nth-child(n + 3) {
+    position: relative;
+  }
+
+  /* 两列布局下不能用 auto-fit 决定块内列数了。
+   *
+   * auto-fit 按容器宽先算「能塞几条 180px 的轨」，
+   * 再把没用上的空轨塌成 0px —— 但 gap 仍然留在那里。
+   * 实测「扣款项」「汇总」只有两个子项，却解析成
+   * 335.5px 335.5px 0px 配 2 道 8px 的 gap，
+   * 金额块因此比「基本项」的 221px 宽出一半，
+   * 同一屏里四个块的数字对不齐。
+   *
+   * 换成 grid-auto-flow: column 则是「有几个子项就几条轨」。
+   * 注意必须同时把 grid-template-columns 设为 none：
+   * 只改 grid-auto-flow 不够 —— 基础规则里那条
+   * repeat(auto-fit, minmax(180px,1fr)) 定义的显式列依然成立，
+   * 自动放置只管「子项往哪放」，管不到「有几条轨」，
+   * 实测那样改完仍是 335.5px 335.5px 0px，第三条空轨照旧。 */
+  .salary-blocks .salary-grid {
+    display: grid;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+}
+
 .salary-block {
   padding-bottom: var(--sp-4);
   border-top: 1px solid var(--rule);

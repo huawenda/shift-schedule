@@ -310,53 +310,59 @@ function SalarySection({
         ) : null}
       </div>
 
-      <div className="salary-block">
-        <div className="salary-block-head">
-          <h3 className="salary-block-title">基本项</h3>
-          <span className="salary-block-total">小计 ¥{formatMoney(calculation.basicPayTotal)}</span>
+      {/* 四个块包一层：窄屏时内部退回单列（见 .salary-blocks），
+          宽屏上并成 2×2，把这一区从 564px 压到约 300px。
+          之前四块是 section 的直接子元素，只能竖着排 ——
+          而面板有 717px 宽，实测横向空着一半。 */}
+      <div className="salary-blocks">
+        <div className="salary-block">
+          <div className="salary-block-head">
+            <h3 className="salary-block-title">基本项</h3>
+            <span className="salary-block-total">小计 ¥{formatMoney(calculation.basicPayTotal)}</span>
+          </div>
+          <div className="salary-grid">
+            <SalaryInput label="底薪" field="baseSalary" value={inputs.baseSalary} onChange={onInputChange} />
+            <SalaryInput label="绩效津贴" field="performanceAllowance" value={inputs.performanceAllowance} onChange={onInputChange} />
+            <SalaryInput label="岗位津贴" field="positionAllowance" value={inputs.positionAllowance} onChange={onInputChange} />
+          </div>
+          <p className="salary-footnote">时薪 ¥{formatMoney(calculation.hourlyWage)}（底薪 ÷ 21.75 ÷ 8）</p>
         </div>
-        <div className="salary-grid">
-          <SalaryInput label="底薪" field="baseSalary" value={inputs.baseSalary} onChange={onInputChange} />
-          <SalaryInput label="绩效津贴" field="performanceAllowance" value={inputs.performanceAllowance} onChange={onInputChange} />
-          <SalaryInput label="岗位津贴" field="positionAllowance" value={inputs.positionAllowance} onChange={onInputChange} />
-        </div>
-        <p className="salary-footnote">时薪 ¥{formatMoney(calculation.hourlyWage)}（底薪 ÷ 21.75 ÷ 8）</p>
-      </div>
 
-      <div className="salary-block">
-        <div className="salary-block-head">
-          <h3 className="salary-block-title">加班工资</h3>
-          <span className="salary-block-total">小计 ¥{formatMoney(calculation.overtimePayTotal)}</span>
+        <div className="salary-block">
+          <div className="salary-block-head">
+            <h3 className="salary-block-title">加班工资</h3>
+            <span className="salary-block-total">小计 ¥{formatMoney(calculation.overtimePayTotal)}</span>
+          </div>
+          <div className="salary-grid">
+            <Readout label="平日 ×1.5" value={calculation.weekdayOvertimePay} />
+            <Readout label="特勤 ×2" value={calculation.specialOvertimePay} accent="specday" />
+            <Readout label="法定 ×3" value={calculation.legalOvertimePay} accent="legal" />
+          </div>
         </div>
-        <div className="salary-grid">
-          <Readout label="平日 ×1.5" value={calculation.weekdayOvertimePay} />
-          <Readout label="特勤 ×2" value={calculation.specialOvertimePay} accent="specday" />
-          <Readout label="法定 ×3" value={calculation.legalOvertimePay} accent="legal" />
-        </div>
-      </div>
 
-      <div className="salary-block">
-        <div className="salary-block-head">
-          <h3 className="salary-block-title">扣款项</h3>
-          <span className="salary-block-total">小计 ¥{formatMoney(calculation.deductionTotal)}</span>
+        <div className="salary-block">
+          <div className="salary-block-head">
+            <h3 className="salary-block-title">扣款项</h3>
+            <span className="salary-block-total">小计 ¥{formatMoney(calculation.deductionTotal)}</span>
+          </div>
+          <div className="salary-grid">
+            <Readout label="事假扣款" value={calculation.leaveDeduction} accent="specnight" />
+            <SalaryInput label="其他扣款" field="otherDeductions" value={inputs.otherDeductions} onChange={onInputChange} />
+          </div>
         </div>
-        <div className="salary-grid">
-          <Readout label="事假扣款" value={calculation.leaveDeduction} accent="specnight" />
-          <SalaryInput label="其他扣款" field="otherDeductions" value={inputs.otherDeductions} onChange={onInputChange} />
-        </div>
-      </div>
 
-      <div className="salary-block">
-        <div className="salary-block-head">
-          <h3 className="salary-block-title">汇总</h3>
-        </div>
-        <div className="salary-grid">
-          <Readout label="应付工资" value={calculation.payableSalary} />
-          <div className="salary-readout is-flag" style={{
-            '--flag-fill': 'var(--face-3)', '--flag-edge': 'var(--signal)', '--flag-ink': 'var(--signal)'
-          } as React.CSSProperties}>
-            <span className="salary-readout-label">实付工资</span>
-            <strong className="salary-readout-value">¥{formatMoney(calculation.netSalary)}</strong>
+        <div className="salary-block">
+          <div className="salary-block-head">
+            <h3 className="salary-block-title">汇总</h3>
+          </div>
+          <div className="salary-grid">
+            <Readout label="应付工资" value={calculation.payableSalary} />
+            <div className="salary-readout is-flag" style={{
+              '--flag-fill': 'var(--face-3)', '--flag-edge': 'var(--signal)', '--flag-ink': 'var(--signal)'
+            } as React.CSSProperties}>
+              <span className="salary-readout-label">实付工资</span>
+              <strong className="salary-readout-value">¥{formatMoney(calculation.netSalary)}</strong>
+            </div>
           </div>
         </div>
       </div>
