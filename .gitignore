@@ -19,5 +19,9 @@ web-dev*.log
 # 构建产物
 **/build/
 
+# 桌面版交付包（几十 MB 的二进制，不入库）
+dist-package/
+*.zip
+
 # 本机开发环境记忆，不入库
 .workbuddy/
