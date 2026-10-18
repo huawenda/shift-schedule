@@ -37,11 +37,32 @@ export function AuthPanel({
 }: AuthPanelProps) {
   return (
     <section className="auth-card">
-      <div className="auth-tabs">
-        <button className={authMode === 'login' ? 'active' : ''} type="button" onClick={() => onAuthModeChange('login')}>登录</button>
-        <button className={authMode === 'register' ? 'active' : ''} type="button" onClick={() => onAuthModeChange('register')}>注册</button>
+      <div className="auth-mark">
+        <h1>倒班表</h1>
+        <span>4F · 值班排班与薪资</span>
       </div>
+
+      <div className="auth-tabs" role="tablist" aria-label="登录或注册">
+        <button
+          aria-selected={authMode === 'login'}
+          role="tab"
+          type="button"
+          onClick={() => onAuthModeChange('login')}
+        >
+          登录
+        </button>
+        <button
+          aria-selected={authMode === 'register'}
+          role="tab"
+          type="button"
+          onClick={() => onAuthModeChange('register')}
+        >
+          注册
+        </button>
+      </div>
+
       {errorText ? <p className="error-banner auth-error">{errorText}</p> : null}
+
       <form className="auth-form" onSubmit={onSubmit}>
         <label>
           <span>账号</span>
@@ -49,7 +70,12 @@ export function AuthPanel({
         </label>
         <label>
           <span>密码</span>
-          <input value={password} onChange={event => onPasswordChange(event.target.value)} type="password" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} />
+          <input
+            value={password}
+            onChange={event => onPasswordChange(event.target.value)}
+            type="password"
+            autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+          />
         </label>
         {authMode === 'register' ? (
           <>
@@ -69,8 +95,8 @@ export function AuthPanel({
             </label>
           </>
         ) : null}
-        <button className="primary-button" type="submit" disabled={isSubmittingAuth}>
-          {isSubmittingAuth ? '处理中' : authMode === 'login' ? '登录账号' : '注册账号'}
+        <button className="primary" type="submit" disabled={isSubmittingAuth}>
+          {isSubmittingAuth ? '处理中…' : authMode === 'login' ? '登录账号' : '注册账号'}
         </button>
       </form>
     </section>

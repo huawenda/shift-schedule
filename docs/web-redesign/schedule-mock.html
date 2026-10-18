@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>倒班表 · 设计提案 mock</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><style>
+:root {
+  --paper: #f4f4f0;
+  --surface: #ffffff;
+  --ink: #14171a;
+  --ink-2: #464c52;
+  --ink-3: #62686e;
+  --rule: #dcdcd5;
+  --rule-strong: #bfc1b8;
+  --s-day: #e9a426;
+  --s-day-ink: #2a1a02;
+  --s-day-x: #92570a;
+  --s-night: #2e3a75;
+  --s-night-x: #1a2150;
+  --s-rest: #edf2ec;
+  --s-rest-ink: #4a6650;
+  --s-rest-bar: #7d9a82;
+  --s-leave: #e9e8e2;
+  --s-leave-ink: #5c6167;
+  --now: #b3392e;
+  --r-data: 2px;
+  --r-sheet: 12px;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", sans-serif;
+  font-size: 15px; line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, p { margin: 0; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+.page { max-width: 1560px; margin: 0 auto; padding: 0 24px 40px; }
+
+/* masthead */
+.masthead { display: flex; align-items: center; gap: 20px; height: 56px; border-bottom: 1px solid var(--rule-strong); }
+.brand { font-size: 17px; font-weight: 700; letter-spacing: 0.04em; }
+.stepper { display: inline-flex; align-items: center; gap: 2px; }
+.stepper button { width: 26px; height: 26px; color: var(--ink-3); font-size: 13px; border-radius: var(--r-data); }
+.stepper button:hover { background: rgba(20,23,26,0.06); color: var(--ink); }
+.stepper .mon { min-width: 52px; text-align: center; font-size: 17px; font-weight: 700; }
+.range { font-size: 12px; color: var(--ink-3); }
+.spacer { flex: 1; }
+.who { display: inline-flex; align-items: baseline; gap: 6px; font-size: 13px; }
+.who b { font-weight: 700; }
+.who span.t { color: var(--ink-3); font-size: 12px; }
+.act { font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: var(--r-data); }
+.act:hover { background: rgba(20,23,26,0.06); }
+.act-ink { background: var(--ink); color: var(--paper); }
+.act-ink:hover { background: #000; }
+.act .live { width: 6px; height: 6px; border-radius: 50%; background: var(--s-rest-bar); display: inline-block; margin-right: 6px; vertical-align: 1px; }
+
+/* month rail */
+.rail { display: flex; gap: 26px; height: 46px; align-items: center; border-bottom: 1px solid var(--rule); }
+.rail button { position: relative; font-size: 14px; color: var(--ink-3); letter-spacing: 0.02em; }
+.rail button:hover { color: var(--ink); }
+.rail button[aria-selected="true"] { color: var(--ink); font-weight: 700; }
+.rail button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -12px; height: 2px; background: var(--ink); }
+
+/* plaque */
+.plaque { margin-top: 24px; background: var(--ink); color: var(--paper); }
+.plaque-top { display: grid; grid-template-columns: 1.1fr 1fr 0.75fr; }
+.plaque-top > div { padding: 20px 24px 18px; }
+.plaque-top > div + div { border-left: 1px solid rgba(244,244,240,0.14); }
+.shift-name { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.shift-range { margin-top: 10px; font-size: 12px; color: rgba(244,244,240,0.6); letter-spacing: 0.04em; }
+.cd-label { font-size: 11px; font-weight: 600; letter-spacing: 0.16em; color: rgba(244,244,240,0.5); }
+.cd-value { margin-top: 10px; font-size: 38px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.cd-value small { font-size: 14px; font-weight: 500; color: rgba(244,244,240,0.6); margin: 0 5px 0 2px; letter-spacing: 0.04em; }
+.progress { margin-top: 12px; height: 2px; background: rgba(244,244,240,0.16); position: relative; }
+.progress i { position: absolute; inset: 0 auto 0 0; width: 62%; background: var(--paper); }
+.progress em { position: absolute; top: -3px; left: 62%; width: 2px; height: 8px; background: var(--paper); }
+.tally { display: flex; gap: 20px; margin-top: 12px; }
+.tally div { display: flex; align-items: baseline; gap: 6px; }
+.tally i { width: 7px; height: 7px; display: inline-block; }
+.tally b { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+.tally span { font-size: 11px; color: rgba(244,244,240,0.55); letter-spacing: 0.1em; }
+.today-line { margin-top: 14px; font-size: 12px; color: rgba(244,244,240,0.55); letter-spacing: 0.03em; }
+.today-line b { color: var(--paper); font-weight: 600; }
+
+/* rhythm inside plaque */
+.rhythm-wrap { padding: 0 24px 20px; }
+.rhythm-head { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 0.14em; color: rgba(244,244,240,0.42); padding-bottom: 6px; }
+.rhythm { display: grid; grid-template-columns: repeat(30, 1fr); gap: 2px; }
+.rhythm i { display: block; height: 26px; }
+
+/* board */
+.board { display: grid; grid-template-columns: 344px minmax(0, 1fr); gap: 36px; margin-top: 30px; }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 9px; border-bottom: 1px solid var(--rule-strong); }
+.sec-head h2 { font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.sec-head .sub, .sub { font-size: 12px; color: var(--ink-3); }
+
+/* calendar */
+.cal { margin-top: 12px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal .wd { font-size: 11px; color: var(--ink-3); text-align: center; padding-bottom: 4px; letter-spacing: 0.12em; }
+.cell { position: relative; height: 46px; display: flex; flex-direction: column; justify-content: space-between; padding: 5px 6px 4px; border-radius: var(--r-data); text-align: left; }
+.cell .d { font-size: 13px; font-weight: 600; }
+.cell .s { font-size: 10px; font-weight: 700; align-self: flex-end; letter-spacing: 0.02em; }
+.cell.empty { opacity: 0.3; }
+.cell.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+.cell.ot .d::after { content: ""; position: absolute; top: 7px; right: 7px; width: 4px; height: 4px; border-radius: 50%; background: var(--now); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-2); letter-spacing: 0.06em; }
+.legend i { width: 9px; height: 9px; }
+
+/* matrix */
+.matrix-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.tabs { display: inline-flex; gap: 18px; }
+.tabs button { position: relative; font-size: 13px; color: var(--ink-3); padding-bottom: 10px; }
+.tabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; }
+.tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--ink); }
+.grid-head, .row { display: grid; grid-template-columns: 88px repeat(30, minmax(0, 1fr)); }
+.grid-head > div, .row > div { display: flex; align-items: center; }
+.grid-head { border-bottom: 1px solid var(--rule); }
+.gh { height: 32px; justify-content: center; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.gh.we { color: var(--now); }
+.gh.week-start, .row > .week-start { border-left: 1px solid var(--rule); }
+.nm { gap: 5px; font-size: 12px; padding-right: 8px; }
+.nm b { font-weight: 600; }
+.nm span { color: var(--ink-3); font-size: 10px; letter-spacing: 0.06em; }
+.bar { padding-left: 1px; height: 30px; }
+.shiftly { font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; width: 100%; height: 26px; border-radius: var(--r-data); letter-spacing: 0.02em; }
+.row-me .nm { position: relative; font-weight: 700; }
+.row-me .nm::before { content: ""; position: absolute; left: -10px; top: 6px; width: 2px; height: 18px; background: var(--ink); }
+.row-me .nm b { font-weight: 800; }
+
+.s-day { background: var(--s-day); color: var(--s-day-ink); }
+.s-night { background: var(--s-night); color: #f3f2ec; }
+.s-rest { background: rgba(20,23,26,0.055); color: var(--ink-3); }
+.s-dayx { background: var(--s-day-x); color: #fff; }
+.s-nightx { background: var(--s-night-x); color: #ddd8ff; }
+.s-leave { background: var(--s-leave); color: var(--s-leave-ink); }
+
+.footnote { margin-top: 26px; font-size: 11px; color: var(--ink-3); letter-spacing: 0.04em; }
+.week-pager { display: none; }
+
+@media (max-width: 720px) {
+  .page { padding: 0 14px 24px; }
+  .masthead { height: 50px; gap: 10px; }
+  .brand { font-size: 15px; }
+  .stepper .mon { font-size: 15px; min-width: 44px; }
+  .range, .who span.t, .act .live, .masthead .sync, .masthead .signout { display: none; }
+  .brand, .who, .act { white-space: nowrap; }
+  .act { font-size: 12px; padding: 5px 8px; }
+  .rail { gap: 18px; height: 42px; overflow-x: auto; scrollbar-width: none; }
+  .rail::-webkit-scrollbar { display: none; }
+  .plaque { margin-top: 14px; }
+  .plaque-top { grid-template-columns: 1fr; }
+  .plaque-top > div { padding: 14px 16px; }
+  .plaque-top > div + div { border-left: 0; border-top: 1px solid rgba(244,244,240,0.14); }
+  .shift-name { font-size: 40px; }
+  .shift-range { font-size: 11px; margin-top: 8px; }
+  .cd-value { font-size: 30px; margin-top: 6px; }
+  .progress { margin-top: 10px; }
+  .tally b { font-size: 20px; }
+  .today-line { margin-top: 10px; }
+  .rhythm-wrap { padding: 0 16px 16px; }
+  .rhythm i { height: 18px; }
+  .board { grid-template-columns: 1fr; gap: 24px; margin-top: 20px; }
+  .sec-head h2 { font-size: 15px; }
+  .cell { height: 44px; }
+  .grid-head, .row { grid-template-columns: 70px repeat(7, minmax(0, 1fr)); }
+  .nm b, .nm span { white-space: nowrap; }
+  .grid-head > div:nth-child(n+9), .row > div:nth-child(n+9) { display: none; }
+  .gh { height: 28px; font-size: 11px; }
+  .bar { height: 28px; }
+  .shiftly { height: 24px; font-size: 10px; }
+  .nm { font-size: 11px; }
+  .week-pager { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--ink-3); padding: 8px 0 2px; letter-spacing: 0.04em; }
+  .week-pager b { color: var(--ink); font-weight: 600; }
+  .footnote { display: none; }
+}
+</style></head>
+<body><div class="page">
+  <header class="masthead">
+    <span class="brand">倒班表</span>
+    <div class="stepper">
+      <button aria-label="上一个月">‹</button><span class="mon">10月</span><button aria-label="下一个月">›</button>
+    </div>
+    <span class="range">10/20 – 11/18 · 30 天</span>
+    <span class="spacer"></span>
+    <button class="act sync"><span class="live"></span>已同步</button>
+    <span class="who"><b>华文达</b><span class="t">4F</span></span>
+    <button class="act act-ink">统计</button>
+    <button class="act signout">退出</button>
+  </header>
+
+  <nav class="rail" aria-label="选择月份">
+    <button aria-selected="false">5月</button><button aria-selected="false">6月</button><button aria-selected="false">7月</button><button aria-selected="false">8月</button><button aria-selected="false">9月</button><button aria-selected="true">10月</button><button aria-selected="false">11月</button><button aria-selected="false">12月</button>
+  </nav>
+
+  <section class="plaque">
+    <div class="plaque-top">
+      <div>
+        <div class="cd-label">现在</div>
+        <div class="shift-name" style="margin-top:10px">夜班</div>
+        <div class="shift-range">10/18 周日 · 20:00 → 次日 08:00 · 12 小时</div>
+      </div>
+      <div>
+        <div class="cd-label">距下班</div>
+        <div class="cd-value">3<small>小时</small>12<small>分</small></div>
+        <div class="progress"><i></i><em></em></div>
+      </div>
+      <div>
+        <div class="cd-label">本月</div>
+        <div class="tally">
+          <div><i style="background:var(--s-day)"></i><b>11</b><span>白班</span></div>
+          <div><i style="background:var(--s-night)"></i><b>9</b><span>夜班</span></div>
+          <div><i style="background:var(--s-rest-bar)"></i><b>10</b><span>休</span></div>
+        </div>
+        <div class="today-line">农历 九月初四 · <b>无加班</b></div>
+      </div>
+    </div>
+    <div class="rhythm-wrap">
+      <div class="rhythm-head"><span>本月节奏</span><span>10/20 → 11/18</span></div>
+      <div class="rhythm" role="img" aria-label="本月 30 天班次节奏"><i style="background:var(--s-night)" title="10/20 夜班"></i><i style="background:transparent" title="10/21 休息"></i><i style="background:transparent" title="10/22 休息"></i><i style="background:var(--s-day)" title="10/23 白班"></i><i style="background:var(--s-day)" title="10/24 白班"></i><i style="background:var(--s-day)" title="10/25 白班"></i><i style="background:var(--s-day)" title="10/26 白班"></i><i style="background:transparent" title="10/27 休息"></i><i style="background:transparent" title="10/28 休息"></i><i style="background:var(--s-day)" title="10/29 白班"></i><i style="background:var(--s-day)" title="10/30 白班"></i><i style="background:var(--s-day)" title="10/01 白班"></i><i style="background:var(--s-day)" title="10/02 白班"></i><i style="background:transparent" title="10/03 休息"></i><i style="background:transparent" title="10/04 休息"></i><i style="background:var(--s-night)" title="10/05 夜班"></i><i style="background:var(--s-night)" title="10/06 夜班"></i><i style="background:var(--s-night)" title="10/07 夜班"></i><i style="background:var(--s-night)" title="10/08 夜班"></i><i style="background:transparent" title="10/09 休息"></i><i style="background:transparent" title="10/10 休息"></i><i style="background:var(--s-night)" title="10/11 夜班"></i><i style="background:var(--s-night)" title="10/12 夜班"></i><i style="background:var(--s-night)" title="10/13 夜班"></i><i style="background:var(--s-night)" title="10/14 夜班"></i><i style="background:transparent" title="10/15 休息"></i><i style="background:transparent" title="10/16 休息"></i><i style="background:var(--s-day)" title="10/17 白班"></i><i style="background:var(--s-day)" title="10/18 白班"></i><i style="background:var(--s-day)" title="10/19 白班"></i></div>
+    </div>
+  </section>
+
+  <div class="board">
+    <section>
+      <div class="sec-head"><h2>排班日历</h2><span class="sub">点日期改班</span></div>
+      <div class="cal">
+        <span class="wd">日</span><span class="wd">一</span><span class="wd">二</span><span class="wd">三</span><span class="wd">四</span><span class="wd">五</span><span class="wd">六</span>
+        <div class="cell s-night  "><span class="d">20</span><span class="s">夜</span></div><div class="cell s-rest  "><span class="d">21</span><span class="s"></span></div><div class="cell s-rest  "><span class="d">22</span><span class="s"></span></div><div class="cell s-day  "><span class="d">23</span><span class="s">白</span></div><div class="cell s-day  "><span class="d">24</span><span class="s">白</span></div><div class="cell s-day  "><span class="d">25</span><span class="s">白</span></div><div class="cell s-day  "><span class="d">26</span><span class="s">白</span></div><div class="cell s-rest  "><span class="d">27</span><span class="s"></span></div><div class="cell s-rest  "><span class="d">28</span><span class="s"></span></div><div class="cell s-day  "><span class="d">29</span><span class="s">白</span></div><div class="cell s-day  "><span class="d">30</span><span class="s">白</span></div><div class="cell s-day  "><span class="d">01</span><span class="s">白</span></div><div class="cell s-day  "><span class="d">02</span><span class="s">白</span></div><div class="cell s-rest  "><span class="d">03</span><span class="s"></span></div><div class="cell s-rest  "><span class="d">04</span><span class="s"></span></div><div class="cell s-night  ot"><span class="d">05</span><span class="s">夜</span></div><div class="cell s-night  "><span class="d">06</span><span class="s">夜</span></div><div class="cell s-night  "><span class="d">07</span><span class="s">夜</span></div><div class="cell s-night  "><span class="d">08</span><span class="s">夜</span></div><div class="cell s-rest  "><span class="d">09</span><span class="s"></span></div><div class="cell s-rest  "><span class="d">10</span><span class="s"></span></div><div class="cell s-night  "><span class="d">11</span><span class="s">夜</span></div><div class="cell s-night  "><span class="d">12</span><span class="s">夜</span></div><div class="cell s-night  "><span class="d">13</span><span class="s">夜</span></div><div class="cell s-night  "><span class="d">14</span><span class="s">夜</span></div><div class="cell s-rest  "><span class="d">15</span><span class="s"></span></div><div class="cell s-rest  ot"><span class="d">16</span><span class="s"></span></div><div class="cell s-day  "><span class="d">17</span><span class="s">白</span></div><div class="cell s-day today "><span class="d">18</span><span class="s">白</span></div><div class="cell s-day  "><span class="d">19</span><span class="s">白</span></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div><div class="cell empty"></div>
+      </div>
+      <div class="legend">
+        <span><i class="s-day"></i>白班</span>
+        <span><i class="s-night"></i>夜班</span>
+        <span><i class="s-rest"></i>休息</span>
+        <span><i class="s-dayx"></i>白特</span>
+        <span><i class="s-nightx"></i>夜特</span>
+        <span><i class="s-leave"></i>事假</span>
+        <span><i style="background:var(--now); border-radius:50%; width:6px; height:6px"></i>加班</span>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head matrix-head" style="border-bottom:0; padding-bottom:0">
+        <div style="display:flex; align-items:baseline; gap:8px">
+          <h2 style="font-size:16px">全员排班</h2><span class="sub">13 人 · 30 天</span>
+        </div>
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true">按班次</button>
+          <button role="tab" aria-selected="false">按姓名</button>
+        </div>
+      </div>
+      <div style="margin-top:6px">
+        <div class="week-pager"><span>第 1 周 · 10/20 – 10/26</span><span>‹ 周 ›</span></div>
+        <div class="grid-head">
+          <div class="gh" style="justify-content:flex-start; font-weight:500; color:var(--ink-3)">姓名</div>
+          <div class="gh we ">20</div><div class="gh  ">21</div><div class="gh  ">22</div><div class="gh  ">23</div><div class="gh  ">24</div><div class="gh  ">25</div><div class="gh we ">26</div><div class="gh we week-start">27</div><div class="gh  ">28</div><div class="gh  ">29</div><div class="gh  ">30</div><div class="gh  ">01</div><div class="gh  ">02</div><div class="gh we ">03</div><div class="gh we week-start">04</div><div class="gh  ">05</div><div class="gh  ">06</div><div class="gh  ">07</div><div class="gh  ">08</div><div class="gh  ">09</div><div class="gh we ">10</div><div class="gh we week-start">11</div><div class="gh  ">12</div><div class="gh  ">13</div><div class="gh  ">14</div><div class="gh  ">15</div><div class="gh  ">16</div><div class="gh we ">17</div><div class="gh we week-start">18</div><div class="gh  ">19</div>
+        </div>
+        <div class="row row-me">
+  <div class="nm"><b>华文达</b><span>4F</span></div>
+  <div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div>
+</div><div class="row ">
+  <div class="nm"><b>张舒棋</b><span>4G</span></div>
+  <div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div>
+</div><div class="row ">
+  <div class="nm"><b>陈泳智</b><span>4H</span></div>
+  <div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div>
+</div><div class="row ">
+  <div class="nm"><b>韩义博</b><span>4I</span></div>
+  <div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div>
+</div><div class="row ">
+  <div class="nm"><b>段志彬</b><span>4J</span></div>
+  <div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div>
+</div><div class="row ">
+  <div class="nm"><b>余昌耿</b><span>4K</span></div>
+  <div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div>
+</div><div class="row ">
+  <div class="nm"><b>张涛</b><span>4R</span></div>
+  <div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div>
+</div><div class="row ">
+  <div class="nm"><b>谢懋</b><span>4S</span></div>
+  <div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div>
+</div><div class="row ">
+  <div class="nm"><b>农伟俊</b><span>4T</span></div>
+  <div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div>
+</div><div class="row ">
+  <div class="nm"><b>帅长安</b><span>4U</span></div>
+  <div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div>
+</div><div class="row ">
+  <div class="nm"><b>林泽勇</b><span>4V</span></div>
+  <div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div>
+</div><div class="row ">
+  <div class="nm"><b>陈家辉</b><span>4W</span></div>
+  <div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div>
+</div><div class="row ">
+  <div class="nm"><b>张增全</b><span>4X</span></div>
+  <div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-night">夜</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-rest"></span></div><div class="bar "><span class="shiftly s-day">白</span></div><div class="bar week-start"><span class="shiftly s-day">白</span></div><div class="bar "><span class="shiftly s-day">白</span></div>
+</div>
+      </div>
+    </section>
+  </div>
+
+  <p class="footnote">提案 mock · 演示数据 · 界面本身不出彩色，颜色只用来表示班次</p>
+</div></body></html>

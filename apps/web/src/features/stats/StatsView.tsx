@@ -1,71 +1,62 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import {
-  type AllPeopleMonthlyOvertimeStats,
-  calculateOvertimePay,
-  formatMoney,
-  type OvertimeChartItem,
-  type PersonMonthlyStats,
-  type SalaryCalculation,
-  scheduleData,
-  type SalaryInputValues,
-  type ScheduleMonth,
-  type ShiftType
+import { useState } from 'react'
+import type {
+  AllPeopleMonthlyOvertimeStats,
+  PersonMonthlyStats,
+  PersonOvertimeStats,
+  SalaryCalculation,
+  SalaryInputValues,
+  ScheduleMonth,
+  SchedulePerson
 } from '@shift-schedule/core'
+import { formatMoney, getOvertimeChartItems } from '@shift-schedule/core'
+import { monthOptions } from '../../appConstants'
 import type { SalaryInputField, SalarySaveStatus, StatsViewMode } from '../../appTypes'
 import { useBackDismiss } from '../../hooks/useBackDismiss'
-import { formatOvertimeHours, getShiftClassName } from '../../scheduleHelpers'
-import { formatDateForDisplay, monthOptions } from '../../appConstants'
+import { ShiftMark } from '../../components/ShiftMark'
 
-interface PersonSchedule {
-  group: string
-  name: string
-  shifts: ShiftType[]
-}
+type StatsPage = 'summary' | 'daily'
 
 interface StatsViewProps {
   isAdminUser: boolean
   isSyncing: boolean
   monthEndDate: string
   monthStartDate: string
-  overtimeChartItems: OvertimeChartItem[]
-  overtimeChartMax: number
   personalStats: PersonMonthlyStats | null
   salaryCalculation: SalaryCalculation
   salaryInputs: SalaryInputValues
   salarySaveStatus: SalarySaveStatus
   selectedMonth: ScheduleMonth
-  shouldAnimateEntry?: boolean
-  statsPerson: PersonSchedule
+  statsPerson: SchedulePerson
   statsViewMode: StatsViewMode
-  teamChartMax: number
   teamStats: AllPeopleMonthlyOvertimeStats
   onBack: () => void
   onMonthChange: (month: ScheduleMonth) => void
   onRefresh: () => void
   onSalaryInputChange: (field: SalaryInputField, value: string) => void
-  onStatsPersonChange: (personName: string) => void
+  onStatsPersonChange: (name: string) => void
   onStatsViewModeChange: (mode: StatsViewMode) => void
 }
 
-type PersonalPage = 0 | 1
-type TouchPoint = { x: number; y: number }
+const saveStateText: Record<SalarySaveStatus, string> = {
+  idle: '',
+  pending: '待保存…',
+  saving: '保存中…',
+  saved: '已保存',
+  error: '保存失败'
+}
 
 export function StatsView({
   isAdminUser,
   isSyncing,
   monthEndDate,
   monthStartDate,
-  overtimeChartItems,
-  overtimeChartMax,
   personalStats,
   salaryCalculation,
   salaryInputs,
   salarySaveStatus,
   selectedMonth,
-  shouldAnimateEntry = false,
   statsPerson,
   statsViewMode,
-  teamChartMax,
   teamStats,
   onBack,
   onMonthChange,
@@ -74,635 +65,411 @@ export function StatsView({
   onStatsPersonChange,
   onStatsViewModeChange
 }: StatsViewProps) {
-  const [personalPage, setPersonalPage] = useState<PersonalPage>(0)
-  const [personalTrackHeight, setPersonalTrackHeight] = useState<number | null>(null)
-  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false)
-  const [isStatsPersonPickerOpen, setIsStatsPersonPickerOpen] = useState(false)
-  const touchStart = useRef<TouchPoint | null>(null)
-  const personalPageRefs = useRef<Array<HTMLDivElement | null>>([])
+  const [page, setPage] = useState<StatsPage>('summary')
+  const [picker, setPicker] = useState<'month' | 'person' | null>(null)
 
-  useBackDismiss(isMonthPickerOpen, () => setIsMonthPickerOpen(false))
-  useBackDismiss(isStatsPersonPickerOpen, () => setIsStatsPersonPickerOpen(false))
+  useBackDismiss(picker !== null, () => setPicker(null))
 
-  useLayoutEffect(() => {
-    const page = personalPageRefs.current[personalPage]
-    if (!page) return
+  const isTeam = statsViewMode === 'team'
 
-    const updateHeight = () => setPersonalTrackHeight(page.scrollHeight)
-    updateHeight()
-
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(updateHeight)
-    observer.observe(page)
-    return () => observer.disconnect()
-  }, [personalPage, personalStats, salaryCalculation, salaryInputs, statsPerson.name, statsViewMode])
-
-  function switchToPersonal() {
-    onStatsViewModeChange('personal')
-    setPersonalPage(0)
+  if (!personalStats) {
+    return (
+      <>
+        <header className="stats-head">
+          <button className="back" type="button" onClick={onBack}>← 返回</button>
+          <h1>统计</h1>
+          <span className="range">{monthStartDate} – {monthEndDate}</span>
+        </header>
+        <p className="bars-empty">当前月份还没有可统计的数据</p>
+      </>
+    )
   }
 
-  function switchToDaily() {
-    onStatsViewModeChange('personal')
-    setPersonalPage(1)
-  }
+  const shiftSummary = personalStats.shiftSummary
+  const overtime = shiftSummary.加班
+  const chartItems = getOvertimeChartItems(overtime)
+  const chartMax = chartItems.reduce((max, item) => Math.max(max, item.hours), 0)
+  const teamMax = teamStats.people.reduce((max, person) => Math.max(max, person.totalHours), 0)
+  const monthLabel = monthOptions.find(option => option.value === selectedMonth)?.label ?? selectedMonth
 
-  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
-    const touch = event.touches[0]
-    touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null
-  }
+  const rows: { label: string; cls?: string; days: number; hours: number }[] = [
+    { label: '白班', cls: 's-day', days: shiftSummary.白班, hours: overtime?.白班 ?? 0 },
+    { label: '夜班', cls: 's-night', days: shiftSummary.夜班, hours: overtime?.夜班 ?? 0 },
+    { label: '休息', cls: 's-rest', days: shiftSummary.休息, hours: 0 },
+    { label: '白特', cls: 's-dayx', days: shiftSummary.白特, hours: overtime?.白特 ?? 0 },
+    { label: '夜特', cls: 's-nightx', days: shiftSummary.夜特, hours: overtime?.夜特 ?? 0 },
+    { label: '法定', days: shiftSummary.法定 ?? 0, hours: overtime?.法定 ?? 0 },
+    { label: '事假', cls: 's-leave', days: personalStats.leaveSummary.days, hours: personalStats.leaveSummary.hours }
+  ]
+  const totalDays = rows.reduce((total, row) => total + row.days, 0)
 
-  function handleTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
-    const start = touchStart.current
-    const touch = event.changedTouches[0]
-    touchStart.current = null
-    if (!start || !touch) return
-
-    const deltaX = touch.clientX - start.x
-    const deltaY = touch.clientY - start.y
-    if (Math.abs(deltaX) <= 64 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.35) return
-
-    setPersonalPage(deltaX < 0 ? 1 : 0)
+  function changeMode(mode: StatsViewMode, nextPage: StatsPage) {
+    onStatsViewModeChange(mode)
+    setPage(nextPage)
   }
 
   return (
-    <section className={`stats-page-mini ${shouldAnimateEntry ? 'stats-page-enter' : ''}`}>
-      <div className="stats-sticky-top">
-        <header className="stats-mini-header">
-          <button className="stats-back-button" type="button" onClick={onBack}>返回</button>
-          <div className="stats-header-copy">
-            <h1>统计</h1>
-            <p>{formatDateForDisplay(monthStartDate)} - {formatDateForDisplay(monthEndDate)}</p>
-          </div>
-          <button className={`stats-sync-button ${isSyncing ? 'loading' : ''}`} type="button" disabled={isSyncing} onClick={onRefresh}>
-            {isSyncing ? '同步中' : '同步'}
+    <>
+      <header className="stats-head">
+        <button className="back" type="button" onClick={onBack}>← 返回</button>
+        <h1>统计</h1>
+        <span className="range">{monthStartDate} – {monthEndDate}</span>
+        <span className="spacer" />
+        <button className="act" type="button" onClick={onRefresh}>{isSyncing ? '同步中…' : '同步'}</button>
+      </header>
+
+      <div className="stats-tabs" role="tablist" aria-label="统计视图">
+        <button
+          aria-selected={!isTeam && page === 'summary'}
+          role="tab"
+          type="button"
+          onClick={() => changeMode('personal', 'summary')}
+        >
+          综合统计
+        </button>
+        <button
+          aria-selected={!isTeam && page === 'daily'}
+          role="tab"
+          type="button"
+          onClick={() => changeMode('personal', 'daily')}
+        >
+          每日明细
+        </button>
+        {isAdminUser ? (
+          <button
+            aria-selected={isTeam}
+            role="tab"
+            type="button"
+            onClick={() => changeMode('team', 'summary')}
+          >
+            全员统计
           </button>
-        </header>
-
-        <div className="stats-view-tabs">
-          {isAdminUser ? (
-            <>
-              <button className={`stats-view-tab ${statsViewMode === 'personal' ? 'active' : ''}`} type="button" onClick={switchToPersonal}>
-                个人统计
-              </button>
-              <button className={`stats-view-tab ${statsViewMode === 'team' ? 'active' : ''}`} type="button" onClick={() => onStatsViewModeChange('team')}>
-                全员统计
-              </button>
-            </>
-          ) : (
-            <>
-              <button className={`stats-view-tab ${statsViewMode === 'personal' && personalPage === 0 ? 'active' : ''}`} type="button" onClick={switchToPersonal}>
-                综合统计
-              </button>
-              <button className={`stats-view-tab ${statsViewMode === 'personal' && personalPage === 1 ? 'active' : ''}`} type="button" onClick={switchToDaily}>
-                每日明细
-              </button>
-            </>
-          )}
-        </div>
-
-        <div className={`stats-filter-card ${statsViewMode === 'personal' ? 'has-person-filter' : ''}`}>
-          <div className="stats-filter-item">
-            <span className="stats-filter-label">月份</span>
-            <button className="stats-filter-trigger" type="button" onClick={() => setIsMonthPickerOpen(true)}>
-              {monthOptions.find(month => month.value === selectedMonth)?.label ?? `${Number(selectedMonth)}月`}
-            </button>
-          </div>
-          {statsViewMode === 'personal' ? (
-            <div className="stats-filter-item">
-              <span className="stats-filter-label">用户</span>
-              {isAdminUser ? (
-                <button className="stats-filter-trigger" type="button" onClick={() => setIsStatsPersonPickerOpen(true)}>
-                  {statsPerson.name} / {statsPerson.group}
-                </button>
-              ) : (
-                <strong className="stats-filter-value">{statsPerson.name} / {statsPerson.group}</strong>
-              )}
-            </div>
-          ) : null}
-        </div>
-
-        {isAdminUser && statsViewMode === 'personal' ? (
-          <div className="stats-page-indicator">
-            {[0, 1].map(index => (
-              <button
-                aria-label={`第 ${index + 1} 页`}
-                className={`stats-page-indicator-dot ${personalPage === index ? 'active' : ''}`}
-                key={index}
-                type="button"
-                onClick={() => setPersonalPage(index as PersonalPage)}
-              />
-            ))}
-          </div>
+        ) : null}
+        <span className="spacer" />
+        {saveStateText[salarySaveStatus] ? (
+          <span className={salarySaveStatus === 'error' ? 'save-state error' : 'save-state'}>
+            {saveStateText[salarySaveStatus]}
+          </span>
         ) : null}
       </div>
 
-      {statsViewMode === 'personal' && personalStats ? (
-        <div
-          className="stats-personal-pages"
-          style={personalTrackHeight ? { height: personalTrackHeight } : undefined}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div className="stats-personal-track" style={{ transform: `translateX(-${personalPage * 50}%)` }}>
-            <div className="stats-personal-page" ref={node => { personalPageRefs.current[0] = node }}>
-              <PersonalSummary
-                overtimeChartItems={overtimeChartItems}
-                overtimeChartMax={overtimeChartMax}
-                personalStats={personalStats}
-                salaryCalculation={salaryCalculation}
-                salaryInputs={salaryInputs}
-                salarySaveStatus={salarySaveStatus}
-                statsPerson={statsPerson}
-                onSalaryInputChange={onSalaryInputChange}
-              />
-            </div>
-            <div className="stats-personal-page" ref={node => { personalPageRefs.current[1] = node }}>
-              <DailyDetails
-                monthEndDate={monthEndDate}
-                monthStartDate={monthStartDate}
-                personalStats={personalStats}
-                salaryInputs={salaryInputs}
-              />
-            </div>
-          </div>
+      <div className="stats-filters">
+        <div className="filter">
+          <span className="k">月份</span>
+          <button className="v" type="button" onClick={() => setPicker('month')}>{monthLabel}</button>
         </div>
-      ) : null}
-
-      {statsViewMode === 'team' && isAdminUser ? (
-        <TeamStatsSections teamChartMax={teamChartMax} teamStats={teamStats} />
-      ) : null}
-
-      {isMonthPickerOpen ? (
-        <PickerOverlay title="选择月份" onClose={() => setIsMonthPickerOpen(false)}>
-          {monthOptions.map(month => (
-            <button
-              className={selectedMonth === month.value ? 'active' : ''}
-              key={month.value}
-              type="button"
-              onClick={() => {
-                onMonthChange(month.value)
-                setIsMonthPickerOpen(false)
-              }}
-            >
-              <strong>{month.label}</strong>
-              <span className="picker-check" aria-hidden="true" />
+        <div className="filter">
+          <span className="k">{isTeam ? '范围' : '用户'}</span>
+          {isTeam ? (
+            <span className="v">{teamStats.people.length} 人</span>
+          ) : isAdminUser ? (
+            <button className="v" type="button" onClick={() => setPicker('person')}>
+              {statsPerson.name}<span className="muted"> / {statsPerson.group}</span>
             </button>
-          ))}
-        </PickerOverlay>
-      ) : null}
-
-      {isStatsPersonPickerOpen ? (
-        <PickerOverlay title="切换用户" onClose={() => setIsStatsPersonPickerOpen(false)}>
-          {scheduleData.people.map(person => (
-            <button
-              className={person.name === statsPerson.name ? 'active' : ''}
-              key={person.name}
-              type="button"
-              onClick={() => {
-                onStatsPersonChange(person.name)
-                setIsStatsPersonPickerOpen(false)
-              }}
-            >
-              <strong>{person.name} / {person.group}</strong>
-              <span className="picker-check" aria-hidden="true" />
-            </button>
-          ))}
-        </PickerOverlay>
-      ) : null}
-    </section>
-  )
-}
-
-function PickerOverlay({
-  children,
-  title,
-  onClose
-}: {
-  children: ReactNode
-  title: string
-  onClose: () => void
-}) {
-  return (
-    <div className="user-picker-backdrop stats-picker-backdrop" role="presentation" onClick={onClose}>
-      <section className="user-picker stats-picker" role="dialog" aria-modal="true" aria-label={title} onClick={event => event.stopPropagation()}>
-        <div className="user-picker-header">
-          <h2>{title}</h2>
-          <button className="ghost-button" type="button" onClick={onClose}>关闭</button>
+          ) : (
+            <span className="v">{statsPerson.name}<span className="muted"> / {statsPerson.group}</span></span>
+          )}
         </div>
-        <div className="user-picker-list stats-picker-list">
-          {children}
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function PersonalSummary({
-  overtimeChartItems,
-  overtimeChartMax,
-  personalStats,
-  salaryCalculation,
-  salaryInputs,
-  salarySaveStatus,
-  statsPerson,
-  onSalaryInputChange
-}: {
-  overtimeChartItems: OvertimeChartItem[]
-  overtimeChartMax: number
-  personalStats: PersonMonthlyStats
-  salaryCalculation: SalaryCalculation
-  salaryInputs: SalaryInputValues
-  salarySaveStatus: SalarySaveStatus
-  statsPerson: PersonSchedule
-  onSalaryInputChange: (field: SalaryInputField, value: string) => void
-}) {
-  return (
-    <div className="stats-content-inner">
-      <section className="stats-card">
-        <div className="stats-section-title-row">
-          <div>
-            <span className="stats-person-label">{statsPerson.name} / {statsPerson.group}</span>
-            <h2 className="stats-section-title">月度概览</h2>
-          </div>
-          <span className="stats-section-hint">加班 {formatOvertimeHours(personalStats.overtimeTotal)} 小时</span>
-        </div>
-        <MonthlyOverview personalStats={personalStats} />
-      </section>
-
-      <section className="stats-card">
-        <div className="stats-section-title-row">
-          <h2 className="stats-section-title">加班分布</h2>
-          <span className="stats-section-hint">按类型统计</span>
-        </div>
-        <OvertimeChart overtimeChartItems={overtimeChartItems} overtimeChartMax={overtimeChartMax} />
-      </section>
-
-      <SalarySection
-        salaryCalculation={salaryCalculation}
-        salaryInputs={salaryInputs}
-        salarySaveStatus={salarySaveStatus}
-        onSalaryInputChange={onSalaryInputChange}
-      />
-    </div>
-  )
-}
-
-function MonthlyOverview({ personalStats }: { personalStats: PersonMonthlyStats }) {
-  return (
-    <div className="stats-overview-table">
-      <div className="stats-overview-row stats-overview-header">
-        <span>项目</span>
-        <span>天数</span>
-        <span>小时</span>
-      </div>
-      {getMonthlyOverviewRows(personalStats).map(row => (
-        <div className="stats-overview-row" key={row.label}>
-          <div className="stats-overview-name">
-            <span className={`stats-overview-tag ${row.className}`}>{row.label}</span>
-          </div>
-          <strong className="stats-overview-value">{row.days}</strong>
-          <strong className={`stats-overview-value ${row.hours > 0 ? 'active' : ''}`}>{formatOvertimeHours(row.hours)}h</strong>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function OvertimeChart({
-  overtimeChartItems,
-  overtimeChartMax
-}: {
-  overtimeChartItems: OvertimeChartItem[]
-  overtimeChartMax: number
-}) {
-  return (
-    <div className="stats-bar-chart">
-      {overtimeChartItems.map(item => {
-        const barHeight = overtimeChartMax > 0
-          ? Math.max((item.hours / overtimeChartMax) * 100, item.hours > 0 ? 8 : 0)
-          : 0
-
-        return (
-          <div className="stats-bar-item" key={item.type}>
-            <span className={`stats-bar-value ${item.hours > 0 ? 'active' : ''}`}>{formatOvertimeHours(item.hours)}h</span>
-            <div className="stats-bar-track">
-              <span className={`stats-bar-fill ${getStatsChartTypeClassName(item.type)}`} style={{ height: `${barHeight}%` }} />
-            </div>
-            <span className="stats-bar-label">{item.type}</span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function SalarySection({
-  salaryCalculation,
-  salaryInputs,
-  salarySaveStatus,
-  onSalaryInputChange
-}: {
-  salaryCalculation: SalaryCalculation
-  salaryInputs: SalaryInputValues
-  salarySaveStatus: SalarySaveStatus
-  onSalaryInputChange: (field: SalaryInputField, value: string) => void
-}) {
-  const salarySaveStatusLabel = salarySaveStatus === 'pending'
-    ? '待保存'
-    : salarySaveStatus === 'saving'
-      ? '保存中'
-      : salarySaveStatus === 'saved'
-        ? '已保存'
-        : salarySaveStatus === 'error'
-          ? '保存失败'
-          : ''
-
-  return (
-    <section className="stats-card salary-card">
-      <div className="stats-section-title-row salary-title-row">
-        <h2 className="stats-section-title">薪资计算</h2>
-        {salarySaveStatusLabel ? <span className={`salary-save-status ${salarySaveStatus}`}>{salarySaveStatusLabel}</span> : null}
-      </div>
-
-      <div className="salary-section">
-        <div className="salary-section-head">
-          <h3 className="salary-block-title">基本项</h3>
-          <span className="salary-section-total">小计 ¥{formatMoney(salaryCalculation.basicPayTotal)}</span>
-        </div>
-        <div className="salary-input-grid salary-basic-input-grid">
-          <SalaryInput label="底薪" field="baseSalary" value={salaryInputs.baseSalary} onChange={onSalaryInputChange} />
-          <SalaryInput label="绩效津贴" field="performanceAllowance" value={salaryInputs.performanceAllowance} onChange={onSalaryInputChange} />
-          <SalaryInput label="岗位津贴" field="positionAllowance" value={salaryInputs.positionAllowance} onChange={onSalaryInputChange} />
-        </div>
-        <span className="salary-rate-line">时薪 ¥{formatMoney(salaryCalculation.hourlyWage)}</span>
-      </div>
-
-      <div className="salary-section">
-        <div className="salary-section-head">
-          <h3 className="salary-block-title">加班工资</h3>
-          <span className="salary-section-total">小计 ¥{formatMoney(salaryCalculation.overtimePayTotal)}</span>
-        </div>
-        <div className="salary-result-grid">
-          <SalaryResult label="平日加班" value={`¥${formatMoney(salaryCalculation.weekdayOvertimePay)}`} />
-          <SalaryResult label="周末加班" value={`¥${formatMoney(salaryCalculation.specialOvertimePay)}`} />
-          <SalaryResult label="法定加班" value={`¥${formatMoney(salaryCalculation.legalOvertimePay)}`} variant="legal" />
+        <div className="filter">
+          <span className="k">加班合计</span>
+          <span className="v">{isTeam ? teamStats.people.reduce((total, person) => total + person.totalHours, 0) : personalStats.overtimeTotal} h</span>
         </div>
       </div>
 
-      <div className="salary-section">
-        <div className="salary-section-head">
-          <h3 className="salary-block-title">扣款项</h3>
-          <span className="salary-section-total deduction">小计 ¥{formatMoney(salaryCalculation.deductionTotal)}</span>
-        </div>
-        <div className="salary-deduction-grid">
-          <SalaryResult label="事假扣款" value={`¥${formatMoney(salaryCalculation.leaveDeduction)}`} variant="deduction" />
-          <SalaryInput label="其他扣款" field="otherDeductions" value={salaryInputs.otherDeductions} onChange={onSalaryInputChange} />
-        </div>
-      </div>
-
-      <div className="salary-section salary-summary-section">
-        <div className="salary-section-head">
-          <h3 className="salary-block-title">汇总</h3>
-        </div>
-        <div className="salary-final-grid">
-          <div className="salary-summary-item">
-            <span className="salary-summary-label">应付工资</span>
-            <strong className="salary-summary-value">¥{formatMoney(salaryCalculation.payableSalary)}</strong>
-          </div>
-          <div className="salary-summary-item primary">
-            <span className="salary-summary-label">实付工资</span>
-            <strong className="salary-summary-value">¥{formatMoney(salaryCalculation.netSalary)}</strong>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function SalaryInput({
-  field,
-  label,
-  value,
-  onChange
-}: {
-  field: SalaryInputField
-  label: string
-  value: string
-  onChange: (field: SalaryInputField, value: string) => void
-}) {
-  return (
-    <label className="salary-input-item">
-      <span className="salary-input-label">{label}</span>
-      <span className="salary-input-box">
-        <span className="salary-input-prefix">¥</span>
-        <input
-          className="salary-input"
-          inputMode="decimal"
-          placeholder="0"
-          value={value}
-          onChange={event => onChange(field, event.target.value)}
-        />
-      </span>
-    </label>
-  )
-}
-
-function SalaryResult({
-  label,
-  value,
-  variant = ''
-}: {
-  label: string
-  value: string
-  variant?: 'legal' | 'deduction' | ''
-}) {
-  return (
-    <div className={`salary-result-item ${variant}`}>
-      <span className="salary-result-label">{label}</span>
-      <strong className="salary-result-value">{value}</strong>
-    </div>
-  )
-}
-
-function DailyDetails({
-  monthEndDate,
-  monthStartDate,
-  personalStats,
-  salaryInputs
-}: {
-  monthEndDate: string
-  monthStartDate: string
-  personalStats: PersonMonthlyStats
-  salaryInputs: SalaryInputValues
-}) {
-  const dailyRecords = Array.from(
-    new Map(personalStats.dailyRecords.map(record => [record.date, record])).values()
-  )
-
-  return (
-    <div className="stats-content-inner">
-      <section className="stats-card">
-        <div className="stats-section-title-row">
-          <h2 className="stats-section-title">每日明细</h2>
-          <span className="stats-section-hint">{monthStartDate.slice(5)} - {monthEndDate.slice(5)}</span>
-        </div>
-        <div className="stats-daily-list">
-          <div className="stats-daily-row stats-daily-header">
-            <span>日期</span>
-            <span>班次</span>
-            <span>金额</span>
-            <span>小时</span>
-          </div>
-          {dailyRecords.map(record => {
-            const dailyOvertimePay = calculateOvertimePay(
-              salaryInputs,
-              record.overtimeHours,
-              getDailyOvertimeMultiplier(record)
-            )
-
-            return (
-              <div className={`stats-daily-row ${record.overtimeHours > 0 ? 'has-overtime' : ''}`} key={record.date}>
-                <span className="stats-daily-date">{record.date}</span>
-                <span className="stats-daily-shift-cell">
-                  <span className={`stats-shift ${getStatsShiftClassName(record.shift)} ${record.isLegal ? 'has-legal' : ''}`}>
-                    {record.isLegal ? <span className="stats-legal-shift-badge">法</span> : null}
-                    {record.shift}
-                  </span>
-                </span>
-                <strong className={`stats-daily-pay ${getDailyPayClassName(record)} ${record.overtimeHours > 0 ? '' : 'placeholder'}`}>
-                  {record.overtimeHours > 0 ? `+${formatMoney(dailyOvertimePay)}` : '+0.00'}
-                </strong>
-                <strong className={`stats-daily-overtime ${record.overtimeHours > 0 ? 'active' : ''}`}>
-                  {record.overtimeHours > 0 ? `${formatOvertimeHours(record.overtimeHours)}h` : '0h'}
-                </strong>
+      {isTeam ? (
+        <>
+          <div className="zones">
+            <section className="page-section zone-wide">
+              <div className="sec-head">
+                <h2>全员加班分布</h2>
+                <span className="sub">{teamStats.people.length} 人 · {monthLabel}结算周期</span>
               </div>
-            )
-          })}
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function TeamStatsSections({
-  teamChartMax,
-  teamStats
-}: {
-  teamChartMax: number
-  teamStats: AllPeopleMonthlyOvertimeStats
-}) {
-  return (
-    <div className="stats-content-inner">
-      <section className="stats-card">
-        <div className="stats-section-title-row">
-          <h2 className="stats-section-title">全员概览</h2>
-          <span className="stats-section-hint">共 {teamStats.people.length} 人</span>
-        </div>
-        <div className="stats-team-overview-grid">
-          <div className="stats-team-overview-item">
-            <strong>{formatOvertimeHours(teamStats.maxOvertime)}h</strong>
-            <span>最高</span>
-          </div>
-          <div className="stats-team-overview-item">
-            <strong>{formatOvertimeHours(teamStats.minOvertime)}h</strong>
-            <span>最低</span>
-          </div>
-          <div className="stats-team-overview-item">
-            <strong>{formatOvertimeHours(teamStats.averageOvertime)}h</strong>
-            <span>平均</span>
-          </div>
-        </div>
-      </section>
-
-      <section className="stats-card">
-        <div className="stats-section-title-row">
-          <h2 className="stats-section-title">加班排名</h2>
-          <span className="stats-section-hint">平日 / 特勤 / 法定</span>
-        </div>
-        <div className="stats-team-legend">
-          <span className="stats-team-legend-item weekday">平日</span>
-          <span className="stats-team-legend-item special">特勤</span>
-          <span className="stats-team-legend-item legal">法定</span>
-        </div>
-        <div className="stats-team-chart">
-          {teamStats.ranking.map(person => (
-            <div className="stats-team-chart-row" key={person.personName}>
-              <strong className={`stats-ranking-rank ${person.rank <= 3 ? 'top' : ''}`}>{person.rank}</strong>
-              <div className="stats-team-chart-person">
-                <span className="stats-team-chart-name">{person.personName}</span>
-                <span className="stats-team-chart-group">{person.group}</span>
+              <div className="team-trio">
+                <div>
+                  <div className="k">最高</div>
+                  <div className="v">{teamStats.maxOvertime} h</div>
+                </div>
+                <div>
+                  <div className="k">平均</div>
+                  <div className="v">{teamStats.averageOvertime} h</div>
+                </div>
+                <div>
+                  <div className="k">最低</div>
+                  <div className="v">{teamStats.minOvertime} h</div>
+                </div>
               </div>
-              <div className="stats-team-chart-track">
-                {getOvertimeStackSegments(person, teamChartMax).map(segment => (
-                  <span className={`stats-team-chart-segment ${segment.className}`} key={segment.key} style={{ width: `${segment.width}%` }}>
-                    {segment.showLabel ? <span>{formatOvertimeHours(segment.hours)}h</span> : null}
-                  </span>
+            </section>
+
+            <section className="page-section zone-wide">
+              <div className="sec-head">
+                <h2>排名</h2>
+                <span className="sub">平日 1.5× · 特勤 2× · 法定 3×</span>
+              </div>
+              <div className="rank">
+                {teamStats.ranking.map(person => (
+                  <div className={person.rank <= 3 ? 'rank-row top' : 'rank-row'} key={person.personName}>
+                    <span className="no">{String(person.rank).padStart(2, '0')}</span>
+                    <span className="rank-name">
+                      <b>{person.personName}</b>
+                      <span>{person.group}</span>
+                    </span>
+                    <span className="rank-track">{rankSegments(person, teamMax)}</span>
+                    <span className="total">{person.totalHours} h</span>
+                  </div>
                 ))}
               </div>
-              <strong className="stats-team-chart-total">{formatOvertimeHours(person.totalHours)}h</strong>
+            </section>
+          </div>
+        </>
+      ) : page === 'summary' ? (
+        <>
+          <div className="zones">
+            <section className="page-section">
+              <div className="sec-head">
+                <h2>月度概览</h2>
+                <span className="sub">{totalDays} 天 · 加班 {personalStats.overtimeTotal} 小时</span>
+              </div>
+              <div className="ovw">
+                <div className="ovw-row is-head">
+                  <span>项目</span>
+                  <span>天数</span>
+                  <span>加班</span>
+                </div>
+                {rows.map(row => (
+                  <div className="ovw-row" key={row.label}>
+                    <span className="ovw-name">
+                      {row.cls
+                        ? <span className={`swatch ${row.cls}`} />
+                        : <span className="legal-dot" />}
+                      {row.label}
+                    </span>
+                    <b>{row.days}</b>
+                    <span className={row.hours > 0 ? 'hrs active' : 'hrs'}>{row.hours} h</span>
+                  </div>
+                ))}
+              </div>
+              <div className="ovw-total">
+                <span>本月加班合计</span>
+                <b>{personalStats.overtimeTotal} h</b>
+              </div>
+            </section>
+
+            <section className="page-section">
+              <div className="sec-head">
+                <h2>加班分布</h2>
+                <span className="sub">按类型</span>
+              </div>
+              {chartMax === 0 ? (
+                <p className="bars-empty">本月没有加班记录</p>
+              ) : (
+                <div className="bars">
+                  <div className="bars-plot">
+                    {chartItems.map(item => (
+                      <div className="col" key={item.type}>
+                        <span className="v">{item.hours} h</span>
+                        <span
+                          className={item.type === '特勤' ? 'fill special' : item.type === '法定' ? 'fill legal' : 'fill'}
+                          style={{ height: `${Math.max(3, (item.hours / chartMax) * 100)}%` }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bars-axis">
+                    {chartItems.map(item => <span key={item.type}>{item.type}</span>)}
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+
+          <section className="page-section payslip">
+            <div className="sec-head">
+              <h2>薪资计算</h2>
+              <span className="sub">时薪 ¥{formatMoney(salaryCalculation.hourlyWage)} · 月计薪 21.75 天 × 8 小时</span>
             </div>
-          ))}
+            <div className="pay-grid">
+              <div className="pay-block">
+                <div className="pay-block-head">
+                  <h3>基本项</h3>
+                  <span className="sum">小计 ¥{formatMoney(salaryCalculation.basicPayTotal)}</span>
+                </div>
+                {payInput('baseSalary', '底薪', salaryInputs.baseSalary)}
+                {payInput('performanceAllowance', '绩效津贴', salaryInputs.performanceAllowance)}
+                {payInput('positionAllowance', '岗位津贴', salaryInputs.positionAllowance)}
+              </div>
+
+              <div className="pay-block">
+                <div className="pay-block-head">
+                  <h3>加班工资</h3>
+                  <span className="sum">小计 ¥{formatMoney(salaryCalculation.overtimePayTotal)}</span>
+                </div>
+                {payAmount('平日加班 ×1.5', salaryCalculation.weekdayOvertimePay)}
+                {payAmount('特勤加班 ×2', salaryCalculation.specialOvertimePay)}
+                {payAmount('法定加班 ×3', salaryCalculation.legalOvertimePay)}
+              </div>
+
+              <div className="pay-block">
+                <div className="pay-block-head">
+                  <h3>扣款项</h3>
+                  <span className="sum deduction">小计 ¥{formatMoney(salaryCalculation.deductionTotal)}</span>
+                </div>
+                {payAmount('事假扣款', salaryCalculation.leaveDeduction)}
+                {payInput('otherDeductions', '其他扣款', salaryInputs.otherDeductions)}
+              </div>
+
+              <div className="pay-net">
+                <div>
+                  <div className="k">实付工资</div>
+                  <div className="v">¥{formatMoney(salaryCalculation.netSalary)}</div>
+                </div>
+                <div className="side">
+                  应付
+                  <b>¥{formatMoney(salaryCalculation.payableSalary)}</b>
+                </div>
+              </div>
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className="page-section">
+          <div className="sec-head">
+            <h2>每日明细</h2>
+            <span className="sub">点班次格可修改 · 加班按当日倍率计薪</span>
+          </div>
+          <div className="daily">
+            <div className="daily-row is-head">
+              <span>日期</span>
+              <span>班次</span>
+              <span>加班</span>
+              <span>金额</span>
+            </div>
+            {personalStats.dailyRecords.map(record => {
+              const multiplier = record.isLegal ? 3 : record.shift === '白特' || record.shift === '夜特' ? 2 : 1.5
+              const pay = record.overtimeHours > 0
+                ? salaryCalculation.hourlyWage * record.overtimeHours * multiplier
+                : 0
+              return (
+                <div
+                  className={['daily-row', record.shift === '休息' ? 'is-rest' : '', record.overtimeHours > 0 ? 'has-overtime' : ''].filter(Boolean).join(' ')}
+                  key={record.date}
+                >
+                  <span className="date">{record.date}</span>
+                  <span className="day-shift">
+                    <ShiftMark shift={record.shift} />
+                    {record.isLegal ? <span className="legal-dot" /> : null}
+                  </span>
+                  <span className={record.overtimeHours > 0 ? 'hrs' : 'hrs placeholder'}>
+                    {record.overtimeHours > 0 ? `${record.overtimeHours} h` : '—'}
+                  </span>
+                  <span className={record.overtimeHours > 0 ? 'pay' : 'pay placeholder'}>
+                    {record.overtimeHours > 0 ? `¥${formatMoney(pay)}` : '—'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {picker ? (
+        <div className="sheet-backdrop" role="presentation" onClick={() => setPicker(null)}>
+          <section
+            aria-label={picker === 'month' ? '选择月份' : '选择用户'}
+            aria-modal="true"
+            className="picker"
+            role="dialog"
+            onClick={event => event.stopPropagation()}
+          >
+            <header className="picker-head">
+              <h2>{picker === 'month' ? '选择月份' : '选择用户'}</h2>
+              <button className="act" type="button" onClick={() => setPicker(null)}>关闭</button>
+            </header>
+            <div className="picker-list">
+              {picker === 'month'
+                ? monthOptions.map(option => (
+                  <button
+                    aria-selected={option.value === selectedMonth}
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onMonthChange(option.value)
+                      setPicker(null)
+                    }}
+                  >
+                    <span>{option.label}</span>
+                    <span className="tick" />
+                  </button>
+                ))
+                : teamStats.people.map(person => (
+                  <button
+                    aria-selected={person.personName === statsPerson.name}
+                    key={person.personName}
+                    type="button"
+                    onClick={() => {
+                      onStatsPersonChange(person.personName)
+                      setPicker(null)
+                    }}
+                  >
+                    <span>{person.personName}<span className="muted"> · {person.group}</span></span>
+                    <span className="tick" />
+                  </button>
+                ))}
+            </div>
+          </section>
         </div>
-      </section>
+      ) : null}
+    </>
+  )
+
+  function payInput(field: SalaryInputField, label: string, value: SalaryInputValues[SalaryInputField]) {
+    return (
+      <label className="pay-row pay-input" key={field}>
+        <span>{label}</span>
+        <span className="amount">
+          <span className="cur">¥</span>
+          <input
+            inputMode="decimal"
+            placeholder="0"
+            value={value === '' ? '' : String(value)}
+            onChange={event => onSalaryInputChange(field, event.target.value)}
+          />
+        </span>
+      </label>
+    )
+  }
+}
+
+function payAmount(label: string, value: number) {
+  return (
+    <div className="pay-row" key={label}>
+      <span>{label}</span>
+      <span className="amount">
+        <span className="cur">¥</span>
+        <b>{formatMoney(value)}</b>
+      </span>
     </div>
   )
 }
 
-function getMonthlyOverviewRows(stats: PersonMonthlyStats) {
-  return [
-    { label: '白班', className: 'stats-shift-day', days: stats.shiftSummary.白班, hours: stats.shiftSummary.加班?.白班 ?? 0 },
-    { label: '夜班', className: 'stats-shift-night', days: stats.shiftSummary.夜班, hours: stats.shiftSummary.加班?.夜班 ?? 0 },
-    { label: '休息', className: 'stats-shift-rest', days: stats.shiftSummary.休息, hours: 0 },
-    { label: '白特', className: 'stats-shift-special-day', days: stats.shiftSummary.白特, hours: stats.shiftSummary.加班?.白特 ?? 0 },
-    { label: '夜特', className: 'stats-shift-special-night', days: stats.shiftSummary.夜特, hours: stats.shiftSummary.加班?.夜特 ?? 0 },
-    { label: '法定', className: 'stats-shift-legal', days: stats.shiftSummary.法定 ?? 0, hours: stats.shiftSummary.加班?.法定 ?? 0 },
-    { label: '事假', className: 'stats-shift-leave', days: stats.leaveSummary.days, hours: stats.leaveSummary.hours }
-  ]
+function rankSegments(person: PersonOvertimeStats, max: number) {
+  const parts = [
+    { key: 'weekday', hours: person.weekdayHours },
+    { key: 'special', hours: person.specialHours },
+    { key: 'legal', hours: person.legalHours }
+  ].filter(part => part.hours > 0)
+
+  if (parts.length === 0) return <span className="muted">无加班</span>
+
+  return parts.map(part => (
+    <i
+      className={part.key}
+      key={part.key}
+      style={{ width: `${(part.hours / max) * 100}%` }}
+      title={`${part.hours} 小时`}
+    >
+      {part.hours / max > 0.14 ? part.hours : ''}
+    </i>
+  ))
 }
 
-function getOvertimeStackSegments(person: AllPeopleMonthlyOvertimeStats['ranking'][number], maxHours: number) {
-  return [
-    { key: 'weekday', className: 'stats-overtime-weekday', hours: person.weekdayHours },
-    { key: 'special', className: 'stats-overtime-special', hours: person.specialHours },
-    { key: 'legal', className: 'stats-overtime-legal', hours: person.legalHours }
-  ].map(segment => ({
-    ...segment,
-    width: maxHours > 0 ? Math.max((segment.hours / maxHours) * 100, segment.hours > 0 ? 8 : 0) : 0,
-    showLabel: segment.hours > 0
-  }))
-}
 
-function getDailyOvertimeMultiplier(record: { shift: ShiftType; isLegal?: boolean }): number {
-  if (record.isLegal) return 3
-  if (record.shift === '白特' || record.shift === '夜特') return 2
-  if (record.shift === '白班' || record.shift === '夜班') return 1.5
-
-  return 0
-}
-
-function getDailyPayClassName(record: { shift: ShiftType; isLegal?: boolean }): string {
-  if (record.isLegal) return 'legal'
-  if (record.shift === '白特' || record.shift === '夜特') return 'special'
-
-  return ''
-}
-
-function getStatsShiftClassName(shift: ShiftType): string {
-  return {
-    白班: 'stats-shift-day',
-    夜班: 'stats-shift-night',
-    休息: 'stats-shift-rest',
-    白特: 'stats-shift-special-day',
-    夜特: 'stats-shift-special-night',
-    事假: 'stats-shift-leave'
-  }[shift]
-}
-
-function getStatsChartTypeClassName(type: string): string {
-  return {
-    平日: 'stats-overtime-weekday',
-    特勤: 'stats-overtime-special',
-    法定: 'stats-overtime-legal'
-  }[type] ?? ''
-}

@@ -1,0 +1,741 @@
+/* 03 schedule — 值班牌、节奏条、排班日历、全员矩阵 */
+
+/* ── 值班牌 ────────────────────────────────────────────── */
+
+.plaque {
+  margin-top: 24px;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.plaque-top {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 0.75fr;
+}
+
+.plaque-top > div {
+  padding: 20px 24px 18px;
+  min-width: 0;
+}
+
+.plaque-top > div + div {
+  border-left: 1px solid rgba(244, 244, 240, 0.14);
+}
+
+.p-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgba(244, 244, 240, 0.5);
+}
+
+.shift-name {
+  margin-top: 8px;
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.shift-range {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(244, 244, 240, 0.6);
+  letter-spacing: 0.04em;
+}
+
+.cd-value {
+  margin-top: 10px;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.cd-value small {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(244, 244, 240, 0.6);
+  margin: 0 5px 0 2px;
+  letter-spacing: 0.04em;
+}
+
+.progress {
+  position: relative;
+  margin-top: 12px;
+  height: 2px;
+  background: rgba(244, 244, 240, 0.16);
+}
+
+.progress i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--paper);
+}
+
+.progress em {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 8px;
+  background: var(--paper);
+}
+
+.tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 12px;
+}
+
+.tally div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.tally i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+}
+
+.tally b {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.tally span {
+  font-size: 11px;
+  color: rgba(244, 244, 240, 0.55);
+  letter-spacing: 0.1em;
+}
+
+.today-line {
+  margin-top: 14px;
+  font-size: 12px;
+  color: rgba(244, 244, 240, 0.55);
+  letter-spacing: 0.03em;
+}
+
+.today-line b {
+  color: var(--paper);
+  font-weight: 700;
+}
+
+/* ── 节奏条 ────────────────────────────────────────────── */
+
+.rhythm-wrap {
+  padding: 0 24px 20px;
+}
+
+.rhythm-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: rgba(244, 244, 240, 0.42);
+  padding-bottom: 6px;
+}
+
+.rhythm {
+  display: grid;
+  grid-template-columns: repeat(var(--days, 30), minmax(0, 1fr));
+  gap: 2px;
+}
+
+.rhythm i {
+  display: block;
+  height: 26px;
+  border-radius: 1px;
+}
+
+.rhythm i.is-today {
+  box-shadow: inset 0 0 0 1px var(--paper);
+}
+
+.rhythm i.s-rest {
+  background: transparent;
+}
+
+/* ── 板块骨架 ──────────────────────────────────────────── */
+
+.board {
+  display: grid;
+  grid-template-columns: 344px minmax(0, 1fr);
+  gap: 36px;
+  margin-top: 30px;
+  align-items: start;
+}
+
+/* ── 排班日历 ──────────────────────────────────────────── */
+
+.cal-wrap {
+  min-width: 0;
+}
+
+.cal {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  margin-top: 12px;
+}
+
+.cal .wd {
+  font-size: 11px;
+  color: var(--ink-3);
+  text-align: center;
+  padding-bottom: 4px;
+  letter-spacing: 0.12em;
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 46px;
+  padding: 5px 6px 4px;
+  border-radius: var(--r-data);
+  text-align: left;
+  transition: transform 90ms ease;
+}
+
+.cell:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.cell .d {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cell .lunar {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  opacity: 0.62;
+}
+
+.cell .lunar.holiday {
+  opacity: 1;
+  font-weight: 700;
+  color: var(--now);
+}
+
+.cell .s {
+  align-self: flex-end;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.cell.is-ghost {
+  opacity: 0.3;
+}
+
+
+
+.cell.is-today {
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+
+.cell.has-overtime .d::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--now);
+}
+
+.cal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.cal-foot .legend {
+  gap: 7px 10px;
+}
+
+/* ── 全员矩阵 ──────────────────────────────────────────── */
+
+.matrix {
+  min-width: 0;
+}
+
+.matrix-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.matrix-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.matrix-title h2 {
+  white-space: nowrap;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 18px;
+}
+
+.tabs button {
+  position: relative;
+  font-size: 13px;
+  color: var(--ink-3);
+  padding-bottom: 10px;
+  transition: color 120ms ease;
+}
+
+.tabs button:hover {
+  color: var(--ink);
+}
+
+.tabs button[aria-selected="true"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.tabs button[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  height: 2px;
+  background: var(--ink);
+}
+
+.matrix-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+.matrix-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.matrix-scroll::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+}
+
+.matrix-inner {
+  min-width: 100%;
+}
+
+.grid-row {
+  display: grid;
+  grid-template-columns: var(--name-col) repeat(var(--days, 30), minmax(0, 1fr));
+  column-gap: 3px;
+}
+
+.grid-row > * {
+  display: flex;
+  align-items: center;
+}
+
+.grid-head {
+  border-bottom: 1px solid var(--rule);
+}
+
+.gh {
+  height: 32px;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.gh.we {
+  color: var(--now);
+}
+
+.gh.today {
+  background: rgba(20, 23, 26, 0.07);
+  color: var(--ink);
+}
+
+.m-name {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  box-shadow: 1px 0 0 var(--rule);
+  gap: 5px;
+  padding-right: 8px;
+  padding-left: 9px;
+  background: var(--paper);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.m-name b {
+  font-weight: 700;
+}
+
+.m-name span {
+  color: var(--ink-3);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.m-body {
+  justify-content: center;
+  height: 30px;
+  width: 100%;
+}
+
+.m-body .shift-block {
+  width: 100%;
+  height: 27px;
+  min-width: 0;
+  padding: 0;
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+.m-body .shift-block span {
+  display: inline;
+  line-height: 1;
+}
+
+/* 按姓名：格子里是「姓名药片」，底色仍然表示班次（与原版 web 一致） */
+.matrix.is-by-name .matrix-inner {
+  width: max-content;
+  min-width: 100%;
+}
+
+.matrix.is-by-name .grid-row {
+  grid-template-columns: 64px repeat(var(--days, 30), 56px);
+}
+
+.matrix.is-by-name .m-name {
+  justify-content: center;
+}
+
+.matrix.is-by-name .m-name span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.name-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 27px;
+  min-width: 0;
+  padding: 0 2px;
+  border-radius: var(--r-data);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 休息格与日历/姓名视图同源：底色由 .s-rest 提供 */
+
+.m-body .shift-block,
+.m-body .name-pill {
+  position: relative;
+}
+
+.m-body.is-edited .shift-block::after,
+.m-body.is-edited .name-pill::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--paper);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+
+
+.m-body {
+  position: relative;
+}
+
+.row-me .m-name {
+  font-weight: 700;
+}
+
+.row-me .m-name::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 6px;
+  width: 3px;
+  height: 18px;
+  background: var(--ink);
+}
+
+
+
+/* 行列固定：行=人、列=日期；两种模式只切换行排序 */
+.m-body.is-empty {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.matrix-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.scroll-hint {
+  display: none;
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+
+/* ── 用户选择（矩阵内联） ──────────────────────────────── */
+
+.user-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-data);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.user-chip:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* ── 移动端 ────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .plaque {
+    margin-top: 14px;
+  }
+
+  .plaque-top {
+    grid-template-columns: 1fr;
+  }
+
+  .plaque-top > div {
+    padding: 14px 16px;
+  }
+
+  .plaque-top > div + div {
+    border-left: 0;
+    border-top: 1px solid rgba(244, 244, 240, 0.14);
+  }
+
+  .shift-name {
+    font-size: 40px;
+  }
+
+  .shift-range {
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  .cd-value {
+    margin-top: 6px;
+    font-size: 30px;
+  }
+
+  .progress {
+    margin-top: 10px;
+  }
+
+  .tally b {
+    font-size: 20px;
+  }
+
+  .today-line {
+    margin-top: 10px;
+  }
+
+  .rhythm-wrap {
+    padding: 0 16px 16px;
+  }
+
+  .rhythm i {
+    height: 18px;
+  }
+
+  .board {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    margin-top: 20px;
+  }
+
+  .cell {
+    height: 44px;
+    padding: 4px 5px 3px;
+  }
+
+  .cell .d {
+    font-size: 12px;
+  }
+
+  .cal {
+    gap: 3px;
+  }
+
+  .matrix-head {
+    padding-bottom: 8px;
+  }
+
+  .tabs {
+    gap: 14px;
+  }
+
+  .tabs button {
+    font-size: 12px;
+  }
+
+  .matrix-inner {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .grid-row {
+    grid-template-columns: var(--name-col) repeat(var(--days, 30), 38px);
+  }
+
+  .m-name {
+    padding-right: 6px;
+    font-size: 11px;
+  }
+
+  .gh {
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .m-body {
+    height: 28px;
+  }
+
+  .m-body .shift-block {
+    height: 24px;
+    font-size: 9px;
+  }
+
+  .scroll-hint {
+    display: block;
+  }
+
+  .cal-foot .legend span {
+    font-size: 10px;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1080px) {
+  .board {
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .plaque-top {
+    grid-template-columns: 1fr 1fr 0.85fr;
+  }
+
+  .plaque-top > div {
+    padding: 16px 18px 14px;
+  }
+
+  .tally {
+    gap: 6px 14px;
+  }
+
+  .tally b {
+    font-size: 20px;
+  }
+
+  /* 窄桌面：宁可横向滚动，也不把 30 天压到 20px 以下 */
+  .matrix-inner {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .grid-row {
+    grid-template-columns: 78px repeat(var(--days, 30), 26px);
+  }
+
+  .scroll-hint {
+    display: block;
+  }
+
+  .m-name {
+    font-size: 11px;
+  }
+
+  .gh {
+    font-size: 11px;
+  }
+
+  .m-body .shift-block {
+    font-size: 9px;
+  }
+}
+
+/* 整数行高：避免半像素基线 */
+.p-label {
+  line-height: 16px;
+}
+
+.shift-range,
+.today-line {
+  line-height: 18px;
+}
+
+.tally span {
+  line-height: 16px;
+}
+
+.tally b {
+  line-height: 28px;
+}
+
+.legend span {
+  line-height: 16px;
+}
+
+.matrix-title h2,
+.matrix-title .sub {
+  line-height: 22px;
+}
+
+.matrix-foot {
+  line-height: 18px;
+}

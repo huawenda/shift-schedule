@@ -25,3 +25,6 @@ dist-package/
 
 # 本机开发环境记忆，不入库
 .workbuddy/
+
+# 截图/探针等临时脚本与产物
+.tmp-shots/

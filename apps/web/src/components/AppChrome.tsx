@@ -1,66 +1,114 @@
 import type { ScheduleMonth } from '@shift-schedule/core'
-import { formatDateForDisplay, monthOptions } from '../appConstants'
-import type { CurrentUserProfile } from '../services/userProfile'
+import { formatShortDate, monthOptions } from '../appConstants'
 
 interface AppChromeProps {
+  currentUserGroup: string
+  currentUserName: string
+  dayCount: number
   endDate: string
+  isAdmin: boolean
   isBooting: boolean
   isSyncing: boolean
-  profile: CurrentUserProfile | null
   selectedMonth: ScheduleMonth
   startDate: string
   statusText: string
   onLogout: () => void
   onMonthChange: (month: ScheduleMonth) => void
+  onOpenStats: () => void
+  onOpenUserPicker: () => void
   onRefresh: () => void
 }
 
 export function AppChrome({
+  currentUserGroup,
+  currentUserName,
+  dayCount,
   endDate,
+  isAdmin,
   isBooting,
   isSyncing,
-  profile,
   selectedMonth,
   startDate,
   statusText,
   onLogout,
   onMonthChange,
+  onOpenStats,
+  onOpenUserPicker,
   onRefresh
 }: AppChromeProps) {
-  return (
-    <div className="app-chrome-sticky">
-      <section className="hero-panel">
-        <div className="hero-title-group">
-          <img className="app-mark" src="/icons/icon2.png" alt="" aria-hidden="true" />
-          <div>
-            <h1>倒班表</h1>
-            <p className="period">{formatDateForDisplay(startDate)} - {formatDateForDisplay(endDate)}</p>
-          </div>
-        </div>
-        <button className="sync-button" type="button" disabled={isSyncing || isBooting} onClick={onRefresh}>
-          {isSyncing ? '同步中' : '同步'}
-        </button>
-      </section>
+  const monthIndex = monthOptions.findIndex(option => option.value === selectedMonth)
+  const previousMonth = monthIndex > 0 ? monthOptions[monthIndex - 1] : null
+  const nextMonth = monthIndex >= 0 && monthIndex < monthOptions.length - 1 ? monthOptions[monthIndex + 1] : null
+  const monthLabel = monthOptions.find(option => option.value === selectedMonth)?.label ?? `${selectedMonth}月`
+  const user = (
+    <>
+      <b>{currentUserName}</b>
+      <span className={`tag ${isAdmin ? 'admin' : ''}`}>{isAdmin ? '管理员' : currentUserGroup}</span>
+    </>
+  )
 
-      <nav className="month-tabs" aria-label="选择月份">
-        {monthOptions.map(month => (
+  return (
+    <>
+      <header className="masthead">
+        <h1 className="brand">倒班表</h1>
+
+        <div className="stepper">
           <button
-            className={`month-tab ${selectedMonth === month.value ? 'active' : ''}`}
-            key={month.value}
+            aria-label="上一个月"
+            disabled={!previousMonth}
             type="button"
-            onClick={() => onMonthChange(month.value)}
+            onClick={() => previousMonth && onMonthChange(previousMonth.value)}
           >
-            {month.label}
+            ‹
+          </button>
+          <span className="mon">{monthLabel}</span>
+          <button
+            aria-label="下一个月"
+            disabled={!nextMonth}
+            type="button"
+            onClick={() => nextMonth && onMonthChange(nextMonth.value)}
+          >
+            ›
+          </button>
+        </div>
+
+        <span className="range">{formatShortDate(startDate)} – {formatShortDate(endDate)} · {dayCount} 天</span>
+        <span className="spacer" />
+
+        <button className="act" type="button" onClick={onRefresh}>
+          <span className={`live-dot ${isSyncing ? 'busy' : isBooting ? 'off' : ''}`} />
+          <span className="sync-text">{isSyncing ? '同步中' : statusText}</span>
+        </button>
+
+        {isAdmin ? (
+          <button
+            aria-label="切换当前用户"
+            className="who"
+            type="button"
+            onClick={onOpenUserPicker}
+          >
+            {user}
+          </button>
+        ) : (
+          <span className="who">{user}</span>
+        )}
+
+        <button className="act act-ink" type="button" onClick={onOpenStats}>统计</button>
+        <button className="act signout" type="button" onClick={onLogout}>退出</button>
+      </header>
+
+      <nav aria-label="切换月份" className="rail">
+        {monthOptions.map(option => (
+          <button
+            aria-selected={option.value === selectedMonth}
+            key={option.value}
+            type="button"
+            onClick={() => onMonthChange(option.value)}
+          >
+            {option.label}
           </button>
         ))}
       </nav>
-
-      <section className="status-strip">
-        <span>{statusText}</span>
-        {profile?.profile ? (
-          <button type="button" onClick={onLogout}>退出</button>
-        ) : null}
-      </section>
-    </div>
+    </>
   )
 }

@@ -7,14 +7,14 @@ import {
 import type { CloudDayRecord, CloudOverrides } from './services/cloudRecords'
 import type { ShiftEditorState } from './appTypes'
 
-export function getShiftClassName(shift: ShiftType): string {
+export function getShiftClass(shift: ShiftType): string {
   return {
-    白班: 'shift-day',
-    夜班: 'shift-night',
-    休息: 'shift-rest',
-    白特: 'shift-special-day',
-    夜特: 'shift-special-night',
-    事假: 'shift-leave'
+    白班: 's-day',
+    夜班: 's-night',
+    休息: 's-rest',
+    白特: 's-dayx',
+    夜特: 's-nightx',
+    事假: 's-leave'
   }[shift]
 }
 

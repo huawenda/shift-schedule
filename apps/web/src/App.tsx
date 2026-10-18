@@ -9,6 +9,7 @@ import {
   getOvertimeChartItems,
   getOverrideKey,
   getPersonMonthlyStats,
+  getPersonMonthCalendarCells,
   getPersonShiftSummary,
   normalizeLegalOverride,
   normalizeOvertimeHours,
@@ -18,7 +19,6 @@ import {
   type ScheduleMonth,
   type ShiftType
 } from '@shift-schedule/core'
-import { AppChrome } from './components/AppChrome'
 import { AuthPanel } from './features/auth/AuthPanel'
 import { ScheduleView } from './features/schedule/ScheduleView'
 import { ShiftEditorModal } from './features/schedule/ShiftEditorModal'
@@ -78,7 +78,6 @@ export function App() {
   const isConfigured = isSupabaseConfigured()
   const isStatsRoute = location.pathname.startsWith('/stats')
   const isLoginRoute = location.pathname.startsWith('/login')
-  const locationState = location.state as { fromSchedule?: boolean } | null
   const hasAppHistoryEntry = location.key !== 'default'
   const isAdminUser = profile?.isAdmin === true
 
@@ -102,6 +101,13 @@ export function App() {
   const currentUserLegalFlags = appliedMonthView.dates.map(date => overrides.legalOverrides[getOverrideKey(appliedCurrentUser.name, date)] === true)
   const currentUserOvertimeHours = appliedMonthView.dates.map(date => overrides.overtimeOverrides[getOverrideKey(appliedCurrentUser.name, date)] ?? 0)
   const summary = getPersonShiftSummary(appliedCurrentUser, currentUserOvertimeHours, currentUserLegalFlags)
+  const calendarCells = useMemo(
+    () => getPersonMonthCalendarCells(scheduleData, selectedMonth, appliedCurrentUser.name).map(cell => {
+      const override = overrides.shiftOverrides[getOverrideKey(appliedCurrentUser.name, cell.key)]
+      return override && override !== cell.shift ? { ...cell, shift: override } : cell
+    }),
+    [selectedMonth, appliedCurrentUser.name, overrides.shiftOverrides]
+  )
   const statsPerson = isAdminUser
     ? scheduleData.people.find(person => person.name === statsPersonName) ?? appliedCurrentUser
     : appliedCurrentUser
@@ -114,7 +120,6 @@ export function App() {
     overrides.leaveDurationOverrides
   )
   const overtimeChartItems = personalStats ? getOvertimeChartItems(personalStats.shiftSummary.加班) : []
-  const overtimeChartMax = Math.max(...overtimeChartItems.map(item => item.hours), 0)
   const salaryInputKey = `${statsPerson.name}::${selectedMonth}`
   const salaryInputs = salaryInputRecords[salaryInputKey] ?? emptySalaryInputs
   const salaryCalculation = calculateSalary(salaryInputs, {
@@ -129,7 +134,6 @@ export function App() {
     overrides.shiftOverrides,
     overrides.legalOverrides
   )
-  const teamChartMax = Math.max(...teamStats.people.map(person => person.totalHours), 0)
 
   useEffect(() => {
     void boot()
@@ -357,11 +361,11 @@ export function App() {
   const requiresLogin = isConfigured && !profile?.profile && !isBooting
 
   return (
-    <main className={`app-shell ${isLoginRoute ? 'auth-shell' : ''}`}>
+    <main className="app-shell">
       {errorText && !isLoginRoute ? <p className="error-banner">{errorText}</p> : null}
 
       {!isConfigured && !isLoginRoute ? (
-        <section className="demo-notice">
+        <section className="dev-strip">
           当前未配置 Supabase，Web 端以演示数据运行。复制 <code>apps/web/.env.example</code> 为 <code>apps/web/.env.local</code> 后可连接云端。
         </section>
       ) : null}
@@ -397,32 +401,24 @@ export function App() {
             <ScheduleView
               appliedCurrentUser={appliedCurrentUser}
               appliedMonthView={appliedMonthView}
-              chrome={(
-                <AppChrome
-                  endDate={monthView.endDate}
-                  isBooting={isBooting}
-                  isSyncing={isSyncing}
-                  profile={profile}
-                  selectedMonth={selectedMonth}
-                  startDate={monthView.startDate}
-                  statusText={statusText}
-                  onLogout={() => void logout()}
-                  onMonthChange={setSelectedMonth}
-                  onRefresh={() => void refreshCloudData('同步完成', isStatsRoute)}
-                />
-              )}
+              calendarCells={calendarCells}
+              isAdmin={isAdminUser}
+              isBooting={isBooting}
+              isSyncing={isSyncing}
               overrides={overrides}
               people={appliedMonthView.people}
-              profile={profile}
               selectedMonth={selectedMonth}
+              statusText={statusText}
               summary={summary}
               onCurrentUserChange={setSchedulePersonName}
+              onLogout={() => void logout()}
               onMonthChange={setSelectedMonth}
               onOpenShiftEditor={openShiftEditor}
-              onStatsOpen={() => {
+              onOpenStats={() => {
                 void openStatsRoute()
                 navigate('/stats', { state: { fromSchedule: true } })
               }}
+              onRefresh={() => void refreshCloudData('同步完成', isStatsRoute)}
             />
           )}
         />
@@ -434,17 +430,13 @@ export function App() {
               isSyncing={isSyncing}
               monthEndDate={monthView.endDate}
               monthStartDate={monthView.startDate}
-              overtimeChartItems={overtimeChartItems}
-              overtimeChartMax={overtimeChartMax}
               personalStats={personalStats}
               salaryCalculation={salaryCalculation}
               salaryInputs={salaryInputs}
               salarySaveStatus={salarySaveStatus}
               selectedMonth={selectedMonth}
-              shouldAnimateEntry={locationState?.fromSchedule === true}
               statsPerson={statsPerson}
               statsViewMode={statsViewMode}
-              teamChartMax={teamChartMax}
               teamStats={teamStats}
               onBack={() => {
                 if (hasAppHistoryEntry) {
