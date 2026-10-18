@@ -6,14 +6,14 @@ import {
   type LeaveDuration,
   type ShiftType
 } from '@local/core'
-import { leaveDurationOptions } from '../../appConstants'
+import { leaveDurationOptions, shiftInitial } from '../../appConstants'
 import type { ShiftEditorState } from '../../appTypes'
 import { useDialog } from '../../hooks/useDialog'
 import {
   canRecordOvertime,
   formatOvertimeHours,
   getEditorEffectiveShift,
-  getShiftClassName
+  getShiftClass
 } from '../../scheduleHelpers'
 
 interface ShiftEditorModalProps {
@@ -41,68 +41,74 @@ export function ShiftEditorModal({
   const effectiveShift = getEditorEffectiveShift(editor)
 
   return (
-    <div className="scrim" onClick={onCancel}>
+    <div className="sheet-backdrop" role="presentation" onClick={onCancel}>
       <section
+        aria-labelledby="shift-editor-title"
+        aria-modal="true"
         className="sheet"
         role="dialog"
-        aria-modal="true"
-        aria-labelledby="shift-editor-title"
         ref={sheetRef}
         onClick={event => event.stopPropagation()}
       >
         <header className="sheet-head">
           <div>
-            <h2 className="sheet-title" id="shift-editor-title">编辑班次</h2>
-            <p className="sheet-sub">{editor.personName} · {editor.date}</p>
+            <h2 id="shift-editor-title">改班</h2>
+            <p className="sub">{editor.personName} · {editor.date}</p>
           </div>
+          <span className="sub">点空白处关闭</span>
         </header>
 
         <div className="sheet-body">
-          <div className="field">
-            <span className="field-label">默认班次</span>
-            <div className="field-options">
+          <div className="field-group">
+            <span className="label">默认班次</span>
+            <div className="choice-row">
               <button
-                className="shift-option is-base"
-                type="button"
+                aria-label={editor.baseShift}
                 aria-pressed={editor.selectedShift === 'default'}
+                className="shift-choice"
+                data-role="base"
+                title={editor.baseShift}
+                type="button"
                 onClick={() => onShiftChange('default')}
               >
-                {editor.baseShift}
+                <span className={`shift-block ${getShiftClass(editor.baseShift)}`}>
+                  <span>{shiftInitial[editor.baseShift]}</span>
+                </span>
               </button>
             </div>
           </div>
 
-          <div className="field">
-            <span className="field-label">改为</span>
-            <div className="field-options">
-              {getEditableShiftOptionsForBase(editor.baseShift).map(shift => {
-                const isDisabled = editor.isLegal && shift === '事假'
-                return (
-                  <button
-                    className={`shift-option ${getShiftClassName(shift)}`}
-                    type="button"
-                    aria-pressed={effectiveShift === shift}
-                    disabled={isDisabled}
-                    key={shift}
-                    onClick={() => onShiftChange(shift === editor.baseShift ? 'default' : shift)}
-                  >
-                    {shift}
-                  </button>
-                )
-              })}
+          <div className="field-group">
+            <span className="label">修改为</span>
+            <div className="choice-row">
+              {getEditableShiftOptionsForBase(editor.baseShift).map(shift => (
+                <button
+                  aria-label={shift}
+                  aria-pressed={effectiveShift === shift}
+                  className="shift-choice"
+                  disabled={editor.isLegal && shift === '事假'}
+                  key={shift}
+                  title={shift}
+                  type="button"
+                  onClick={() => onShiftChange(shift === editor.baseShift ? 'default' : shift)}
+                >
+                  <span className={`shift-block ${getShiftClass(shift)}`}>
+                    <span>{shiftInitial[shift]}</span>
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
           {effectiveShift === '事假' ? (
-            <div className="field">
-              <span className="field-label">请假时长</span>
-              <div className="field-options">
+            <div className="field-group">
+              <span className="label">事假时长</span>
+              <div className="choice-row">
                 {leaveDurationOptions.map(duration => (
                   <button
-                    className="shift-option is-base"
-                    type="button"
                     aria-pressed={editor.leaveDuration === duration}
                     key={duration}
+                    type="button"
                     onClick={() => onLeaveDurationChange(duration)}
                   >
                     {duration}
@@ -112,78 +118,65 @@ export function ShiftEditorModal({
             </div>
           ) : null}
 
-          <div className="field">
-            <span className="field-label">法定加班</span>
+          <div className="field-group">
+            <span className="label">法定</span>
             {canMarkLegalShift(effectiveShift) ? (
-              <div className="field-options">
-                <button
-                  className="shift-option is-base"
-                  type="button"
-                  aria-pressed={!editor.isLegal}
-                  onClick={() => onLegalChange(false)}
-                >
+              <div className="choice-row">
+                <button aria-pressed={!editor.isLegal} type="button" onClick={() => onLegalChange(false)}>
                   否
                 </button>
-                <button
-                  className="shift-option shift-legal"
-                  type="button"
-                  aria-pressed={editor.isLegal}
-                  onClick={() => onLegalChange(true)}
-                >
+                <button aria-pressed={editor.isLegal} type="button" onClick={() => onLegalChange(true)}>
                   是
                 </button>
               </div>
             ) : (
-              <span className="field-note">{effectiveShift} 不计入法定加班</span>
+              <p className="hint">该班次不可标记法定</p>
             )}
           </div>
 
-          <div className="field">
-            <span className="field-label">加班时长</span>
+          <div className="field-group">
+            <span className="label">加班时长</span>
             {canRecordOvertime(effectiveShift) ? (
               <>
-                <div className="field-options">
+                <div className="choice-row">
                   {getOvertimePresetOptions(effectiveShift, editor.isLegal).map(hours => (
                     <button
-                      className="shift-option is-base"
-                      type="button"
                       aria-pressed={normalizeOvertimeHours(editor.overtimeInput) === hours}
                       key={hours}
+                      type="button"
                       onClick={() => onOvertimeInputChange(formatOvertimeHours(hours))}
                     >
                       {formatOvertimeHours(hours)}h
                     </button>
                   ))}
                 </div>
-                <label className="hours-row">
+                <label className="hours-input">
                   <input
-                    className="hours-input"
-                    type="number"
+                    autoComplete="off"
                     inputMode="decimal"
-                    step="0.5"
                     min="0"
                     name="overtimeHours"
-                    autoComplete="off"
                     placeholder="0"
+                    step="0.5"
+                    type="number"
                     value={editor.overtimeInput}
                     onChange={event => onOvertimeInputChange(event.target.value)}
                   />
-                  <span className="hours-unit" aria-hidden="true">h</span>
-                  <span className="hours-hint">最小单位 0.5</span>
+                  <span className="hint">小时 · 最小单位 0.5</span>
                 </label>
               </>
             ) : (
-              <span className="field-note">{effectiveShift} 不记录加班</span>
+              <p className="hint">该班次不记录加班</p>
             )}
           </div>
         </div>
 
-        <footer className="sheet-foot">
-          <button className="btn" type="button" onClick={onCancel}>取消</button>
-          <button className="btn btn-primary" type="button" disabled={isSavingRecord} onClick={onSave}>
+        <div className="sheet-actions">
+          <button className="save" type="button" disabled={isSavingRecord} onClick={onSave}>
             {isSavingRecord ? '保存中…' : '保存'}
           </button>
-        </footer>
+          <button className="cancel" type="button" onClick={onCancel}>取消</button>
+        </div>
       </section>
     </div>
   )

@@ -1,0 +1,103 @@
+/* 倒班表 · 本地版专有覆盖
+ *
+ * 只放「本地版与 Web 版有意不同」的规则，避免在共用层里写条件分支。
+ * 一、PC 上允许选中复制（桌面端要能复制姓名、日期、金额）
+ * 二、版心不设上限：离线版是「一个窗口一个应用」，两侧留 150px 空白没有意义
+ * 三、列宽被拉开后字号要跟上
+ */
+
+@media (hover: hover) and (pointer: fine) {
+  body {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Web 版 --page-max: 1560px；离线版窗口有多宽就用多宽（只保留 24px 内边距） */
+.app-shell {
+  max-width: none;
+}
+
+/* 顶栏 + 月轨冻结：桌面窗口里把它们当标题栏，只有下面的内容滚动 */
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--paper);
+}
+
+/* 统计页同理：标题栏 + 两个 tab 固定，只有内容滚动 */
+.stats-head,
+.stats-tabs {
+  position: sticky;
+  background: var(--paper);
+  z-index: 30;
+}
+
+.stats-head {
+  top: 0;
+}
+
+.stats-tabs {
+  top: 56px;
+  z-index: 29;
+}
+
+/* 窄屏表头会换行，高度不再是 56px；此时只钉表头，tab 跟随内容滚走 */
+@media (max-width: 720px) {
+  .stats-tabs {
+    position: static;
+  }
+}
+
+/* 隐藏滚动条（仍可滚动：滚轮、触控板、键盘都照常）。
+   桌面应用里那条灰槽会把「窗口」变成「网页」。 */
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+.matrix-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.matrix-scroll {
+  scrollbar-width: none;
+}
+
+/* 列宽随窗口一起变宽，字号要跟上，否则 70px 的格子里塞 10px 的字会显得空 */
+@media (min-width: 1920px) {
+  .gh {
+    font-size: 12px;
+  }
+
+  .m-name b {
+    font-size: 12px;
+  }
+
+  .m-body .shift-block {
+    font-size: 11px;
+  }
+}
+
+@media (min-width: 2400px) {
+  .m-body .shift-block {
+    font-size: 12px;
+  }
+
+  .cell .d {
+    font-size: 13px;
+  }
+}
+
+/* 改班面板：色块里只留班次首字，不再跟一遍班次全名 */
+.shift-choice {
+  gap: 0;
+  padding: 4px !important;
+}
+
+.shift-choice .shift-block {
+  width: 34px;
+  height: 22px;
+  font-size: 10px;
+}

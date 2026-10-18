@@ -194,10 +194,10 @@ async function waitFor(client, expression, label, timeoutMs = 15000) {
 async function reload(client) {
   await client.send('Page.reload', { ignoreCache: true })
   await waitFor(client, 'document.readyState === "complete"', '页面重新加载')
-  await waitFor(client, 'Boolean(document.querySelector(".roster-row .roster-cell"))', '排班表渲染')
+  await waitFor(client, 'Boolean(document.querySelector(".matrix .grid-row .m-body .shift-block"))', '排班表渲染')
 }
 
-const cellSelector = '.roster-row .roster-cell'
+const cellSelector = '.matrix .grid-row .m-body'
 
 async function runScenario(name, url, downloadDir) {
   console.log(`\n=== 场景：${name} ===`)
@@ -236,7 +236,7 @@ async function runScenario(name, url, downloadDir) {
       await client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir }).catch(() => {})
     }
 
-    await waitFor(client, 'Boolean(document.querySelector(".roster-row .roster-cell"))', '排班表渲染')
+    await waitFor(client, 'Boolean(document.querySelector(".matrix .grid-row .m-body .shift-block"))', '排班表渲染')
     check(`${name}: 排班表渲染成功`, true)
 
     const storageState = await client.evaluate(`(() => {
@@ -267,10 +267,11 @@ async function runScenario(name, url, downloadDir) {
     const picked = await client.evaluate(`(() => {
       const cell = document.querySelector(${JSON.stringify(cellSelector)})
       if (!cell) return null
-      return { shift: cell.textContent.trim() }
+      const block = cell.querySelector('.shift-block')
+      return { shift: block ? block.textContent.trim() : '' }
     })()`)
 
-    const nextShift = ['夜班', '白班', '休息', '白特', '夜特'].find(shift => shift !== picked.shift)
+    const nextShift = ['夜班', '白班', '休息', '白特', '夜特'].find(shift => shift !== picked?.shift)
     check(`${name}: 找到可编辑的排班单元格`, Boolean(picked && nextShift), `当前「${picked?.shift}」→「${nextShift}」`)
 
     await client.evaluate(`document.querySelector(${JSON.stringify(cellSelector)}).click(); true`)
@@ -278,25 +279,34 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 点击单元格能打开编辑弹窗`, true)
 
     const shiftClicked = await client.evaluate(`(() => {
-      const options = Array.from(document.querySelectorAll('.shift-option'))
-      const target = options.find(option => option.textContent?.trim() === ${JSON.stringify(nextShift)})
+      const target = document.querySelector('.sheet .shift-choice[aria-label="' + ${JSON.stringify(nextShift)} + '"]:not([data-role="base"])')
       if (!target) return false
       target.click()
       return true
     })()`)
     check(`${name}: 选中目标班次「${nextShift}」`, shiftClicked)
 
-    await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.sheet-foot button'))
+    // 必须等 React 重新渲染：选班次与保存若在同一次求值里，保存读到的还是旧 state
+    await sleep(200)
+    const saveClicked = await client.evaluate(`(() => {
+      const button = Array.from(document.querySelectorAll('.sheet-actions button'))
         .find(item => item.textContent.trim() === '保存')
       if (!button) return false
       button.click()
       return true
     })()`)
+    check(`${name}: 点击保存`, saveClicked)
 
     await waitFor(client, '!document.querySelector(".sheet")', '弹窗关闭')
 
-    const storedRaw = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(DAY_RECORDS_KEY)})`)
+    // 落盘是异步的（保存要等 React 重渲染 + 写库），这里轮询而不是读一次
+    let storedRaw = null
+    const saveDeadline = Date.now() + 3000
+    while (Date.now() < saveDeadline) {
+      storedRaw = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(DAY_RECORDS_KEY)})`)
+      if (storedRaw && storedRaw !== '[]') break
+      await sleep(150)
+    }
     let storedRecords = []
     try {
       storedRecords = JSON.parse(storedRaw || '[]')
@@ -317,8 +327,9 @@ async function runScenario(name, url, downloadDir) {
     const afterReload = await client.evaluate(`(() => {
       const cell = document.querySelector(${JSON.stringify(cellSelector)})
       if (!cell) return null
+      const block = cell.querySelector('.shift-block')
       return {
-        shift: cell.textContent.trim(),
+        shift: block ? block.textContent.trim() : '',
         marked: cell.classList.contains('is-edited')
       }
     })()`)
@@ -331,7 +342,7 @@ async function runScenario(name, url, downloadDir) {
 
     // --- 导出备份真的落文件 ---
     await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.top-bar-actions button'))
+      const button = Array.from(document.querySelectorAll('.masthead button'))
         .find(item => item.textContent.trim() === '导出')
       if (!button) return false
       button.click()
@@ -362,9 +373,9 @@ async function runScenario(name, url, downloadDir) {
     await waitFor(client, 'Boolean(document.querySelector(".sheet"))', '班次编辑弹窗')
     const resetClicked = await client.evaluate(`(() => {
       // 「默认班次」的文案在 editor-label 上，按钮本体只有班次 chip
-      const label = Array.from(document.querySelectorAll('.field-label'))
+      const label = Array.from(document.querySelectorAll('.sheet .label'))
         .find(item => item.textContent.trim() === '默认班次')
-      const option = label?.parentElement?.querySelector('.shift-option')
+      const option = label?.parentElement?.querySelector('.shift-choice')
       if (!option) return false
       option.click()
       return true
@@ -372,14 +383,14 @@ async function runScenario(name, url, downloadDir) {
     // 必须等 React 重新渲染：把「选班次」和「保存」放在同一次求值里，
     // 保存读到的还是旧 state（React 会批处理）。
     await sleep(200)
-    await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.sheet-foot button'))
+    const saveClickedReset = await client.evaluate(`(() => {
+      const button = Array.from(document.querySelectorAll('.sheet-actions button'))
         .find(item => item.textContent.trim() === '保存')
       if (!button) return false
       button.click()
       return true
     })()`)
-    check(`${name}: 选中「默认班次」并保存`, resetClicked)
+    check(`${name}: 选中「默认班次」并保存`, resetClicked && saveClickedReset)
     await waitFor(client, '!document.querySelector(".sheet")', '弹窗关闭')
 
     const afterDelete = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(DAY_RECORDS_KEY)})`)
@@ -393,26 +404,26 @@ async function runScenario(name, url, downloadDir) {
 
     // --- 团队统计（本地版视为管理员） ---
     await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.top-bar-actions button')).find(b => b.textContent.trim() === '统计')
+      const button = Array.from(document.querySelectorAll('.masthead button')).find(b => b.textContent.trim() === '统计')
       if (!button) return false
       button.click()
       return true
     })()`)
-    await waitFor(client, 'Boolean(document.querySelector(".stats"))', '统计页')
+    await waitFor(client, 'Boolean(document.querySelector(".stats-head"))', '统计页')
     check(`${name}: 能进入统计页`, true)
 
     const statsTabs = await client.evaluate(`(() => {
-      const labels = Array.from(document.querySelectorAll('.stats-filters [role="tablist"] button')).map(item => item.textContent.trim())
+      const labels = Array.from(document.querySelectorAll('.stats-tabs button')).map(item => item.textContent.trim())
       return labels
     })()`)
     check(
-      `${name}: 统计页显示两个视图标签（月度概览 / 每日明细）`,
-      statsTabs.includes('月度概览') && statsTabs.includes('每日明细'),
+      `${name}: 统计页显示两个视图标签（综合统计 / 每日明细）`,
+      statsTabs.includes('综合统计') && statsTabs.includes('每日明细'),
       JSON.stringify(statsTabs)
     )
 
     const dailyTabClicked = await client.evaluate(`(() => {
-      const tab = Array.from(document.querySelectorAll('.stats-filters [role="tablist"] button'))
+      const tab = Array.from(document.querySelectorAll('.stats-tabs button'))
         .find(item => item.textContent.includes('每日明细'))
       if (!tab) return false
       tab.click()
@@ -433,37 +444,37 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 全员排名已移除`, !hasTeamTab, JSON.stringify(statsTabs))
 
     const backClicked = await client.evaluate(`(() => {
-      const button = document.querySelector('.stats-bar .btn-ghost')
+      const button = document.querySelector('.stats-head .back')
       if (!button) return false
       button.click()
       return true
     })()`)
     const backHome = backClicked
-      ? await waitFor(client, 'Boolean(document.querySelector(".calendar"))', '返回排班页', 8000).then(() => true).catch(() => false)
+      ? await waitFor(client, 'Boolean(document.querySelector(".cal"))', '返回排班页', 8000).then(() => true).catch(() => false)
       : false
     check(`${name}: 从统计页返回排班页`, backHome)
 
     // --- 薪资输入能落盘 ---
     await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.top-bar-actions button')).find(b => b.textContent.trim() === '统计')
+      const button = Array.from(document.querySelectorAll('.masthead button')).find(b => b.textContent.trim() === '统计')
       if (button) button.click()
       return true
     })()`)
-    await waitFor(client, 'Boolean(document.querySelector(".stats"))', '统计页')
+    await waitFor(client, 'Boolean(document.querySelector(".stats-head"))', '统计页')
 
-    // 统计页会记住上次看的是「全员统计」，薪资输入在「个人统计」页
+    // 薪资输入在「综合统计」页
     await client.evaluate(`(() => {
-      const tab = Array.from(document.querySelectorAll('.stats-filters [role="tablist"] button'))
-        .find(item => item.textContent.includes('个人统计'))
+      const tab = Array.from(document.querySelectorAll('.stats-tabs button'))
+        .find(item => item.textContent.includes('综合统计'))
       if (tab) tab.click()
       return true
     })()`)
-    const hasSalaryInput = await waitFor(client, 'Boolean(document.querySelector(".salary-input"))', '薪资输入框', 8000)
+    const hasSalaryInput = await waitFor(client, 'Boolean(document.querySelector(".pay-input input"))', '薪资输入框', 8000)
       .then(() => true)
       .catch(() => false)
 
     const salaryFilled = hasSalaryInput && await client.evaluate(`(() => {
-      const input = document.querySelector('.salary-input')
+      const input = document.querySelector('.pay-input input')
       if (!input) return false
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
       setter.call(input, '5000')

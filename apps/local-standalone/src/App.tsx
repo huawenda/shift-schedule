@@ -342,6 +342,8 @@ export function App() {
           monthStartDate={monthView.startDate}
           overtimeChartItems={overtimeChartItems}
           overtimeChartMax={overtimeChartMax}
+          personGroup={currentUser.group}
+          personName={currentUser.name}
           personalStats={personalStats}
           salaryCalculation={salaryCalculation}
           salaryInputs={salaryInputs}
@@ -361,10 +363,12 @@ export function App() {
               endDate={monthView.endDate}
               isBooting={isBooting}
               isRefreshing={isRefreshing}
+              isAdmin
               personGroup={currentUser.group}
               personName={currentUser.name}
               selectedMonth={selectedMonth}
               startDate={monthView.startDate}
+              statusText={statusText}
               onExportBackup={exportBackup}
               onImportBackup={file => void importBackup(file)}
               onMonthChange={setSelectedMonth}

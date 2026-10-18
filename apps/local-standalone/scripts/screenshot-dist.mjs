@@ -177,33 +177,34 @@ async function measure(client) {
     const shell = document.querySelector('.app-shell')
     const shellRect = shell ? shell.getBoundingClientRect() : null
 
-    // 表头与数据行的列是否逐列对齐（WP3 用各行独立 1fr 分配，必须验证对齐）
-    const headerLefts = Array.from(document.querySelectorAll('.date-head'))
+    // 表头与数据行的列是否逐列对齐（每行独立 grid，必须验证对齐）
+    // 表头是 .grid-head > .gh（首格「姓名」），行是 .grid-row > .m-name + .m-body
+    const headerLefts = Array.from(document.querySelectorAll('.grid-head .gh'))
       .map(node => Math.round(node.getBoundingClientRect().left))
-    const firstBodyRow = document.querySelector('.roster-row')
+    const firstBodyRow = document.querySelector('.grid-row:not(.grid-head)')
     const bodyLefts = firstBodyRow
-      ? Array.from(firstBodyRow.children).map(node => Math.round(node.getBoundingClientRect().left))
+      ? Array.from(firstBodyRow.querySelectorAll('.m-body')).map(node => Math.round(node.getBoundingClientRect().left))
       : []
     const aligned = headerLefts.length > 0 &&
       headerLefts.length === bodyLefts.length &&
       headerLefts.every((left, index) => Math.abs(left - bodyLefts[index]) <= 1)
 
     // 实际列宽（≥1440 之后 grid-auto-columns 是 minmax(...)，取不到定值，直接量单元格）
-    const firstCell = firstBodyRow?.querySelector('.roster-cell')
+    const firstCell = firstBodyRow?.querySelector('.m-body')
     const dateColumnPx = firstCell ? Math.round(firstCell.getBoundingClientRect().width) : null
     const dateColumnPxExact = firstCell ? firstCell.getBoundingClientRect().width : null
 
     // 班次标签是否撑破单元格：格子内文字溢出就会被 overflow 裁掉
     let worstChipOverflow = 0
-    document.querySelectorAll('.roster-cell').forEach(cell => {
+    document.querySelectorAll('.m-body').forEach(cell => {
       const overflow = cell.scrollWidth - cell.clientWidth
       if (overflow > worstChipOverflow) worstChipOverflow = overflow
     })
 
-    // 排班日历：.calendar-cell 是 overflow:hidden，内容一旦超出就会被裁掉
-    const calendarCard = document.querySelector('.side-col .panel')
+    // 排班日历：.cell 是 overflow:hidden，内容一旦超出就会被裁掉
+    const calendarCard = document.querySelector('.cal-wrap')
     const cardOverflow = calendarCard ? calendarCard.scrollWidth - calendarCard.clientWidth : 0
-    const calendarCells = Array.from(document.querySelectorAll('.calendar-cell'))
+    const calendarCells = Array.from(document.querySelectorAll('.cell'))
     let calendarClippedCount = 0
     let calendarWorstOverflow = 0
     let calendarWorstChild = null
@@ -237,8 +238,8 @@ async function measure(client) {
     })
 
     // 首个日历单元格的盒模型细节（排查裁剪用）
-    const firstCal = document.querySelector('.calendar-cell:not([aria-hidden])') ||
-      document.querySelector('.calendar-cell')
+    const firstCal = document.querySelector('.cell:not([aria-hidden])') ||
+      document.querySelector('.cell')
     const calendarDetail = firstCal ? (() => {
       const round = value => Math.round(value * 10) / 10
       const pick = selector => {
@@ -261,12 +262,12 @@ async function measure(client) {
           scrollW: firstCal.scrollWidth, scrollH: firstCal.scrollHeight,
           padding: cellStyle.padding, overflow: cellStyle.overflow
         },
-        content: pick('.calendar-cell .calendar-day'),
+        content: pick('.d'),
         wrap: null,
         spacer: null,
-        day: pick('.calendar-day'),
-        lunar: pick('.calendar-lunar'),
-        shiftRow: pick('.calendar-bar'),
+        day: pick('.d'),
+        lunar: pick('.lunar'),
+        shiftRow: pick('.s'),
         chip: null
       }
     })() : null
@@ -278,8 +279,8 @@ async function measure(client) {
       shellWidthRatio: shellRect ? Number((shellRect.width / window.innerWidth).toFixed(3)) : null,
       sideMargin: shellRect ? Math.round((window.innerWidth - shellRect.width) / 2) : null,
       contentBottom: Math.round(document.querySelector('.matrix')?.getBoundingClientRect().bottom ?? 0),
-      calendarCard: rect('.side-col .panel'),
-      tableCard: rect('.schedule-card'),
+      calendarCard: rect('.cal-wrap'),
+      tableCard: rect('.matrix'),
       tableOverflow: scroller ? { visible: scroller.clientWidth, needed: scroller.scrollWidth, hidden: scroller.scrollWidth - scroller.clientWidth } : null,
       headerBodyAligned: aligned,
       worstChipOverflow,
@@ -292,18 +293,18 @@ async function measure(client) {
       dateColumnPxExact,
       dayCount: headerLefts.length,
       docScrollHeight: document.documentElement.scrollHeight,
-      stickyTop: rect('.top-bar'),
+      masthead: rect('.masthead'),
       monthTab: rect('.stepper'),
-      monthTabsRow: rect('.summary-bar'),
+      monthTabsRow: rect('.rail'),
       bodyUserSelect: getComputedStyle(document.body).userSelect,
       hoverCapable: window.matchMedia('(hover: hover) and (pointer: fine)').matches,
-      dateColumnWidth: style('.roster-row', 'gridAutoColumns'),
+      dateColumnWidth: style('.grid-row', 'gridTemplateColumns'),
       fonts: {
-        calendarDay: style('.calendar-day', 'fontSize'),
-        shiftChip: style('.roster-cell', 'fontSize'),
-        personName: style('.rail-name', 'fontSize'),
-        sectionTitle: style('.section-title', 'fontSize'),
-        headerH1: style('.brand-name', 'fontSize')
+        calendarDay: style('.cell .d', 'fontSize'),
+        shiftChip: style('.m-body .shift-block', 'fontSize'),
+        personName: style('.m-name b', 'fontSize'),
+        sectionTitle: style('.matrix-title', 'fontSize'),
+        headerH1: style('.brand', 'fontSize')
       }
     }
   })()`)
@@ -312,7 +313,7 @@ async function measure(client) {
 /** 统计页的垂直填充率：内容底部 / 视口高度。 */
 async function measureStats(client) {
   return client.evaluate(`(() => {
-    const boxes = ['.stats-main', '.stats-bar']
+    const boxes = ['.zones', '.stats-head']
       .map(selector => document.querySelector(selector)?.getBoundingClientRect())
       .filter(Boolean)
     const bottom = boxes.length ? Math.round(Math.max(...boxes.map(box => box.bottom))) : 0
@@ -365,6 +366,15 @@ async function main() {
     await client.send('Runtime.enable')
     await client.send('Page.enable')
 
+    // Chrome 起来时先是一个 about:blank，等它真正导航到产物页面再操作，
+    // 否则 localStorage 会抛 SecurityError（Access is denied for this document）
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const href = String(await client.evaluate('location.href'))
+      if (href.startsWith('http') || href.startsWith('file')) break
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    await new Promise(resolve => setTimeout(resolve, 300))
+
     // 用工具自带的清空方式，保证每个尺寸从同一状态出发
     await client.evaluate(`(() => { window.localStorage.clear(); return true })()`)
 
@@ -391,7 +401,7 @@ async function main() {
       }
 
       await client.send('Page.navigate', { url: startUrl })
-      await waitFor(client, 'Boolean(document.querySelector(".calendar"))', '排班页渲染')
+      await waitFor(client, 'Boolean(document.querySelector(".cal, .calendar"))', '排班页渲染')
       await sleep(500)
 
       const scheduleBytes = await capture(client, path.join(outDir, `${tag}-01-排班.png`))
@@ -405,14 +415,14 @@ async function main() {
         ? Math.round(metrics.tableOverflow.visible / metrics.dateColumnPxExact)
         : 0
       console.log(`    应用宽度 ${metrics.shell.w}px (占视口 ${(metrics.shellWidthRatio * 100).toFixed(0)}%)  两侧留白 ${metrics.sideMargin}px  内容底部 y=${metrics.contentBottom}/${metrics.viewport.h}`)
-      console.log(`    sticky ${metrics.stickyTop.h}px  月份tab ${metrics.monthTab.w}px  日期列 ${metrics.dateColumnWidth}  可见天数 ${visibleDays}/${metrics.dayCount}  横向溢出 ${metrics.tableOverflow ? metrics.tableOverflow.hidden : 0}px`)
+      console.log(`    sticky ${metrics.masthead.h}px  月份tab ${metrics.monthTab.w}px  日期列 ${metrics.dateColumnWidth}  可见天数 ${visibleDays}/${metrics.dayCount}  横向溢出 ${metrics.tableOverflow ? metrics.tableOverflow.hidden : 0}px`)
       console.log(`    行列对齐=${metrics.headerBodyAligned}  标签最宽溢出=${metrics.worstChipOverflow}px  文字可选=${metrics.bodyUserSelect}`)
 
       /* 「按姓名」视图显示的是人名（3 个汉字），比班次标签更容易撑破列。
          之前只测了默认的「按班次」模式，恰好漏掉了这一类溢出 ——
          所以这里单独切过去复测一次。 */
       const nameModeOverflow = await client.evaluate(`(() => {
-        const tab = Array.from(document.querySelectorAll('.segmented button'))
+        const tab = Array.from(document.querySelectorAll('.matrix .tabs button'))
           .find(b => b.textContent.trim() === '按姓名')
         if (!tab) return -1
         tab.click()
@@ -420,7 +430,7 @@ async function main() {
           requestAnimationFrame(() => {
             let worst = 0
             let worstText = ''
-            document.querySelectorAll('.roster-cell').forEach(cell => {
+            document.querySelectorAll('.m-body').forEach(cell => {
               const over = cell.scrollWidth - cell.clientWidth
               if (over > worst) { worst = over; worstText = cell.textContent.trim() }
             })
@@ -430,7 +440,7 @@ async function main() {
       })()`)
       metrics.nameModeOverflow = nameModeOverflow.worst
       const backToShift = await client.evaluate(`(() => {
-        const tab = Array.from(document.querySelectorAll('.segmented button'))
+        const tab = Array.from(document.querySelectorAll('.matrix .tabs button'))
           .find(b => b.textContent.trim() === '按班次')
         if (tab) tab.click()
         return true
@@ -446,8 +456,8 @@ async function main() {
           await new Promise(resolve => setTimeout(resolve, 240))
           const scroller = document.querySelector('.matrix-scroll')
           results.push({
-            month: document.querySelector('.stepper-value')?.textContent?.trim() ?? '',
-            days: document.querySelectorAll('.date-head').length,
+            month: document.querySelector('.stepper .mon')?.textContent?.trim() ?? '',
+            days: document.querySelectorAll('.gh').length,
             hidden: scroller ? scroller.scrollWidth - scroller.clientWidth : 0
           })
           if (next) next.click()
@@ -462,8 +472,8 @@ async function main() {
 
       // 日历卡片局部截图（2x），方便肉眼确认有没有裁剪
       const cardBox = await client.evaluate(`(() => {
-        const cell = document.querySelector('.calendar-cell')
-        const card = document.querySelector('.side-col .panel')
+        const cell = document.querySelector('.cell')
+        const card = document.querySelector('.cal-wrap')
         if (!card) return null
         const r = card.getBoundingClientRect()
         return {
@@ -485,8 +495,8 @@ async function main() {
       }
 
       // 统计 · 个人
-      await client.evaluate(`Array.from(document.querySelectorAll('.top-bar-actions button')).find(b => b.textContent.trim() === '统计')?.click(); true`)
-      await waitFor(client, 'Boolean(document.querySelector(".stats"))', '统计页')
+      await client.evaluate(`Array.from(document.querySelectorAll('.masthead button')).find(b => b.textContent.trim() === '统计')?.click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".stats-head"))', '统计页')
       await sleep(500)
       const statsBytes = await capture(client, path.join(outDir, `${tag}-02-统计-个人.png`))
       console.log(`  统计·个人         ${(statsBytes / 1024).toFixed(0)} KB`)
@@ -495,7 +505,7 @@ async function main() {
 
       // 统计 · 每日明细（全员排名页已删除）
       const switched = await client.evaluate(`(() => {
-        const tab = Array.from(document.querySelectorAll('.stats-filters [role="tablist"] button'))
+        const tab = Array.from(document.querySelectorAll('.stats-tabs button'))
           .find(item => item.textContent.includes('每日明细'))
         if (!tab) return false
         tab.click()
@@ -519,14 +529,14 @@ async function main() {
   }
 
   console.log('\n=== 布局度量汇总 ===')
-  console.log('视口        应用宽  占比  sticky  可见天数  列宽  横滚  行列对齐  标签溢出  姓名溢出  内容底部  字号(日期/标签/姓名/标题)')
+  console.log('视口        应用宽  占比  顶栏  可见天数  列宽  横滚  行列对齐  标签溢出  姓名溢出  内容底部  字号(日期/标签/姓名/标题)')
   for (const item of measurements) {
     const visibleDays = item.tableOverflow && item.dateColumnPx
       ? Math.round(item.tableOverflow.visible / item.dateColumnPxExact)
       : 0
     console.log(
       `${item.size.padEnd(11)} ${String(item.shell.w).padStart(5)}  ${String(Math.round(item.shellWidthRatio * 100)).padStart(3)}% ` +
-      `${String(item.stickyTop.h).padStart(6)} ${String(`${visibleDays}/${item.dayCount}`).padStart(9)} ` +
+      `${String(item.masthead.h).padStart(6)} ${String(`${visibleDays}/${item.dayCount}`).padStart(9)} ` +
       `${String(item.dateColumnPx ?? '-').padStart(5)}px ` +
       `${String(item.tableOverflow ? item.tableOverflow.hidden : 0).padStart(5)} ` +
       `${String(item.headerBodyAligned ? '是' : '否').padStart(8)} ` +

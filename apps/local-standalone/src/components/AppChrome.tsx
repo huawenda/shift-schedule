@@ -1,15 +1,17 @@
 import { useRef, type ChangeEvent } from 'react'
 import type { ScheduleMonth } from '@local/core'
-import { monthOptions } from '../appConstants'
+import { formatShortDate, monthOptions } from '../appConstants'
 
 interface AppChromeProps {
   endDate: string
+  isAdmin?: boolean
   isBooting: boolean
   isRefreshing: boolean
-  personName: string
   personGroup: string
+  personName: string
   selectedMonth: ScheduleMonth
   startDate: string
+  statusText?: string
   onExportBackup: () => void
   onImportBackup: (file: File) => void
   onMonthChange: (month: ScheduleMonth) => void
@@ -18,16 +20,22 @@ interface AppChromeProps {
   onRefresh: () => void
 }
 
-const monthIndex = (month: ScheduleMonth) => monthOptions.findIndex(item => item.value === month)
+function dayCount(startDate: string, endDate: string) {
+  const start = new Date(`${startDate}T00:00:00`)
+  const end = new Date(`${endDate}T00:00:00`)
+  return Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1
+}
 
 export function AppChrome({
   endDate,
+  isAdmin = true,
   isBooting,
   isRefreshing,
-  personName,
   personGroup,
+  personName,
   selectedMonth,
   startDate,
+  statusText = '已同步',
   onExportBackup,
   onImportBackup,
   onMonthChange,
@@ -36,7 +44,10 @@ export function AppChrome({
   onRefresh
 }: AppChromeProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const index = monthIndex(selectedMonth)
+  const monthIndex = monthOptions.findIndex(option => option.value === selectedMonth)
+  const previousMonth = monthIndex > 0 ? monthOptions[monthIndex - 1] : null
+  const nextMonth = monthIndex >= 0 && monthIndex < monthOptions.length - 1 ? monthOptions[monthIndex + 1] : null
+  const monthLabel = monthOptions.find(option => option.value === selectedMonth)?.label ?? `${selectedMonth}月`
   const isBusy = isRefreshing || isBooting
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -46,74 +57,72 @@ export function AppChrome({
     if (file) onImportBackup(file)
   }
 
-  function step(offset: number) {
-    const next = monthOptions[index + offset]
-    if (next) onMonthChange(next.value)
-  }
-
   return (
-    <div>
-      <header className="top-bar">
-        <div className="brand">
-          <span className="brand-name">倒班表</span>
-          <span className="brand-period">
-            {formatPeriod(startDate)} – {formatPeriod(endDate)}
-          </span>
-        </div>
+    <>
+      <header className="masthead">
+        <h1 className="brand">倒班表</h1>
 
         <div className="stepper">
           <button
-            type="button"
             aria-label="上一个月"
-            disabled={index <= 0}
-            onClick={() => step(-1)}
-          >
-            ◀
-          </button>
-          <span className="stepper-value">{monthOptions[index]?.label ?? '—'}</span>
-          <button
+            disabled={!previousMonth}
             type="button"
-            aria-label="下一个月"
-            disabled={index >= monthOptions.length - 1}
-            onClick={() => step(1)}
+            onClick={() => previousMonth && onMonthChange(previousMonth.value)}
           >
-            ▶
+            ‹
+          </button>
+          <span className="mon">{monthLabel}</span>
+          <button
+            aria-label="下一个月"
+            disabled={!nextMonth}
+            type="button"
+            onClick={() => nextMonth && onMonthChange(nextMonth.value)}
+          >
+            ›
           </button>
         </div>
 
-        <div className="top-bar-spacer" />
+        <span className="range">
+          {formatShortDate(startDate)} – {formatShortDate(endDate)} · {dayCount(startDate, endDate)} 天
+        </span>
+        <span className="spacer" />
 
-        <div className="top-bar-actions">
-          <button className="person-chip" type="button" onClick={onOpenPersonPicker}>
-            {personName}
-            <span className="person-chip-caret">{personGroup}</span>
-            <span className="person-chip-caret" aria-hidden="true">▾</span>
-          </button>
+        <button className="act" type="button" disabled={isBusy} onClick={onRefresh}>
+          <span className={`live-dot ${isBusy ? 'busy' : ''}`} />
+          <span className="sync-text">{isRefreshing ? '读取中' : statusText}</span>
+        </button>
 
-          <button className="btn" type="button" disabled={isBusy} onClick={onRefresh}>
-            {isRefreshing ? '读取中…' : '刷新'}
-          </button>
+        <button aria-label="切换当前用户" className="who" type="button" onClick={onOpenPersonPicker}>
+          <b>{personName}</b>
+          <span className={`tag ${isAdmin ? 'admin' : ''}`}>{isAdmin ? '管理员' : personGroup}</span>
+        </button>
 
-          <button className="btn" type="button" onClick={onOpenStats}>统计</button>
+        <button className="act act-ink" type="button" onClick={onOpenStats}>统计</button>
+        <button className="act" type="button" onClick={onExportBackup}>导出</button>
+        <button className="act" type="button" onClick={() => fileInputRef.current?.click()}>导入</button>
 
-          <button className="btn" type="button" onClick={onExportBackup}>导出</button>
-          <button className="btn" type="button" onClick={() => fileInputRef.current?.click()}>导入</button>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            aria-label="导入排班备份文件"
-            hidden
-            onChange={handleFileChange}
-          />
-        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          aria-label="导入排班备份文件"
+          hidden
+          onChange={handleFileChange}
+        />
       </header>
-    </div>
-  )
-}
 
-function formatPeriod(date: string) {
-  const [, month, day] = date.split('-')
-  return `${month}/${day}`
+      <nav aria-label="切换月份" className="rail">
+        {monthOptions.map(option => (
+          <button
+            aria-selected={option.value === selectedMonth}
+            key={option.value}
+            type="button"
+            onClick={() => onMonthChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </nav>
+    </>
+  )
 }

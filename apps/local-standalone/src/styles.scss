@@ -1,12 +1,10 @@
 /* 倒班表 · 本地版 —— 视觉体系入口
  *
- * 规范见 DESIGN.local.md。
+ * 与 apps/web 共用同一套视觉语言（tokens → chrome → schedule → stats）。
  * 层序即优先级：后面的文件覆盖前面的同名规则。
- * 文件名以数字开头，Sass 不能拿它当默认命名空间，故一律 `as *`。
  */
-@use './styles/01-tokens' as *;
-@use './styles/02-shell' as *;
-@use './styles/03-matrix' as *;
-@use './styles/04-stats' as *;
-@use './styles/05-overlays' as *;
-@use './styles/06-responsive' as *;
+@use './styles/tokens' as *;
+@use './styles/chrome' as *;
+@use './styles/schedule' as *;
+@use './styles/stats' as *;
+@use './styles/local' as *;

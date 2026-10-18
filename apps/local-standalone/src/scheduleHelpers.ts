@@ -7,16 +7,20 @@ import {
 import type { CloudDayRecord, DayOverrides } from './services/dayRecords'
 import type { ShiftEditorState } from './appTypes'
 
-export function getShiftClassName(shift: ShiftType): string {
+/** 班次 → 新视觉体系的类名（s-day / s-night / …），日历、矩阵、图例共用 */
+export function getShiftClass(shift: ShiftType): string {
   return {
-    白班: 'shift-day',
-    夜班: 'shift-night',
-    休息: 'shift-rest',
-    白特: 'shift-special-day',
-    夜特: 'shift-special-night',
-    事假: 'shift-leave'
+    白班: 's-day',
+    夜班: 's-night',
+    休息: 's-rest',
+    白特: 's-dayx',
+    夜特: 's-nightx',
+    事假: 's-leave'
   }[shift]
 }
+
+/** 旧名保留，老代码继续可用 */
+export const getShiftClassName = getShiftClass
 
 export function getBaseShift(personName: string, date: string): ShiftType | null {
   const person = scheduleData.people.find(item => item.name === personName)

@@ -1,35 +1,31 @@
-import { useEffect, useRef, useState, type ReactNode, type RefObject, type TouchEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent } from 'react'
 import {
   formatScheduleMonthDay,
+  getCalendarDateMeta,
+  getDateLabels,
   getOverrideKey,
   getPersonMonthCalendarCells,
   scheduleData,
-  type ShiftSummary,
-  type ShiftType,
-  type ScheduleMonth
+  type ScheduleMonth,
+  type SchedulePerson,
+  type ShiftSummary
 } from '@local/core'
-import { shiftLabels } from '../../appConstants'
-import { useDialog } from '../../hooks/useDialog'
-import { getShiftClassName } from '../../scheduleHelpers'
+import { monthOptions } from '../../appConstants'
+import { useCurrentShift } from '../../hooks/useCurrentShift'
 import type { DayOverrides } from '../../services/dayRecords'
-
-type RosterView = 'shift' | 'name'
-
-interface PersonSchedule {
-  group: string
-  name: string
-  shifts: ShiftType[]
-}
+import { MonthCalendar } from './MonthCalendar'
+import { ShiftPlaque } from './ShiftPlaque'
+import { TeamMatrix, type TableMode } from './TeamMatrix'
 
 interface MonthScheduleView {
   dates: string[]
   endDate: string
-  people: PersonSchedule[]
+  people: SchedulePerson[]
   startDate: string
 }
 
 interface ScheduleViewProps {
-  appliedCurrentUser: PersonSchedule
+  appliedCurrentUser: SchedulePerson
   appliedMonthView: MonthScheduleView
   chrome?: ReactNode
   confirmedKey?: string | null
@@ -37,7 +33,7 @@ interface ScheduleViewProps {
   isAdmin: boolean
   isPersonPickerOpen: boolean
   overrides: DayOverrides
-  people: PersonSchedule[]
+  people: SchedulePerson[]
   selectedMonth: ScheduleMonth
   statusText: string
   summary: ShiftSummary
@@ -49,20 +45,16 @@ interface ScheduleViewProps {
 }
 
 type TouchPoint = { x: number; y: number }
-const scheduleMonthOrder: ScheduleMonth[] = ['05', '06', '07', '08', '09', '10', '11', '12']
 
 export function ScheduleView({
   appliedCurrentUser,
   appliedMonthView,
   chrome,
-  confirmedKey,
   errorText,
-  isAdmin,
   isPersonPickerOpen,
   overrides,
   people,
   selectedMonth,
-  statusText,
   summary,
   warningText,
   onCurrentUserChange,
@@ -70,43 +62,65 @@ export function ScheduleView({
   onOpenShiftEditor,
   onPersonPickerClose
 }: ScheduleViewProps) {
-  const [rosterView, setRosterView] = useState<RosterView>('shift')
-  const [swiped, setSwiped] = useState(false)
+  const [tableMode, setTableMode] = useState<TableMode>('shift')
+  const [slide, setSlide] = useState<'next' | 'prev' | null>(null)
+  const pickerTouch = useRef<TouchPoint | null>(null)
   const touchStart = useRef<TouchPoint | null>(null)
-  const matrixScrollRef = useRef<HTMLDivElement | null>(null)
-  const pickerRef = useDialog(isPersonPickerOpen, onPersonPickerClose)
+  const suppressOpenUntil = useRef(0)
 
-  const today = formatScheduleMonthDay(new Date())
-  const calendarCells = getPersonMonthCalendarCells(scheduleData, selectedMonth, appliedCurrentUser.name)
+  const { dates } = appliedMonthView
+  const moment = useCurrentShift(dates, appliedCurrentUser.shifts)
+  const dateLabels = useMemo(() => getDateLabels(appliedMonthView.startDate, dates), [appliedMonthView.startDate, dates])
+  const todayKey = formatScheduleMonthDay(new Date())
+  const todayMeta = useMemo(() => {
+    const now = new Date()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return getCalendarDateMeta(`${now.getFullYear()}-${month}-${day}`)
+  }, [todayKey])
+  const monthLabel = `${appliedMonthView.startDate.slice(0, 4)}年${
+    monthOptions.find(option => option.value === selectedMonth)?.label ?? `${selectedMonth} 月`
+  }`
 
-  /* 滚轮横向滚动：矩阵是唯一的宽内容，桌面端鼠标只有纵向滚轮，
-     不转换的话必须去拖底部的滚动条或者 Shift+滚轮，两者都很难发现。
-     只在「矩阵真的装不下」时才拦截：能一屏放下时不劫持纵向滚动，
-     否则用户会发现整页滚不动。 */
+  /* 日历格要跟着本地改班走：getPersonMonthCalendarCells 读的是原始排班数据，
+     所以把班次覆盖逐格贴回去。 */
+  const calendarCells = useMemo(() => {
+    const cells = getPersonMonthCalendarCells(scheduleData, selectedMonth, appliedCurrentUser.name)
+    return cells.map(cell => {
+      const override = overrides.shiftOverrides[getOverrideKey(appliedCurrentUser.name, cell.key)]
+      return override ? { ...cell, shift: override } : cell
+    })
+  }, [appliedCurrentUser.name, overrides, selectedMonth])
+
+  const overtimeDates = useMemo(() => new Set(
+    dates.filter(date => (overrides.overtimeOverrides[getOverrideKey(appliedCurrentUser.name, date)] ?? 0) > 0)
+  ), [appliedCurrentUser.name, dates, overrides.overtimeOverrides])
+
+  const overtimeKeys = useMemo(() => new Set(
+    Object.keys(overrides.overtimeOverrides).filter(key => (overrides.overtimeOverrides[key] ?? 0) > 0)
+  ), [overrides.overtimeOverrides])
+
+  const editedKeys = useMemo(() => new Set<string>([
+    ...Object.keys(overrides.shiftOverrides),
+    ...Object.keys(overrides.overtimeOverrides),
+    ...Object.keys(overrides.legalOverrides),
+    ...Object.keys(overrides.leaveDurationOverrides)
+  ]), [overrides])
+
   useEffect(() => {
-    const node = matrixScrollRef.current
-    if (!node) return
+    if (!slide) return
+    const timer = window.setTimeout(() => setSlide(null), 260)
+    return () => window.clearTimeout(timer)
+  }, [slide])
 
-    function handleWheel(event: WheelEvent) {
-      const maxScroll = node!.scrollWidth - node!.clientWidth
-      if (maxScroll <= 1) return
+  function changeMonth(next: ScheduleMonth) {
+    const from = monthOptions.findIndex(option => option.value === selectedMonth)
+    const to = monthOptions.findIndex(option => option.value === next)
+    setSlide(to > from ? 'next' : to < from ? 'prev' : null)
+    onMonthChange(next)
+  }
 
-      const deltaX = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : 0
-      const deltaY = event.deltaY
-
-      // 触控板的横向手势原样放行，不做转换。
-      if (deltaX !== 0) return
-      // 纯纵向滚动，且当前已经在左端继续向下滚/右端继续向上滚 → 交还页面。
-      if (node!.scrollLeft <= 0 && deltaY < 0) return
-      if (node!.scrollLeft >= maxScroll - 1 && deltaY > 0) return
-
-      event.preventDefault()
-      node!.scrollLeft += deltaY
-    }
-
-    node.addEventListener('wheel', handleWheel, { passive: false })
-    return () => node.removeEventListener('wheel', handleWheel)
-  }, [])
+  const monthOrder = monthOptions.map(option => option.value)
 
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
     const touch = event.touches[0]
@@ -123,362 +137,116 @@ export function ScheduleView({
     const deltaY = touch.clientY - start.y
     if (Math.abs(deltaX) <= 56 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.25) return
 
-    const index = scheduleMonthOrder.indexOf(selectedMonth)
-    const next = scheduleMonthOrder[deltaX < 0 ? index + 1 : index - 1]
+    const index = monthOrder.indexOf(selectedMonth)
+    const next = monthOrder[deltaX < 0 ? index + 1 : index - 1]
     if (!next) return
 
-    setSwiped(true)
-    onMonthChange(next)
-    window.setTimeout(() => setSwiped(false), 0)
+    // 滑动翻月后短暂抑制格子点击，避免误触改班弹层
+    suppressOpenUntil.current = Date.now() + 320
+    onMonthChange(next as ScheduleMonth)
+  }
+
+  function handleOpenShiftEditor(personName: string, date: string) {
+    if (Date.now() < suppressOpenUntil.current) return
+    onOpenShiftEditor(personName, date)
   }
 
   return (
     <>
-      {chrome}
-      <SummaryBar summary={summary} statusText={statusText} />
+      {/* 顶栏 + 月轨冻结：滚动时只有值班牌和矩阵在动（桌面窗口里更像一个应用） */}
+      <div className="app-topbar">{chrome}</div>
 
-      {errorText ? <p className="notice notice-error" role="alert">{errorText}</p> : null}
-      {warningText ? <p className="notice notice-warn">{warningText}</p> : null}
+      {warningText ? <p className="error-banner warn">{warningText}</p> : null}
+      {errorText ? <p className="error-banner">{errorText}</p> : null}
 
-      <div className="content" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <aside className="side-col">
-          <div className="section-head">
-            <h2 className="section-title">排班日历</h2>
-            <span className="section-meta">{appliedCurrentUser.name}</span>
-          </div>
-          <div className="panel" style={{ padding: 'var(--sp-3)' }}>
-            <div className="calendar">
-              {['日', '一', '二', '三', '四', '五', '六'].map(day => (
-                <div className="calendar-weekday" key={day} aria-hidden="true">{day}</div>
-              ))}
-              {calendarCells.map(cell => (
-                <CalendarCell
-                  confirmed={confirmedKey === getOverrideKey(appliedCurrentUser.name, cell.key)}
-                  key={cell.key}
-                  cell={cell}
-                  today={cell.key === today}
-                  overrides={overrides}
-                  personName={appliedCurrentUser.name}
-                  onOpen={onOpenShiftEditor}
-                  onSkip={() => swiped}
-                />
-              ))}
-            </div>
-          </div>
-        </aside>
+      <ShiftPlaque
+        dates={dates}
+        endDate={appliedMonthView.endDate}
+        moment={moment}
+        personGroup={appliedCurrentUser.group}
+        personName={appliedCurrentUser.name}
+        shifts={appliedCurrentUser.shifts}
+        startDate={appliedMonthView.startDate}
+        summary={summary}
+        todayLabel={todayKey}
+        todayMetaLabel={todayMeta.label}
+      />
 
-        <div className="main-col">
-          <div className="section-head">
-            <h2 className="section-title">排班表</h2>
-            <div className="segmented" role="tablist" aria-label="表格显示方式">
-              <button
-                role="tab"
-                type="button"
-                aria-selected={rosterView === 'shift'}
-                onClick={() => setRosterView('shift')}
-              >
-                按班次
-              </button>
-              <button
-                role="tab"
-                type="button"
-                aria-selected={rosterView === 'name'}
-                onClick={() => setRosterView('name')}
-              >
-                按姓名
-              </button>
-            </div>
-          </div>
+      <div className="board" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <MonthCalendar
+          cells={calendarCells}
+          monthLabel={monthLabel}
+          overtimeDates={overtimeDates}
+          selectedMonth={selectedMonth}
+          slide={slide}
+          todayKey={todayKey}
+          onMonthChange={changeMonth}
+          onOpen={date => onOpenShiftEditor(appliedCurrentUser.name, date)}
+        />
 
-          <div className="matrix">
-            <div className="matrix-rail">
-              <div className="rail-cell rail-head">姓名</div>
-              {appliedMonthView.people.map(person => (
-                <div
-                  className={`rail-cell ${person.name === appliedCurrentUser.name ? 'is-current' : ''}`}
-                  key={person.name}
-                >
-                  <span className="rail-name">{person.name}</span>
-                  <span className="rail-group">{person.group}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="matrix-scroll" ref={matrixScrollRef}>
-              <div className="matrix-head" role="row">
-                {appliedMonthView.dates.map(date => (
-                  <div
-                    className={`date-head ${date === today ? 'is-today' : ''}`}
-                    key={date}
-                    role="columnheader"
-                  >
-                    <span className="date-head-day">{date.slice(3)}</span>
-                    <span className="date-head-week">{weekdayOf(date)}</span>
-                  </div>
-                ))}
-              </div>
-
-              {appliedMonthView.people.map(person => (
-                <div
-                  className={`roster-row ${person.name === appliedCurrentUser.name ? 'is-current' : ''}`}
-                  key={person.name}
-                  role="row"
-                >
-                  {appliedMonthView.dates.map((date, dateIndex) => (
-                    <RosterCell
-                      confirmed={confirmedKey === getOverrideKey(person.name, date)}
-                      date={date}
-                      isCurrent={person.name === appliedCurrentUser.name}
-                      key={`${person.name}-${date}`}
-                      overrides={overrides}
-                      personName={person.name}
-                      shift={person.shifts[dateIndex]}
-                      view={rosterView}
-                      onOpen={onOpenShiftEditor}
-                      onSkip={() => swiped}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="matrix-legend">
-            {shiftLabels.map(shift => (
-              <span className="legend-item" key={shift}>
-                <span className={`legend-swatch ${getShiftClassName(shift)}`} />
-                {shift}
-              </span>
-            ))}
-            <span className="legend-item">底边灰条 = 有加班</span>
-          </div>
-        </div>
+        <TeamMatrix
+          currentUserName={appliedCurrentUser.name}
+          dateLabels={dateLabels}
+          dates={dates}
+          editedKeys={editedKeys}
+          overtimeKeys={overtimeKeys}
+          people={people}
+          tableMode={tableMode}
+          todayKey={todayKey}
+          onOpen={onOpenShiftEditor}
+          onTableModeChange={setTableMode}
+        />
       </div>
+
+      <p className="footnote">
+        数据：{people.length} 人 · {dates.length} 天，结算周期 {appliedMonthView.startDate} 至 {appliedMonthView.endDate}。
+        点任意格子改班；浅绿色块表示休息。
+      </p>
 
       {isPersonPickerOpen ? (
-        <PersonPicker
-          appliedCurrentUser={appliedCurrentUser}
-          onClose={onPersonPickerClose}
-          onSelect={onCurrentUserChange}
-          people={people}
-          sheetRef={pickerRef}
-        />
+        <div className="sheet-backdrop" role="presentation" onClick={onPersonPickerClose}>
+          <section
+            aria-label="切换当前用户"
+            aria-modal="true"
+            className="picker"
+            role="dialog"
+            onClick={event => event.stopPropagation()}
+            onTouchEnd={event => {
+              const start = pickerTouch.current
+              pickerTouch.current = null
+              const touch = event.changedTouches[0]
+              if (!start || !touch) return
+              if (touch.clientY - start.y > 80) onPersonPickerClose()
+            }}
+            onTouchStart={event => {
+              const touch = event.touches[0]
+              pickerTouch.current = touch ? { x: touch.clientX, y: touch.clientY } : null
+            }}
+          >
+            <header className="picker-head">
+              <h2>切换当前用户</h2>
+              <button className="act" type="button" onClick={onPersonPickerClose}>关闭</button>
+            </header>
+            <div className="picker-list">
+              {people.map(person => (
+                <button
+                  aria-selected={person.name === appliedCurrentUser.name}
+                  key={person.name}
+                  type="button"
+                  onClick={() => {
+                    onCurrentUserChange(person.name)
+                    onPersonPickerClose()
+                  }}
+                >
+                  <span>{person.name}<span className="muted"> · {person.group}</span></span>
+                  <span className="tick" />
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
       ) : null}
+
     </>
   )
-}
-
-function PersonPicker({
-  appliedCurrentUser,
-  onClose,
-  onSelect,
-  people,
-  sheetRef
-}: {
-  appliedCurrentUser: PersonSchedule
-  onClose: () => void
-  onSelect: (personName: string) => void
-  people: PersonSchedule[]
-  sheetRef: RefObject<HTMLElement>
-}) {
-  return (
-    <div className="scrim" onClick={onClose}>
-      <section
-        className="sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-label="切换人员"
-        ref={sheetRef}
-        onClick={event => event.stopPropagation()}
-      >
-        <header className="sheet-head">
-          <div>
-            <h2 className="sheet-title">切换人员</h2>
-            <p className="sheet-sub">共 {people.length} 人</p>
-          </div>
-          <button className="btn btn-ghost" type="button" onClick={onClose}>关闭</button>
-        </header>
-        <div className="picker-list">
-          {people.map(person => (
-            <button
-              className="picker-item"
-              type="button"
-              aria-selected={person.name === appliedCurrentUser.name}
-              key={person.name}
-              onClick={() => {
-                onSelect(person.name)
-                onClose()
-              }}
-            >
-              <span>{person.name}</span>
-              <span className="picker-group">{person.group}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function RosterCell({
-  confirmed,
-  date,
-  isCurrent,
-  overrides,
-  personName,
-  shift,
-  view,
-  onOpen,
-  onSkip
-}: {
-  confirmed: boolean
-  date: string
-  isCurrent: boolean
-  overrides: DayOverrides
-  personName: string
-  shift: ShiftType | undefined
-  view: RosterView
-  onOpen: (personName: string, date: string) => void
-  onSkip: () => boolean
-}) {
-  if (!shift) return <div className="roster-cell" />
-
-  const key = getOverrideKey(personName, date)
-  const isEdited = Boolean(overrides.shiftOverrides[key])
-  const isLegal = overrides.legalOverrides[key] === true
-  const hasOvertime = (overrides.overtimeOverrides[key] ?? 0) > 0
-
-  const className = [
-    'roster-cell',
-    getShiftClassName(shift),
-    view === 'name' ? 'is-name' : '',
-    isCurrent ? 'is-current' : '',
-    isEdited ? 'is-edited' : '',
-    isLegal ? 'is-legal' : '',
-    hasOvertime ? 'has-overtime' : '',
-    confirmed ? 'is-confirmed' : ''
-  ].filter(Boolean).join(' ')
-
-  return (
-    <button
-      className={className}
-      type="button"
-      title={`${personName} ${date} ${shift}`}
-      onClick={() => {
-        if (onSkip()) return
-        onOpen(personName, date)
-      }}
-    >
-      {view === 'name' ? personName : shift}
-    </button>
-  )
-}
-
-function CalendarCell({
-  cell,
-  confirmed,
-  overrides,
-  personName,
-  today,
-  onOpen,
-  onSkip
-}: {
-  cell: { day: string; inCurrentMonth: boolean; key: string; shift?: ShiftType }
-  confirmed: boolean
-  overrides: DayOverrides
-  personName: string
-  today: boolean
-  onOpen: (personName: string, date: string) => void
-  onSkip: () => boolean
-}) {
-  const key = getOverrideKey(personName, cell.key)
-  const shift = overrides.shiftOverrides[key] ?? cell.shift
-  const isLegal = overrides.legalOverrides[key] === true
-  const hasOvertime = (overrides.overtimeOverrides[key] ?? 0) > 0
-  /* 特勤两班在日历里也给底色，和法定一样归为「不常规班次」。
-     只认白特 / 夜特，其余班次维持面板底色 —— 给所有班次都上色，
-     日历会变成一块碎花，反而看不出哪个才是需要注意的。 */
-  const specialClass = shift === '白特'
-    ? 'is-special-day'
-    : shift === '夜特'
-      ? 'is-special-night'
-      : ''
-
-  if (!cell.inCurrentMonth) {
-    /* 周期外日期照常渲染，只是整体降调 —— 这些天不是本月排班范围，
-       颜色给足了会让人以为它们也参与统计。 */
-    return (
-      <button
-        className={[
-          'calendar-cell',
-          'is-outside',
-          shift ? getShiftClassName(shift) : '',
-          specialClass,
-          isLegal ? 'is-legal' : '',
-          today ? 'is-today' : ''
-        ].filter(Boolean).join(' ')}
-        type="button"
-        title={`${cell.key} ${shift ?? ''}（非本月）`}
-        onClick={() => {
-          if (onSkip()) return
-          onOpen(personName, cell.key)
-        }}
-      >
-        <span className="calendar-day">{cell.day}</span>
-        {shift ? <span className="calendar-shift">{shift}</span> : null}
-      </button>
-    )
-  }
-
-  return (
-    <button
-      className={[
-        'calendar-cell',
-        shift ? getShiftClassName(shift) : '',
-        specialClass,
-        isLegal ? 'is-legal' : '',
-        today ? 'is-today' : '',
-        confirmed ? 'is-confirmed' : ''
-      ].filter(Boolean).join(' ')}
-      type="button"
-      title={`${cell.key} ${shift ?? ''}${isLegal ? ' 法定' : ''}`}
-      onClick={() => {
-        if (onSkip()) return
-        onOpen(personName, cell.key)
-      }}
-    >
-      <span className="calendar-day">{cell.day}</span>
-      {shift ? <span className="calendar-shift">{shift}</span> : null}
-      {hasOvertime || isLegal ? (
-        <span className="calendar-marks">
-          {hasOvertime ? <span className="calendar-mark" /> : null}
-          {isLegal ? <span className="calendar-mark is-legal" /> : null}
-        </span>
-      ) : null}
-    </button>
-  )
-}
-
-function SummaryBar({ summary, statusText }: { summary: ShiftSummary; statusText: string }) {
-  return (
-    <div className="summary-bar">
-      {shiftLabels.map(shift => (
-        <div className={`summary-item ${getShiftClassName(shift)}`} key={shift}>
-          <span className="summary-value">{summary[shift] ?? 0}</span>
-          <span className="summary-label">{shift}</span>
-        </div>
-      ))}
-      <div className="summary-rule" />
-      <div className="summary-item">
-        <span className="summary-label">{statusText}</span>
-      </div>
-    </div>
-  )
-}
-
-const weekdays = ['日', '一', '二', '三', '四', '五', '六']
-
-function weekdayOf(date: string) {
-  const [year, month, day] = date.split('-').map(Number)
-  return weekdays[new Date(year, month - 1, day).getDay()]
 }

@@ -1,0 +1,614 @@
+/* 02 chrome — 报头、月份轨、选择器、编辑抽屉、登录页 */
+
+/* ── masthead ──────────────────────────────────────────── */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 56px;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.masthead .brand {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stepper button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-data);
+  color: var(--ink-3);
+  font-size: 13px;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.stepper button:hover:not(:disabled) {
+  background: rgba(20, 23, 26, 0.06);
+  color: var(--ink);
+}
+
+.stepper .mon {
+  min-width: 52px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.masthead .range {
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.masthead .spacer {
+  flex: 1;
+}
+
+.masthead .who {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.masthead .who b {
+  font-weight: 700;
+}
+
+.masthead .who .tag {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.masthead .who.admin .tag {
+  padding: 1px 5px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  color: var(--ink-2);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.masthead .actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ── 月份轨 ────────────────────────────────────────────── */
+
+.rail {
+  display: flex;
+  gap: 26px;
+  height: 46px;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.rail button {
+  position: relative;
+  flex: none;
+  font-size: 14px;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+  transition: color 120ms ease;
+}
+
+.rail button:hover {
+  color: var(--ink);
+}
+
+.rail button[aria-selected="true"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.rail button[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -12px;
+  height: 2px;
+  background: var(--ink);
+}
+
+/* ── 覆盖层通用 ────────────────────────────────────────── */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(20, 23, 26, 0.42);
+  animation: veil-in 160ms ease-out;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 22px 24px 24px;
+  border-radius: var(--r-sheet);
+  background: var(--surface);
+  box-shadow: var(--shadow-sheet);
+  animation: sheet-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.sheet-head h2 {
+  font-size: 18px;
+}
+
+.sheet-head .sub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 16px;
+}
+
+.field-group > .label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+}
+
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.choice-row button {
+  padding: 5px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-data);
+  font-size: 12px;
+  color: var(--ink-2);
+  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+
+.choice-row button:hover:not(:disabled) {
+  border-color: var(--ink-3);
+  color: var(--ink);
+}
+
+.choice-row button[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+}
+
+.shift-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px 5px 5px !important;
+}
+
+.shift-choice .shift-block {
+  width: 30px;
+  height: 20px;
+  font-size: 9px;
+}
+
+.shift-choice[aria-pressed="true"] {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border-color: var(--ink) !important;
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+
+.hours-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.hours-input input {
+  width: 92px;
+  padding: 7px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-data);
+  background: var(--surface);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.hours-input input:focus {
+  border-color: var(--ink);
+  outline: none;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+
+.sheet-actions .save {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: var(--r-data);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sheet-actions .save:hover:not(:disabled) {
+  background: #000;
+}
+
+.sheet-actions .cancel {
+  padding: 10px 16px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-data);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.sheet-actions .cancel:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* ── 列表选择器 ────────────────────────────────────────── */
+
+.picker {
+  width: 100%;
+  max-width: 420px;
+  max-height: min(72vh, 620px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-sheet);
+  background: var(--surface);
+  box-shadow: var(--shadow-sheet);
+  animation: sheet-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.picker-head h2 {
+  font-size: 15px;
+}
+
+.picker-list {
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.picker-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: var(--r-data);
+  font-size: 14px;
+  color: var(--ink-2);
+  text-align: left;
+}
+
+.picker-list button:hover {
+  background: rgba(20, 23, 26, 0.05);
+  color: var(--ink);
+}
+
+.picker-list button[aria-selected="true"] {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+}
+
+.picker-list button .tick {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+}
+
+.picker-list button[aria-selected="true"] .tick {
+  opacity: 1;
+}
+
+/* ── 登录页 ────────────────────────────────────────────── */
+
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px 16px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-mark {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.auth-mark h1 {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.auth-mark span {
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.auth-tabs button {
+  position: relative;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+.auth-tabs button[aria-selected="true"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.auth-tabs button[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -15px;
+  height: 2px;
+  background: var(--ink);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-form label > span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+}
+
+.auth-form input,
+.auth-form select {
+  padding: 11px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-data);
+  background: var(--surface);
+  font-size: 15px;
+}
+
+.auth-form input:focus,
+.auth-form select:focus {
+  border-color: var(--ink);
+  outline: none;
+}
+
+.auth-form .primary {
+  margin-top: 6px;
+  padding: 12px 16px;
+  border-radius: var(--r-data);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.auth-form .primary:hover:not(:disabled) {
+  background: #000;
+}
+
+.auth-error {
+  margin-top: 16px;
+}
+
+/* ── 动效 ──────────────────────────────────────────────── */
+
+@keyframes veil-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+}
+
+@keyframes calendar-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+@keyframes calendar-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+
+.cal-slide-next {
+  animation: calendar-in-next 180ms ease-out;
+}
+
+.cal-slide-prev {
+  animation: calendar-in-prev 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-backdrop,
+  .sheet,
+  .picker,
+  .cal-slide-next,
+  .cal-slide-prev {
+    animation: none;
+  }
+}
+
+/* ── 移动端 ────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .masthead {
+    height: 50px;
+    gap: 10px;
+  }
+
+  .masthead .brand {
+    font-size: 15px;
+  }
+
+  .stepper .mon {
+    min-width: 44px;
+    font-size: 15px;
+  }
+
+  .masthead .range,
+  .masthead .who .tag:not(.admin-tag),
+  .masthead .sync-text,
+  .live-dot,
+  .masthead .signout {
+    display: none;
+  }
+
+  .masthead .act {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  .rail {
+    gap: 18px;
+    height: 42px;
+  }
+
+  .sheet {
+    max-width: none;
+    max-height: 88vh;
+    padding: 18px 16px 20px;
+    align-self: flex-end;
+    border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  }
+
+  .sheet-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+}
+
+/* 整数行高：避免半像素基线（Windows/DPR 1 下最明显） */
+.masthead .brand {
+  line-height: 25px;
+}
+
+.masthead .range {
+  line-height: 18px;
+}
+
+.masthead .act {
+  line-height: 19px;
+}
+
+.masthead .who {
+  line-height: 19px;
+}
+
+.masthead .who .tag {
+  line-height: 18px;
+}
+
+.stepper .mon {
+  line-height: 25px;
+}
+
+.rail button {
+  line-height: 20px;
+}
