@@ -83,6 +83,10 @@ export default defineConfig({
 
   server: {
     // 与静态版 dev 端口错开：两个 dev server 同时开会互相抢占。
+    // 必须显式绑 127.0.0.1：默认的 localhost 在 Windows 上可能只解到 ::1，
+    // 而 tauri.conf.json 的 devUrl 写的是 http://127.0.0.1:6182，
+    // 结果就是 tauri 一直打印 "Waiting for your frontend dev server to start"。
+    host: '127.0.0.1',
     port: 6182,
     strictPort: true,
     watch: {
