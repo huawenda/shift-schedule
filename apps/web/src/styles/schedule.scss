@@ -164,7 +164,8 @@
 
 .board {
   display: grid;
-  grid-template-columns: 344px minmax(0, 1fr);
+  /* 341 = 7 × 47 + 6 × 2：日历列宽与实际单元格都落在整像素 */
+  grid-template-columns: 341px minmax(0, 1fr);
   gap: 36px;
   margin-top: 30px;
   align-items: start;
@@ -178,7 +179,7 @@
 
 .cal {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, 47px);
   gap: 2px;
   margin-top: 12px;
 }
@@ -287,7 +288,7 @@
 
 .matrix-title {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   min-width: 0;
 }
@@ -305,7 +306,8 @@
   position: relative;
   font-size: 13px;
   color: var(--ink-3);
-  padding-bottom: 10px;
+  /* 1px 让分节头的高度和左侧「排班日历」一致，两条线才会落在同一水平线 */
+  padding-bottom: 1px;
   transition: color 120ms ease;
 }
 
@@ -541,6 +543,10 @@
 /* ── 移动端 ────────────────────────────────────────────── */
 
 @media (max-width: 720px) {
+  /* 手机端列宽随容器流式分配（DPR≥2，不必强求整数像素） */
+  .cal {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
   .plaque {
     margin-top: 14px;
   }
@@ -662,8 +668,13 @@
 
 @media (min-width: 721px) and (max-width: 1080px) {
   .board {
-    grid-template-columns: 300px minmax(0, 1fr);
+    /* 299 = 7 × 41 + 6 × 2 */
+    grid-template-columns: 299px minmax(0, 1fr);
     gap: 24px;
+  }
+
+  .cal {
+    grid-template-columns: repeat(7, 41px);
   }
 
   .plaque-top {

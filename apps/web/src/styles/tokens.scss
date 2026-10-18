@@ -44,6 +44,12 @@
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.45;
+}
+
+/* 整数行高：字号都是整数，`1em + 6px` 得到的行高也一定是整数，
+   避免半像素基线让中文笔画发虚（Windows / DPR 1 最明显） */
+* {
+  line-height: calc(1em + 6px);
   font-variant-numeric: tabular-nums;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;

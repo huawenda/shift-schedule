@@ -222,17 +222,18 @@
   font-weight: 700;
 }
 
+/* 改班面板：色块自带班次首字，不再跟一遍班次全名（全名在 title / aria-label） */
 .shift-choice {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 9px 5px 5px !important;
+  gap: 0;
+  padding: 4px !important;
 }
 
 .shift-choice .shift-block {
-  width: 30px;
-  height: 20px;
-  font-size: 9px;
+  width: 34px;
+  height: 22px;
+  font-size: 10px;
 }
 
 .shift-choice[aria-pressed="true"] {

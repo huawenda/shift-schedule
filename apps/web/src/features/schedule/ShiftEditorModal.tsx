@@ -56,13 +56,14 @@ export function ShiftEditorModal({
             <span className="label">默认班次</span>
             <div className="choice-row">
               <button
+                aria-label={editor.baseShift}
                 aria-pressed={editor.selectedShift === 'default'}
                 className="shift-choice"
+                title={editor.baseShift}
                 type="button"
                 onClick={() => onShiftChange('default')}
               >
                 <ShiftMark shift={editor.baseShift} />
-                <span>{editor.baseShift}</span>
               </button>
             </div>
           </div>
@@ -75,15 +76,16 @@ export function ShiftEditorModal({
 
                 return (
                   <button
+                    aria-label={shift}
                     aria-pressed={effectiveShift === shift}
                     className="shift-choice"
                     disabled={isDisabled}
                     key={shift}
+                    title={shift}
                     type="button"
                     onClick={() => onShiftChange(shift === editor.baseShift ? 'default' : shift)}
                   >
                     <ShiftMark shift={shift} />
-                    <span>{shift}</span>
                   </button>
                 )
               })}
