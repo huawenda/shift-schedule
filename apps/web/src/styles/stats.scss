@@ -6,6 +6,11 @@
   gap: 16px;
   height: 56px;
   border-bottom: 1px solid var(--rule-strong);
+  /* 冻结：滚动容器是文档本身，sticky 在此生效；必须给不透明背景，否则下方内容会透出 */
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--paper);
 }
 
 .stats-head .back {
@@ -45,6 +50,11 @@
   gap: 24px;
   height: 46px;
   border-bottom: 1px solid var(--rule);
+  /* 冻结在报头下方：top = .stats-head 的实际高度 */
+  position: sticky;
+  top: 56px;
+  z-index: 19;
+  background: var(--paper);
 }
 
 .stats-tabs button {
@@ -82,6 +92,11 @@
   flex-wrap: wrap;
   gap: 28px;
   padding-top: 16px;
+  /* 冻结在 tabs 下方：top = .stats-head(56) + .stats-tabs(46) */
+  position: sticky;
+  top: 102px;
+  z-index: 18;
+  background: var(--paper);
 }
 
 .filter {
@@ -116,13 +131,23 @@
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   gap: 36px;
-  margin-top: 26px;
+  margin-top: 30px;
   align-items: stretch;
 }
 
 .zones > section {
   display: flex;
   flex-direction: column;
+}
+
+/* 标题高度对齐：.zones 内 section 的 .page-section 上边距会与 .zones 自身的
+   margin-top 叠加（26+30=56），而独立 section（如「每日明细」）只有 30px，
+   导致前者标题比后者低一截。取消首个 section 的上边距，两者就对齐了。
+   同一行并排的第二个 section（如「加班分布」）也必须清零，否则它比左列低 30px，
+   两栏的 .sec-head 横线就对不齐；.zone-wide 是纵向堆叠的，要保留 10px 间距，故排除。 */
+.zones > section:first-child,
+.zones > section:not(.zone-wide) {
+  margin-top: 0;
 }
 
 .zone-wide {
@@ -154,7 +179,12 @@
   border-bottom-color: var(--rule-strong);
 }
 
+/* 列标题跟随该列内容的对齐方式：首列左对齐（下方是色块+名称），数值列右对齐。
+   居中不可用——首列宽度是 minmax(0,1fr)，标题居中会飘到列中间，与内容脱节。
+   唯一的偏差来自 letter-spacing：它在末字符后多留 0.14em 空白，把右对齐文字
+   的右缘向左顶偏约 1.4px，用等量负 margin 把盒子右缘推出去抵消。 */
 .ovw-row.is-head span:not(:first-child) {
+  margin-right: -0.14em;
   text-align: right;
 }
 
@@ -440,7 +470,9 @@
 
 .daily-row {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr) 86px 64px;
+  grid-template-columns: 96px minmax(0, 1fr) 76px 104px;
+  /* 「加班」与「金额」两列都是右对齐，没有列间距时两者会贴成一团 */
+  column-gap: 16px;
   align-items: center;
   height: 36px;
   border-bottom: 1px solid var(--rule);
@@ -456,7 +488,9 @@
   border-bottom-color: var(--rule-strong);
 }
 
+/* 同上：日期/班次左对齐，加班/金额右对齐 */
 .daily-row.is-head span:nth-child(n + 3) {
+  margin-right: -0.14em;
   text-align: right;
 }
 
@@ -465,9 +499,39 @@
   letter-spacing: 0.02em;
 }
 
+/* 金额列：¥ 前缀做小做淡，数字做粗，并按金额分三档递进放大 + 底色高亮，
+   让「当天赚到多少」一眼可读（收获感），而不是一串等权的数字 */
 .daily-row .pay {
   text-align: right;
+  font-weight: 400;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.daily-row .pay .pay-cur {
+  margin-right: 1px;
+  font-size: 0.76em;
   font-weight: 700;
+  color: var(--ink-3);
+  vertical-align: 0.14em;
+}
+
+.daily-row .pay b {
+  /* inline-block：Chrome 不会在非替换的行内元素上绘制 inset 阴影，
+     高亮底纹必须让它成为块级原子才生效；同时固定缩放基准 */
+  display: inline-block;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.daily-row .pay.is-mid b {
+  font-size: 1.08em;
+}
+
+.daily-row .pay.is-big b {
+  font-size: 1.18em;
+  letter-spacing: -0.01em;
+  box-shadow: inset 0 -0.4em 0 rgba(233, 164, 38, 0.26);
 }
 
 .daily-row .pay.placeholder {
@@ -637,6 +701,7 @@
   .stats-tabs {
     height: 42px;
     gap: 18px;
+    top: 50px;
   }
 
   .stats-tabs button {
@@ -646,12 +711,13 @@
   .stats-filters {
     gap: 20px;
     padding-top: 12px;
+    top: 92px;
   }
 
   .zones {
     grid-template-columns: 1fr;
     gap: 26px;
-    margin-top: 20px;
+    margin-top: 30px;
   }
 
   .pay-grid {
@@ -671,7 +737,8 @@
   }
 
   .daily-row {
-    grid-template-columns: 78px minmax(0, 1fr) 74px 52px;
+    grid-template-columns: 70px minmax(0, 1fr) 50px 84px;
+    column-gap: 12px;
     height: 34px;
     font-size: 12px;
   }

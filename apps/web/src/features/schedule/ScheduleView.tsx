@@ -80,15 +80,17 @@ export function ScheduleView({
     dates.filter(date => (overrides.overtimeOverrides[getOverrideKey(appliedCurrentUser.name, date)] ?? 0) > 0)
   ), [appliedCurrentUser.name, dates, overrides.overtimeOverrides])
 
-  const editedKeys = useMemo(() => {
-    const keys = new Set<string>([
-      ...Object.keys(overrides.shiftOverrides),
-      ...Object.keys(overrides.overtimeOverrides),
-      ...Object.keys(overrides.legalOverrides),
-      ...Object.keys(overrides.leaveDurationOverrides)
-    ])
-    return keys
-  }, [overrides])
+  const legalDates = useMemo(() => new Set(
+    dates.filter(date => overrides.legalOverrides[getOverrideKey(appliedCurrentUser.name, date)] === true)
+  ), [appliedCurrentUser.name, dates, overrides.legalOverrides])
+
+  const overtimeKeys = useMemo(() => new Set(
+    Object.keys(overrides.overtimeOverrides).filter(key => (overrides.overtimeOverrides[key] ?? 0) > 0)
+  ), [overrides.overtimeOverrides])
+
+  const legalKeys = useMemo(() => new Set(
+    Object.keys(overrides.legalOverrides).filter(key => overrides.legalOverrides[key] === true)
+  ), [overrides.legalOverrides])
 
   useEffect(() => {
     if (!slide) return
@@ -139,6 +141,7 @@ export function ScheduleView({
       <div className="board">
         <MonthCalendar
           cells={calendarCells}
+          legalDates={legalDates}
           monthLabel={monthLabel}
           overtimeDates={overtimeDates}
           selectedMonth={selectedMonth}
@@ -152,7 +155,8 @@ export function ScheduleView({
           currentUserName={appliedCurrentUser.name}
           dateLabels={dateLabels}
           dates={dates}
-          editedKeys={editedKeys}
+          editedKeys={overtimeKeys}
+          legalKeys={legalKeys}
           people={people}
           tableMode={tableMode}
           todayKey={todayKey}
@@ -160,11 +164,6 @@ export function ScheduleView({
           onTableModeChange={setTableMode}
         />
       </div>
-
-      <p className="footnote">
-        数据：{people.length} 人 · {dates.length} 天，结算周期 {appliedMonthView.startDate} 至 {appliedMonthView.endDate}。
-        点任意格子改班；浅绿色块表示休息。
-      </p>
 
       {isUserPickerOpen ? (
         <div className="sheet-backdrop" role="presentation" onClick={() => setIsUserPickerOpen(false)}>

@@ -2,17 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { getEditableShiftOptionsForBase, getOvertimePresetOptions } from './shiftEditRules'
 
 describe('shift edit rules', () => {
-  it('hides the base shift from editable regular shift options', () => {
-    expect(getEditableShiftOptionsForBase('白班')).toEqual(['夜班', '事假'])
-    expect(getEditableShiftOptionsForBase('夜班')).toEqual(['白班', '事假'])
+  it('offers every shift type except the base shift', () => {
+    expect(getEditableShiftOptionsForBase('白班')).toEqual(['夜班', '休息', '白特', '夜特', '事假'])
+    expect(getEditableShiftOptionsForBase('夜班')).toEqual(['白班', '休息', '白特', '夜特', '事假'])
+    expect(getEditableShiftOptionsForBase('休息')).toEqual(['白班', '夜班', '白特', '夜特', '事假'])
+    expect(getEditableShiftOptionsForBase('白特')).toEqual(['白班', '夜班', '休息', '夜特', '事假'])
+    expect(getEditableShiftOptionsForBase('夜特')).toEqual(['白班', '夜班', '休息', '白特', '事假'])
+    expect(getEditableShiftOptionsForBase('事假')).toEqual(['白班', '夜班', '休息', '白特', '夜特'])
   })
 
-  it('allows rest shifts to change only to special duty shifts', () => {
-    expect(getEditableShiftOptionsForBase('休息')).toEqual(['白特', '夜特'])
-  })
-
-  it('returns no edit options when no alternative exists', () => {
-    expect(getEditableShiftOptionsForBase('白特')).toEqual([])
+  it('never lists the base shift itself among the options', () => {
+    for (const base of ['白班', '夜班', '休息', '白特', '夜特', '事假'] as const) {
+      expect(getEditableShiftOptionsForBase(base)).not.toContain(base)
+      expect(getEditableShiftOptionsForBase(base)).toHaveLength(5)
+    }
   })
 
   it('uses regular overtime presets for non-legal day and night shifts', () => {

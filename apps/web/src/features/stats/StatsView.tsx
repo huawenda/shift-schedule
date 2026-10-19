@@ -361,8 +361,24 @@ export function StatsView({
                   <span className={record.overtimeHours > 0 ? 'hrs' : 'hrs placeholder'}>
                     {record.overtimeHours > 0 ? `${record.overtimeHours} h` : '—'}
                   </span>
-                  <span className={record.overtimeHours > 0 ? 'pay' : 'pay placeholder'}>
-                    {record.overtimeHours > 0 ? `¥${formatMoney(pay)}` : '—'}
+                  <span
+                    className={[
+                      'pay',
+                      record.overtimeHours > 0 ? '' : 'placeholder',
+                      record.overtimeHours > 0 && pay >= 400 ? 'is-big' : '',
+                      record.overtimeHours > 0 && pay >= 100 && pay < 400 ? 'is-mid' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {record.overtimeHours > 0 ? (
+                      <>
+                        <span className="pay-cur">¥</span>
+                        <b>{formatMoney(pay)}</b>
+                      </>
+                    ) : (
+                      '—'
+                    )}
                   </span>
                 </div>
               )

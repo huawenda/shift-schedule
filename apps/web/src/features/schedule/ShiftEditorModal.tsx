@@ -71,24 +71,19 @@ export function ShiftEditorModal({
           <div className="field-group">
             <span className="label">修改为</span>
             <div className="choice-row">
-              {getEditableShiftOptionsForBase(editor.baseShift).map(shift => {
-                const isDisabled = editor.isLegal && shift === '事假'
-
-                return (
-                  <button
-                    aria-label={shift}
-                    aria-pressed={effectiveShift === shift}
-                    className="shift-choice"
-                    disabled={isDisabled}
-                    key={shift}
-                    title={shift}
-                    type="button"
-                    onClick={() => onShiftChange(shift === editor.baseShift ? 'default' : shift)}
-                  >
-                    <ShiftMark shift={shift} />
-                  </button>
-                )
-              })}
+              {getEditableShiftOptionsForBase(editor.baseShift).map(shift => (
+                <button
+                  aria-label={shift}
+                  aria-pressed={effectiveShift === shift}
+                  className="shift-choice"
+                  key={shift}
+                  title={shift}
+                  type="button"
+                  onClick={() => onShiftChange(shift === editor.baseShift ? 'default' : shift)}
+                >
+                  <ShiftMark shift={shift} />
+                </button>
+              ))}
             </div>
           </div>
 

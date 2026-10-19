@@ -10,6 +10,7 @@ interface TeamMatrixProps {
   dateLabels: DateLabel[]
   dates: string[]
   editedKeys: Set<string>
+  legalKeys: Set<string>
   people: SchedulePerson[]
   tableMode: TableMode
   todayKey: string
@@ -24,6 +25,7 @@ export function TeamMatrix({
   dateLabels,
   dates,
   editedKeys,
+  legalKeys,
   people,
   tableMode,
   todayKey,
@@ -42,6 +44,28 @@ export function TeamMatrix({
     if (cellWidth <= 0) return
     scroll.scrollLeft = Math.max(0, cellWidth * (todayIndex - 1))
   }, [dates, tableMode, todayKey])
+
+  // 桌面端鼠标没有横向滚轮：在矩阵上滚滚轮即横向滚动内容。
+  // React 的 onWheel 挂在根节点上且是 passive 的，preventDefault 不生效，
+  // 所以这里用原生监听并显式 passive: false。
+  useEffect(() => {
+    const scroll = scrollRef.current
+    if (!scroll) return
+
+    function onWheel(event: WheelEvent) {
+      if (event.deltaX !== 0) return
+      const max = scroll!.scrollWidth - scroll!.clientWidth
+      if (max <= 0) return
+      const next = scroll!.scrollLeft + event.deltaY
+      // 触边后不再拦截，让页面继续纵向滚动，不把人困在矩阵里
+      if ((next <= 0 && scroll!.scrollLeft <= 0) || (next >= max && scroll!.scrollLeft >= max)) return
+      event.preventDefault()
+      scroll!.scrollLeft = next
+    }
+
+    scroll.addEventListener('wheel', onWheel, { passive: false })
+    return () => scroll.removeEventListener('wheel', onWheel)
+  }, [])
 
   const rowStyle = { '--days': dates.length } as CSSProperties
 
@@ -106,14 +130,21 @@ export function TeamMatrix({
                 const date = dates[index]
                 if (!date) return <div className="m-body is-empty" key={index} />
 
+                const key = `${person.name}::${date}`
+                // 标记与排班日历保持一致：加班=白点，法定=红点，法定盖过加班，
+                // 事假不记录加班所以不标点。is-edited 这个名字是历史遗留。
+                const hasLegal = legalKeys.has(key)
+                const hasOvertime = shift !== '事假' && (hasLegal || editedKeys.has(key))
+
                 return (
                   <button
-                    aria-label={`${person.name} ${date} ${shift}`}
+                    aria-label={`${person.name} ${date} ${shift}${hasOvertime ? hasLegal ? ' 法定加班' : ' 有加班' : ''}`}
                     className={[
                       'm-body',
                       byName ? 'is-name' : '',
                       !byName && shift === '休息' ? 'is-blank' : '',
-                      editedKeys.has(`${person.name}::${date}`) ? 'is-edited' : ''
+                      hasOvertime ? 'is-edited' : '',
+                      hasLegal && hasOvertime ? 'is-legal' : ''
                     ].filter(Boolean).join(' ')}
                     key={date}
                     type="button"
@@ -131,9 +162,6 @@ export function TeamMatrix({
       </div>
 
       <div className="matrix-foot">
-        <span className="muted">
-          {byName ? '药片本色=班次 · 点格改班' : '浅绿=休息 · 点格改班'}
-        </span>
         <span className="scroll-hint">左滑看更多日期</span>
       </div>
     </section>

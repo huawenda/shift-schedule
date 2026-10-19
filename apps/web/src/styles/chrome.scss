@@ -2,12 +2,17 @@
 
 /* ── masthead ──────────────────────────────────────────── */
 
+/* 报头与月份轨吸顶：滚动容器是文档本身，sticky 在此生效 */
 .masthead {
   display: flex;
   align-items: center;
   gap: 20px;
   height: 56px;
   border-bottom: 1px solid var(--rule-strong);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--paper);
 }
 
 .masthead .brand {
@@ -100,6 +105,10 @@
   border-bottom: 1px solid var(--rule);
   overflow-x: auto;
   scrollbar-width: none;
+  position: sticky;
+  top: 56px;
+  z-index: 19;
+  background: var(--paper);
 }
 
 .rail::-webkit-scrollbar {
@@ -206,8 +215,12 @@
   border: 1px solid var(--rule);
   border-radius: var(--r-data);
   font-size: 12px;
+  font-weight: 700;
   color: var(--ink-2);
-  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+  /* color / background-color 必须瞬时切换：若两者都做过渡，深浅互换时文字必然中途穿过
+     与背景同色的点（实测对比度降到 1.0，文字完全消失），Android Chrome 高频点击下
+     表现为“点谁谁灭”。只保留 border-color 过渡（纯装饰、不影响可读性）。 */
+  transition: border-color 120ms ease;
 }
 
 .choice-row button:hover:not(:disabled) {
@@ -215,11 +228,17 @@
   color: var(--ink);
 }
 
+/* 移动端点按后 :hover 会被“锁”在按钮上（触摸设备不重新触发 mouseover 解除），
+   若不排除选中态，hover 的 color 覆盖选中态的 var(--paper)，深色背景配深色文字
+   → 对比度 1.0，文字彻底消失。这就是“点谁谁灭”的真因。 */
+.choice-row button[aria-pressed="true"]:hover:not(:disabled) {
+  color: var(--paper);
+}
+
 .choice-row button[aria-pressed="true"] {
   border-color: var(--ink);
   background: var(--ink);
   color: var(--paper);
-  font-weight: 700;
 }
 
 /* 改班面板：色块自带班次首字，不再跟一遍班次全名（全名在 title / aria-label） */
@@ -234,6 +253,8 @@
   width: 34px;
   height: 22px;
   font-size: 10px;
+  /* 全局 `* { line-height: calc(1em + 6px) }` 会让 10px 文字基线溢出 22px 固定高度 */
+  line-height: 22px;
 }
 
 .shift-choice[aria-pressed="true"] {
@@ -542,6 +563,10 @@
   .masthead {
     height: 50px;
     gap: 10px;
+  }
+
+  .rail {
+    top: 50px;
   }
 
   .masthead .brand {
