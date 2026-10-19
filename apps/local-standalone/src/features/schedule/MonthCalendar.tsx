@@ -6,6 +6,8 @@ import { getShiftClass } from '../../scheduleHelpers'
 interface MonthCalendarProps {
   cells: CalendarCell[]
   monthLabel: string
+  /** 已标记为「法定加班」的日期，用于在格子上打红点 */
+  legalDates: Set<string>
   overtimeDates: Set<string>
   selectedMonth: ScheduleMonth
   slide: 'next' | 'prev' | null
@@ -16,6 +18,7 @@ interface MonthCalendarProps {
 
 export function MonthCalendar({
   cells,
+  legalDates,
   monthLabel,
   overtimeDates,
   selectedMonth,
@@ -64,17 +67,21 @@ export function MonthCalendar({
         {cells.map((cell, index) => {
           const shift = cell.shift
           const isToday = cell.key === todayKey
-          const hasOvertime = overtimeDates.has(cell.key)
+          const hasLegal = legalDates.has(cell.key)
+          // 事假不产生加班（canRecordOvertime 已排除），即便残留了加班数据也不标点
+          const hasOvertime = shift !== '事假' && (hasLegal || overtimeDates.has(cell.key))
+          const markLabel = hasOvertime ? (hasLegal ? ' 法定加班' : ' 有加班') : ''
 
           return (
             <button
-              aria-label={`${cell.key} ${shift ?? '未排班'}${hasOvertime ? ' 有加班' : ''}`}
+              aria-label={`${cell.key} ${shift ?? '未排班'}${markLabel}`}
               className={[
                 'cell',
                 shift ? getShiftClass(shift) : '',
                 cell.inCurrentMonth ? '' : 'is-ghost',
                 isToday ? 'is-today' : '',
-                hasOvertime ? 'has-overtime' : ''
+                hasOvertime ? 'has-overtime' : '',
+                hasLegal && hasOvertime ? 'has-legal' : ''
               ].filter(Boolean).join(' ')}
               key={`${cell.key}-${index}`}
               type="button"
@@ -96,7 +103,11 @@ export function MonthCalendar({
               {shift}
             </span>
           ))}
-          <span><i className="legal-dot" />加班</span>
+        </div>
+        {/* 标记图例单独占一行，左边缘与上方班次图例对齐 */}
+        <div className="legend legend-marks">
+          <span><i className="ot-dot" />加班</span>
+          <span><i className="legal-dot" />法定</span>
         </div>
       </div>
     </section>

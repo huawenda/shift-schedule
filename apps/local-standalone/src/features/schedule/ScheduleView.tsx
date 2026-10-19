@@ -96,16 +96,20 @@ export function ScheduleView({
     dates.filter(date => (overrides.overtimeOverrides[getOverrideKey(appliedCurrentUser.name, date)] ?? 0) > 0)
   ), [appliedCurrentUser.name, dates, overrides.overtimeOverrides])
 
+  const legalDates = useMemo(() => new Set(
+    dates.filter(date => overrides.legalOverrides[getOverrideKey(appliedCurrentUser.name, date)] === true)
+  ), [appliedCurrentUser.name, dates, overrides.legalOverrides])
+
   const overtimeKeys = useMemo(() => new Set(
     Object.keys(overrides.overtimeOverrides).filter(key => (overrides.overtimeOverrides[key] ?? 0) > 0)
   ), [overrides.overtimeOverrides])
 
-  const editedKeys = useMemo(() => new Set<string>([
-    ...Object.keys(overrides.shiftOverrides),
-    ...Object.keys(overrides.overtimeOverrides),
-    ...Object.keys(overrides.legalOverrides),
-    ...Object.keys(overrides.leaveDurationOverrides)
-  ]), [overrides])
+  const legalKeys = useMemo(() => new Set(
+    Object.keys(overrides.legalOverrides).filter(key => overrides.legalOverrides[key] === true)
+  ), [overrides.legalOverrides])
+
+  // 矩阵角标语义与日历一致：只有「加班」才打点（编辑过班次不算加班）。
+  // 事假不记录加班，所以永远不会有点。
 
   useEffect(() => {
     if (!slide) return
@@ -175,6 +179,7 @@ export function ScheduleView({
       <div className="board" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <MonthCalendar
           cells={calendarCells}
+          legalDates={legalDates}
           monthLabel={monthLabel}
           overtimeDates={overtimeDates}
           selectedMonth={selectedMonth}
@@ -188,8 +193,8 @@ export function ScheduleView({
           currentUserName={appliedCurrentUser.name}
           dateLabels={dateLabels}
           dates={dates}
-          editedKeys={editedKeys}
-          overtimeKeys={overtimeKeys}
+          editedKeys={overtimeKeys}
+          legalKeys={legalKeys}
           people={people}
           tableMode={tableMode}
           todayKey={todayKey}

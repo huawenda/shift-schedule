@@ -10,8 +10,8 @@ interface TeamMatrixProps {
   dateLabels: DateLabel[]
   dates: string[]
   editedKeys: Set<string>
-  /** 有加班记录的「人::日期」，用于格子上打点 */
-  overtimeKeys?: Set<string>
+  /** 已标记为「法定加班」的「人::日期」，格子上打红点 */
+  legalKeys?: Set<string>
   people: SchedulePerson[]
   tableMode: TableMode
   todayKey: string
@@ -26,7 +26,7 @@ export function TeamMatrix({
   dateLabels,
   dates,
   editedKeys,
-  overtimeKeys,
+  legalKeys,
   people,
   tableMode,
   todayKey,
@@ -46,8 +46,9 @@ export function TeamMatrix({
     scroll.scrollLeft = Math.max(0, cellWidth * (todayIndex - 1))
   }, [dates, tableMode, todayKey])
 
-  /* 桌面端只有纵向滚轮：矩阵装不下时才把纵向滚轮转成横向，
-     能一屏放下就不劫持，否则整页会滚不动。 */
+  /* 桌面端只有纵向滚轮：矩阵装不下时才把纵向滚轮转成横向。
+     滚到两端就放行，让页面继续纵向滚动，不把人困在矩阵里；
+     触控板的横扫（deltaX）一律不拦。 */
   useEffect(() => {
     const node = scrollRef.current
     if (!node) return
@@ -55,8 +56,10 @@ export function TeamMatrix({
     function handleWheel(event: WheelEvent) {
       const maxScroll = node!.scrollWidth - node!.clientWidth
       if (maxScroll <= 1) return
-      if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return
-      node!.scrollLeft += event.deltaY
+      if (event.deltaX !== 0) return
+      const next = node!.scrollLeft + event.deltaY
+      if ((next <= 0 && node!.scrollLeft <= 0) || (next >= maxScroll && node!.scrollLeft >= maxScroll)) return
+      node!.scrollLeft = next
       event.preventDefault()
     }
 
@@ -127,15 +130,20 @@ export function TeamMatrix({
                 const date = dates[index]
                 if (!date) return <div className="m-body is-empty" key={index} />
 
+                const key = `${person.name}::${date}`
+                const hasLegal = legalKeys?.has(key) ?? false
+                // 事假不记录加班，所以永远不会有点
+                const hasOvertime = shift !== '事假' && (hasLegal || editedKeys.has(key))
+
                 return (
                   <button
-                    aria-label={`${person.name} ${date} ${shift}`}
+                    aria-label={`${person.name} ${date} ${shift}${hasOvertime ? (hasLegal ? ' 法定加班' : ' 有加班') : ''}`}
                     className={[
                       'm-body',
                       byName ? 'is-name' : '',
                       !byName && shift === '休息' ? 'is-blank' : '',
-                      editedKeys.has(`${person.name}::${date}`) ? 'is-edited' : '',
-                      overtimeKeys?.has(`${person.name}::${date}`) ? 'has-overtime' : ''
+                      hasOvertime ? 'is-edited' : '',
+                      hasLegal && hasOvertime ? 'is-legal' : ''
                     ].filter(Boolean).join(' ')}
                     key={date}
                     type="button"

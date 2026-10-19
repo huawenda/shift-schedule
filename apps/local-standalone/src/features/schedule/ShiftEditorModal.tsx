@@ -86,7 +86,6 @@ export function ShiftEditorModal({
                   aria-label={shift}
                   aria-pressed={effectiveShift === shift}
                   className="shift-choice"
-                  disabled={editor.isLegal && shift === '事假'}
                   key={shift}
                   title={shift}
                   type="button"

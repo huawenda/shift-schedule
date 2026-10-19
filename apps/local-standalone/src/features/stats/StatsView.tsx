@@ -276,8 +276,19 @@ export function StatsView({
                   <span className={record.overtimeHours > 0 ? 'hrs' : 'hrs placeholder'}>
                     {record.overtimeHours > 0 ? `${record.overtimeHours} h` : '—'}
                   </span>
-                  <span className={record.overtimeHours > 0 ? 'pay' : 'pay placeholder'}>
-                    {record.overtimeHours > 0 ? `¥${formatMoney(pay)}` : '—'}
+                  <span className={[
+                    'pay',
+                    record.overtimeHours > 0 ? '' : 'placeholder',
+                    // 金额分三档递进放大，小字 ¥ 配大数字，让「当天赚到多少」一眼可读
+                    record.overtimeHours > 0 && pay >= 400 ? 'is-big' : '',
+                    record.overtimeHours > 0 && pay >= 100 && pay < 400 ? 'is-mid' : ''
+                  ].filter(Boolean).join(' ')}>
+                    {record.overtimeHours > 0 ? (
+                      <>
+                        <span className="pay-cur">¥</span>
+                        <b>{formatMoney(pay)}</b>
+                      </>
+                    ) : '—'}
                   </span>
                 </div>
               )

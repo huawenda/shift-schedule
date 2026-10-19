@@ -18,37 +18,9 @@
   max-width: none;
 }
 
-/* 顶栏 + 月轨冻结：桌面窗口里把它们当标题栏，只有下面的内容滚动 */
-.app-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  background: var(--paper);
-}
-
-/* 统计页同理：标题栏 + 两个 tab 固定，只有内容滚动 */
-.stats-head,
-.stats-tabs {
-  position: sticky;
-  background: var(--paper);
-  z-index: 30;
-}
-
-.stats-head {
-  top: 0;
-}
-
-.stats-tabs {
-  top: 56px;
-  z-index: 29;
-}
-
-/* 窄屏表头会换行，高度不再是 56px；此时只钉表头，tab 跟随内容滚走 */
-@media (max-width: 720px) {
-  .stats-tabs {
-    position: static;
-  }
-}
+/* 顶栏 + 月轨冻结：桌面窗口里把它们当标题栏，只有下面的内容滚动。
+   stats.scss 里已经把冻结规则写全（报头 + tab + 筛选行三块），此处不再重写，
+   否则两处 top 值会各说各话，窄屏还会多出一条缝。 */
 
 /* 隐藏滚动条（仍可滚动：滚轮、触控板、键盘都照常）。
    桌面应用里那条灰槽会把「窗口」变成「网页」。 */
