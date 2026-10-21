@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
-import { Image, Input, Picker, ScrollView, Text, View } from '@tarojs/components'
+import { Picker, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { scheduleData } from '../../data/schedule'
+import { defaultCurrentUserName, monthOptions, weekdayLabels } from '../../appConstants'
+import MonthCalendar from '../../components/MonthCalendar'
+import ShiftEditorSheet, { type ShiftEditorState } from '../../components/ShiftEditorSheet'
+import ShiftPlaque from '../../components/ShiftPlaque'
+import TeamMatrix, { type TableMode } from '../../components/TeamMatrix'
+import UserPickerSheet from '../../components/UserPickerSheet'
+import { useCurrentShift } from '../../hooks/useCurrentShift'
 import type { LeaveDuration, ShiftType } from '../../types/schedule'
-import { canMarkLegalShift, normalizeLegalOverride } from '../../utils/legalOvertime'
+import { normalizeLegalOverride } from '../../utils/legalOvertime'
 import { mergeSharedCloudOverrides, shouldRefreshCloudOnUserSwitch } from '../../utils/cloudSync'
-import { getShiftClassName, hasShiftOverrideChanged } from '../../utils/shift'
 import { getEditableShiftOptionsForBase, getOvertimePresetOptions } from '../../utils/shiftEditRules'
 import {
   formatScheduleMonthDay,
+  getCalendarDateMeta,
   getDateLabels,
   getCurrentScheduleMonth,
   getMonthScheduleView,
@@ -50,55 +57,26 @@ import {
 } from '../../services/localOverrides'
 import './index.scss'
 
-const defaultCurrentUserName = '华文达'
 const formatDateRangePart = (date: string) => date.split('-').join('/')
-const getDayPart = (date: string) => date.slice(3)
-const dateColumnWidth = 74
-const identityColumnWidth = 148
-const monthTabWidth = 104
-const monthTabGap = 8
-const monthTabsHorizontalPadding = 12
-const pageHorizontalPadding = 36
-const monthVisiblePadding = 8
-const weekdayLabels = ['日', '一', '二', '三', '四', '五', '六']
-type TableView = 'shift' | 'name'
+
+// ——— 横向滚动定位用的几何常量 ———
+// 这些值必须与 styles 里的 px 对齐：矩阵单元格宽 ds.$cell-w(38px)、姓名列 ds.$name-col(84px)、
+// 版心内边距 ds.$page-pad(14px)、月份标签宽/间距（见 web-ui.scss 的 .rail-item）。
+// Taro 在 designWidth 375 / deviceRatio 2 下把 1 源 px 编成 2rpx，所以这里一律 ×2 写成 rpx。
+const rpx = (px: number) => px * 2
+const dateColumnWidth = rpx(38)
+const identityColumnWidth = rpx(84)
+const pageHorizontalPadding = rpx(14)
+const monthTabWidth = rpx(52)
+const monthTabGap = rpx(4)
+const monthTabsHorizontalPadding = rpx(6)
+const monthVisiblePadding = rpx(4)
 type CalendarAnimation = '' | 'calendar-slide-next' | 'calendar-slide-previous'
-const monthOptions: Array<{ label: string; value: ScheduleMonth }> = [
-  { label: '5月', value: '05' },
-  { label: '6月', value: '06' },
-  { label: '7月', value: '07' },
-  { label: '8月', value: '08' },
-  { label: '9月', value: '09' },
-  { label: '10月', value: '10' },
-  { label: '11月', value: '11' },
-  { label: '12月', value: '12' }
-]
 
 function openStatsPage() {
   void Taro.navigateTo({ url: '/pages/stats/index' }).catch(() => {
     void Taro.redirectTo({ url: '/pages/stats/index' })
   })
-}
-
-function isDesktopPointerRuntime(): boolean {
-  return false
-}
-
-const tableViewOptions: Array<{ label: string; value: TableView }> = [
-  { label: '常规', value: 'shift' },
-  { label: '姓名', value: 'name' }
-]
-const legendShiftOptions: ShiftType[] = ['白班', '夜班', '休息', '白特', '夜特', '事假']
-const leaveDurationOptions: LeaveDuration[] = ['半天', '一天']
-
-interface ShiftEditorState {
-  personName: string
-  date: string
-  baseShift: ShiftType
-  selectedShift: ShiftType | 'default'
-  overtimeInput: string
-  isLegal: boolean
-  leaveDuration: LeaveDuration
 }
 
 function getWindowWidth(): number {
@@ -129,14 +107,6 @@ function getCenteredTableScrollLeft(date: string, dates: string[]): number {
   return Math.max(0, columnCenter - (tableVisibleWidth / 2)) * scale
 }
 
-function getMaxTableScrollLeft(dates: string[]): number {
-  const scale = getRpxScale()
-  const tableVisibleWidth = 750 - pageHorizontalPadding - identityColumnWidth
-  const tableWidth = dates.length * dateColumnWidth
-
-  return Math.max(0, tableWidth - tableVisibleWidth) * scale
-}
-
 function getHeaderTopPadding(): string {
   try {
     const menuButton = Taro.getMenuButtonBoundingClientRect()
@@ -148,7 +118,7 @@ function getHeaderTopPadding(): string {
       && windowWidth > 0
     ) {
       const rpxScale = windowWidth / 750
-      const titleLineHeight = 32 * 1.2 * rpxScale
+      const titleLineHeight = rpx(20) * rpxScale
       const alignedTop = menuButton.top + ((menuButton.height - titleLineHeight) / 2)
       return `${Math.max(alignedTop, 0)}px`
     }
@@ -263,7 +233,8 @@ export default function Index() {
   const currentScheduleMonth = getCurrentScheduleMonth(scheduleData, todayDate)
   const [activeMonth, setActiveMonth] = useState<ScheduleMonth>(currentScheduleMonth ?? '05')
   const [currentUserName, setCurrentUserName] = useState(defaultCurrentUserName)
-  const [tableView, setTableView] = useState<TableView>('shift')
+  const [tableView, setTableView] = useState<TableMode>('shift')
+  const [userPickerOpen, setUserPickerOpen] = useState(false)
   const [calendarAnimation, setCalendarAnimation] = useState<CalendarAnimation>('')
   const [headerTopPadding] = useState(getHeaderTopPadding)
   const [shiftOverrides, setShiftOverrides] = useState<ShiftOverrides>(readShiftOverridesFromStorage)
@@ -275,7 +246,6 @@ export default function Index() {
     getMonthTargetScrollLeft(currentScheduleMonth ?? '05', 0) ?? 0
   ))
   const [tableScrollLeft, setTableScrollLeft] = useState<number | undefined>(undefined)
-  const calendarTouchStart = useRef<{ x: number; y: number } | null>(null)
   const calendarAnimationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const monthScrollLeftRef = useRef(monthScrollLeft)
   const tableScrollLeftRef = useRef(0)
@@ -291,40 +261,68 @@ export default function Index() {
   const isAdminUser = currentUserProfile?.isAdmin ?? false
   const boundPersonName = currentUserProfile?.profile?.personName ?? null
   const needsProfileBinding = profileReady && !isAdminUser && !boundPersonName
-  const canSwitchUser = isAdminUser
-  const userPickerButtonText = profileReady && boundPersonName ? '已绑定' : '待绑定'
   const effectiveScheduleData = applyShiftOverrides(shiftOverrides)
   const activeScheduleData = getMonthScheduleView(effectiveScheduleData, activeMonth)
   const currentUser = activeScheduleData.people.find(person => person.name === currentUserName)
     ?? activeScheduleData.people[0]
-  const currentUserBadgeType = !isAdminUser
-    ? 'self'
-    : currentUser.name === defaultCurrentUserName ? 'admin' : 'user'
-  const currentUserBadgeLabel = {
-    admin: '管理员',
-    self: '我',
-    user: '用户'
-  }[currentUserBadgeType]
-  const currentUserBadgeClassName = `mine-badge ${currentUserBadgeType}`
-  const userPickerOptions = scheduleData.people.map(person => `${person.name} / ${person.group}`)
-  const currentUserIndex = Math.max(
-    scheduleData.people.findIndex(person => person.name === currentUser.name),
-    0
-  )
-  const dateRangeText = `${formatDateRangePart(activeScheduleData.startDate)} - ${formatDateRangePart(activeScheduleData.endDate)}`
+  const activeMonthLabel = `${monthOptions.find(option => option.value === activeMonth)?.label ?? ''}`
+  const monthLabel = activeScheduleData.startDate
+    ? `${activeScheduleData.startDate.slice(0, 4)}年${activeMonthLabel}`
+    : activeMonthLabel
+  const dateLabels = getDateLabels(activeScheduleData.startDate, activeScheduleData.dates)
   const currentUserOvertimeHours = currentUser
     ? activeScheduleData.dates.map(date => overtimeOverrides[getOverrideKey(currentUser.name, date)] ?? 0)
     : []
   const currentUserLegalFlags = currentUser
     ? activeScheduleData.dates.map(date => legalOverrides[getOverrideKey(currentUser.name, date)] === true)
     : []
-  const shiftSummary = currentUser ? getPersonShiftSummary(currentUser, currentUserOvertimeHours, currentUserLegalFlags) : null
+  const shiftSummary = currentUser
+    ? getPersonShiftSummary(currentUser, currentUserOvertimeHours, currentUserLegalFlags)
+    : null
   const calendarCells = currentUser
     ? getPersonMonthCalendarCells(effectiveScheduleData, activeMonth, currentUser.name)
     : []
-  const dateLabels = getDateLabels(activeScheduleData.startDate, activeScheduleData.dates)
-  const scheduleTableStyle = `width: ${dateLabels.length * dateColumnWidth}rpx`
   const activeMonthIndex = monthOptions.findIndex(option => option.value === activeMonth)
+  const moment = useCurrentShift(
+    activeScheduleData.dates,
+    currentUser ? currentUser.shifts : []
+  )
+  const overtimeDates = new Set(
+    currentUser
+      ? activeScheduleData.dates.filter((date, index) => {
+          const key = getOverrideKey(currentUser.name, date)
+          return currentUserLegalFlags[index] === true || (currentUserOvertimeHours[index] ?? 0) > 0
+        })
+      : []
+  )
+  const legalDates = new Set(
+    currentUser
+      ? activeScheduleData.dates.filter((date, index) => currentUserLegalFlags[index] === true)
+      : []
+  )
+  const shiftsByPerson = activeScheduleData.people.reduce<Record<string, ShiftType[]>>((result, person) => {
+    result[person.name] = person.shifts
+    return result
+  }, {})
+  const matrixOvertimeKeys = new Set(
+    activeScheduleData.people.flatMap(person => (
+      activeScheduleData.dates
+        .filter(date => {
+          const key = getOverrideKey(person.name, date)
+          return (overtimeOverrides[key] ?? 0) > 0 || legalOverrides[key] === true
+        })
+        .map(date => getOverrideKey(person.name, date))
+    ))
+  )
+  const matrixLegalKeys = new Set(
+    activeScheduleData.people.flatMap(person => (
+      activeScheduleData.dates
+        .filter(date => legalOverrides[getOverrideKey(person.name, date)] === true)
+        .map(date => getOverrideKey(person.name, date))
+    ))
+  )
+  const userPickerOptions = scheduleData.people.map(person => `${person.name} / ${person.group}`)
+  const todayWeekday = todayDate.getDay()
   const setProgrammaticTableScrollLeft = (scrollLeft: number) => {
     tableScrollLeftRef.current = scrollLeft
     setTableScrollLeft(scrollLeft)
@@ -548,20 +546,6 @@ export default function Index() {
     setActiveMonth(month)
   }
 
-  const jumpTableToDate = (date: string) => {
-    setProgrammaticTableScrollLeft(getCenteredTableScrollLeft(date, activeScheduleData.dates))
-  }
-
-  const scrollTableByDays = (direction: 'previous' | 'next') => {
-    const step = dateColumnWidth * 4 * getRpxScale()
-    const maxScrollLeft = getMaxTableScrollLeft(activeScheduleData.dates)
-    const nextScrollLeft = direction === 'next'
-      ? tableScrollLeftRef.current + step
-      : tableScrollLeftRef.current - step
-
-    setProgrammaticTableScrollLeft(Math.min(Math.max(nextScrollLeft, 0), maxScrollLeft))
-  }
-
   const openShiftEditor = (date: string, personName = currentUser?.name) => {
     if (!personName) return
     if (!isAdminUser && personName !== boundPersonName) {
@@ -732,548 +716,169 @@ export default function Index() {
         setProfileBinding(false)
       })
   }
+const shiftSummaryForPlaque = shiftSummary ?? {}
+  // formatScheduleMonthDay 已产出 'MM/DD'，Web 端直接把它当 todayLabel 传下去；
+  // 不能再走 formatShortDate（那函数吃的是 'YYYY-MM-DD'，传 'MM/DD' 会切出空串）。
+  const todayDateKey = formatScheduleMonthDay(todayDate)
+  const todayFullDate = `${todayDate.getFullYear()}-${todayDateKey.slice(0, 2)}-${todayDateKey.slice(3)}`
+  const todayMetaLabel = getCalendarDateMeta(todayFullDate).label
 
   return (
     <View className="page">
-      <View className="frozen-panel">
-        <View className="header" style={{ paddingTop: headerTopPadding }}>
-          <View className="header-main">
-            <View className="title-row">
-              <View className="app-mark">
-                <Image className="app-mark-icon" src={appIcon} mode="aspectFill" />
-              </View>
-              <View className="title-copy">
-                <Text className="title">倒班表</Text>
-                <Text className="subtitle">{dateRangeText}</Text>
-              </View>
+      <View className="app-shell">
+        <View className="masthead" style={{ paddingTop: headerTopPadding }}>
+          <Text className="brand">倒班表</Text>
+          <View className="stepper">
+            <View
+              className={`stepper-btn ${activeMonthIndex <= 0 ? 'disabled' : ''}`}
+              onClick={() => activeMonthIndex > 0 && switchMonthBySwipe('previous')}
+            >
+              <Text>‹</Text>
+            </View>
+            <Text className="mon">{activeMonthLabel}</Text>
+            <View
+              className={`stepper-btn ${activeMonthIndex >= monthOptions.length - 1 ? 'disabled' : ''}`}
+              onClick={() => activeMonthIndex < monthOptions.length - 1 && switchMonthBySwipe('next')}
+            >
+              <Text>›</Text>
+            </View>
+          </View>
+          <View className="masthead-spacer" />
+          <View
+            className={`who ${isAdminUser ? 'admin' : ''}`}
+            onClick={() => isAdminUser && setUserPickerOpen(true)}
+          >
+            <Text className="who-name">{currentUser?.name ?? ''}</Text>
+            {isAdminUser ? (
+              <Text className="who-tag">管理员</Text>
+            ) : (
+              <Text className="who-tag">{currentUser?.group ?? ''}</Text>
+            )}
+          </View>
+          <View className="masthead-actions">
+            <View className="act" onClick={refreshCloudOverrides}>
+              <View
+                className={`live-dot ${cloudRefreshing ? 'busy' : profileReady ? '' : 'off'}`}
+              />
+              <Text>{cloudRefreshing ? '同步中' : '同步'}</Text>
+            </View>
+            <View className="act act-ink" onClick={openStatsPage}>
+              <Text>统计</Text>
             </View>
           </View>
         </View>
 
         <ScrollView
           scrollX
-          scrollLeft={monthScrollLeft}
-          scrollWithAnimation
-          className="month-tabs"
           enhanced
           showScrollbar={false}
-          onScroll={event => {
-            const scrollLeft = (event as unknown as { detail: { scrollLeft: number } }).detail.scrollLeft
-            monthScrollLeftRef.current = scrollLeft
-          }}
+          className="rail"
+          scrollLeft={monthScrollLeft}
+          scrollWithAnimation
         >
-          <View className="month-tabs-inner">
+          <View className="rail-inner">
             {monthOptions.map(option => (
               <View
                 key={option.value}
-                className={`month-tab ${activeMonth === option.value ? 'active' : ''}`}
+                className={`rail-item ${option.value === activeMonth ? 'is-active' : ''}`}
                 onClick={() => setVisibleActiveMonth(option.value)}
               >
                 <Text>{option.label}</Text>
+                {option.value === activeMonth ? <View className="rail-underline" /> : null}
               </View>
             ))}
           </View>
         </ScrollView>
 
-        <View className="current-user-card">
-          <View className="current-user-main">
-            <View>
-              <Text className="eyebrow">当前用户</Text>
-              <View className="current-user-title-row">
-                <Text className="current-user-name">{currentUser?.name}</Text>
-                <Text className={currentUserBadgeClassName}>{currentUserBadgeLabel}</Text>
-                <Text className="current-user-group">{currentUser?.group}</Text>
-              </View>
-            </View>
-            {canSwitchUser ? (
-              <View className="current-user-actions">
-                <View className="user-picker-button" onClick={openStatsPage}>
-                  <Text>统计</Text>
-                </View>
-                <Picker
-                  mode="selector"
-                  range={userPickerOptions}
-                  value={currentUserIndex}
-                  onChange={event => {
-                    const nextUser = scheduleData.people[Number(event.detail.value)]
-                    if (!nextUser) return
-
-                    setCurrentUserName(nextUser.name)
-                    refreshCloudOverridesForUserSwitch(nextUser.name)
-                  }}
-                >
-                  <View className="user-picker-button">
-                    <Text>切换</Text>
-                  </View>
-                </Picker>
-              </View>
-            ) : (
-              <View className="current-user-actions">
-                <View className="user-picker-button" onClick={openStatsPage}>
-                  <Text>统计</Text>
-                </View>
-                <View className="user-picker-button locked">
-                  <Text>{userPickerButtonText}</Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          {shiftSummary && (
-            <View className="summary-grid">
-              <View className="summary-item summary-day">
-                <View className="summary-value-row">
-                  <Text className="summary-value">{shiftSummary.白班}</Text>
-                  {(shiftSummary.加班?.白班 ?? 0) > 0 && (
-                    <Text className="summary-overtime">{formatOvertimeHours(shiftSummary.加班?.白班 ?? 0)}h</Text>
-                  )}
-                </View>
-                <Text className="summary-label">白班</Text>
-              </View>
-              <View className="summary-item summary-night">
-                <View className="summary-value-row">
-                  <Text className="summary-value">{shiftSummary.夜班}</Text>
-                  {(shiftSummary.加班?.夜班 ?? 0) > 0 && (
-                    <Text className="summary-overtime">{formatOvertimeHours(shiftSummary.加班?.夜班 ?? 0)}h</Text>
-                  )}
-                </View>
-                <Text className="summary-label">夜班</Text>
-              </View>
-              <View className="summary-item summary-rest">
-                <Text className="summary-value">{shiftSummary.休息}</Text>
-                <Text className="summary-label">休息</Text>
-              </View>
-              <View className="summary-item summary-white-special">
-                <View className="summary-value-row">
-                  <Text className="summary-value">{shiftSummary.白特}</Text>
-                  {(shiftSummary.加班?.白特 ?? 0) > 0 && (
-                    <Text className="summary-overtime">{formatOvertimeHours(shiftSummary.加班?.白特 ?? 0)}h</Text>
-                  )}
-                </View>
-                <Text className="summary-label">白特</Text>
-              </View>
-              <View className="summary-item summary-night-special">
-                <View className="summary-value-row">
-                  <Text className="summary-value">{shiftSummary.夜特}</Text>
-                  {(shiftSummary.加班?.夜特 ?? 0) > 0 && (
-                    <Text className="summary-overtime">{formatOvertimeHours(shiftSummary.加班?.夜特 ?? 0)}h</Text>
-                  )}
-                </View>
-                <Text className="summary-label">夜特</Text>
-              </View>
-              <View className="summary-item summary-legal">
-                <View className="summary-value-row">
-                  <Text className="summary-value">{shiftSummary.法定 ?? 0}</Text>
-                  {(shiftSummary.加班?.法定 ?? 0) > 0 && (
-                    <Text className="summary-overtime legal">{formatOvertimeHours(shiftSummary.加班?.法定 ?? 0)}h</Text>
-                  )}
-                </View>
-                <Text className="summary-label">法定</Text>
-              </View>
-            </View>
-          )}
+        <View className={`cloud-refresh-status ${refreshHintVisible ? 'visible' : ''}`}>
+          <View className={`cloud-refresh-spinner ${cloudRefreshing ? 'spinning' : ''}`} />
+          <Text>{refreshHintVisible ? '云端同步完成' : ''}</Text>
         </View>
+
+        <ScrollView
+          scrollY
+          enhanced
+          showScrollbar={false}
+          className="scrollable-content"
+          refresherEnabled
+          refresherTriggered={cloudRefreshing}
+          refresherDefaultStyle="none"
+          refresherBackground="#f4f4f0"
+          onRefresherRefresh={refreshCloudOverrides}
+          onScrollToLower={refreshCloudOverrides}
+        >
+          <View className="scrollable-content-inner">
+            <View className="plaque-wrap">
+              <ShiftPlaque
+                moment={moment}
+                shiftName={moment.shift ?? '—'}
+                summary={shiftSummaryForPlaque}
+                startDate={activeScheduleData.startDate}
+                endDate={activeScheduleData.endDate}
+                personName={currentUser?.name ?? ''}
+                personGroup={currentUser?.group ?? ''}
+                dates={activeScheduleData.dates}
+                shifts={currentUser?.shifts ?? []}
+                todayLabel={todayDateKey}
+                todayWeekday={weekdayLabels[todayWeekday]}
+                todayMetaLabel={todayMetaLabel}
+              />
+            </View>
+
+            <View className="board">
+              <MonthCalendar
+                monthLabel={monthLabel}
+                cells={calendarCells}
+                todayKey={todayDateKey}
+                overtimeDates={overtimeDates}
+                legalDates={legalDates}
+                slideClassName={
+                  calendarAnimation === 'calendar-slide-next'
+                    ? 'cal-slide-next'
+                    : calendarAnimation === 'calendar-slide-previous'
+                      ? 'cal-slide-prev'
+                      : ''
+                }
+                onOpenShiftEditor={date => openShiftEditor(date)}
+                onSwipe={deltaX => {
+                  if (Math.abs(deltaX) < 50) return
+                  switchMonthBySwipe(deltaX < 0 ? 'next' : 'previous')
+                }}
+              />
+
+              <TeamMatrix
+                people={activeScheduleData.people}
+                dates={activeScheduleData.dates}
+                shiftsByPerson={shiftsByPerson}
+                dateLabels={dateLabels}
+                mode={tableView}
+                currentPersonName={currentUser?.name ?? ''}
+                todayKey={todayDateKey}
+                overtimeKeys={matrixOvertimeKeys}
+                legalKeys={matrixLegalKeys}
+                scrollLeft={tableScrollLeft}
+                onOpenShiftEditor={(date, personName) => openShiftEditor(date, personName)}
+                onModeChange={nextMode => setTableView(nextMode)}
+              />
+            </View>
+
+            <View className="page-footer">
+              <Text className="footnote">
+                数据：{activeScheduleData.people.length} 人 · {activeScheduleData.dates.length} 天，
+                结算周期 {formatDateRangePart(activeScheduleData.startDate)} 至{' '}
+                {formatDateRangePart(activeScheduleData.endDate)}。
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
       </View>
 
-      <ScrollView
-        scrollY
-        className="scrollable-content"
-        enableFlex
-        enhanced
-        showScrollbar={false}
-        refresherEnabled
-        refresherTriggered={cloudRefreshing}
-        refresherDefaultStyle="none"
-        refresherBackground="#f5f7fb"
-        onRefresherPulling={() => {
-          setRefreshHintVisible(true)
-        }}
-        onRefresherRestore={() => {
-          if (!cloudRefreshing) setRefreshHintVisible(false)
-        }}
-        onRefresherAbort={() => {
-          if (!cloudRefreshing) setRefreshHintVisible(false)
-        }}
-        onRefresherRefresh={() => {
-          refreshCloudOverrides()
-        }}
-      >
-        <View className="scrollable-content-inner">
-          <View className={`cloud-refresh-status ${refreshHintVisible ? 'visible' : ''}`}>
-            <View className={`cloud-refresh-spinner ${cloudRefreshing ? 'spinning' : ''}`} />
-            <Text>{cloudRefreshing ? '正在同步云端' : '下拉同步云端'}</Text>
-          </View>
-          <View className="desktop-layout">
-            <View className="desktop-primary-column">
-          <View
-            className="upcoming-card"
-            onTouchStart={event => {
-              const touch = (event as unknown as { changedTouches: Array<{ clientX: number; clientY: number }> }).changedTouches[0]
-              if (!touch) return
-              calendarTouchStart.current = { x: touch.clientX, y: touch.clientY }
-            }}
-            onTouchEnd={event => {
-              const start = calendarTouchStart.current
-              const touch = (event as unknown as { changedTouches: Array<{ clientX: number; clientY: number }> }).changedTouches[0]
-              calendarTouchStart.current = null
-              if (!start || !touch) return
-
-              const deltaX = touch.clientX - start.x
-              const deltaY = touch.clientY - start.y
-              if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return
-
-              switchMonthBySwipe(deltaX < 0 ? 'next' : 'previous')
-            }}
-          >
-          <View className="calendar-panel">
-          <View className="section-title-row">
-            <Text className="section-title">排班日历</Text>
-            <Text className="section-hint">2026年{Number(activeMonth)}月</Text>
-          </View>
-          <View className="calendar-weekdays">
-            {weekdayLabels.map(weekday => (
-              <Text key={weekday} className="calendar-weekday">{weekday}</Text>
-            ))}
-          </View>
-          <View className={`calendar-grid ${calendarAnimation}`}>
-            {calendarCells.map(cell => (
-              <View
-                key={cell.key}
-                className={`calendar-cell ${cell.inCurrentMonth ? '' : 'calendar-cell-empty'} ${cell.key === todayMonthDay ? 'today-calendar-cell' : ''} ${currentUser && shiftOverrides[getOverrideKey(currentUser.name, cell.key)] ? 'edited-calendar-cell' : ''}`}
-                onClick={() => {
-                  if (!cell.inCurrentMonth) return
-                  if (isDesktopPointerRuntime()) {
-                    openShiftEditor(cell.key)
-                    return
-                  }
-
-                  jumpTableToDate(cell.key)
-                }}
-                onLongPress={() => {
-                  if (cell.inCurrentMonth) openShiftEditor(cell.key)
-                }}
-              >
-                {cell.inCurrentMonth && currentUser && shiftOverrides[getOverrideKey(currentUser.name, cell.key)] && (
-                  <View className="edited-marker" />
-                )}
-                {cell.inCurrentMonth &&
-                  currentUser &&
-                  (overtimeOverrides[getOverrideKey(currentUser.name, cell.key)] ?? 0) > 0 &&
-                  legalOverrides[getOverrideKey(currentUser.name, cell.key)] !== true && (
-                  <View className="overtime-marker" />
-                )}
-                {cell.day && (
-                  <View className="calendar-cell-content">
-                    <View className="calendar-date-wrap">
-                      <View className="calendar-lunar-spacer" />
-                      <Text className={`calendar-day ${cell.inCurrentMonth ? '' : 'calendar-day-muted'}`}>
-                        {cell.day}
-                      </Text>
-                      <View className={`calendar-lunar ${cell.inCurrentMonth ? '' : 'calendar-lunar-muted'} ${cell.meta.isHoliday ? 'calendar-lunar-holiday' : ''}`}>
-                        {cell.meta.label.split('').map((char, charIndex) => (
-                          <Text key={`${cell.key}-${charIndex}`} className="calendar-lunar-char">
-                            {char}
-                          </Text>
-                        ))}
-                      </View>
-                    </View>
-                    {cell.shift && (
-                      <View className="calendar-shift-row">
-                        <Text className={`${getShiftClassName(cell.shift)} ${cell.inCurrentMonth ? '' : 'shift-muted'}`}>
-                          {cell.shift}
-                        </Text>
-                        {currentUser && legalOverrides[getOverrideKey(currentUser.name, cell.key)] === true && (
-                          <Text className={`legal-shift-badge ${cell.inCurrentMonth ? '' : 'shift-muted'}`}>法</Text>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
-          </View>
-          </View>
-            </View>
-
-            <View className="desktop-secondary-column">
-          <View className="table-card">
-        <View className="table-toolbar">
-          <View className="table-toolbar-main">
-            <Text className="table-card-title">多视图</Text>
-            <View className="table-view-switch">
-              {tableViewOptions.map(option => (
-                <View
-                  key={option.value}
-                  className={`table-view-option ${tableView === option.value ? 'active' : ''}`}
-                  onClick={() => setTableView(option.value)}
-                >
-                  <Text>{option.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-          <View className="table-toolbar-sub">
-            <View className="legend">
-              {legendShiftOptions.map(shift => (
-                <View key={shift} className="legend-item">
-                  <Text className={getShiftClassName(shift)}>{shift}</Text>
-                </View>
-              ))}
-            </View>
-            <View className="table-scroll-controls">
-              <View className="table-scroll-button" onClick={() => scrollTableByDays('previous')}>
-                <Text>‹</Text>
-              </View>
-              <View className="table-scroll-button" onClick={() => scrollTableByDays('next')}>
-                <Text>›</Text>
-              </View>
-            </View>
-            <Text className="scroll-tip">左右滑动查看更多日期</Text>
-          </View>
-        </View>
-
-        <View className="table-shell">
-          <View className="identity-column">
-            <View className="identity-row identity-header">
-              <Text className="identity-header-title">{tableView === 'name' ? '班次' : '姓名'}</Text>
-              {tableView === 'shift' && <Text className="identity-subtitle">班次</Text>}
-            </View>
-            {activeScheduleData.people.map(person => (
-              <View
-                key={person.name}
-                className={`identity-row ${person.name === currentUser.name ? 'highlight-identity' : ''}`}
-              >
-                {tableView === 'name' ? (
-                  <View className="identity-name-row">
-                    <Text className="identity-group only-group">{person.group}</Text>
-                    {person.name === currentUser.name && (
-                      <Text className={`${currentUserBadgeClassName} small`}>{currentUserBadgeLabel}</Text>
-                    )}
-                  </View>
-                ) : (
-                  <View>
-                    <View className="identity-name-row">
-                      <Text className="identity-name">{person.name}</Text>
-                      {person.name === currentUser.name && (
-                        <Text className={`${currentUserBadgeClassName} small`}>{currentUserBadgeLabel}</Text>
-                      )}
-                    </View>
-                    <Text className="identity-group">{person.group}</Text>
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
-
-          <ScrollView
-            scrollX
-            scrollLeft={tableScrollLeft}
-            scrollWithAnimation
-            className="table-scroll"
-            enhanced
-            showScrollbar={false}
-            onScroll={event => {
-              const scrollLeft = Number((event as unknown as { detail?: { scrollLeft?: number } }).detail?.scrollLeft)
-              if (Number.isFinite(scrollLeft)) tableScrollLeftRef.current = scrollLeft
-            }}
-          >
-            <View className="schedule-table" style={scheduleTableStyle}>
-              <View className="table-row table-header">
-                {dateLabels.map(label => (
-                  <View
-                    key={label.date}
-                    className={`cell date-cell ${label.date === todayMonthDay ? 'today-date-cell' : ''}`}
-                  >
-                    <Text className="date-main">{getDayPart(label.date)}</Text>
-                    <Text className="date-weekday">{label.weekday}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {activeScheduleData.people.map(person => (
-                <View key={person.name} className={`table-row ${person.name === currentUser.name ? 'highlight-row' : ''}`}>
-                  {person.shifts.map((shift, index) => {
-                    const date = activeScheduleData.dates[index]
-                    const overrideKey = getOverrideKey(person.name, date)
-                    const baseShift = getBaseShift(person.name, date)
-                    const isEditedShift = Boolean(
-                      baseShift && hasShiftOverrideChanged(baseShift, shiftOverrides[overrideKey])
-                    )
-
-                    return (
-                      <View
-                        key={`${person.name}-${index}`}
-                        className="cell date-cell table-shift-cell"
-                        onClick={() => {
-                          if (isDesktopPointerRuntime()) openShiftEditor(date, person.name)
-                        }}
-                        onLongPress={() => openShiftEditor(date, person.name)}
-                      >
-                        {isEditedShift && <View className="table-edited-marker" />}
-                        {tableView === 'name' ? (
-                          <Text className={`name-view-person-name ${getNameViewShiftClassName(shift)}`}>
-                            {person.name}
-                          </Text>
-                        ) : (
-                          <Text className={getShiftClassName(shift)}>{shift}</Text>
-                        )}
-                      </View>
-                    )
-                  })}
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-          </View>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-
-      {shiftEditor && (
-        <View className="editor-mask" onClick={() => setShiftEditor(null)}>
-          <View className="shift-editor" onClick={event => event.stopPropagation()}>
-            <View className="shift-editor-header">
-              <View>
-                <Text className="shift-editor-title">编辑</Text>
-                <Text className="shift-editor-subtitle">
-                  {shiftEditor.personName} · {shiftEditor.date}
-                </Text>
-              </View>
-            </View>
-
-            <View className="shift-editor-section">
-              <Text className="shift-editor-label">默认班次</Text>
-              <View
-                className={`shift-editor-option ${shiftEditor.selectedShift === 'default' ? 'selected' : ''}`}
-                onClick={() => selectShiftEdit('default')}
-              >
-                <Text className={getShiftClassName(shiftEditor.baseShift)}>
-                  {shiftEditor.baseShift}
-                </Text>
-              </View>
-            </View>
-
-            <View className="shift-editor-section">
-              <Text className="shift-editor-label">修改为</Text>
-              <View className="shift-editor-options">
-                {getEditableShiftOptionsForBase(shiftEditor.baseShift).map(shift => {
-                  const selectedShift = shiftEditor.selectedShift === 'default' ? shiftEditor.baseShift : shiftEditor.selectedShift
-                  const isSelected = selectedShift === shift
-                  const isDisabled = shiftEditor.isLegal && shift === '事假'
-
-                  return (
-                    <View
-                      key={shift}
-                      className={`shift-editor-option ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
-                      onClick={() => {
-                        if (!isDisabled) selectShiftEdit(shift === shiftEditor.baseShift ? 'default' : shift)
-                      }}
-                    >
-                      <Text className={getShiftClassName(shift)}>{shift}</Text>
-                    </View>
-                  )
-                })}
-              </View>
-            </View>
-
-            {getEditorEffectiveShift(shiftEditor) === '事假' && (
-              <View className="shift-editor-section">
-                <Text className="shift-editor-label">事假时长</Text>
-                <View className="legal-editor-row">
-                  {leaveDurationOptions.map(duration => (
-                    <View
-                      key={duration}
-                      className={`legal-editor-option ${shiftEditor.leaveDuration === duration ? 'selected' : ''}`}
-                      onClick={() => setShiftEditorLeaveDuration(duration)}
-                    >
-                      <Text>{duration}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            <View className="shift-editor-section">
-              <Text className="shift-editor-label">法定</Text>
-              {canMarkLegalShift(getEditorEffectiveShift(shiftEditor)) ? (
-                <View className="legal-editor-row">
-                  <View
-                    className={`legal-editor-option ${!shiftEditor.isLegal ? 'selected' : ''}`}
-                    onClick={() => setShiftEditorLegal(false)}
-                  >
-                    <Text>否</Text>
-                  </View>
-                  <View
-                    className={`legal-editor-option ${shiftEditor.isLegal ? 'selected' : ''}`}
-                    onClick={() => setShiftEditorLegal(true)}
-                  >
-                    <Text>是</Text>
-                  </View>
-                </View>
-              ) : (
-                <Text className="overtime-disabled">该班次不可标记法定</Text>
-              )}
-            </View>
-
-            <View className="shift-editor-section">
-              <Text className="shift-editor-label">加班时长</Text>
-              {canRecordOvertime(getEditorEffectiveShift(shiftEditor)) ? (
-                <View className="overtime-editor-stack">
-                  <View className="overtime-preset-row">
-                    {getOvertimePresetOptions(getEditorEffectiveShift(shiftEditor), shiftEditor.isLegal).map(hours => {
-                      const isSelected = normalizeOvertimeHours(shiftEditor.overtimeInput) === hours
-
-                      return (
-                        <View
-                          key={hours}
-                          className={`overtime-preset-option ${isSelected ? 'selected' : ''}`}
-                          onClick={() => setShiftEditorOvertimeInput(formatOvertimeHours(hours))}
-                        >
-                          <Text>{formatOvertimeHours(hours)}h</Text>
-                        </View>
-                      )
-                    })}
-                  </View>
-                  <View className="overtime-editor-row">
-                    <Input
-                      className="overtime-input"
-                      type="digit"
-                      value={shiftEditor.overtimeInput}
-                      placeholder="0"
-                      onInput={event => {
-                        setShiftEditorOvertimeInput(String(event.detail.value))
-                      }}
-                    />
-                    <Text className="overtime-unit">小时</Text>
-                    <Text className="overtime-hint">最小单位0.5</Text>
-                  </View>
-                </View>
-              ) : (
-                <Text className="overtime-disabled">该班次不记录加班</Text>
-              )}
-            </View>
-
-            <View className="shift-editor-actions">
-              <View className="shift-editor-save" onClick={saveShiftEditor}>
-                <Text>保存</Text>
-              </View>
-              <View className="shift-editor-cancel" onClick={() => setShiftEditor(null)}>
-                <Text>取消</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {needsProfileBinding && (
-        <View className="editor-mask profile-binding-mask">
-          <View className="profile-binding">
-            <Text className="profile-binding-title">绑定姓名</Text>
-            <Text className="profile-binding-desc">
-              绑定后只能修改本人排班和加班记录。
+      {needsProfileBinding ? (
+        <View className="sheet-backdrop">
+          <View className="bind-sheet">
+            <Text className="bind-title">绑定姓名</Text>
+            <Text className="bind-desc">
+              首次使用需要绑定到排班表中的姓名，之后将固定显示本人的排班与统计。
             </Text>
             <Picker
               mode="selector"
@@ -1281,23 +886,52 @@ export default function Index() {
               value={profilePickerIndex}
               onChange={event => setProfilePickerIndex(Number(event.detail.value))}
             >
-              <View className="profile-binding-picker">
-                <Text>{userPickerOptions[profilePickerIndex]}</Text>
+              <View className="bind-picker">
+                <Text>{userPickerOptions[profilePickerIndex] ?? ''}</Text>
+                <Text>›</Text>
               </View>
             </Picker>
-            <View className="profile-binding-actions">
-              <View
-                className={`profile-binding-confirm ${profileBinding ? 'disabled' : ''}`}
-                onClick={() => {
-                  if (!profileBinding) bindProfile()
-                }}
-              >
-                <Text>{profileBinding ? '处理中' : '绑定'}</Text>
-              </View>
+            <View
+              className={`bind-confirm ${profileBinding ? 'is-disabled' : ''}`}
+              onClick={() => !profileBinding && bindProfile()}
+            >
+              <Text>{profileBinding ? '处理中' : '绑定'}</Text>
             </View>
           </View>
         </View>
-      )}
+      ) : null}
+
+      {shiftEditor ? (
+        <ShiftEditorSheet
+          editor={shiftEditor}
+          editableOptions={getEditableShiftOptionsForBase(shiftEditor.baseShift)}
+          leaveOptions={getEditorEffectiveShift(shiftEditor) === '事假'}
+          overtimePresets={getOvertimePresetOptions(
+            getEditorEffectiveShift(shiftEditor),
+            shiftEditor.isLegal
+          )}
+          isSaving={false}
+          onSelectShift={selectShiftEdit}
+          onSelectLeaveDuration={setShiftEditorLeaveDuration}
+          onSelectLegal={setShiftEditorLegal}
+          onOvertimeInput={setShiftEditorOvertimeInput}
+          onSave={saveShiftEditor}
+          onClose={() => setShiftEditor(null)}
+        />
+      ) : null}
+
+      {userPickerOpen ? (
+        <UserPickerSheet
+          people={scheduleData.people}
+          selectedName={currentUser?.name ?? ''}
+          onSelect={nextName => {
+            setUserPickerOpen(false)
+            refreshCloudOverridesForUserSwitch(nextName)
+            setCurrentUserName(nextName)
+          }}
+          onClose={() => setUserPickerOpen(false)}
+        />
+      ) : null}
     </View>
   )
 }

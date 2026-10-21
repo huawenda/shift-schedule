@@ -84,6 +84,13 @@ export function calculateOvertimePay(
   return roundMoney(rawHourlyWage * safeHours(overtimeHours) * safeMultiplier(multiplier))
 }
 
+/** 分位取整，两端统一口径（Web 端 stats 页用同一套 roundMoney）。 */
+export function roundMoney(value: number): number {
+  if (!Number.isFinite(value)) return 0
+
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
 export function formatMoney(value: number): string {
   return roundMoney(value).toFixed(2)
 }
@@ -101,10 +108,4 @@ function safeHours(value: number): number {
 
 function safeMultiplier(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0
-}
-
-function roundMoney(value: number): number {
-  if (!Number.isFinite(value)) return 0
-
-  return Math.round((value + Number.EPSILON) * 100) / 100
 }

@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Input, Picker, ScrollView, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { scheduleData } from '../../data/schedule'
+import { getShiftClass } from '../../appConstants'
+import ShiftMark from '../../components/ShiftMark'
+import UserPickerSheet from '../../components/UserPickerSheet'
 import { loadCloudOverrides } from '../../services/cloudRecords'
 import {
   readLeaveDurationOverridesFromStorage,
@@ -25,10 +28,10 @@ import {
   type ScheduleMonth
 } from '../../utils/schedule'
 import {
-  calculateOvertimePay,
   calculateSalary,
   emptySalaryInputs,
   formatMoney,
+  roundMoney,
   type SalaryInputValues
 } from '../../utils/salary'
 import {
@@ -130,29 +133,20 @@ function getDailyOvertimeMultiplier(record: { shift: ShiftType; isLegal?: boolea
   return 0
 }
 
-function getDailyPayClassName(record: { shift: ShiftType; isLegal?: boolean }): string {
-  if (record.isLegal) return 'legal'
-  if (record.shift === '白特' || record.shift === '夜特') return 'special'
+// 与 Web 端一致：金额越大字号越重，≥400 用 .is-big，100–400 用 .is-mid。
+function getDailyPayClassName(pay: number): string {
+  if (pay >= 400) return 'is-big'
+  if (pay >= 100) return 'is-mid'
 
   return ''
 }
 
-function getStatsShiftClassName(shift: ShiftType): string {
-  return {
-    白班: 'stats-shift-day',
-    夜班: 'stats-shift-night',
-    休息: 'stats-shift-rest',
-    白特: 'stats-shift-special-day',
-    夜特: 'stats-shift-special-night',
-    事假: 'stats-shift-leave'
-  }[shift]
-}
-
+// 加班图表 / 排名分段的配色修饰词（Web 端 .fill 与 .rank-track i 共用）。
 function getStatsChartTypeClassName(type: string): string {
   return {
-    平日: 'stats-overtime-weekday',
-    特勤: 'stats-overtime-special',
-    法定: 'stats-overtime-legal'
+    平日: 'weekday',
+    特勤: 'special',
+    法定: 'legal'
   }[type] ?? ''
 }
 
@@ -160,17 +154,17 @@ function getOvertimeStackSegments(person: PersonOvertimeStats, maxHours: number)
   return [
     {
       key: 'weekday',
-      className: 'stats-overtime-weekday',
+      className: 'weekday',
       hours: person.weekdayHours
     },
     {
       key: 'special',
-      className: 'stats-overtime-special',
+      className: 'special',
       hours: person.specialHours
     },
     {
       key: 'legal',
-      className: 'stats-overtime-legal',
+      className: 'legal',
       hours: person.legalHours
     }
   ].map(segment => ({
@@ -178,51 +172,52 @@ function getOvertimeStackSegments(person: PersonOvertimeStats, maxHours: number)
     width: maxHours > 0
       ? Math.max((segment.hours / maxHours) * 100, segment.hours > 0 ? 8 : 0)
       : 0,
-    showLabel: segment.hours > 0
+    showLabel: segment.hours > 0 && maxHours > 0 && segment.hours / maxHours > 0.14
   }))
 }
 
+// swatchClass 为空表示这一行用红点（法定）而不是色票。
 function getMonthlyOverviewRows(stats: NonNullable<ReturnType<typeof getPersonMonthlyStats>>) {
   return [
     {
       label: '白班',
-      className: 'stats-shift-day',
+      swatchClass: getShiftClass('白班'),
       days: stats.shiftSummary.白班,
       hours: stats.shiftSummary.加班?.白班 ?? 0
     },
     {
       label: '夜班',
-      className: 'stats-shift-night',
+      swatchClass: getShiftClass('夜班'),
       days: stats.shiftSummary.夜班,
       hours: stats.shiftSummary.加班?.夜班 ?? 0
     },
     {
       label: '休息',
-      className: 'stats-shift-rest',
+      swatchClass: getShiftClass('休息'),
       days: stats.shiftSummary.休息,
       hours: 0
     },
     {
       label: '白特',
-      className: 'stats-shift-special-day',
+      swatchClass: getShiftClass('白特'),
       days: stats.shiftSummary.白特,
       hours: stats.shiftSummary.加班?.白特 ?? 0
     },
     {
       label: '夜特',
-      className: 'stats-shift-special-night',
+      swatchClass: getShiftClass('夜特'),
       days: stats.shiftSummary.夜特,
       hours: stats.shiftSummary.加班?.夜特 ?? 0
     },
     {
       label: '法定',
-      className: 'stats-shift-legal',
+      swatchClass: '',
       days: stats.shiftSummary.法定 ?? 0,
       hours: stats.shiftSummary.加班?.法定 ?? 0
     },
     {
       label: '事假',
-      className: 'stats-shift-leave',
+      swatchClass: getShiftClass('事假'),
       days: stats.leaveSummary.days,
       hours: stats.leaveSummary.hours
     }
@@ -233,6 +228,7 @@ export default function StatsPage() {
   const [headerTopPadding] = useState(getHeaderTopPadding)
   const [viewMode, setViewMode] = useState<StatsViewMode>('personal')
   const [personalPageIndex, setPersonalPageIndex] = useState(0)
+  const [userPickerOpen, setUserPickerOpen] = useState(false)
   const personalPageTouchStart = useRef<TouchPoint | null>(null)
   const salarySaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editedSalaryKey = useRef<string | null>(null)
@@ -280,15 +276,17 @@ export default function StatsPage() {
     legalOverrides,
     leaveDurationOverrides
   )
-  const personOptions = scheduleData.people.map(person => `${person.name} / ${person.group}`)
+  const monthLabel = availableMonthOptions[activeMonthIndex]?.label ?? ''
+  const monthlyOverviewRows = stats ? getMonthlyOverviewRows(stats) : []
+  const totalDays = monthlyOverviewRows.reduce((total, row) => total + row.days, 0)
   const overtimeChartItems = stats ? getOvertimeChartItems(stats.shiftSummary.加班) : []
   const overtimeChartMax = Math.max(...overtimeChartItems.map(item => item.hours), 0)
   const salaryInputKey = getSalaryInputKey(currentPerson.name, activeMonth)
   const salaryInputs = salaryInputRecords[salaryInputKey] ?? emptySalaryInputs
   const salarySaveStatusLabel = salarySaveStatus === 'pending'
-    ? '待保存'
+    ? '待保存…'
     : salarySaveStatus === 'saving'
-      ? '保存中'
+      ? '保存中…'
       : salarySaveStatus === 'saved'
         ? '已保存'
         : salarySaveStatus === 'error'
@@ -307,6 +305,8 @@ export default function StatsPage() {
     legalOverrides
   )
   const allPeopleChartMax = Math.max(...allPeopleStats.people.map(person => person.totalHours), 0)
+  const teamOvertimeTotal = allPeopleStats.people.reduce((sum, person) => sum + person.totalHours, 0)
+  const statsRangeText = `${activeScheduleData.startDate.replace(/-/g, '/')} – ${activeScheduleData.endDate.replace(/-/g, '/')}`
 
   useEffect(() => {
     let cancelled = false
@@ -512,26 +512,18 @@ export default function StatsPage() {
   if (!profileReady || !cloudStatsReady) {
     return (
       <View className="stats-page">
-        <View className="stats-header" style={{ paddingTop: headerTopPadding }}>
-          <View className="stats-back-button" onClick={goBackToIndexPage}>
-            <Text>返回</Text>
+        <View className="stats-shell">
+          <View className="stats-head" style={{ paddingTop: headerTopPadding }}>
+            <View className="back" onClick={goBackToIndexPage}>
+              <Text>← 返回</Text>
+            </View>
+            <Text className="stats-head-title">统计</Text>
+            <Text className="range">{statsRangeText}</Text>
           </View>
-          <View className="stats-header-copy">
-            <Text className="stats-title">统计</Text>
-            <Text className="stats-subtitle">
-              {activeScheduleData.startDate.replace(/-/g, '/')} - {activeScheduleData.endDate.replace(/-/g, '/')}
-            </Text>
-          </View>
-        </View>
 
-        <View className="stats-loading-card">
-          <View className="stats-loading-mark" />
-          <Text className="stats-loading-title">
-            {profileReady ? '同步统计数据' : '读取统计信息'}
-          </Text>
-          <Text className="stats-loading-text">
-            {profileReady ? '正在读取云端最新排班记录' : '正在同步当前账号身份与绑定人员'}
-          </Text>
+          <View className="stats-loading">
+            <Text>{profileReady ? '同步统计数据' : '读取统计信息'}</Text>
+          </View>
         </View>
       </View>
     )
@@ -539,403 +531,464 @@ export default function StatsPage() {
 
   return (
     <View className="stats-page">
-      <View className="stats-header" style={{ paddingTop: headerTopPadding }}>
-        <View className="stats-back-button" onClick={goBackToIndexPage}>
-          <Text>返回</Text>
+      <View className="stats-shell">
+        <View className="stats-head" style={{ paddingTop: headerTopPadding }}>
+          <View className="back" onClick={goBackToIndexPage}>
+            <Text>← 返回</Text>
+          </View>
+          <Text className="stats-head-title">统计</Text>
+          <Text className="range">{statsRangeText}</Text>
+          <View className="stats-spacer" />
+          <View className="act" onClick={refreshStatsCloudData}>
+            <View className={`live-dot ${cloudStatsRefreshing ? 'busy' : ''}`} />
+            <Text>{cloudStatsRefreshing ? '同步中…' : '同步'}</Text>
+          </View>
         </View>
-        <View className="stats-header-copy">
-          <Text className="stats-title">统计</Text>
-          <Text className="stats-subtitle">
-            {activeScheduleData.startDate.replace(/-/g, '/')} - {activeScheduleData.endDate.replace(/-/g, '/')}
-          </Text>
-        </View>
-        <View
-          className={`stats-sync-button ${cloudStatsRefreshing ? 'loading' : ''}`}
-          onClick={refreshStatsCloudData}
-        >
-          <Text>{cloudStatsRefreshing ? '同步中' : '同步'}</Text>
-        </View>
-      </View>
 
-      <View className="stats-view-tabs">
-        {isAdminUser ? (
-          <>
+        <View className="stats-tabs">
+          <View
+            className={`stats-tab ${viewMode === 'personal' && personalPageIndex === 0 ? 'is-active' : ''}`}
+            onClick={switchToPersonalSummary}
+          >
+            <Text>综合统计</Text>
+            {viewMode === 'personal' && personalPageIndex === 0 ? (
+              <View className="stats-tab-underline" />
+            ) : null}
+          </View>
+          <View
+            className={`stats-tab ${viewMode === 'personal' && personalPageIndex === 1 ? 'is-active' : ''}`}
+            onClick={switchToDailyDetails}
+          >
+            <Text>每日明细</Text>
+            {viewMode === 'personal' && personalPageIndex === 1 ? (
+              <View className="stats-tab-underline" />
+            ) : null}
+          </View>
+          {isAdminUser ? (
             <View
-              className={`stats-view-tab ${viewMode === 'personal' ? 'active' : ''}`}
-              onClick={switchToPersonalSummary}
-            >
-              <Text>个人统计</Text>
-            </View>
-            <View
-              className={`stats-view-tab ${viewMode === 'team' ? 'active' : ''}`}
+              className={`stats-tab ${viewMode === 'team' ? 'is-active' : ''}`}
               onClick={() => setViewMode('team')}
             >
               <Text>全员统计</Text>
+              {viewMode === 'team' ? <View className="stats-tab-underline" /> : null}
             </View>
-          </>
-        ) : (
-          <>
-            <View
-              className={`stats-view-tab ${viewMode === 'personal' && personalPageIndex === 0 ? 'active' : ''}`}
-              onClick={switchToPersonalSummary}
-            >
-              <Text>综合统计</Text>
-            </View>
-            <View
-              className={`stats-view-tab ${viewMode === 'personal' && personalPageIndex === 1 ? 'active' : ''}`}
-              onClick={switchToDailyDetails}
-            >
-              <Text>每日明细</Text>
-            </View>
-          </>
-        )}
-      </View>
+          ) : null}
+          <View className="stats-spacer" />
+          {salarySaveStatusLabel && viewMode === 'personal' ? (
+            <Text className={`save-state ${salarySaveStatus === 'error' ? 'error' : ''}`}>
+              {salarySaveStatusLabel}
+            </Text>
+          ) : null}
+        </View>
 
-      <View className={`stats-filter-card ${viewMode === 'personal' ? 'has-person-filter' : ''}`}>
-        <Picker
-          mode="selector"
-          range={monthPickerOptions}
-          value={activeMonthIndex}
-          onChange={event => {
-            const nextMonth = availableMonthOptions[Number(event.detail.value)]?.value
-            if (nextMonth) {
-              setActiveMonth(nextMonth)
-            }
-          }}
-        >
-          <View className="stats-filter-item">
-            <Text className="stats-filter-label">月份</Text>
-            <Text className="stats-filter-value">{availableMonthOptions[activeMonthIndex]?.label ?? ''}</Text>
+        <View className="stats-filters">
+          <View className="filter">
+            <Text className="k">月份</Text>
+            <Picker
+              mode="selector"
+              range={monthPickerOptions}
+              value={activeMonthIndex}
+              onChange={event => {
+                const nextMonth = availableMonthOptions[Number(event.detail.value)]?.value
+                if (nextMonth) {
+                  setActiveMonth(nextMonth)
+                }
+              }}
+            >
+              <View className="v is-tappable">
+                <Text>{monthLabel}</Text>
+              </View>
+            </Picker>
           </View>
-        </Picker>
-        {viewMode === 'personal' && isAdminUser && (
-          <Picker
-            mode="selector"
-            range={personOptions}
-            value={currentPersonIndex}
-            onChange={event => setPersonIndex(Number(event.detail.value))}
-          >
-            <View className="stats-filter-item">
-              <Text className="stats-filter-label">用户</Text>
-              <Text className="stats-filter-value">{personOptions[currentPersonIndex]}</Text>
+
+          {viewMode === 'team' ? (
+            <View className="filter">
+              <Text className="k">范围</Text>
+              <Text className="v">{allPeopleStats.people.length} 人</Text>
             </View>
-          </Picker>
-        )}
-        {viewMode === 'personal' && !isAdminUser && (
-          <View className="stats-filter-item">
-            <Text className="stats-filter-label">用户</Text>
-            <Text className="stats-filter-value">
-              {boundPersonName ? personOptions[currentPersonIndex] : (profileReady ? '未绑定' : '读取中')}
+          ) : null}
+
+          {viewMode === 'personal' ? (
+            <View className="filter">
+              <Text className="k">用户</Text>
+              {isAdminUser ? (
+                <View className="v is-tappable" onClick={() => setUserPickerOpen(true)}>
+                  <Text>{currentPerson.name}</Text>
+                  <Text className="muted"> / {currentPerson.group}</Text>
+                </View>
+              ) : (
+                <Text className="v">
+                  {boundPersonName ? currentPerson.name : (profileReady ? '未绑定' : '读取中')}
+                </Text>
+              )}
+            </View>
+          ) : null}
+
+          <View className="filter">
+            <Text className="k">加班合计</Text>
+            <Text className="v">
+              {viewMode === 'team'
+                ? formatOvertimeHours(teamOvertimeTotal)
+                : formatOvertimeHours(stats?.overtimeTotal ?? 0)} h
             </Text>
           </View>
-        )}
-      </View>
-
-      {isAdminUser && viewMode === 'personal' && (
-        <View className="stats-page-indicator">
-          {[0, 1].map(index => (
-            <View
-              key={index}
-              className={`stats-page-indicator-dot ${personalPageIndex === index ? 'active' : ''}`}
-              onClick={() => setPersonalPageIndex(index)}
-            />
-          ))}
         </View>
-      )}
 
-      {viewMode === 'personal' && stats && (
-        <View
-          className="stats-personal-pages"
-          onTouchStart={handlePersonalPageTouchStart}
-          onTouchEnd={handlePersonalPageTouchEnd}
-        >
+        {isAdminUser && viewMode === 'personal' && stats ? (
+          <View className="stats-page-indicator">
+            {[0, 1].map(index => (
+              <View
+                key={index}
+                className={`stats-page-indicator-dot ${personalPageIndex === index ? 'active' : ''}`}
+                onClick={() => setPersonalPageIndex(index)}
+              />
+            ))}
+          </View>
+        ) : null}
+
+        {viewMode === 'personal' && stats ? (
           <View
-            className="stats-personal-track"
-            style={`transform: translate3d(-${personalPageIndex * 50}%, 0, 0);`}
+            className="stats-personal-pages"
+            onTouchStart={handlePersonalPageTouchStart}
+            onTouchEnd={handlePersonalPageTouchEnd}
           >
-          <View className="stats-personal-page">
-            <View className="stats-personal-page-inner">
-            <ScrollView scrollY className="stats-content stats-personal-scroll" enableFlex enhanced showScrollbar={false}>
-              <View className="stats-content-inner">
-                <View className="stats-card">
-              <View className="stats-section-title-row">
-                <Text className="stats-section-title">月度概览</Text>
-                <Text className="stats-section-hint">加班 {formatOvertimeHours(stats.overtimeTotal)} 小时</Text>
-              </View>
-              <View className="stats-overview-table">
-                <View className="stats-overview-row stats-overview-header">
-                  <Text>项目</Text>
-                  <Text>天数</Text>
-                  <Text>小时</Text>
-                </View>
-                {getMonthlyOverviewRows(stats).map(row => (
-                  <View key={row.label} className="stats-overview-row">
-                    <View className="stats-overview-name">
-                      <Text className={`stats-overview-tag ${row.className}`}>{row.label}</Text>
+            <View
+              className="stats-personal-track"
+              style={`transform: translate3d(-${personalPageIndex * 50}%, 0, 0);`}
+            >
+              <View className="stats-personal-page">
+                <View className="stats-personal-page-inner">
+                  <ScrollView
+                    scrollY
+                    className="stats-scroll"
+                    enableFlex
+                    enhanced
+                    showScrollbar={false}
+                  >
+                    <View className="zones">
+                      <View className="page-section">
+                        <View className="sec-head">
+                          <Text className="sec-title">月度概览</Text>
+                          <Text className="sec-sub">
+                            {formatOvertimeHours(totalDays)} 天 · 加班{' '}
+                            {formatOvertimeHours(stats.overtimeTotal)} 小时
+                          </Text>
+                        </View>
+
+                        <View className="ovw">
+                          <View className="ovw-row is-head">
+                            <Text className="ovw-name">项目</Text>
+                            <Text className="ovw-num ovw-num-days">天数</Text>
+                            <Text className="ovw-num ovw-num-hrs">加班</Text>
+                          </View>
+                          {monthlyOverviewRows.map(row => (
+                            <View key={row.label} className="ovw-row">
+                              <View className="ovw-name">
+                                {row.swatchClass ? (
+                                  <View className={`swatch ${row.swatchClass}`} />
+                                ) : (
+                                  <View className="legal-dot" />
+                                )}
+                                <Text>{row.label}</Text>
+                              </View>
+                              <Text className="ovw-days">{row.days}</Text>
+                              <Text className={`ovw-hrs ${row.hours > 0 ? 'active' : ''}`}>
+                                {formatOvertimeHours(row.hours)} h
+                              </Text>
+                            </View>
+                          ))}
+                          <View className="ovw-total">
+                            <Text>本月加班合计</Text>
+                            <Text>{formatOvertimeHours(stats.overtimeTotal)} h</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View className="page-section">
+                        <View className="sec-head">
+                          <Text className="sec-title">加班分布</Text>
+                          <Text className="sec-sub">按类型</Text>
+                        </View>
+
+                        <View className="bars">
+                          {overtimeChartMax === 0 ? (
+                            <View className="bars-empty">
+                              <Text>本月没有加班记录</Text>
+                            </View>
+                          ) : (
+                            <>
+                              <View className="bars-plot">
+                                {overtimeChartItems.map(item => (
+                                  <View key={item.type} className="col">
+                                    <Text className="v">{formatOvertimeHours(item.hours)} h</Text>
+                                    <View
+                                      className={`fill ${getStatsChartTypeClassName(item.type)}`}
+                                      style={{
+                                        height: `${Math.max(3, (item.hours / overtimeChartMax) * 100)}%`
+                                      }}
+                                    />
+                                  </View>
+                                ))}
+                              </View>
+                              <View className="bars-axis">
+                                {overtimeChartItems.map(item => (
+                                  <Text key={item.type}>{item.type}</Text>
+                                ))}
+                              </View>
+                            </>
+                          )}
+                        </View>
+                      </View>
+
+                      <View className="payslip">
+                        <View className="sec-head">
+                          <Text className="sec-title">薪资计算</Text>
+                          <Text className="sec-sub">
+                            时薪 ¥{formatMoney(salaryCalculation.hourlyWage)} · 月计薪 21.75 天 × 8 小时
+                          </Text>
+                        </View>
+
+                        <View className="pay-grid">
+                          <View className="pay-block">
+                            <View className="pay-block-head">
+                              <Text className="pay-block-title">基本项</Text>
+                              <Text className="sum">小计 ¥{formatMoney(salaryCalculation.basicPayTotal)}</Text>
+                            </View>
+                            {([
+                              { label: '底薪', field: 'baseSalary' as const },
+                              { label: '绩效津贴', field: 'performanceAllowance' as const },
+                              { label: '岗位津贴', field: 'positionAllowance' as const }
+                            ]).map(item => (
+                              <View key={item.field} className="pay-row pay-input">
+                                <Text className="pay-row-label">{item.label}</Text>
+                                <View className="amount">
+                                  <Text className="cur">¥</Text>
+                                  <Input
+                                    className="pay-amount-input"
+                                    type="digit"
+                                    value={salaryInputs[item.field]}
+                                    placeholder="0"
+                                    onInput={event => setSalaryInputValue(item.field, String(event.detail.value))}
+                                  />
+                                </View>
+                              </View>
+                            ))}
+                          </View>
+
+                          <View className="pay-block">
+                            <View className="pay-block-head">
+                              <Text className="pay-block-title">加班工资</Text>
+                              <Text className="sum">小计 ¥{formatMoney(salaryCalculation.overtimePayTotal)}</Text>
+                            </View>
+                            <View className="pay-row">
+                              <Text className="pay-row-label">平日加班 ×1.5</Text>
+                              <Text className="pay-row-value">
+                                ¥{formatMoney(salaryCalculation.weekdayOvertimePay)}
+                              </Text>
+                            </View>
+                            <View className="pay-row">
+                              <Text className="pay-row-label">特勤加班 ×2</Text>
+                              <Text className="pay-row-value">
+                                ¥{formatMoney(salaryCalculation.specialOvertimePay)}
+                              </Text>
+                            </View>
+                            <View className="pay-row">
+                              <Text className="pay-row-label">法定加班 ×3</Text>
+                              <Text className="pay-row-value">
+                                ¥{formatMoney(salaryCalculation.legalOvertimePay)}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View className="pay-block">
+                            <View className="pay-block-head">
+                              <Text className="pay-block-title">扣款项</Text>
+                              <Text className="sum deduction">
+                                小计 ¥{formatMoney(salaryCalculation.deductionTotal)}
+                              </Text>
+                            </View>
+                            <View className="pay-row">
+                              <Text className="pay-row-label">事假扣款</Text>
+                              <Text className="pay-row-value">
+                                ¥{formatMoney(salaryCalculation.leaveDeduction)}
+                              </Text>
+                            </View>
+                            <View className="pay-row pay-input">
+                              <Text className="pay-row-label">其他扣款</Text>
+                              <View className="amount">
+                                <Text className="cur">¥</Text>
+                                <Input
+                                  className="pay-amount-input"
+                                  type="digit"
+                                  value={salaryInputs.otherDeductions}
+                                  placeholder="0"
+                                  onInput={event => setSalaryInputValue('otherDeductions', String(event.detail.value))}
+                                />
+                              </View>
+                            </View>
+                          </View>
+
+                          <View className="pay-net">
+                            <View>
+                              <Text className="k">实付工资</Text>
+                              <Text className="v">¥{formatMoney(salaryCalculation.netSalary)}</Text>
+                            </View>
+                            <View className="side">
+                              <Text>应付</Text>
+                              <Text className="b">¥{formatMoney(salaryCalculation.payableSalary)}</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
                     </View>
-                    <Text className="stats-overview-value">{row.days}</Text>
-                    <Text className={`stats-overview-value ${row.hours > 0 ? 'active' : ''}`}>
-                      {formatOvertimeHours(row.hours)}h
-                    </Text>
+                  </ScrollView>
+                </View>
+              </View>
+
+              <View className="stats-personal-page">
+                <View className="stats-personal-page-inner">
+                  <ScrollView
+                    scrollY
+                    className="stats-scroll"
+                    enableFlex
+                    enhanced
+                    showScrollbar={false}
+                  >
+                    <View className="page-section daily-zone">
+                      <View className="sec-head">
+                        <Text className="sec-title">每日明细</Text>
+                        <Text className="sec-sub">加班按当日倍率计薪</Text>
+                      </View>
+
+                      <View className="daily">
+                        <View className="daily-row is-head">
+                          <Text className="date">日期</Text>
+                          <Text>班次</Text>
+                          <Text className="hrs">加班</Text>
+                          <Text className="pay">金额</Text>
+                        </View>
+                        {stats.dailyRecords.map(record => {
+                          // 与 Web 端一致：用已四舍五入的时薪计算当日加班金额，
+                          // 而不是拿底薪现算时薪（否则会出现分位差异）。
+                          const dailyPay = roundMoney(
+                            salaryCalculation.hourlyWage *
+                              record.overtimeHours *
+                              getDailyOvertimeMultiplier(record)
+                          )
+
+                          return (
+                            <View
+                              key={record.date}
+                              className={`daily-row ${record.shift === '休息' ? 'is-rest' : ''} ${record.overtimeHours > 0 ? 'has-overtime' : ''}`}
+                            >
+                              <Text className="date">{record.date}</Text>
+                              <View className="day-shift">
+                                <ShiftMark shift={record.shift} />
+                                {record.isLegal ? <View className="legal-dot" /> : null}
+                              </View>
+                              <Text className={`hrs ${record.overtimeHours > 0 ? '' : 'placeholder'}`}>
+                                {record.overtimeHours > 0 ? `${formatOvertimeHours(record.overtimeHours)} h` : '—'}
+                              </Text>
+                              <Text className={`pay ${record.overtimeHours > 0 ? getDailyPayClassName(dailyPay) : 'placeholder'}`}>
+                                <Text className="pay-cur">¥</Text>
+                                <Text className="pay-num">{formatMoney(dailyPay)}</Text>
+                              </Text>
+                            </View>
+                          )
+                        })}
+                      </View>
+                    </View>
+                  </ScrollView>
+                </View>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {viewMode === 'team' ? (
+          <ScrollView
+            scrollY
+            className="stats-scroll stats-scroll-team"
+            enableFlex
+            enhanced
+            showScrollbar={false}
+          >
+            <View className="zones">
+              <View className="page-section">
+                <View className="sec-head">
+                  <Text className="sec-title">全员加班分布</Text>
+                  <Text className="sec-sub">{allPeopleStats.people.length} 人 · {monthLabel}结算周期</Text>
+                </View>
+
+                <View className="team-trio">
+                  <View className="trio-cell">
+                    <Text className="k">最高</Text>
+                    <Text className="v">{formatOvertimeHours(allPeopleStats.maxOvertime)} h</Text>
                   </View>
-                ))}
+                  <View className="trio-cell">
+                    <Text className="k">平均</Text>
+                    <Text className="v">{formatOvertimeHours(allPeopleStats.averageOvertime)} h</Text>
+                  </View>
+                  <View className="trio-cell">
+                    <Text className="k">最低</Text>
+                    <Text className="v">{formatOvertimeHours(allPeopleStats.minOvertime)} h</Text>
+                  </View>
+                </View>
               </View>
+
+              <View className="page-section">
+                <View className="sec-head">
+                  <Text className="sec-title">排名</Text>
+                  <Text className="sec-sub">平日 1.5× · 特勤 2× · 法定 3×</Text>
                 </View>
 
-                <View className="stats-card">
-              <View className="stats-section-title-row">
-                <Text className="stats-section-title">加班分布</Text>
-                <Text className="stats-section-hint">按类型统计</Text>
-              </View>
-              <View className="stats-bar-chart">
-                {overtimeChartItems.map(item => {
-                  const barHeight = overtimeChartMax > 0
-                    ? Math.max((item.hours / overtimeChartMax) * 100, item.hours > 0 ? 8 : 0)
-                    : 0
-
-                  return (
-                    <View key={item.type} className="stats-bar-item">
-                      <Text className={`stats-bar-value ${item.hours > 0 ? 'active' : ''}`}>
-                        {formatOvertimeHours(item.hours)}h
-                      </Text>
-                      <View className="stats-bar-track">
-                        <View
-                          className={`stats-bar-fill ${getStatsChartTypeClassName(item.type)}`}
-                          style={{ height: `${barHeight}%` }}
-                        />
+                <View className="rank">
+                  {allPeopleStats.ranking.map(person => (
+                    <View key={person.personName} className={`rank-row ${person.rank <= 3 ? 'top' : ''}`}>
+                      <Text className="no">{String(person.rank).padStart(2, '0')}</Text>
+                      <View className="rank-name">
+                        <Text className="b">{person.personName}</Text>
+                        <Text className="g">{person.group}</Text>
                       </View>
-                      <Text className="stats-bar-label">{item.type}</Text>
-                    </View>
-                  )
-                })}
-              </View>
-                </View>
-
-                <View className="stats-card salary-card">
-              <View className="stats-section-title-row salary-title-row">
-                <Text className="stats-section-title">薪资计算</Text>
-                {salarySaveStatusLabel && (
-                  <Text className={`salary-save-status ${salarySaveStatus}`}>{salarySaveStatusLabel}</Text>
-                )}
-              </View>
-
-              <View className="salary-section">
-                <View className="salary-section-head">
-                  <Text className="salary-block-title">基本项</Text>
-                  <Text className="salary-section-total">小计 ¥{formatMoney(salaryCalculation.basicPayTotal)}</Text>
-                </View>
-                <View className="salary-input-grid">
-                  {[
-                    { label: '底薪', field: 'baseSalary' as const },
-                    { label: '绩效津贴', field: 'performanceAllowance' as const },
-                    { label: '岗位津贴', field: 'positionAllowance' as const }
-                  ].map(item => (
-                    <View key={item.field} className="salary-input-item">
-                      <Text className="salary-input-label">{item.label}</Text>
-                      <View className="salary-input-box">
-                        <Text className="salary-input-prefix">¥</Text>
-                        <Input
-                          className="salary-input"
-                          type="digit"
-                          value={salaryInputs[item.field]}
-                          placeholder="0"
-                          onInput={event => setSalaryInputValue(item.field, String(event.detail.value))}
-                        />
+                      <View className="rank-track">
+                        {person.totalHours > 0 ? (
+                          getOvertimeStackSegments(person, allPeopleChartMax).map(segment => (
+                            <View
+                              key={segment.key}
+                              className={`seg ${segment.className}`}
+                              style={{ width: `${segment.width}%` }}
+                            >
+                              {segment.showLabel ? (
+                                <Text>{formatOvertimeHours(segment.hours)}</Text>
+                              ) : null}
+                            </View>
+                          ))
+                        ) : (
+                          <Text className="muted">无加班</Text>
+                        )}
                       </View>
+                      <Text className="total">{formatOvertimeHours(person.totalHours)} h</Text>
                     </View>
                   ))}
                 </View>
-                <Text className="salary-rate-line">时薪 ¥{formatMoney(salaryCalculation.hourlyWage)}</Text>
-              </View>
-
-              <View className="salary-section">
-                <View className="salary-section-head">
-                  <Text className="salary-block-title">加班工资</Text>
-                  <Text className="salary-section-total">小计 ¥{formatMoney(salaryCalculation.overtimePayTotal)}</Text>
-                </View>
-                <View className="salary-result-grid">
-                  <View className="salary-result-item">
-                    <Text className="salary-result-label">平日加班</Text>
-                    <Text className="salary-result-value">¥{formatMoney(salaryCalculation.weekdayOvertimePay)}</Text>
-                  </View>
-                  <View className="salary-result-item">
-                    <Text className="salary-result-label">周末加班</Text>
-                    <Text className="salary-result-value">¥{formatMoney(salaryCalculation.specialOvertimePay)}</Text>
-                  </View>
-                  <View className="salary-result-item legal">
-                    <Text className="salary-result-label">法定加班</Text>
-                    <Text className="salary-result-value">¥{formatMoney(salaryCalculation.legalOvertimePay)}</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View className="salary-section">
-                <View className="salary-section-head">
-                  <Text className="salary-block-title">扣款项</Text>
-                  <Text className="salary-section-total deduction">小计 ¥{formatMoney(salaryCalculation.deductionTotal)}</Text>
-                </View>
-                <View className="salary-deduction-grid">
-                  <View className="salary-result-item deduction">
-                    <Text className="salary-result-label">事假扣款</Text>
-                    <Text className="salary-result-value">¥{formatMoney(salaryCalculation.leaveDeduction)}</Text>
-                  </View>
-                  <View className="salary-input-item">
-                    <Text className="salary-input-label">其他扣款</Text>
-                    <View className="salary-input-box">
-                      <Text className="salary-input-prefix">¥</Text>
-                      <Input
-                        className="salary-input"
-                        type="digit"
-                        value={salaryInputs.otherDeductions}
-                        placeholder="0"
-                        onInput={event => setSalaryInputValue('otherDeductions', String(event.detail.value))}
-                      />
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              <View className="salary-section salary-summary-section">
-                <View className="salary-section-head">
-                  <Text className="salary-block-title">汇总</Text>
-                </View>
-                <View className="salary-final-grid">
-                  <View className="salary-summary-item">
-                    <Text className="salary-summary-label">应付工资</Text>
-                    <Text className="salary-summary-value">¥{formatMoney(salaryCalculation.payableSalary)}</Text>
-                  </View>
-                  <View className="salary-summary-item primary">
-                    <Text className="salary-summary-label">实付工资</Text>
-                    <Text className="salary-summary-value">¥{formatMoney(salaryCalculation.netSalary)}</Text>
-                  </View>
-                </View>
-              </View>
-                </View>
-              </View>
-            </ScrollView>
-            </View>
-          </View>
-          <View className="stats-personal-page">
-            <View className="stats-personal-page-inner">
-            <ScrollView scrollY className="stats-content stats-personal-scroll" enableFlex enhanced showScrollbar={false}>
-              <View className="stats-content-inner">
-                <View className="stats-card">
-                  <View className="stats-section-title-row">
-                    <Text className="stats-section-title">每日明细</Text>
-                    <Text className="stats-section-hint">{activeScheduleData.startDate.slice(5)} - {activeScheduleData.endDate.slice(5)}</Text>
-                  </View>
-                  <View className="stats-daily-list">
-                    <View className="stats-daily-row stats-daily-header">
-                      <Text>日期</Text>
-                      <Text>班次</Text>
-                      <Text>金额</Text>
-                      <Text>小时</Text>
-                    </View>
-                    {stats.dailyRecords.map(record => {
-                      const dailyOvertimePay = calculateOvertimePay(
-                        salaryInputs,
-                        record.overtimeHours,
-                        getDailyOvertimeMultiplier(record)
-                      )
-
-                      return (
-                        <View key={record.date} className={`stats-daily-row ${record.overtimeHours > 0 ? 'has-overtime' : ''}`}>
-                          <View className="stats-daily-date-wrap">
-                            <Text className="stats-daily-date">{record.date}</Text>
-                          </View>
-                          <View className="stats-daily-shift-cell">
-                            <Text className={`stats-shift ${getStatsShiftClassName(record.shift)} ${record.isLegal ? 'has-legal' : ''}`}>
-                              {record.isLegal && (
-                                <Text className="stats-legal-shift-badge">法</Text>
-                              )}
-                              {record.shift}
-                            </Text>
-                          </View>
-                          <Text className={`stats-daily-pay ${getDailyPayClassName(record)} ${record.overtimeHours > 0 ? '' : 'placeholder'}`}>
-                            {record.overtimeHours > 0 ? `+${formatMoney(dailyOvertimePay)}` : '+0.00'}
-                          </Text>
-                          <Text className={`stats-daily-overtime ${record.overtimeHours > 0 ? 'active' : ''}`}>
-                            {record.overtimeHours > 0 ? `${formatOvertimeHours(record.overtimeHours)}h` : '0h'}
-                          </Text>
-                        </View>
-                      )
-                    })}
-                  </View>
-                </View>
-              </View>
-            </ScrollView>
-            </View>
-          </View>
-          </View>
-        </View>
-      )}
-      {viewMode === 'team' && (
-        <ScrollView scrollY className="stats-content" enableFlex enhanced showScrollbar={false}>
-          <View className="stats-content-inner">
-            <>
-            <View className="stats-card">
-              <View className="stats-section-title-row">
-                <Text className="stats-section-title">全员概览</Text>
-                <Text className="stats-section-hint">共 {allPeopleStats.people.length} 人</Text>
-              </View>
-              <View className="stats-team-overview-grid">
-                <View className="stats-team-overview-item">
-                  <Text className="stats-team-overview-value">{formatOvertimeHours(allPeopleStats.maxOvertime)}h</Text>
-                  <Text className="stats-team-overview-label">最高</Text>
-                </View>
-                <View className="stats-team-overview-item">
-                  <Text className="stats-team-overview-value">{formatOvertimeHours(allPeopleStats.minOvertime)}h</Text>
-                  <Text className="stats-team-overview-label">最低</Text>
-                </View>
-                <View className="stats-team-overview-item">
-                  <Text className="stats-team-overview-value">{formatOvertimeHours(allPeopleStats.averageOvertime)}h</Text>
-                  <Text className="stats-team-overview-label">平均</Text>
-                </View>
               </View>
             </View>
+          </ScrollView>
+        ) : null}
+      </View>
 
-            <View className="stats-card">
-              <View className="stats-section-title-row">
-                <Text className="stats-section-title">加班排名</Text>
-                <Text className="stats-section-hint">平日 / 特勤 / 法定</Text>
-              </View>
-              <View className="stats-team-legend">
-                <Text className="stats-team-legend-item weekday">平日</Text>
-                <Text className="stats-team-legend-item special">特勤</Text>
-                <Text className="stats-team-legend-item legal">法定</Text>
-              </View>
-              <View className="stats-team-chart">
-                {allPeopleStats.ranking.map(person => (
-                  <View key={person.personName} className="stats-team-chart-row">
-                    <Text className={`stats-ranking-rank ${person.rank <= 3 ? 'top' : ''}`}>{person.rank}</Text>
-                    <View className="stats-team-chart-person">
-                      <Text className="stats-team-chart-name">{person.personName}</Text>
-                      <Text className="stats-team-chart-group">{person.group}</Text>
-                    </View>
-                    <View className="stats-team-chart-track">
-                      {getOvertimeStackSegments(person, allPeopleChartMax).map(segment => (
-                        <View
-                          key={segment.key}
-                          className={`stats-team-chart-segment ${segment.className}`}
-                          style={{ width: `${segment.width}%` }}
-                        >
-                          {segment.showLabel && (
-                            <Text className="stats-team-chart-segment-label">
-                              {formatOvertimeHours(segment.hours)}h
-                            </Text>
-                          )}
-                        </View>
-                      ))}
-                    </View>
-                    <Text className="stats-team-chart-total">{formatOvertimeHours(person.totalHours)}h</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-            </>
-          </View>
-        </ScrollView>
-      )}
+      {userPickerOpen ? (
+        <UserPickerSheet
+          people={scheduleData.people}
+          selectedName={currentPerson.name}
+          onSelect={nextName => {
+            setUserPickerOpen(false)
+            const nextIndex = scheduleData.people.findIndex(person => person.name === nextName)
+            if (nextIndex >= 0) setPersonIndex(nextIndex)
+          }}
+          onClose={() => setUserPickerOpen(false)}
+        />
+      ) : null}
     </View>
   )
 }

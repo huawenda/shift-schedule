@@ -1,117 +1,113 @@
-$color-canvas: #eef4fb;
-$color-canvas-soft: #f7f9fc;
-$color-surface: #ffffff;
-$color-surface-muted: #f6f9fd;
-$color-surface-disabled: #f3f6fb;
-$color-border-soft: #eef2f7;
-$color-border-strong: #cdd7e5;
-$color-border-control-disabled: #d8e0ec;
-$color-ink: #172033;
-$color-ink-base: #162033;
-$color-ink-soft: #526071;
-$color-muted: #667085;
-$color-muted-strong: #5b6678;
-$color-primary: #2563eb;
-$color-primary-soft: #eff6ff;
-$color-primary-border: #bfdbfe;
-$color-success: #15803d;
-$color-warning: #f59e0b;
-$color-danger: #ef4444;
-$color-legal-text: #dc2626;
+// 纸面 + 墨牌 设计令牌（与 apps/web/src/styles/tokens.scss 同源）
+//
+// 与 Web 端一致的约束：
+// 1. 小程序不支持 CSS 自定义属性与 `::after` 等伪元素，圆点标记一律用真实 View 节点。
+// 2. 不支持 `display: grid`，排版网格一律用 flex。
+// 3. Taro 会把本文件里的 `px` 自动换算成 rpx（designWidth 375，deviceRatio 2），
+//    即 1 源 px = 2rpx，在 375pt 宽的设备上恰好等于 1 物理 pt，
+//    与 Web 端 ≤720px 断点的呈现完全一致。
 
-$shift-day-bg: #dff3ff;
-$shift-day-text: #02689f;
-$shift-night-bg: #eee9ff;
-$shift-night-text: #5b21b6;
-$shift-rest-bg: #dcfce7;
-$shift-rest-text: #047857;
-$shift-special-day-bg: #fff0c2;
-$shift-special-day-text: #b45309;
-$shift-special-night-bg: #fde7c7;
-$shift-special-night-text: #9a3412;
-$shift-leave-bg: #e5e7eb;
-$shift-leave-text: #475467;
-$shift-legal-bg: #fee2e2;
+// —— 纸面 / 墨色 ——
+$paper: #f4f4f0;
+$surface: #ffffff;
+$ink: #14171a;
+$ink-2: #464c52;
+$ink-3: #62686e;
+$rule: #dcdcd5;
+$rule-strong: #bfc1b8;
 
-$radius-sm: 8px;
-$radius-md: 10px;
-$radius-lg: 14px;
-$radius-xl: 18px;
-$radius-pill: 999px;
+// —— 班次牌面（与 Web 端完全一致的色值）——
+$s-day: #e9a426;
+$s-day-ink: #2a1a02;
+$s-day-x: #92570a;
+$s-night: #2e3a75;
+$s-night-ink: #f3f2ec;
+$s-night-x: #1a2150;
+$s-rest-cell: #c9d7c3;
+$s-rest-cell-ink: #3f5b47;
+$s-rest-bar: #7d9a82;
+$s-leave: #e9e8e2;
+$s-leave-ink: #5c6167;
+$now: #b3392e;
 
-$space-xs: 4px;
-$space-sm: 8px;
-$space-md: 12px;
-$space-lg: 18px;
-$space-xl: 24px;
+// —— 形状 ——
+$r-data: 2px;
+$r-sheet: 12px;
 
-$font-headline: 32px;
-$font-title: 26px;
-$font-body: 20px;
-$font-control: 22px;
-$font-label: 18px;
-$font-micro: 16px;
+// —— 版心 ——
+$page-pad: 14px;
+$name-col: 84px;
+$cell-w: 38px;
+$cell-gap: 3px;
 
-$shadow-mobile-shell: 0 22px 58px rgba(15, 23, 42, 0.16);
-$shadow-raised-control: 0 4px 12px rgba(25, 39, 70, 0.08);
-$shadow-resting-card: 0 1px 2px rgba(15, 23, 42, 0.04);
-$shadow-sticky-column: 8px 0 16px rgba(25, 39, 70, 0.08);
+// —— 遮罩与阴影 ——
+$veil: rgba(20, 23, 26, 0.42);
+$shadow-sheet: 0 24px 60px rgba(20, 23, 26, 0.18);
 
-@mixin page-shell {
+// —— 过渡时长 ——
+$fast: 140ms;
+$base: 220ms;
+$slow: 320ms;
+
+// —— 通用 mixin ——
+
+/// 纸面卡片：白底 + 细墨线边框。
+@mixin card-surface {
+  background: $surface;
+  border: 1px solid $rule;
+  border-radius: $r-sheet;
+}
+
+/// 墨色实心按钮。
+@mixin button-ink {
   display: flex;
-  flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  padding: 0 $space-lg;
-  box-sizing: border-box;
-  overflow: hidden;
-  background: linear-gradient(180deg, $color-canvas 0%, $color-canvas-soft 260px, $color-canvas-soft 100%);
-}
-
-@mixin card-surface($padding: null) {
-  border: 1px solid $color-border-soft;
-  border-radius: $radius-lg;
-  box-sizing: border-box;
-  background: $color-surface;
-
-  @if $padding != null {
-    padding: $padding;
-  }
-}
-
-@mixin pill-control($border-color: $color-border-strong, $bg: $color-surface, $text: $color-primary) {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 88px;
-  height: 48px;
-  padding: 0 $space-lg;
-  border: 1px solid $border-color;
-  border-radius: $radius-pill;
-  box-sizing: border-box;
-  background: $bg;
-  color: $text;
-  font-size: $font-control;
-  font-weight: 800;
-  line-height: 1;
+  background: $ink;
+  color: $paper;
+  border-radius: $r-data;
+  font-weight: 700;
 }
 
-@mixin semantic-chip($bg, $text) {
-  background: $bg;
-  color: $text;
+/// 描边按钮。
+@mixin button-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: $ink-2;
+  border: 1px solid $rule-strong;
+  border-radius: $r-data;
+  font-weight: 700;
 }
 
-@mixin spinner($size, $stroke, $track: $color-border-strong, $active: $color-primary) {
+/// 小圆点（加班 / 法定 / 在线状态标记），因为小程序没有伪元素。
+@mixin dot($size, $color) {
   width: $size;
   height: $size;
-  border: $stroke solid $track;
-  border-top-color: $active;
-  border-radius: $radius-pill;
-  box-sizing: border-box;
+  border-radius: 50%;
+  background: $color;
+  flex-shrink: 0;
 }
 
-@mixin field-surface {
-  border-radius: $radius-md;
-  box-sizing: border-box;
-  background: $color-surface-muted;
+/// 方块色票（对应 Web 端 tokens.scss 的 .swatch）。
+/// 只负责尺寸/圆角/描边 —— 背景一律交给搭配的 `.s-*` 班次类提供，
+/// 与 Web 端一致（Web 的 .swatch 同样不声明 background）。
+/// 若确实需要自带底色，显式传 $color。
+@mixin swatch($size: 9px, $color: null) {
+  width: $size;
+  height: $size;
+  border-radius: 1px;
+  @if $color {
+    background: $color;
+  }
+  box-shadow: inset 0 0 0 1px rgba(20, 23, 26, 0.16);
+  flex-shrink: 0;
+}
+
+/// 单行截断。
+@mixin ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

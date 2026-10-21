@@ -27,8 +27,13 @@ loadLocalEnv()
 export default defineConfig({
   projectName: 'shift-schedule-miniapp',
   date: '2026-05-23',
-  designWidth: 750,
+  // 设计稿宽 375：源文件的 px 与 Web 端 CSS px 1:1，
+  // pxtransform 会把 1px 编译成 2rpx（375 设计宽 × deviceRatio 2），
+  // 在 375pt 宽的设备上 750rpx = 屏宽，于是 1 源 px = 1 物理 pt，
+  // 渲染尺寸与 Web 端 ≤720px 断点完全一致。
+  designWidth: 375,
   deviceRatio: {
+    375: 2,
     640: 2.34 / 2,
     750: 1,
     828: 1.81 / 2
