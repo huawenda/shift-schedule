@@ -32,6 +32,12 @@ export default function StatsPage() {
   const monthIndex = monthOptions.findIndex(option => option.value === data.activeMonth)
   const monthLabel = monthOptions[monthIndex]?.label ?? ''
 
+  function switchMonth(step: number) {
+    const next = monthOptions[monthIndex + step]
+    if (!next) return
+    data.setActiveMonth(next.value)
+  }
+
   const stats = useMemo(() => {
     if (!data.currentUser) return null
     return getPersonMonthlyStats(
@@ -77,7 +83,25 @@ export default function StatsPage() {
       <View className="status-cover" style={{ height: safeTop }} />
       <View className="stats-top" style={{ paddingTop: safeTop }}>
         <View>
-          <Text className="stats-month">{monthLabel}</Text>
+          <View className="stats-month-group">
+            <View
+              className={`step-arrow ${monthIndex <= 0 ? 'is-off' : ''}`}
+              hoverClass={monthIndex <= 0 ? 'none' : 'press-dim'}
+              onClick={() => switchMonth(-1)}
+            >
+              <Text>‹</Text>
+            </View>
+            <View className="step-label">
+              <Text>{monthLabel}</Text>
+            </View>
+            <View
+              className={`step-arrow ${monthIndex >= monthOptions.length - 1 ? 'is-off' : ''}`}
+              hoverClass={monthIndex >= monthOptions.length - 1 ? 'none' : 'press-dim'}
+              onClick={() => switchMonth(1)}
+            >
+              <Text>›</Text>
+            </View>
+          </View>
           <Text className="stats-sub">{data.currentUser?.name ?? ''} · {data.currentUser?.group ?? ''}</Text>
         </View>
         <View className="stats-total">

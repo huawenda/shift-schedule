@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Text, View, type CommonEvent, type ITouchEvent } from '@tarojs/components'
+import { ScrollView, Text, View, type CommonEvent, type ITouchEvent } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { getMarkClass, monthOptions, shiftInitial, shiftLabels, weekdayLabels, type ScheduleMonth } from '../../appConstants'
 import ShiftEditor from '../../components/ShiftEditor'
+import SyncPill from '../../components/SyncPill'
 import TeamMatrix, { type MatrixMode } from '../../components/TeamMatrix'
 import { useScheduleData, type ShiftDraft } from '../../hooks/useScheduleData'
 import { getSafeTop } from '../../utils/safeArea'
@@ -23,7 +24,16 @@ export default function CalendarPage() {
   const [safeTop] = useState(() => getSafeTop())
   const [draft, setDraft] = useState<ShiftDraft | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [bindOpen, setBindOpen] = useState(false)
   const [matrixMode, setMatrixMode] = useState<MatrixMode>('shift')
+
+  // 未绑定用户首次进页自动弹一次绑定层，关掉后就只留顶栏描边提示，不再打扰。
+  const bindPromptShown = useRef(false)
+  useEffect(() => {
+    if (!data.needsBinding || bindPromptShown.current) return
+    bindPromptShown.current = true
+    setBindOpen(true)
+  }, [data.needsBinding])
 
   const dateLabels = useMemo(
     () => getDateLabels(data.monthView.startDate, data.monthView.dates),
@@ -44,10 +54,10 @@ export default function CalendarPage() {
   // 弹层打开时收起底部导航 —— custom-tab-bar 在独立组件层，
   // 页面内的 fixed + z-index 盖不住它，不收起会把弹层底部按钮压住。
   useEffect(() => {
-    const opened = Boolean(draft) || pickerOpen
+    const opened = Boolean(draft) || pickerOpen || bindOpen
     Taro.eventCenter.trigger('tabbar-hide', opened)
     return () => { Taro.eventCenter.trigger('tabbar-hide', false) }
-  }, [draft, pickerOpen])
+  }, [draft, pickerOpen, bindOpen])
 
   const monthIndex = monthOptions.findIndex(option => option.value === data.activeMonth)
   const monthLabel = monthOptions[monthIndex]?.label ?? ''
@@ -92,6 +102,17 @@ export default function CalendarPage() {
     if (next) setDraft(next)
   }
 
+  async function handleBind(personName: string) {
+    try {
+      await data.bindProfile(personName)
+      setBindOpen(false)
+      Taro.showToast({ title: '绑定成功', icon: 'none' })
+    } catch (error) {
+      console.warn('绑定失败', error)
+      Taro.showToast({ title: '绑定失败，请稍后重试', icon: 'none' })
+    }
+  }
+
   const todayIndex = data.monthView.dates.indexOf(data.todayKey)
   const sameDayGroups = shiftLabels
     .map(shift => ({
@@ -110,35 +131,47 @@ export default function CalendarPage() {
       <View className="cal-top" style={{ paddingTop: safeTop }}>
         <View className="cal-month">
           <View
-            className={`cal-arrow ${monthIndex <= 0 ? 'is-off' : ''}`}
+            className={`step-arrow ${monthIndex <= 0 ? 'is-off' : ''}`}
             hoverClass={monthIndex <= 0 ? 'none' : 'press-dim'}
             onClick={() => switchMonth(-1)}
           >
             <Text>‹</Text>
           </View>
           <View
-            className="cal-month-text"
+            className="step-label"
             hoverClass={isCurrentMonth ? 'none' : 'press-dim'}
             onClick={() => data.setActiveMonth(currentMonth)}
           >
             <Text>{monthLabel}</Text>
-            {isCurrentMonth ? null : <View className="cal-month-dot" />}
+            {isCurrentMonth ? null : <View className="step-dot" />}
           </View>
           <View
-            className={`cal-arrow ${monthIndex >= monthOptions.length - 1 ? 'is-off' : ''}`}
+            className={`step-arrow ${monthIndex >= monthOptions.length - 1 ? 'is-off' : ''}`}
             hoverClass={monthIndex >= monthOptions.length - 1 ? 'none' : 'press-dim'}
             onClick={() => switchMonth(1)}
           >
             <Text>›</Text>
           </View>
         </View>
+        {data.profileReady && !data.needsBinding ? (
+          <SyncPill
+            syncing={data.refreshing || !data.cloudSyncReady}
+            blocked={data.cloudSyncBlocked}
+            onRetry={() => { void data.refresh() }}
+          />
+        ) : null}
         <View
-          className="cal-user"
-          hoverClass={data.isAdmin ? 'press-dim' : 'none'}
-          onClick={() => data.isAdmin && setPickerOpen(true)}
+          className={`cal-user ${data.needsBinding ? 'is-bind' : ''}`}
+          hoverClass={data.isAdmin || data.needsBinding ? 'press-dim' : 'none'}
+          onClick={() => {
+            if (data.isAdmin) setPickerOpen(true)
+            else if (data.needsBinding) setBindOpen(true)
+          }}
         >
-          <Text className="cal-user-name">{data.currentUser?.name ?? ''}</Text>
-          <Text className="cal-user-group">{data.currentUser?.group ?? ''}</Text>
+          <Text className="cal-user-name">{data.needsBinding ? '未绑定' : data.currentUser?.name ?? ''}</Text>
+          <Text className="cal-user-group">
+            {data.needsBinding ? '点此选择姓名' : data.currentUser?.group ?? ''}
+          </Text>
         </View>
       </View>
 
@@ -249,7 +282,7 @@ export default function CalendarPage() {
               <Text className="dlg-title">切换人员</Text>
               <Text className="dlg-sub">管理员可查看任何人的排班</Text>
             </View>
-            <View className="dlg-body">
+            <ScrollView scrollY enhanced showScrollbar={false} className="dlg-body">
               {data.monthView.people.map(person => (
                 <View
                   key={person.name}
@@ -264,10 +297,39 @@ export default function CalendarPage() {
                   <Text className="pick-group">{person.group}</Text>
                 </View>
               ))}
-            </View>
+            </ScrollView>
             <View className="dlg-actions">
               <View className="btn-ghost" hoverClass="press-dim" onClick={() => setPickerOpen(false)}>
                 关闭
+              </View>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {bindOpen ? (
+        <View className="dlg-mask" onClick={() => setBindOpen(false)}>
+          <View className="dlg" onClick={event => event.stopPropagation()}>
+            <View className="dlg-head">
+              <Text className="dlg-title">绑定我的姓名</Text>
+              <Text className="dlg-sub">选择你在排班表中的名字，之后只能查看和修改本人的记录</Text>
+            </View>
+            <ScrollView scrollY enhanced showScrollbar={false} className="dlg-body">
+              {data.monthView.people.map(person => (
+                <View
+                  key={person.name}
+                  className="pick-row"
+                  hoverClass="press-surface"
+                  onClick={() => { void handleBind(person.name) }}
+                >
+                  <Text className="pick-name">{person.name}</Text>
+                  <Text className="pick-group">{person.group}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <View className="dlg-actions">
+              <View className="btn-ghost" hoverClass="press-dim" onClick={() => setBindOpen(false)}>
+                暂不绑定
               </View>
             </View>
           </View>

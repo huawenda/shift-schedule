@@ -283,6 +283,86 @@ text {
   color: t.$ink-3;
 }
 
+// —— 月份步进器（月历页 / 统计页共用）——
+.step-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: t.$r-chip;
+  background: t.$card;
+  font-size: 18px;
+  line-height: 36px;
+  color: t.$ink-2;
+  box-shadow: t.$shadow-card;
+}
+
+.step-arrow.is-off {
+  color: t.$ink-3;
+  opacity: 0.45;
+}
+
+.step-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  margin: 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 26px;
+  color: t.$ink;
+}
+
+// 非当月时月份文字旁的「回本月」暗示点
+.step-dot {
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: t.$brand;
+}
+
+// —— 云同步状态胶囊 ——
+.sync-pill {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: t.$r-pill;
+  background: t.$card;
+  box-shadow: t.$shadow-card;
+  font-size: 11px;
+  color: t.$ink-2;
+}
+
+.sync-pill-dot {
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: t.$ink-3;
+}
+
+.sync-pill.is-ok .sync-pill-dot {
+  background: t.$s-rest;
+}
+
+.sync-pill.is-err {
+  color: t.$danger;
+}
+
+.sync-pill.is-err .sync-pill-dot {
+  background: t.$danger;
+}
+
+.sync-pill-act {
+  margin-left: 6px;
+  font-weight: 600;
+}
+
 // 按压态（微信 hover-class）：只改透明度和缩放，不动尺寸
 .press-dim {
   opacity: 0.55;

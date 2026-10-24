@@ -13,45 +13,7 @@
   align-items: center;
 }
 
-.cal-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: t.$r-chip;
-  background: t.$card;
-  font-size: 18px;
-  line-height: 36px;
-  color: t.$ink-2;
-  box-shadow: t.$shadow-card;
-}
-
-.cal-arrow.is-off {
-  color: t.$ink-3;
-  opacity: 0.45;
-}
-
-.cal-month-text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 58px;
-  margin: 0 6px;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 26px;
-  color: t.$ink;
-}
-
-// 非当月时月份文字旁的「回本月」暗示点
-.cal-month-dot {
-  width: 6px;
-  height: 6px;
-  margin-left: 4px;
-  border-radius: 50%;
-  background: t.$brand;
-}
+// ‹ › 与月份文字用全局 .step-arrow / .step-label（统计页共用）
 
 .cal-user {
   padding: 4px 10px;
@@ -59,6 +21,11 @@
   text-align: right;
   background: t.$card;
   box-shadow: t.$shadow-card;
+}
+
+// 未绑定用户：品牌描边提示「这里可以绑定」
+.cal-user.is-bind {
+  box-shadow: inset 0 0 0 1.5px t.$brand, t.$shadow-card;
 }
 
 .cal-user-name {

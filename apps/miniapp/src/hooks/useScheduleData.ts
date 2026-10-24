@@ -370,6 +370,7 @@ export function useScheduleData() {
     bindProfile,
     // 同步
     refreshing,
+    cloudSyncReady,
     cloudSyncBlocked,
     refresh,
     // 编辑
