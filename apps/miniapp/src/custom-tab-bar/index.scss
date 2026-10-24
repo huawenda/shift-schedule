@@ -1,5 +1,8 @@
 @use '../styles/tokens' as t;
 
+// 笔槽：白板底部的白底 + 2px 墨线，图标用 2px 白板笔线宽。
+// 选中 = 盖章：文字装进墨底白字小标签，图标填墨。
+
 .tabbar {
   position: fixed;
   left: 0;
@@ -9,8 +12,8 @@
   display: flex;
   min-height: 56px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: t.$card;
-  box-shadow: 0 -1px 0 t.$line, 0 -6px 20px rgba(15, 23, 42, 0.05);
+  background: t.$paper;
+  border-top: t.$rule-ink;
 }
 
 .tabbar-item {
@@ -20,11 +23,11 @@
   align-items: center;
   justify-content: center;
   padding: 8px 0 6px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
 .tabbar-item.is-on {
-  color: t.$brand;
+  color: t.$ink;
 }
 
 .tabbar-press {
@@ -34,11 +37,20 @@
 .tabbar-text {
   margin-top: 4px;
   font-size: 10px;
-  line-height: 12px;
+  line-height: 14px;
   letter-spacing: 0.02em;
+  color: t.$pencil;
 }
 
-// —— 图标（纯 View 绘制，跟随 currentColor）——
+// 盖章：选中的文字进墨底白字小标签
+.tabbar-item.is-on .tabbar-text {
+  padding: 1px 7px;
+  background: t.$ink;
+  border-radius: 2px;
+  color: #ffffff;
+}
+
+// —— 图标（纯 View 绘制，跟随 currentColor，2px 白板笔线宽）——
 
 .ico {
   position: relative;
@@ -47,7 +59,7 @@
 }
 
 .ico-today {
-  border: 1.5px solid currentColor;
+  border: 2px solid currentColor;
   border-radius: 50%;
 }
 
@@ -68,8 +80,8 @@
 }
 
 .ico-cal {
-  border: 1.5px solid currentColor;
-  border-radius: 5px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
 }
 
 .ico-cal-bar {
@@ -91,17 +103,17 @@
 }
 
 .ico-cal-dot.d1 {
-  top: 10px;
+  top: 11px;
   left: 3px;
 }
 
 .ico-cal-dot.d2 {
-  top: 10px;
+  top: 11px;
   left: 9px;
 }
 
 .ico-cal-dot.d3 {
-  top: 10px;
+  top: 11px;
   left: 15px;
 }
 
@@ -114,7 +126,7 @@
 
 .ico-bar {
   width: 5px;
-  border-radius: 1.5px;
+  border-radius: 1px;
   background: currentColor;
 }
 

@@ -1,5 +1,5 @@
 import { Input, ScrollView, Text, View } from '@tarojs/components'
-import { leaveDurationOptions } from '../appConstants'
+import { getMarkClass, leaveDurationOptions } from '../appConstants'
 import type { LeaveDuration, ShiftType } from '../types/schedule'
 import { canMarkLegalShift } from '../utils/legalOvertime'
 import { normalizeOvertimeHours } from '../utils/schedule'
@@ -62,7 +62,7 @@ export default function ShiftEditor({ draft, onChange, onCancel, onSave }: Props
             {shiftOptions.map(shift => (
               <View
                 key={shift}
-                className={`chip ${draft.selectedShift === shift ? 'is-on' : ''}`}
+                className={`chip ${getMarkClass(shift)} ${draft.selectedShift === shift ? 'is-on' : ''}`}
                 hoverClass="press-surface"
                 onClick={() => selectShift(shift)}
               >
