@@ -1,88 +1,66 @@
 // ============================================================
-// 倒班表 · 小程序设计系统（v2，2026-10-23 重写）
+// 倒班表 · 值班白板设计系统（v3，2026-10-24）
 // ============================================================
-// 与旧版无任何继承关系。旧版是「暖灰纸面 + 墨黑大块 + 2px 直角 + 细线分隔」，
-// 新版是「冷白底 + 白色圆角卡片 + 柔和投影 + 品牌蓝」。
+// 方案见 docs/miniapp-board-redesign.md。
+// 一句话：整页一块日光灯下的排班白板——信息本身就是设计。
+// 无卡片、无柔投影、无品牌色；结构靠粗细墨线，状态靠六色磁贴，
+// 选中靠盖章（墨底白字），数字用等宽表格字对齐。
 //
-// 配色逻辑：
-//   页面底色冷灰，内容全部浮在白卡上，靠投影与圆角区分层级，
-//   不再用 1px 细线切割版面（手机上细线太碎，看起来像表格而非 App）。
-//   班次色只作为「标签 / 色条 / 圆点」出现，不做整格大面积填色。
+// 与 v2（冷灰底 + 白卡 + 品牌蓝）无继承关系，班次色语义保持一致。
 
-// —— 底色与层次 ——
-$bg: #eef1f6;          // 页面底（冷灰）
-$card: #ffffff;        // 卡片
-$card-2: #f6f8fb;      // 卡内次级面（输入框、空态）
-$line: #e6ebf2;        // 极细分隔
+// —— 板面 ——
+$board: #F7F8F6;        // 日光灯白：整页唯一底色，无卡片分层
+$grid: #DDE0DB;         // 次级格线（1px 浅线）
+$ink: #17181A;          // 马克笔墨：结构线、主文字、印章、主按钮
+$pencil: #535855;       // 铅笔注：次级文字（板面上 ≥4.5:1）
+$paper: #FFFFFF;        // 提亮面：弹层、输入框、磁贴留白位
+$red: #C2372B;          // 信号红：法定加班、失败、扣款。全应用唯一警示色
 
-// —— 文字 ——
-$ink: #0f172a;         // 标题 / 数字
-$ink-2: #475569;       // 正文
-// 辅助 / 占位。不能浅于这档：11-12px 信息小字需要白卡 ≥4.5:1（页面底更深），
-// #94a3b8 实测白卡仅 2.6:1，是审计 Round 3 P2-3 的根因。
-$ink-3: #556070;
-$ink-inv: #ffffff;     // 深底上的文字
+// —— 班次磁贴（色块上直接承载文字；语义与 v2/web 一致）——
+$tile-day: #E8A21A;     // 白班 · 黄，配墨字（安全标识语言）
+$tile-night: #3D4E85;   // 夜班 · 靛，配白字
+$tile-rest: #2F7D4F;    // 休息 · 绿，配白字
+$tile-dayx: #A05A12;    // 白特 · 棕，配白字
+$tile-nightx: #2D3A6E;  // 夜特 · 深靛，配白字
+$tile-leave: #5F6B76;   // 事假 · 石板灰，配白字
 
-// —— 品牌 ——
-$brand: #2563eb;
-$brand-2: #dbeafe;     // 品牌浅底
-$danger: #dc2626;
-
-// —— 班次语义色（只做标签/色条/圆点）——
-$s-day: #f59e0b;       // 白班
-$s-night: #4338ca;     // 夜班
-$s-rest: #10b981;      // 休息
-$s-dayx: #b45309;      // 白特
-$s-nightx: #312e81;    // 夜特
-$s-leave: #64748b;     // 事假
-
-// 班次浅底（用于小徽章背景）
-$s-day-soft: #fef3c7;
-$s-night-soft: #e0e7ff;
-$s-rest-soft: #d1fae5;
-$s-dayx-soft: #fde68a;
-$s-nightx-soft: #c7d2fe;
-$s-leave-soft: #e2e8f0;
-
-// 加班标记色（矩阵右上角小点 / 图例）。Web 端是纸白点，小程序底色浅，
-// 用琥珀；白底 3.2:1，满足非文字元素 3:1。法定加班仍用 $danger 红。
-$s-ot: #d97706;
-
-// —— 形状 ——
-$r-card: 18px;
-$r-chip: 10px;
-$r-pill: 999px;
-$r-bar: 4px;
-
-// —— 投影（只有两档，多了会脏）——
-$shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
-$shadow-float: 0 8px 32px rgba(15, 23, 42, 0.16);
+// —— 线与形 ——
+// 结构线三档：2px 墨线（板框/表头/区块）、1px 浅线（格）、2.5px 墨框（圈今天）
+$rule-ink: 2px solid $ink;
+$rule-grid: 1px solid $grid;
+$rule-today: 2.5px solid $ink;
+$r-tile: 3px;                 // 磁贴微圆角：全应用唯一的圆角
+$shadow-stamp: 3px 3px 0 $ink; // 硬投影：只给弹层与主按钮（印章压感），无柔影
 
 // —— 版心 ——
-$pad: 16px;
+$pad: 20px;
+
+// —— 字 ——
+// 家族：系统栈，不引入中文 webfont（包体红线）。
+// 数字对齐靠 tabular-nums；显示级大数字可选内嵌 Oswald 数字子集
+// （增强项，wx.loadFontFace 失败静默回退，不是依赖）。
+$font-num: 'Bahnschrift', 'DIN Alternate', -apple-system, 'PingFang SC', sans-serif;
 
 // —— 动效 ——
-$fast: 160ms;
-$base: 240ms;
+$fast: 90ms;   // 落版/按压
+$base: 160ms;
 
 // —— 常用 mixin ——
 
-/// 白卡：圆角 + 极轻投影。整页唯一的容器样式。
-@mixin card {
-  background: $card;
-  border-radius: $r-card;
-  box-shadow: $shadow-card;
+/// 磁贴：班次色块上直接放字（t-* 类的基础）。
+@mixin tile($bg, $fg) {
+  background: $bg;
+  color: $fg;
 }
 
-/// 按压反馈（微信 hover-class 用）：只改缩放与透明度，不改尺寸。
-@mixin press($scale: 0.97, $opacity: 1) {
-  transform: scale($scale);
-  opacity: $opacity;
+/// 按压反馈（微信 hover-class 用）：磁贴按进板面。
+/// 规矩（Round 2 审计 §9）：只改 transform/opacity，不动尺寸边距。
+@mixin press($dy: 1px) {
+  transform: translateY($dy);
 }
 
-/// 单行截断。
-@mixin ellipsis {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+/// 等宽表格数字：矩阵、账本、倒计时统一用。
+@mixin tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
 }

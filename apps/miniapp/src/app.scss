@@ -1,7 +1,13 @@
 @use './styles/tokens' as t;
 
+// ============================================================
+// 值班白板 · 全局层（v3）
+// 页面无卡片容器：区块靠 $rule-ink 墨线分隔，表格内靠 $rule-grid 浅线。
+// 本文件只放跨页复用的东西；页面专属样式在各自 index.scss。
+// ============================================================
+
 page {
-  background: t.$bg;
+  background: t.$board;
   color: t.$ink;
   font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
   font-size: 15px;
@@ -14,7 +20,7 @@ text {
   box-sizing: border-box;
 }
 
-// 页面容器：所有页面共用。底部留出 tabBar 高度 + 安全区。
+// 页面容器：底部留出 tabBar 高度 + 安全区。
 .screen {
   min-height: 100vh;
   padding: 0 t.$pad;
@@ -22,26 +28,32 @@ text {
 }
 
 .screen-with-tabbar {
-  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
 }
 
-// 通用区块标题
-.block-title {
+// —— 区块：白板上的一个「栏」，顶上一条 2px 墨线 ——
+.sect {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: t.$rule-ink;
+}
+
+.sect-title {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 24px 0 10px;
+  margin-bottom: 10px;
 }
 
-.block-title-text {
-  font-size: 16px;
-  font-weight: 600;
+.sect-title-text {
+  font-size: 15px;
+  font-weight: 800;
   color: t.$ink;
 }
 
-.block-title-sub {
+.sect-title-sub {
   font-size: 12px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
 // 空态
@@ -49,68 +61,36 @@ text {
   padding: 28px 0;
   text-align: center;
   font-size: 13px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
-// 班次语义色：新版只允许出现在「色点 / 色条 / 小徽章」上，
-// 不再像旧版那样整格填满（30 个彩色方块连成一片，反而看不出排班）。
-.s-day {
-  background: t.$s-day;
+// —— 班次磁贴（t-*）：色块上直接放字。
+// 白班黄贴配墨字，其余配白字；色彩是数据不是装饰。
+.t-day    { @include t.tile(t.$tile-day, t.$ink); }
+.t-night  { @include t.tile(t.$tile-night, #ffffff); }
+.t-rest   { @include t.tile(t.$tile-rest, #ffffff); }
+.t-dayx   { @include t.tile(t.$tile-dayx, #ffffff); }
+.t-nightx { @include t.tile(t.$tile-nightx, #ffffff); }
+.t-leave  { @include t.tile(t.$tile-leave, #ffffff); }
+
+// 落版：全应用唯一的编排动效（今日页班次名进场一次即止）。
+.stamp-in {
+  animation: stamp-in t.$fast ease-out;
 }
 
-.s-night {
-  background: t.$s-night;
-}
-
-.s-rest {
-  background: t.$s-rest;
-}
-
-.s-dayx {
-  background: t.$s-dayx;
-}
-
-.s-nightx {
-  background: t.$s-nightx;
-}
-
-.s-leave {
-  background: t.$s-leave;
-}
-
-// 浅底色版（用于日历格内的小标记）
-.m-day {
-  background: t.$s-day-soft;
-  color: t.$s-dayx;
-}
-
-.m-night {
-  background: t.$s-night-soft;
-  color: t.$s-night;
-}
-
-.m-rest {
-  background: t.$s-rest-soft;
-  color: #047857;
-}
-
-.m-dayx {
-  background: t.$s-dayx-soft;
-  color: t.$s-dayx;
-}
-
-.m-nightx {
-  background: t.$s-nightx-soft;
-  color: t.$s-nightx;
-}
-
-.m-leave {
-  background: t.$s-leave-soft;
-  color: t.$s-leave;
+@keyframes stamp-in {
+  from {
+    transform: translateY(4px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 // ————————————————————————————————————————————————
-// 弹层与通用控件（改班层、人员选择层共用）
+// 弹层：抽出的记录板（全宽、直角、墨色把手条、硬投影）
 // ————————————————————————————————————————————————
 
 .dlg-mask {
@@ -122,27 +102,39 @@ text {
   z-index: 100;
   display: flex;
   align-items: flex-end;
-  background: rgba(15, 23, 42, 0.42);
+  background: rgba(23, 24, 26, 0.42);
 }
 
 .dlg {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
   max-height: 82vh;
-  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
-  background: t.$card;
-  border-radius: 24px 24px 0 0;
+  padding: 42px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: t.$paper;
+  box-shadow: t.$shadow-stamp;
+}
+
+// 墨色把手条：抽板暗示，纯装饰位直接用伪元素，所有弹层免费获得。
+.dlg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: t.$ink;
 }
 
 .dlg-head {
-  padding-bottom: 14px;
-  border-bottom: 1px solid t.$line;
+  padding-bottom: 12px;
+  border-bottom: t.$rule-grid;
 }
 
 .dlg-title {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 800;
   line-height: 24px;
   color: t.$ink;
 }
@@ -152,7 +144,7 @@ text {
   margin-top: 2px;
   font-size: 12px;
   line-height: 16px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
 .dlg-body {
@@ -166,22 +158,23 @@ text {
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
-  letter-spacing: 0.04em;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
 .dlg-hint {
   display: block;
   margin-top: 16px;
   font-size: 12px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
 .dlg-actions {
   display: flex;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
+// —— 选项磁贴：中性选项白底墨框，选中盖章；班次选项自带磁贴色，
+//    选中加 2.5px 墨框（色彩保留，靠框表达选中）。 ——
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -193,20 +186,40 @@ text {
   justify-content: center;
   margin: 0 8px 8px 0;
   padding: 10px 14px;
-  border-radius: t.$r-pill;
-  background: t.$card-2;
+  border: 1.5px solid t.$ink;
+  border-radius: t.$r-tile;
+  background: t.$paper;
   font-size: 13px;
   font-weight: 500;
   line-height: 18px;
-  color: t.$ink-2;
+  color: t.$ink;
   white-space: nowrap;
 }
 
 .chip.is-on {
-  background: t.$brand;
+  background: t.$ink;
+  border-color: t.$ink;
   color: #ffffff;
 }
 
+// t-* 定义在 .chip.is-on 之后：磁贴色盖过墨底，选中只加墨框。
+.chip.t-day    { @include t.tile(t.$tile-day, t.$ink); }
+.chip.t-night  { @include t.tile(t.$tile-night, #ffffff); }
+.chip.t-rest   { @include t.tile(t.$tile-rest, #ffffff); }
+.chip.t-dayx   { @include t.tile(t.$tile-dayx, #ffffff); }
+.chip.t-nightx { @include t.tile(t.$tile-nightx, #ffffff); }
+.chip.t-leave  { @include t.tile(t.$tile-leave, #ffffff); }
+
+.chip.t-day.is-on,
+.chip.t-night.is-on,
+.chip.t-rest.is-on,
+.chip.t-dayx.is-on,
+.chip.t-nightx.is-on,
+.chip.t-leave.is-on {
+  border: 2.5px solid t.$ink;
+}
+
+// —— 加班时长输入 ——
 .hours {
   display: flex;
   align-items: center;
@@ -219,15 +232,17 @@ text {
   width: 96px;
   height: 40px;
   padding: 0 12px;
-  border-radius: t.$r-chip;
-  background: t.$card-2;
+  border: 1.5px solid t.$ink;
+  border-radius: t.$r-tile;
+  background: t.$paper;
 }
 
 .hours-input {
   flex: 1;
   height: 40px;
+  @include t.tnum;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: right;
   color: t.$ink;
 }
@@ -235,9 +250,10 @@ text {
 .hours-unit {
   margin-left: 8px;
   font-size: 12px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
+// —— 按钮：主 = 墨底白字方块 + 硬投影（印章）；次 = 白底墨框 ——
 .btn-ghost,
 .btn-primary {
   flex: 1;
@@ -245,20 +261,22 @@ text {
   align-items: center;
   justify-content: center;
   height: 46px;
-  border-radius: t.$r-pill;
+  border-radius: t.$r-tile;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .btn-ghost {
   margin-right: 10px;
-  background: t.$card-2;
-  color: t.$ink-2;
+  border: 1.5px solid t.$ink;
+  background: t.$paper;
+  color: t.$ink;
 }
 
 .btn-primary {
-  background: t.$brand;
+  background: t.$ink;
   color: #ffffff;
+  box-shadow: t.$shadow-stamp;
 }
 
 .pick-row {
@@ -266,11 +284,19 @@ text {
   align-items: center;
   justify-content: space-between;
   padding: 13px 12px;
-  border-radius: t.$r-chip;
+  border-radius: t.$r-tile;
 }
 
 .pick-row.is-on {
-  background: t.$brand-2;
+  background: t.$ink;
+
+  .pick-name {
+    color: #ffffff;
+  }
+
+  .pick-group {
+    color: rgba(255, 255, 255, 0.72);
+  }
 }
 
 .pick-name {
@@ -280,7 +306,7 @@ text {
 
 .pick-group {
   font-size: 12px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
 // —— 月份步进器（月历页 / 统计页共用）——
@@ -290,17 +316,17 @@ text {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: t.$r-chip;
-  background: t.$card;
+  border: 1.5px solid t.$ink;
+  border-radius: t.$r-tile;
+  background: t.$paper;
   font-size: 18px;
   line-height: 36px;
-  color: t.$ink-2;
-  box-shadow: t.$shadow-card;
+  color: t.$ink;
 }
 
 .step-arrow.is-off {
-  color: t.$ink-3;
-  opacity: 0.45;
+  color: t.$pencil;
+  opacity: 0.4;
 }
 
 .step-label {
@@ -309,9 +335,9 @@ text {
   justify-content: center;
   min-width: 58px;
   margin: 0 6px;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 26px;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 28px;
   color: t.$ink;
 }
 
@@ -321,21 +347,21 @@ text {
   height: 6px;
   margin-left: 4px;
   border-radius: 50%;
-  background: t.$brand;
+  background: t.$red;
 }
 
-// —— 云同步状态胶囊 ——
+// —— 云同步状态：白底墨框小签 ——
 .sync-pill {
   display: flex;
   align-items: center;
   flex-shrink: 0;
   height: 28px;
   padding: 0 10px;
-  border-radius: t.$r-pill;
-  background: t.$card;
-  box-shadow: t.$shadow-card;
+  border: 1.5px solid t.$ink;
+  border-radius: t.$r-tile;
+  background: t.$paper;
   font-size: 11px;
-  color: t.$ink-2;
+  color: t.$ink;
 }
 
 .sync-pill-dot {
@@ -343,49 +369,49 @@ text {
   height: 6px;
   margin-right: 5px;
   border-radius: 50%;
-  background: t.$ink-3;
+  background: t.$pencil;
 }
 
 .sync-pill.is-ok .sync-pill-dot {
-  background: t.$s-rest;
+  background: t.$tile-rest;
 }
 
 .sync-pill.is-err {
-  color: t.$danger;
-}
+  color: t.$red;
 
-.sync-pill.is-err .sync-pill-dot {
-  background: t.$danger;
+  .sync-pill-dot {
+    background: t.$red;
+  }
 }
 
 .sync-pill-act {
   margin-left: 6px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-// 按压态（微信 hover-class）：只改透明度和缩放，不动尺寸
+// —— 按压态（微信 hover-class）——
+// 磁贴/格子 = 按进板面 translateY(1px)；其余 = 降透明度或淡墨底。
+// 只改 transform/opacity，不动尺寸边距（Round 2 审计 §9 的规矩）。
 .press-dim {
   opacity: 0.55;
 }
 
 .press-surface {
-  background: rgba(15, 23, 42, 0.05);
+  background: rgba(23, 24, 26, 0.06);
 }
 
 .press-cell {
-  transform: scale(0.94);
+  transform: translateY(1px);
 }
 
 // 顶部遮罩：页面滚动时内容不会钻到系统胶囊底下。
-// custom 导航栏下胶囊是浮层，页面没有原生导航条给它让位，
-// 不加这层的话「今天同班」这类标题滚到顶部会被胶囊压住。
+// 下缘渐隐，避免滚到顶部的行被「截断」。
 .status-cover {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 10;
-  // 下缘做渐隐：直接切一刀会让滚到顶部的行被"截断"得很生硬。
-  background: linear-gradient(to bottom, t.$bg 72%, rgba(238, 241, 246, 0));
+  background: linear-gradient(to bottom, t.$board 72%, rgba(247, 248, 246, 0));
   pointer-events: none;
 }
