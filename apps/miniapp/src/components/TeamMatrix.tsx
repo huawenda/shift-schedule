@@ -1,159 +1,148 @@
 import { ScrollView, Text, View } from '@tarojs/components'
+import { shiftInitial } from '../appConstants'
 import { getOverrideKey } from '../services/cloudRecordMaps'
-import { getShiftClass } from '../appConstants'
 import type { SchedulePerson, ShiftType } from '../types/schedule'
 import type { DateLabel } from '../utils/schedule'
-import ShiftMark from './ShiftMark'
 
-export type TableMode = 'shift' | 'name'
+export type MatrixMode = 'shift' | 'name'
 
 interface Props {
   people: SchedulePerson[]
   dates: string[]
-  shiftsByPerson: Record<string, ShiftType[]>
   dateLabels: DateLabel[]
-  mode: TableMode
-  currentPersonName: string
+  mode: MatrixMode
+  currentUserName: string
   todayKey: string
   overtimeKeys: Set<string>
   legalKeys: Set<string>
-  scrollLeft?: number
-  onScroll?: (scrollLeft: number) => void
-  onOpenShiftEditor: (date: string, personName: string) => void
-  onModeChange: (mode: TableMode) => void
+  onOpen: (personName: string, date: string) => void
+  onModeChange: (mode: MatrixMode) => void
 }
 
-/** 与 Web 端 TeamMatrix.tsx 对应；左侧姓名列用独立 View 固定，右侧横向滚动。 */
+const MARK_CLASS: Record<ShiftType, string> = {
+  白班: 'm-day',
+  夜班: 'm-night',
+  休息: 'm-rest',
+  白特: 'm-dayx',
+  夜特: 'm-nightx',
+  事假: 'm-leave'
+}
+
+/**
+ * 全员排班矩阵（按新设计语言重建）。
+ *
+ * 与旧版的结构差异：
+ * 1. 班次不再是深色实心块，改成浅底 + 深字的徽章（m-* 系列），
+ *    与日历格一致，整片看上去是「浅色网格 + 少量彩色标记」而不是彩色马赛克。
+ * 2. 加班/法定标记缩成右上角小圆点，不再叠在白点上。
+ * 3. 当前用户整行高亮：左侧姓名加粗变蓝，行底色极浅。
+ *
+ * 保留的关键约束（旧版踩过坑）：
+ * - 左侧姓名列是独立 View，与右侧 ScrollView 分离，所以**表头与内容的列宽
+ *   必须同时切换**（按班次 38 / 按姓名 56），否则第 2 列就开始错位。
+ * - 行高必须一致：表头 34，数据行 32 + 3 间距。
+ */
 export default function TeamMatrix({
   people,
   dates,
-  shiftsByPerson,
   dateLabels,
   mode,
-  currentPersonName,
+  currentUserName,
   todayKey,
   overtimeKeys,
   legalKeys,
-  scrollLeft,
-  onScroll,
-  onOpenShiftEditor,
+  onOpen,
   onModeChange
 }: Props) {
   const byName = mode === 'name'
-  const weekdayOrder = ['日', '六']
 
   return (
     <View className={`matrix ${byName ? 'is-by-name' : ''}`}>
-      <View className="matrix-head">
-        <View className="matrix-title">
-          <Text className="sec-title">全员排班</Text>
-          <Text className="sec-sub matrix-title-sub">
-            {people.length} 人 · {dates.length} 天
-          </Text>
+      <View className="mx-head">
+        <View className="mx-title">
+          <Text className="mx-title-text">全员排班</Text>
+          <Text className="mx-title-sub">{people.length} 人 · {dates.length} 天</Text>
         </View>
-        <View className="tabs">
-          <Text
-            className={`tab ${!byName ? 'is-active' : ''}`}
+        <View className="seg">
+          <View
+            className={`seg-item ${!byName ? 'is-on' : ''}`}
+            hoverClass="press-dim"
             onClick={() => onModeChange('shift')}
           >
-            按班次
-          </Text>
-          <Text
-            className={`tab ${byName ? 'is-active' : ''}`}
+            <Text>按班次</Text>
+          </View>
+          <View
+            className={`seg-item ${byName ? 'is-on' : ''}`}
+            hoverClass="press-dim"
             onClick={() => onModeChange('name')}
           >
-            按姓名
-          </Text>
+            <Text>按姓名</Text>
+          </View>
         </View>
       </View>
 
-      <View className="matrix-shell">
-        <View className="matrix-names">
-          <View className="mn mn-head">
-            <Text className="mn-head-label">{byName ? '班次' : '姓名'}</Text>
+      <View className="mx-card">
+        <View className="mx-col">
+          <View className="mx-name mx-name-head">
+            <Text>{byName ? '班次' : '姓名'}</Text>
           </View>
           {people.map(person => (
-            <View key={person.name} className={`mn ${person.name === currentPersonName ? 'is-me' : ''}`}>
-              {byName ? null : <Text className="mn-name">{person.name}</Text>}
-              <Text className={byName ? 'mn-group-solo' : 'mn-group'}>{person.group}</Text>
+            <View
+              key={person.name}
+              className={`mx-name ${person.name === currentUserName ? 'is-me' : ''}`}
+            >
+              <Text className="mx-name-main">{byName ? person.group : person.name}</Text>
+              {byName ? null : <Text className="mx-name-sub">{person.group}</Text>}
             </View>
           ))}
         </View>
 
-        <ScrollView
-          scrollX
-          enhanced
-          showScrollbar={false}
-          className="matrix-scroll"
-          scrollLeft={scrollLeft}
-          onScroll={
-            onScroll ? event => onScroll(Number(event.detail.scrollLeft) || 0) : undefined
-          }
-        >
+        <ScrollView scrollX enhanced showScrollbar={false} className="mx-scroll">
           <View>
-            <View className="mr mr-head">
+            <View className="mx-row mx-row-head">
               {dateLabels.map(label => (
                 <View
                   key={label.date}
-                  className={`gh ${weekdayOrder.includes(label.weekday) ? 'we' : ''}${
-                    label.date === todayKey ? ' today' : ''
-                  }`}
+                  className={`mx-gh ${label.date === todayKey ? 'is-today' : ''}`}
                 >
                   <Text>{label.date.slice(3)}</Text>
                 </View>
               ))}
             </View>
 
-            {people.map(person => {
-              const shifts = shiftsByPerson[person.name] ?? []
+            {people.map(person => (
+              <View
+                key={person.name}
+                className={`mx-row ${person.name === currentUserName ? 'is-me' : ''}`}
+              >
+                {dates.map((date, index) => {
+                  const shift = person.shifts[index]
+                  const key = getOverrideKey(person.name, date)
+                  const hasLegal = legalKeys.has(key)
+                  const hasOvertime = shift !== '事假' && (hasLegal || overtimeKeys.has(key))
 
-              return (
-                <View key={person.name} className="mr">
-                  {dates.map((date, index) => {
-                    const shift = shifts[index]
-                    const key = getOverrideKey(person.name, date)
-                    const hasOvertime = overtimeKeys.has(key)
-                    const hasLegal = legalKeys.has(key)
-
-                    return (
-                      <View
-                        key={date}
-                        className={[
-                          'm-body',
-                          byName ? 'is-name' : '',
-                          !byName && shift === '休息' ? 'is-blank' : '',
-                          hasOvertime ? 'is-edited' : '',
-                          hasLegal && hasOvertime ? 'is-legal' : '',
-                          !shift ? 'is-empty' : ''
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                        onClick={() => onOpenShiftEditor(date, person.name)}
-                      >
-                        {hasOvertime ? (
-                          <View className={`mark-dot ${hasLegal ? 'mark-dot-legal' : 'mark-dot-ot'}`} />
-                        ) : null}
-                        {shift ? (
-                          byName ? (
-                            <View className={`name-pill ${getShiftClass(shift)}`}>
-                              <Text>{person.name}</Text>
-                            </View>
-                          ) : (
-                            <ShiftMark shift={shift} />
-                          )
-                        ) : null}
-                      </View>
-                    )
-                  })}
-                </View>
-              )
-            })}
+                  return (
+                    <View
+                      key={date}
+                      className="mx-cell"
+                      hoverClass="press-cell"
+                      onClick={() => onOpen(person.name, date)}
+                    >
+                      {shift ? (
+                        <View className={`mx-mark ${MARK_CLASS[shift]}`}>
+                          <Text>{byName ? person.name : shiftInitial[shift]}</Text>
+                        </View>
+                      ) : null}
+                      {hasOvertime ? (
+                        <View className={`mx-dot ${hasLegal ? 'is-legal' : ''}`} />
+                      ) : null}
+                    </View>
+                  )
+                })}
+              </View>
+            ))}
           </View>
         </ScrollView>
-      </View>
-
-      <View className="matrix-foot">
-        <Text className="scroll-hint">左滑看更多日期</Text>
       </View>
     </View>
   )

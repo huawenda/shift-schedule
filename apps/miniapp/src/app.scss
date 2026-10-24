@@ -1,28 +1,311 @@
-@use './styles/design-tokens' as ds;
+@use './styles/tokens' as t;
 
 page {
-  background: ds.$paper;
-  color: ds.$ink;
+  background: t.$bg;
+  color: t.$ink;
   font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 
-html,
-body {
-  min-height: 100%;
-  margin: 0;
-  background: ds.$paper;
-  color: ds.$ink;
+view,
+text {
+  box-sizing: border-box;
 }
 
-#app {
-  min-height: 100%;
-  background: ds.$paper;
-}
-
-#app.taro_router {
-  width: 100%;
+// 页面容器：所有页面共用。底部留出 tabBar 高度 + 安全区。
+.screen {
   min-height: 100vh;
-  margin: 0 auto;
-  background: ds.$paper;
+  padding: 0 t.$pad;
+  box-sizing: border-box;
+}
+
+.screen-with-tabbar {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
+
+// 通用区块标题
+.block-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 24px 0 10px;
+}
+
+.block-title-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: t.$ink;
+}
+
+.block-title-sub {
+  font-size: 12px;
+  color: t.$ink-3;
+}
+
+// 空态
+.empty {
+  padding: 28px 0;
+  text-align: center;
+  font-size: 13px;
+  color: t.$ink-3;
+}
+
+// 班次语义色：新版只允许出现在「色点 / 色条 / 小徽章」上，
+// 不再像旧版那样整格填满（30 个彩色方块连成一片，反而看不出排班）。
+.s-day {
+  background: t.$s-day;
+}
+
+.s-night {
+  background: t.$s-night;
+}
+
+.s-rest {
+  background: t.$s-rest;
+}
+
+.s-dayx {
+  background: t.$s-dayx;
+}
+
+.s-nightx {
+  background: t.$s-nightx;
+}
+
+.s-leave {
+  background: t.$s-leave;
+}
+
+// 浅底色版（用于日历格内的小标记）
+.m-day {
+  background: t.$s-day-soft;
+  color: t.$s-dayx;
+}
+
+.m-night {
+  background: t.$s-night-soft;
+  color: t.$s-night;
+}
+
+.m-rest {
+  background: t.$s-rest-soft;
+  color: #047857;
+}
+
+.m-dayx {
+  background: t.$s-dayx-soft;
+  color: t.$s-dayx;
+}
+
+.m-nightx {
+  background: t.$s-nightx-soft;
+  color: t.$s-nightx;
+}
+
+.m-leave {
+  background: t.$s-leave-soft;
+  color: t.$s-leave;
+}
+
+// ————————————————————————————————————————————————
+// 弹层与通用控件（改班层、人员选择层共用）
+// ————————————————————————————————————————————————
+
+.dlg-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.dlg {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 82vh;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: t.$card;
+  border-radius: 24px 24px 0 0;
+}
+
+.dlg-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid t.$line;
+}
+
+.dlg-title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+  color: t.$ink;
+}
+
+.dlg-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 16px;
+  color: t.$ink-3;
+}
+
+.dlg-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.dlg-label {
+  display: block;
+  margin: 18px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+  color: t.$ink-3;
+}
+
+.dlg-hint {
+  display: block;
+  margin-top: 16px;
+  font-size: 12px;
+  color: t.$ink-3;
+}
+
+.dlg-actions {
+  display: flex;
+  margin-top: 16px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 8px 8px 0;
+  padding: 8px 14px;
+  border-radius: t.$r-pill;
+  background: t.$card-2;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  color: t.$ink-2;
+  white-space: nowrap;
+}
+
+.chip.is-on {
+  background: t.$brand;
+  color: #ffffff;
+}
+
+.hours {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.hours-box {
+  display: flex;
+  align-items: center;
+  width: 96px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: t.$r-chip;
+  background: t.$card-2;
+}
+
+.hours-input {
+  flex: 1;
+  height: 40px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: right;
+  color: t.$ink;
+}
+
+.hours-unit {
+  margin-left: 8px;
+  font-size: 12px;
+  color: t.$ink-3;
+}
+
+.btn-ghost,
+.btn-primary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  border-radius: t.$r-pill;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.btn-ghost {
+  margin-right: 10px;
+  background: t.$card-2;
+  color: t.$ink-2;
+}
+
+.btn-primary {
+  background: t.$brand;
+  color: #ffffff;
+}
+
+.pick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 12px;
+  border-radius: t.$r-chip;
+}
+
+.pick-row.is-on {
+  background: t.$brand-2;
+}
+
+.pick-name {
+  font-size: 15px;
+  color: t.$ink;
+}
+
+.pick-group {
+  font-size: 12px;
+  color: t.$ink-3;
+}
+
+// 按压态（微信 hover-class）：只改透明度和缩放，不动尺寸
+.press-dim {
+  opacity: 0.55;
+}
+
+.press-surface {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.press-cell {
+  transform: scale(0.94);
+}
+
+// 顶部遮罩：页面滚动时内容不会钻到系统胶囊底下。
+// custom 导航栏下胶囊是浮层，页面没有原生导航条给它让位，
+// 不加这层的话「今天同班」这类标题滚到顶部会被胶囊压住。
+.status-cover {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  // 下缘做渐隐：直接切一刀会让滚到顶部的行被"截断"得很生硬。
+  background: linear-gradient(to bottom, t.$bg 72%, rgba(238, 241, 246, 0));
+  pointer-events: none;
 }

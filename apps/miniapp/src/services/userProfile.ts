@@ -26,6 +26,7 @@ interface CloudCollection {
   doc: (id: string) => {
     update: (options: { data: Record<string, unknown> }) => Promise<unknown>
   }
+  where: (condition: Record<string, unknown>) => CloudCollection
   limit: (limit: number) => CloudCollection
 }
 
@@ -111,16 +112,26 @@ export async function loadCurrentUserProfile(): Promise<CurrentUserProfile> {
   const functionProfile = normalizeCurrentUserProfile(await callUserProfileFunction('load'))
   if (functionProfile) return functionProfile
 
-  const [openid, profileResponse] = await Promise.all([
-    getCurrentOpenid(),
-    getCollection().limit(1).get().catch<CloudGetResponse>(() => ({ data: [] }))
-  ])
+  // 云函数不可用时的降级路径。
+  // ⚠️ 绝不能在这里直接 `collection('user_profiles').limit(1).get()`：
+  // 那是**无条件读取**，会拿到集合里任意一条记录（很可能是别人的 profile），
+  // 从而把当前用户错绑到他人姓名，进而看到并改写他人的排班。
+  // 云端文档自带 _openid，这里必须按 _openid 过滤，读不到就当作「未绑定」。
+  const openid = await getCurrentOpenid()
+  if (!openid) {
+    return { openid: null, isAdmin: false, profile: null }
+  }
+
+  const profileResponse = await getCollection()
+    .where({ _openid: openid } as never)
+    .limit(1)
+    .get()
+    .catch<CloudGetResponse>(() => ({ data: [] }))
   const profile = profileResponse.data.find(isUserProfile) ?? null
-  const resolvedOpenid = openid ?? profile?._openid ?? null
 
   return {
-    openid: resolvedOpenid,
-    isAdmin: resolvedOpenid ? adminOpenidSet.has(resolvedOpenid.trim().toLowerCase()) : false,
+    openid,
+    isAdmin: adminOpenidSet.has(openid.trim().toLowerCase()),
     profile
   }
 }

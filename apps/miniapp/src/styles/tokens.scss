@@ -1,0 +1,82 @@
+// ============================================================
+// 倒班表 · 小程序设计系统（v2，2026-10-23 重写）
+// ============================================================
+// 与旧版无任何继承关系。旧版是「暖灰纸面 + 墨黑大块 + 2px 直角 + 细线分隔」，
+// 新版是「冷白底 + 白色圆角卡片 + 柔和投影 + 品牌蓝」。
+//
+// 配色逻辑：
+//   页面底色冷灰，内容全部浮在白卡上，靠投影与圆角区分层级，
+//   不再用 1px 细线切割版面（手机上细线太碎，看起来像表格而非 App）。
+//   班次色只作为「标签 / 色条 / 圆点」出现，不做整格大面积填色。
+
+// —— 底色与层次 ——
+$bg: #eef1f6;          // 页面底（冷灰）
+$card: #ffffff;        // 卡片
+$card-2: #f6f8fb;      // 卡内次级面（输入框、空态）
+$line: #e6ebf2;        // 极细分隔
+
+// —— 文字 ——
+$ink: #0f172a;         // 标题 / 数字
+$ink-2: #475569;       // 正文
+$ink-3: #94a3b8;       // 辅助 / 占位
+$ink-inv: #ffffff;     // 深底上的文字
+
+// —— 品牌 ——
+$brand: #2563eb;
+$brand-2: #dbeafe;     // 品牌浅底
+$danger: #dc2626;
+
+// —— 班次语义色（只做标签/色条/圆点）——
+$s-day: #f59e0b;       // 白班
+$s-night: #4338ca;     // 夜班
+$s-rest: #10b981;      // 休息
+$s-dayx: #b45309;      // 白特
+$s-nightx: #312e81;    // 夜特
+$s-leave: #64748b;     // 事假
+
+// 班次浅底（用于小徽章背景）
+$s-day-soft: #fef3c7;
+$s-night-soft: #e0e7ff;
+$s-rest-soft: #d1fae5;
+$s-dayx-soft: #fde68a;
+$s-nightx-soft: #c7d2fe;
+$s-leave-soft: #e2e8f0;
+
+// —— 形状 ——
+$r-card: 18px;
+$r-chip: 10px;
+$r-pill: 999px;
+$r-bar: 4px;
+
+// —— 投影（只有两档，多了会脏）——
+$shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+$shadow-float: 0 8px 32px rgba(15, 23, 42, 0.16);
+
+// —— 版心 ——
+$pad: 16px;
+
+// —— 动效 ——
+$fast: 160ms;
+$base: 240ms;
+
+// —— 常用 mixin ——
+
+/// 白卡：圆角 + 极轻投影。整页唯一的容器样式。
+@mixin card {
+  background: $card;
+  border-radius: $r-card;
+  box-shadow: $shadow-card;
+}
+
+/// 按压反馈（微信 hover-class 用）：只改缩放与透明度，不改尺寸。
+@mixin press($scale: 0.97, $opacity: 1) {
+  transform: scale($scale);
+  opacity: $opacity;
+}
+
+/// 单行截断。
+@mixin ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,409 @@
+@use '../../styles/tokens' as t;
+
+// —— 顶部：月份切换 + 当前用户 ——
+.cal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+}
+
+.cal-month {
+  display: flex;
+  align-items: center;
+}
+
+.cal-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: t.$r-chip;
+  background: t.$card;
+  font-size: 18px;
+  line-height: 32px;
+  color: t.$ink-2;
+  box-shadow: t.$shadow-card;
+}
+
+.cal-arrow.is-off {
+  color: t.$ink-3;
+  opacity: 0.45;
+}
+
+.cal-month-text {
+  min-width: 58px;
+  margin: 0 6px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 26px;
+  color: t.$ink;
+}
+
+.cal-user {
+  padding: 4px 10px;
+  border-radius: t.$r-chip;
+  text-align: right;
+  background: t.$card;
+  box-shadow: t.$shadow-card;
+}
+
+.cal-user-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  color: t.$ink;
+}
+
+.cal-user-group {
+  display: block;
+  font-size: 11px;
+  line-height: 14px;
+  color: t.$ink-3;
+}
+
+// —— 月历卡 ——
+.cal-card {
+  padding: 12px 10px 10px;
+  background: t.$card;
+  border-radius: t.$r-card;
+  box-shadow: t.$shadow-card;
+}
+
+.cal-week {
+  display: flex;
+  padding-bottom: 6px;
+}
+
+.cal-week-text {
+  width: 14.2857%;
+  text-align: center;
+  font-size: 11px;
+  line-height: 16px;
+  color: t.$ink-3;
+}
+
+.cal-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.cal-cell {
+  width: 14.2857%;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.cal-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border-radius: 12px;
+  background: t.$card-2;
+}
+
+.cal-face.is-out {
+  opacity: 0.32;
+}
+
+// 今天用内描边高亮，而不是整格填充 ——
+// 填充会把该日的班次标记盖掉，而「今天什么班」恰恰是最该看清的。
+.cal-face.is-today {
+  box-shadow: inset 0 0 0 2px t.$brand;
+}
+
+.cal-face.is-today .cal-day {
+  color: t.$brand;
+  font-weight: 700;
+}
+
+.cal-day {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+  color: t.$ink;
+}
+
+.cal-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 14px;
+  margin-top: 2px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+}
+
+// —— 图例 ——
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin: 0 14px 8px 0;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+}
+
+.legend-text {
+  margin-left: 5px;
+  font-size: 11px;
+  line-height: 14px;
+  color: t.$ink-2;
+}
+
+// —— 今天同班 ——
+.mates {
+  padding: 4px 14px;
+  background: t.$card;
+  border-radius: t.$r-card;
+  box-shadow: t.$shadow-card;
+}
+
+.mate-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid t.$line;
+}
+
+.mate-row:last-child {
+  border-bottom: 0;
+}
+
+.mate-tag {
+  flex-shrink: 0;
+  min-width: 48px;
+  padding: 3px 8px;
+  border-radius: t.$r-pill;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.mate-names {
+  flex: 1;
+  margin-left: 10px;
+  font-size: 13px;
+  line-height: 18px;
+  color: t.$ink-2;
+}
+
+// ————————————————————————————————————————————————
+// 全员排班矩阵
+// ————————————————————————————————————————————————
+
+.matrix {
+  margin-top: 20px;
+}
+
+.mx-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mx-title {
+  display: flex;
+  align-items: baseline;
+}
+
+.mx-title-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: t.$ink;
+}
+
+.mx-title-sub {
+  margin-left: 8px;
+  font-size: 11px;
+  color: t.$ink-3;
+}
+
+.seg {
+  display: flex;
+  padding: 3px;
+  border-radius: t.$r-pill;
+  background: t.$card;
+  box-shadow: t.$shadow-card;
+}
+
+.seg-item {
+  padding: 5px 12px;
+  border-radius: t.$r-pill;
+  font-size: 12px;
+  line-height: 16px;
+  color: t.$ink-3;
+}
+
+.seg-item.is-on {
+  background: t.$brand;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.mx-card {
+  display: flex;
+  padding: 8px 0;
+  background: t.$card;
+  border-radius: t.$r-card;
+  box-shadow: t.$shadow-card;
+  overflow: hidden;
+}
+
+// 左右内边距必须对称，否则「居中」是相对内容区居中、整体看着偏一侧。
+.mx-col {
+  flex-shrink: 0;
+  width: 78px;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+// 左侧姓名列必须与右侧色块「垂直居中」对齐。
+// 原先用 align-items: baseline 让姓名和班组基线对齐，
+// 但右侧 .mx-cell 是 center 居中，两套对齐方式叠在一起就错开了半行。
+// 水平方向同样居中（表头「姓名/班次」与各行内容一起对齐列中线）。
+.mx-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  margin-top: 3px;
+}
+
+.mx-name-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  margin-top: 0;
+  font-size: 11px;
+  color: t.$ink-3;
+}
+
+.mx-name-main {
+  font-size: 12px;
+  font-weight: 500;
+  color: t.$ink-2;
+}
+
+.mx-name.is-me .mx-name-main {
+  color: t.$brand;
+  font-weight: 700;
+}
+
+.mx-name-sub {
+  margin-left: 3px;
+  font-size: 9px;
+  color: t.$ink-3;
+}
+
+.mx-scroll {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.mx-row {
+  display: flex;
+  height: auto;
+}
+
+.mx-row.is-me {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.mx-row-head {
+  height: 34px;
+}
+
+.mx-gh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 34px;
+  font-size: 11px;
+  font-weight: 600;
+  color: t.$ink-3;
+}
+
+.mx-gh.is-today {
+  color: t.$brand;
+}
+
+.mx-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 32px;
+  margin-top: 3px;
+}
+
+.mx-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 26px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mx-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: t.$s-rest;
+}
+
+.mx-dot.is-legal {
+  background: t.$danger;
+}
+
+// 按姓名模式：表头与内容必须同时变宽，否则第 2 列就开始错位
+.matrix.is-by-name {
+  .mx-gh {
+    width: 56px;
+  }
+
+  .mx-cell {
+    width: 56px;
+  }
+
+  .mx-mark {
+    width: 52px;
+    font-size: 9px;
+  }
+
+  .mx-col {
+    width: 58px;
+  }
+}

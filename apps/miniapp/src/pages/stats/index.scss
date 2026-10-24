@@ -1,749 +1,180 @@
-// 统计页：小程序版样式 = web-ui.scss 共享层（.page/.sec-head/.shift-block/.swatch/
-// .legal-dot/.live-dot/.act/.muted）+ 本页布局。
-// Web 端 stats.scss 的几何按其 ≤720px 移动断点取用，px 已按 Taro pxtransform 减半。
-@use '../../styles/design-tokens' as ds;
-@use '../../styles/web-ui';
+@use '../../styles/tokens' as t;
 
-.stats-page {
-  min-height: 100vh;
-  box-sizing: border-box;
-  background: ds.$paper;
-}
-
-.stats-shell {
-  padding: 0 ds.$page-pad 8px;
-  box-sizing: border-box;
-}
-
-// 小程序没有 position: sticky 的滚动容器等价物：
-// 头部 / 标签轨 / 筛选行都留在页面顶部的普通流里，内容各自在 ScrollView 内滚动。
-.stats-head {
-  display: flex;
-  align-items: center;
-  min-height: 50px;
-  box-sizing: border-box;
-  border-bottom: 1px solid ds.$rule-strong;
-}
-
-.back {
-  display: flex;
-  align-items: center;
-  padding: 6px 10px 6px 6px;
-  border-radius: ds.$r-data;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 18px;
-  color: ds.$ink-2;
-}
-
-.stats-head-title {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 20px;
-  color: ds.$ink;
-}
-
-.stats-spacer {
-  flex: 1;
-}
-
-// .range 在 Web 的移动断点被隐藏；统计页在小程序里空间更紧，同样省略，
-// 结算周期改由「月份」筛选与各区块副标题呈现。
-.stats-tabs {
-  display: flex;
-  align-items: center;
-  min-height: 42px;
-  box-sizing: border-box;
-  border-bottom: 1px solid ds.$rule;
-}
-
-.stats-tab {
-  position: relative;
-  margin-right: 18px;
-  padding-bottom: 1px;
-  font-size: 13px;
-  line-height: 18px;
-  color: ds.$ink-3;
-}
-
-.stats-tab.is-active {
-  font-weight: 700;
-  color: ds.$ink;
-}
-
-.stats-tab-underline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -12px;
-  height: 2px;
-  background: ds.$ink;
-}
-
-.stats-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  padding-top: 12px;
-}
-
-.filter {
-  display: flex;
-  align-items: baseline;
-  margin-right: 20px;
-  margin-bottom: 6px;
-}
-
-.filter .k {
-  margin-right: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 14px;
-  letter-spacing: 0.14em;
-  color: ds.$ink-3;
-}
-
-.filter .v {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 20px;
-  color: ds.$ink;
-}
-
-.filter .v.is-tappable {
-  border-bottom: 1px dashed ds.$rule-strong;
-}
-
-.stats-page-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 0 2px;
-}
-
-.stats-page-indicator-dot {
-  width: 5px;
-  height: 5px;
-  margin: 0 3px;
-  border-radius: 50%;
-  background: ds.$rule-strong;
-}
-
-.stats-page-indicator-dot.active {
-  background: ds.$ink;
-}
-
-.stats-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 140px;
-  margin-top: 26px;
-  font-size: 12px;
-  line-height: 18px;
-  color: ds.$ink-3;
-}
-
-// ————————————————————————————————————————————————
-// 横向双页（综合统计 / 每日明细）
-// ————————————————————————————————————————————————
-
-.stats-personal-pages {
-  overflow: hidden;
-}
-
-.stats-personal-track {
-  display: flex;
-  width: 200%;
-  transition: transform ds.$base ease;
-}
-
-.stats-personal-page {
-  width: 50%;
-  box-sizing: border-box;
-}
-
-.stats-personal-page-inner {
-  height: 100%;
-}
-
-.stats-scroll {
-  flex: 1;
-  height: 100%;
-}
-
-.stats-scroll-team {
-  margin-top: 26px;
-}
-
-.zones {
-  padding-bottom: 24px;
-}
-
-// ————————————————————————————————————————————————
-// 月度概览
-// ————————————————————————————————————————————————
-
-.ovw {
-  margin-top: 10px;
-}
-
-.ovw-row {
-  display: flex;
-  align-items: center;
-  min-height: 38px;
-  border-bottom: 1px solid ds.$rule;
-  font-size: 13px;
-  line-height: 18px;
-}
-
-.ovw-row.is-head {
-  min-height: 28px;
-  border-bottom: 1px solid ds.$rule-strong;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: ds.$ink-3;
-}
-
-.ovw-name {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  min-width: 0;
-  color: ds.$ink-2;
-}
-
-.ovw-name .muted,
-.ovw-name Text {
-  margin-left: 8px;
-}
-
-// 表头的两列数值标题：Web 端靠 grid 三列（minmax(0,1fr) 64px 76px）天然对齐，
-// 小程序用 flex，这里给两列补上与 .ovw-days / .ovw-hrs 完全一致的固定宽与右对齐，
-// 否则表头两列宽度会塌陷、与下方数据列错位。
-// letter-spacing 在末字符后多留 0.14em 空白，用等量负 margin 把右缘推出去抵消。
-.ovw-num {
-  flex-shrink: 0;
-  text-align: right;
-  margin-right: -0.14em;
-}
-
-.ovw-num.ovw-num-days {
-  width: 64px;
-}
-
-.ovw-num.ovw-num-hrs {
-  width: 76px;
-}
-
-.ovw-days {
-  width: 64px;
-  flex-shrink: 0;
-  font-weight: 700;
-  text-align: right;
-}
-
-.ovw-row.is-head .ovw-days {
-  font-weight: 700;
-}
-
-.ovw-hrs {
-  width: 76px;
-  flex-shrink: 0;
-  text-align: right;
-  color: ds.$ink-3;
-}
-
-.ovw-hrs.active {
-  color: ds.$ink;
-  font-weight: 700;
-}
-
-.ovw-total {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding-top: 14px;
-  font-size: 12px;
-  line-height: 18px;
-  color: ds.$ink-3;
-}
-
-// ————————————————————————————————————————————————
-// 加班分布柱状图
-// ————————————————————————————————————————————————
-
-.bars {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  margin-top: 10px;
-}
-
-.bars-plot {
+.stats-top {
   display: flex;
   align-items: flex-end;
-  min-height: 118px;
-  border-bottom: 1px solid ds.$rule-strong;
-}
-
-.bars-plot .col {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  height: 100%;
-  margin: 0 9px;
-}
-
-.bars-plot .col .v {
-  margin-bottom: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 16px;
-}
-
-.bars-plot .col .fill {
-  width: 100%;
-  max-width: 56px;
-  border-radius: 1px 1px 0 0;
-  background: ds.$ink;
-}
-
-.bars-plot .col .fill.special {
-  background: ds.$s-day;
-}
-
-.bars-plot .col .fill.legal {
-  background: ds.$now;
-}
-
-.bars-axis {
-  display: flex;
-  margin-top: 8px;
+  justify-content: space-between;
   padding-bottom: 16px;
 }
 
-.bars-axis Text {
-  flex: 1;
-  text-align: center;
-  font-size: 11px;
-  line-height: 16px;
-  letter-spacing: 0.08em;
-  color: ds.$ink-3;
+.stats-month {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 32px;
+  color: t.$ink;
 }
 
-.bars-empty {
+.stats-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 16px;
+  color: t.$ink-3;
+}
+
+.stats-total {
+  text-align: right;
+}
+
+.stats-total-num {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 26px;
+  color: t.$brand;
+}
+
+.stats-total-unit {
+  display: block;
+  font-size: 11px;
+  line-height: 14px;
+  color: t.$ink-3;
+}
+
+// —— 通用卡片 ——
+.card {
+  margin-top: 14px;
+  padding: 16px;
+  background: t.$card;
+  border-radius: t.$r-card;
+  box-shadow: t.$shadow-card;
+}
+
+.card-title {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  color: t.$ink;
+}
+
+.card-empty {
+  display: block;
+  padding: 6px 0 2px;
+  font-size: 12px;
+  color: t.$ink-3;
+}
+
+// —— 加班分布 ——
+.bar-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 72px;
-  margin-top: 16px;
-  border-top: 1px solid ds.$rule;
-  border-bottom: 1px solid ds.$rule-strong;
+  padding: 6px 0;
+}
+
+.bar-key {
+  flex-shrink: 0;
+  width: 34px;
   font-size: 12px;
-  line-height: 18px;
-  letter-spacing: 0.04em;
-  color: ds.$ink-3;
+  color: t.$ink-2;
 }
 
-// ————————————————————————————————————————————————
-// 薪资计算
-// ————————————————————————————————————————————————
-
-.payslip {
-  margin-top: 12px;
+.bar-track {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: t.$card-2;
+  overflow: hidden;
 }
 
-.pay-grid {
-  display: flex;
-  flex-direction: column;
+.bar-fill {
+  height: 10px;
+  border-radius: 5px;
 }
 
-.pay-block {
-  padding: 16px 0;
-  border-bottom: 1px solid ds.$rule;
+.bar-weekday {
+  background: t.$brand;
 }
 
-.pay-block-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 8px;
+.bar-special {
+  background: t.$s-day;
 }
 
-.pay-block-title {
+.bar-legal {
+  background: t.$s-night;
+}
+
+.bar-val {
+  flex-shrink: 0;
+  width: 50px;
+  text-align: right;
   font-size: 12px;
-  font-weight: 700;
-  line-height: 16px;
-  letter-spacing: 0.12em;
-  color: ds.$ink-2;
+  font-weight: 600;
+  color: t.$ink;
 }
 
-.pay-block-head .sum {
-  font-size: 12px;
-  line-height: 16px;
-  color: ds.$ink-3;
-}
-
-.pay-block-head .sum.deduction {
-  color: ds.$now;
-}
-
+// —— 薪资 ——
 .pay-row {
   display: flex;
-  align-items: baseline;
-  min-height: 34px;
-  font-size: 13px;
-  line-height: 18px;
-  color: ds.$ink-2;
-}
-
-.pay-row-label {
-  flex: 1;
-  min-width: 0;
-}
-
-.pay-row-value {
-  flex-shrink: 0;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 20px;
-  color: ds.$ink;
-}
-
-.pay-row .amount {
-  display: flex;
-  flex-shrink: 0;
-  align-items: baseline;
-  justify-content: flex-end;
-}
-
-.pay-row .amount .cur {
-  margin-right: 2px;
-  font-size: 12px;
-  line-height: 16px;
-  color: ds.$ink-3;
-}
-
-.pay-amount-input {
-  width: 92px;
-  height: 26px;
-  padding: 0;
-  text-align: right;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 20px;
-  color: ds.$ink;
-  border-bottom: 1px dashed ds.$rule-strong;
-}
-
-.pay-amount-input::placeholder {
-  color: rgba(98, 104, 110, 0.4);
-}
-
-.pay-net {
-  display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  margin-top: 18px;
-  padding: 16px;
-  background: ds.$ink;
-  border-radius: ds.$r-sheet;
+  padding: 6px 0;
 }
 
-.pay-net .k {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 15px;
-  letter-spacing: 0.14em;
-  color: rgba(244, 244, 240, 0.55);
-}
-
-.pay-net .v {
-  display: block;
-  margin-top: 6px;
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 30px;
-  letter-spacing: -0.02em;
-  color: ds.$paper;
-}
-
-.pay-net .side {
-  text-align: right;
-  font-size: 12px;
-  line-height: 18px;
-  color: rgba(244, 244, 240, 0.6);
-}
-
-.pay-net .side .b {
-  display: block;
-  margin-top: 4px;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 20px;
-  color: ds.$paper;
-}
-
-// ————————————————————————————————————————————————
-// 每日明细
-// ————————————————————————————————————————————————
-
-.daily-zone {
-  margin-top: 26px;
-}
-
-.daily {
-  margin-top: 12px;
-}
-
-.daily-row {
-  display: flex;
-  align-items: center;
-  min-height: 36px;
-  border-bottom: 1px solid ds.$rule;
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.daily-row.is-head {
-  min-height: 28px;
-  border-bottom: 1px solid ds.$rule-strong;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: ds.$ink-3;
-}
-
-.daily-row .date {
-  width: 70px;
-  flex-shrink: 0;
-  color: ds.$ink-2;
-}
-
-.daily-row.is-head .date {
-  color: ds.$ink-3;
-}
-
-.daily-row .day-shift {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  min-width: 0;
-  margin-right: 6px;
-}
-
-.daily-row .day-shift .shift-block {
-  min-width: 34px;
-  height: 20px;
-  font-size: 9px;
-  line-height: 20px;
-}
-
-.daily-row .day-shift .legal-dot {
-  margin-left: 6px;
-}
-
-.daily-row .hrs {
-  width: 50px;
-  flex-shrink: 0;
-  text-align: right;
-  font-weight: 700;
-}
-
-.daily-row .pay {
-  width: 84px;
-  flex-shrink: 0;
-  text-align: right;
-}
-
-.daily-row .pay-cur {
-  margin-right: 1px;
-  font-size: 9px;
-  font-weight: 700;
-  color: ds.$ink-3;
-}
-
-.daily-row .pay-num {
+.pay-label {
   font-size: 13px;
-  font-weight: 700;
+  color: t.$ink-2;
 }
 
-.daily-row .pay.is-mid .pay-num {
-  font-size: 14px;
-}
-
-.daily-row .pay.is-big .pay-num {
-  font-size: 15px;
-  letter-spacing: -0.01em;
-  color: ds.$s-day-x;
-}
-
-.daily-row .pay.placeholder,
-.daily-row .hrs.placeholder {
-  color: rgba(98, 104, 110, 0.4);
-  font-weight: 400;
-}
-
-.daily-row.has-overtime {
-  background: rgba(20, 23, 26, 0.035);
-}
-
-.daily-row.is-rest .date {
-  color: ds.$ink-3;
-}
-
-.daily-row.is-rest .day-shift .shift-block {
-  opacity: 0.55;
-}
-
-.save-state {
-  font-size: 11px;
-  line-height: 16px;
-  letter-spacing: 0.06em;
-  color: ds.$ink-3;
-}
-
-.save-state.error {
-  color: ds.$now;
-}
-
-// ————————————————————————————————————————————————
-// 全员统计
-// ————————————————————————————————————————————————
-
-.team-trio {
-  display: flex;
-  margin-top: 12px;
-}
-
-.team-trio .trio-cell {
-  flex: 1;
-  padding-top: 12px;
-  margin-right: 16px;
-  border-top: 2px solid ds.$ink;
-}
-
-.team-trio .trio-cell:last-child {
-  margin-right: 0;
-}
-
-.team-trio .k {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 14px;
-  letter-spacing: 0.14em;
-  color: ds.$ink-3;
-}
-
-.team-trio .v {
-  display: block;
-  margin-top: 6px;
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 24px;
-  letter-spacing: -0.02em;
-  color: ds.$ink;
-}
-
-.rank {
-  margin-top: 12px;
-}
-
-.rank-row {
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.rank-row .no {
-  width: 18px;
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  color: ds.$ink-3;
-}
-
-.rank-row.top .no {
-  font-weight: 800;
-  color: ds.$ink;
-}
-
-.rank-row .rank-name {
-  display: flex;
-  flex-shrink: 0;
-  align-items: baseline;
-  width: 104px;
-  margin-right: 8px;
-}
-
-.rank-row .rank-name .b {
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 16px;
-  color: ds.$ink;
-}
-
-.rank-row .rank-name .g {
-  margin-left: 6px;
-  font-size: 10px;
-  line-height: 14px;
-  letter-spacing: 0.06em;
-  color: ds.$ink-3;
-}
-
-.rank-row .rank-track {
-  display: flex;
-  flex: 1;
-  align-items: stretch;
-  min-width: 0;
-  height: 14px;
-}
-
-.rank-row .rank-track .seg {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  height: 100%;
-  padding-right: 4px;
-  box-sizing: border-box;
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 14px;
-  color: ds.$paper;
-  background: ds.$ink;
-}
-
-.rank-row .rank-track .seg.special {
-  background: ds.$s-day;
-  color: ds.$s-day-ink;
-}
-
-.rank-row .rank-track .seg.legal {
-  background: ds.$now;
-}
-
-.rank-row .rank-track .seg Text {
-  color: inherit;
-  line-height: 14px;
-}
-
-.rank-row .rank-track .muted {
-  font-size: 11px;
-  line-height: 14px;
-}
-
-.rank-row .total {
-  width: 46px;
-  flex-shrink: 0;
+.pay-input {
+  width: 124px;
+  height: 34px;
+  padding: 0 10px;
   text-align: right;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
+  color: t.$ink;
+  background: t.$card-2;
+  border-radius: 8px;
+}
+
+.pay-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: t.$ink;
+}
+
+.pay-value.is-minus {
+  color: t.$danger;
+}
+
+.pay-split {
+  height: 1px;
+  margin: 8px 0;
+  background: t.$line;
+}
+
+// —— 实发 ——
+.net {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding: 18px;
+  background: t.$brand;
+  border-radius: t.$r-card;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.26);
+}
+
+.net-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.net-value {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
 }

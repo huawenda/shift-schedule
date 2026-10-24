@@ -28,3 +28,6 @@ dist-package/
 
 # 截图/探针等临时脚本与产物
 .tmp-shots/
+
+# 小程序实机截图工具（miniprogram-automator 独立安装目录）
+apps/miniapp/.automator/
