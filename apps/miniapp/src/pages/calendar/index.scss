@@ -33,13 +33,24 @@
 }
 
 .cal-month-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 58px;
   margin: 0 6px;
-  text-align: center;
   font-size: 20px;
   font-weight: 700;
   line-height: 26px;
   color: t.$ink;
+}
+
+// 非当月时月份文字旁的「回本月」暗示点
+.cal-month-dot {
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: t.$brand;
 }
 
 .cal-user {

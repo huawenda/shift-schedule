@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Text, View } from '@tarojs/components'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Text, View, type CommonEvent, type ITouchEvent } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { getMarkClass, monthOptions, shiftInitial, shiftLabels, weekdayLabels } from '../../appConstants'
+import { getMarkClass, monthOptions, shiftInitial, shiftLabels, weekdayLabels, type ScheduleMonth } from '../../appConstants'
 import ShiftEditor from '../../components/ShiftEditor'
 import TeamMatrix, { type MatrixMode } from '../../components/TeamMatrix'
 import { useScheduleData, type ShiftDraft } from '../../hooks/useScheduleData'
@@ -51,11 +51,40 @@ export default function CalendarPage() {
 
   const monthIndex = monthOptions.findIndex(option => option.value === data.activeMonth)
   const monthLabel = monthOptions[monthIndex]?.label ?? ''
+  // 浏览到别的月时月份文字旁亮蓝点，点一下回到本月。
+  const currentMonth = data.todayKey.slice(0, 2) as ScheduleMonth
+  const isCurrentMonth = data.activeMonth === currentMonth
 
   function switchMonth(step: number) {
     const next = monthOptions[monthIndex + step]
     if (!next) return
     data.setActiveMonth(next.value)
+  }
+
+  // 左右滑切月。微信在 touchend 时 touches 已清空（Round 2 审计 #1 的根因），
+  // 起点终点都必须读 changedTouches。
+  const swipeStart = useRef<{ x: number; y: number } | null>(null)
+
+  function readSwipePoint(event: CommonEvent): { x: number; y: number } | null {
+    // 运行时是触摸事件；Taro 把 View 的触摸 prop 标成通用事件类型，这里收窄。
+    const touch = (event as unknown as ITouchEvent).changedTouches?.[0]
+    return touch ? { x: touch.clientX, y: touch.clientY } : null
+  }
+
+  function handleCardTouchStart(event: CommonEvent) {
+    swipeStart.current = readSwipePoint(event)
+  }
+
+  function handleCardTouchEnd(event: CommonEvent) {
+    const start = swipeStart.current
+    swipeStart.current = null
+    const end = readSwipePoint(event)
+    if (!start || !end) return
+    const dx = end.x - start.x
+    const dy = end.y - start.y
+    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      switchMonth(dx < 0 ? 1 : -1)
+    }
   }
 
   function openDraft(date: string) {
@@ -87,7 +116,14 @@ export default function CalendarPage() {
           >
             <Text>‹</Text>
           </View>
-          <Text className="cal-month-text">{monthLabel}</Text>
+          <View
+            className="cal-month-text"
+            hoverClass={isCurrentMonth ? 'none' : 'press-dim'}
+            onClick={() => data.setActiveMonth(currentMonth)}
+          >
+            <Text>{monthLabel}</Text>
+            {isCurrentMonth ? null : <View className="cal-month-dot" />}
+          </View>
           <View
             className={`cal-arrow ${monthIndex >= monthOptions.length - 1 ? 'is-off' : ''}`}
             hoverClass={monthIndex >= monthOptions.length - 1 ? 'none' : 'press-dim'}
@@ -106,7 +142,11 @@ export default function CalendarPage() {
         </View>
       </View>
 
-      <View className="cal-card">
+      <View
+        className="cal-card"
+        onTouchStart={handleCardTouchStart}
+        onTouchEnd={handleCardTouchEnd}
+      >
         <View className="cal-week">
           {weekdayLabels.map(label => (
             <Text key={label} className="cal-week-text">{label}</Text>
@@ -156,20 +196,25 @@ export default function CalendarPage() {
         </View>
       </View>
 
-      <View className="block-title">
-        <Text className="block-title-text">今天同班</Text>
-        <Text className="block-title-sub">{data.todayKey} · {data.monthView.people.length} 人</Text>
-      </View>
-      <View className="mates">
-        {sameDayGroups.length > 0 ? sameDayGroups.map(group => (
-          <View key={group.shift} className="mate-row">
-            <View className={`mate-tag ${getMarkClass(group.shift)}`}>
-              <Text>{group.shift}</Text>
-            </View>
-            <Text className="mate-names">{group.names.join('、')}</Text>
+      {/* 浏览非当月时整块隐藏：todayIndex 为 -1，硬显示会是误导性空态 */}
+      {todayIndex >= 0 ? (
+        <>
+          <View className="block-title">
+            <Text className="block-title-text">今天同班</Text>
+            <Text className="block-title-sub">{data.todayKey} · {data.monthView.people.length} 人</Text>
           </View>
-        )) : <Text className="empty">今天没有排班记录</Text>}
-      </View>
+          <View className="mates">
+            {sameDayGroups.length > 0 ? sameDayGroups.map(group => (
+              <View key={group.shift} className="mate-row">
+                <View className={`mate-tag ${getMarkClass(group.shift)}`}>
+                  <Text>{group.shift}</Text>
+                </View>
+                <Text className="mate-names">{group.names.join('、')}</Text>
+              </View>
+            )) : <Text className="empty">今天没有排班记录</Text>}
+          </View>
+        </>
+      ) : null}
 
       <TeamMatrix
         people={data.monthView.people}

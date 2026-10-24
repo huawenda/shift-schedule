@@ -31,7 +31,9 @@ interface Props {
  * 保留的关键约束（旧版踩过坑）：
  * - 左侧姓名列是独立 View，与右侧 ScrollView 分离，所以**表头与内容的列宽
  *   必须同时切换**（按班次 38 / 按姓名 56），否则第 2 列就开始错位。
- * - 行高必须一致：表头 34，数据行 32 + 3 间距。
+ * - 行高必须一致：表头 34，数据行 36 + 3 间距（两侧同步改）。
+ * - 定位今天列用 ScrollView 自带的 scroll-into-view（表头 today 列带 id），
+ *   不做任何几何估算——估算常量必然漂移（Round 2 审计 #4 的教训）。
  */
 export default function TeamMatrix({
   people,
@@ -88,12 +90,19 @@ export default function TeamMatrix({
           ))}
         </View>
 
-        <ScrollView scrollX enhanced showScrollbar={false} className="mx-scroll">
+        <ScrollView
+          scrollX
+          enhanced
+          showScrollbar={false}
+          className="mx-scroll"
+          scrollIntoView="mx-today"
+        >
           <View>
             <View className="mx-row mx-row-head">
               {dateLabels.map(label => (
                 <View
                   key={label.date}
+                  id={label.date === todayKey ? 'mx-today' : undefined}
                   className={`mx-gh ${label.date === todayKey ? 'is-today' : ''}`}
                 >
                   <Text>{label.date.slice(3)}</Text>
