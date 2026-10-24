@@ -231,10 +231,10 @@ export default function CalendarPage() {
 
       {/* 浏览非当月时整块隐藏：todayIndex 为 -1，硬显示会是误导性空态 */}
       {todayIndex >= 0 ? (
-        <>
-          <View className="block-title">
-            <Text className="block-title-text">今天同班</Text>
-            <Text className="block-title-sub">{data.todayKey} · {data.monthView.people.length} 人</Text>
+        <View className="sect">
+          <View className="sect-title">
+            <Text className="sect-title-text">今天同班</Text>
+            <Text className="sect-title-sub">{data.todayKey} · {data.monthView.people.length} 人</Text>
           </View>
           <View className="mates">
             {sameDayGroups.length > 0 ? sameDayGroups.map(group => (
@@ -246,7 +246,7 @@ export default function CalendarPage() {
               </View>
             )) : <Text className="empty">今天没有排班记录</Text>}
           </View>
-        </>
+        </View>
       ) : null}
 
       <TeamMatrix

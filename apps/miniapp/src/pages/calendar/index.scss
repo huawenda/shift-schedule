@@ -1,6 +1,10 @@
 @use '../../styles/tokens' as t;
 
-// —— 顶部：月份切换 + 当前用户 ——
+// ============================================================
+// 月历页（值班白板版）：格线日历 + 今天同班 + 时刻表矩阵
+// ============================================================
+
+// —— 顶行：月份步进 + 同步签 + 人员（都在白板上，无卡片）——
 .cal-top {
   display: flex;
   align-items: center;
@@ -17,21 +21,21 @@
 
 .cal-user {
   padding: 4px 10px;
-  border-radius: t.$r-chip;
+  border: 1.5px solid t.$ink;
+  border-radius: t.$r-tile;
+  background: t.$paper;
   text-align: right;
-  background: t.$card;
-  box-shadow: t.$shadow-card;
 }
 
-// 未绑定用户：品牌描边提示「这里可以绑定」
+// 未绑定用户：信号红描边提示「这里可以绑定」
 .cal-user.is-bind {
-  box-shadow: inset 0 0 0 1.5px t.$brand, t.$shadow-card;
+  border: 2.5px solid t.$red;
 }
 
 .cal-user-name {
   display: block;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 18px;
   color: t.$ink;
 }
@@ -40,28 +44,28 @@
   display: block;
   font-size: 11px;
   line-height: 14px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
-// —— 月历卡 ——
+// —— 月历：白板格线表 ——
 .cal-card {
-  padding: 12px 10px 10px;
-  background: t.$card;
-  border-radius: t.$r-card;
-  box-shadow: t.$shadow-card;
+  margin-top: 2px;
+  border-top: t.$rule-ink;
 }
 
 .cal-week {
   display: flex;
-  padding-bottom: 6px;
+  padding: 8px 0;
+  border-bottom: t.$rule-grid;
 }
 
 .cal-week-text {
   width: 14.2857%;
   text-align: center;
   font-size: 11px;
+  font-weight: 600;
   line-height: 16px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
 .cal-grid {
@@ -71,7 +75,7 @@
 
 .cal-cell {
   width: 14.2857%;
-  padding: 2px;
+  padding: 3px;
   box-sizing: border-box;
 }
 
@@ -80,52 +84,47 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 44px;
-  border-radius: 12px;
-  background: t.$card-2;
+  height: 48px;
 }
 
 .cal-face.is-out {
-  opacity: 0.32;
+  opacity: 0.3;
 }
 
-// 今天用内描边高亮，而不是整格填充 ——
-// 填充会把该日的班次标记盖掉，而「今天什么班」恰恰是最该看清的。
+// 圈今天：马克笔框住整格。填充会盖掉格内磁贴，框不会。
 .cal-face.is-today {
-  box-shadow: inset 0 0 0 2px t.$brand;
-}
-
-.cal-face.is-today .cal-day {
-  color: t.$brand;
-  font-weight: 700;
+  border: t.$rule-today;
+  border-radius: 2px;
 }
 
 .cal-day {
+  @include t.tnum;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 18px;
   color: t.$ink;
 }
 
+// 格内磁贴条：色带上放班次首字
 .cal-mark {
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 20px;
-  height: 14px;
-  margin-top: 2px;
+  height: 13px;
+  margin-top: 3px;
   padding: 0 4px;
-  border-radius: 4px;
+  border-radius: 2px;
   font-size: 9px;
   font-weight: 700;
-  line-height: 14px;
+  line-height: 11px;
 }
 
 // —— 图例 ——
 .legend {
   display: flex;
   flex-wrap: wrap;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .legend-item {
@@ -134,13 +133,13 @@
   margin: 0 14px 8px 0;
 }
 
+// 班次图例 = 小磁贴条；加班/法定 = 圆点
 .legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 3px;
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
 }
 
-// 加班 / 法定标记是圆点语义，与班次方块图例区分开
 .legend-dot.is-round {
   width: 6px;
   height: 6px;
@@ -148,33 +147,31 @@
 }
 
 .legend-dot.is-ot {
-  background: t.$s-ot;
+  background: #ffffff;
+  border: 1.5px solid t.$ink;
 }
 
 .legend-dot.is-legal {
-  background: t.$danger;
+  background: t.$red;
 }
 
 .legend-text {
   margin-left: 5px;
   font-size: 11px;
   line-height: 14px;
-  color: t.$ink-2;
+  color: t.$pencil;
 }
 
 // —— 今天同班 ——
 .mates {
-  padding: 4px 14px;
-  background: t.$card;
-  border-radius: t.$r-card;
-  box-shadow: t.$shadow-card;
+  padding: 2px 0 4px;
 }
 
 .mate-row {
   display: flex;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid t.$line;
+  padding: 12px 0;
+  border-bottom: t.$rule-grid;
 }
 
 .mate-row:last-child {
@@ -182,14 +179,17 @@
 }
 
 .mate-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  min-width: 48px;
-  padding: 3px 8px;
-  border-radius: t.$r-pill;
-  text-align: center;
+  min-width: 46px;
+  height: 21px;
+  padding: 0 7px;
+  border-radius: t.$r-tile;
   font-size: 11px;
-  font-weight: 600;
-  line-height: 16px;
+  font-weight: 700;
+  line-height: 14px;
 }
 
 .mate-names {
@@ -197,22 +197,22 @@
   margin-left: 10px;
   font-size: 13px;
   line-height: 18px;
-  color: t.$ink-2;
+  color: t.$ink;
 }
 
 // ————————————————————————————————————————————————
-// 全员排班矩阵
+// 全员排班矩阵：时刻表
 // ————————————————————————————————————————————————
 
 .matrix {
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
 .mx-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .mx-title {
@@ -221,67 +221,63 @@
 }
 
 .mx-title-text {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 800;
   color: t.$ink;
 }
 
 .mx-title-sub {
   margin-left: 8px;
   font-size: 11px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
+// 分段控件：墨框 + 盖章选中
 .seg {
   display: flex;
-  padding: 3px;
-  border-radius: t.$r-pill;
-  background: t.$card;
-  box-shadow: t.$shadow-card;
+  padding: 2px;
+  border: 1.5px solid t.$ink;
+  border-radius: t.$r-tile;
+  background: t.$paper;
 }
 
 .seg-item {
-  padding: 7px 14px;
-  border-radius: t.$r-pill;
+  padding: 6px 12px;
+  border-radius: 2px;
   font-size: 12px;
   line-height: 16px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
 .seg-item.is-on {
-  background: t.$brand;
+  background: t.$ink;
   color: #ffffff;
-  font-weight: 600;
+  font-weight: 700;
 }
 
+// 时刻表本体：外框墨线、行间浅线、无卡片
 .mx-card {
   display: flex;
-  padding: 8px 0;
-  background: t.$card;
-  border-radius: t.$r-card;
-  box-shadow: t.$shadow-card;
-  overflow: hidden;
+  border-top: t.$rule-ink;
 }
 
-// 左右内边距必须对称，否则「居中」是相对内容区居中、整体看着偏一侧。
+// 左列行高必须与右侧 .mx-cell 同步改（36 + 3 间距），否则整片错行。
+// 左列与右侧用 1px 浅格线分隔，行底浅线与右侧 .mx-row 逐行对齐。
 .mx-col {
   flex-shrink: 0;
   width: 78px;
   padding: 0 8px;
   box-sizing: border-box;
+  border-right: t.$rule-grid;
 }
 
-// 左侧姓名列必须与右侧色块「垂直居中」对齐。
-// 原先用 align-items: baseline 让姓名和班组基线对齐，
-// 但右侧 .mx-cell 是 center 居中，两套对齐方式叠在一起就错开了半行。
-// 水平方向同样居中（表头「姓名/班次」与各行内容一起对齐列中线）。
-// 左列行高必须与右侧 .mx-cell 同步改（32→36），否则整片错行。
 .mx-name {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 36px;
   margin-top: 3px;
+  border-bottom: t.$rule-grid;
 }
 
 .mx-name-head {
@@ -290,25 +286,27 @@
   justify-content: center;
   height: 34px;
   margin-top: 0;
+  border-bottom: t.$rule-ink;
   font-size: 11px;
-  color: t.$ink-3;
+  color: t.$pencil;
+}
+
+// 当前用户：白板上给自己的名字划线加粗
+.mx-name.is-me .mx-name-main {
+  font-weight: 800;
+  border-bottom: 2px solid t.$ink;
 }
 
 .mx-name-main {
   font-size: 12px;
   font-weight: 500;
-  color: t.$ink-2;
-}
-
-.mx-name.is-me .mx-name-main {
-  color: t.$brand;
-  font-weight: 700;
+  color: t.$ink;
 }
 
 .mx-name-sub {
   margin-left: 3px;
   font-size: 9px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
 .mx-scroll {
@@ -320,30 +318,41 @@
 .mx-row {
   display: flex;
   height: auto;
+  border-bottom: t.$rule-grid;
+}
+
+.mx-row:last-child {
+  border-bottom: 0;
 }
 
 .mx-row.is-me {
-  background: rgba(37, 99, 235, 0.04);
+  background: rgba(23, 24, 26, 0.04);
 }
 
 .mx-row-head {
   height: 34px;
+  border-bottom: t.$rule-ink;
 }
 
 .mx-gh {
+  @include t.tnum;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   width: 38px;
   height: 34px;
+  border-left: 2px solid transparent;
   font-size: 11px;
-  font-weight: 600;
-  color: t.$ink-3;
+  font-weight: 700;
+  color: t.$pencil;
 }
 
+// 表头今天：反白 + 接上今天列的墨竖条
 .mx-gh.is-today {
-  color: t.$brand;
+  background: t.$ink;
+  border-left-color: t.$ink;
+  color: #ffffff;
 }
 
 .mx-cell {
@@ -355,6 +364,12 @@
   width: 38px;
   height: 36px;
   margin-top: 3px;
+  border-left: 2px solid transparent;
+}
+
+// 今天列：整列竖墨条（与表头反白格连成一条）
+.mx-cell.is-today {
+  border-left-color: t.$ink;
 }
 
 .mx-mark {
@@ -363,28 +378,29 @@
   justify-content: center;
   width: 36px;
   height: 30px;
-  border-radius: 7px;
+  border-radius: 2px;
   font-size: 10px;
   font-weight: 700;
 }
 
+// 加班标记：白点带墨描边（黄底磁贴上也可见）；法定 = 红点。与 Web 端语义一致。
 .mx-dot {
   position: absolute;
   top: 5px;
   right: 5px;
   width: 5px;
   height: 5px;
+  border: 1px solid t.$ink;
   border-radius: 50%;
-  // 琥珀 = 平日加班（Web 端为纸白点，浅底小程序用深色系）；红 = 法定。
-  // 不能用 $s-rest 绿：那是「休息」的语义色，撞色会误读。
-  background: t.$s-ot;
+  background: #ffffff;
 }
 
 .mx-dot.is-legal {
-  background: t.$danger;
+  border-color: t.$red;
+  background: t.$red;
 }
 
-// 按姓名模式：表头与内容必须同时变宽，否则第 2 列就开始错位
+// 按姓名模式：表头 / 内容 / 磁贴 / 左列**四处同宽切换**（Round 1 P0-1 的铁律）
 .matrix.is-by-name {
   .mx-gh {
     width: 56px;

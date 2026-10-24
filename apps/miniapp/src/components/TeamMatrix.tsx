@@ -121,13 +121,13 @@ export default function TeamMatrix({
                   const hasLegal = legalKeys.has(key)
                   const hasOvertime = shift !== '事假' && (hasLegal || overtimeKeys.has(key))
 
-                  return (
-                    <View
-                      key={date}
-                      className="mx-cell"
-                      hoverClass="press-cell"
-                      onClick={() => onOpen(person.name, date)}
-                    >
+                    return (
+                      <View
+                        key={date}
+                        className={`mx-cell ${date === todayKey ? 'is-today' : ''}`}
+                        hoverClass="press-cell"
+                        onClick={() => onOpen(person.name, date)}
+                      >
                       {shift ? (
                         <View className={`mx-mark ${getMarkClass(shift)}`}>
                           <Text>{byName ? person.name : shiftInitial[shift]}</Text>
