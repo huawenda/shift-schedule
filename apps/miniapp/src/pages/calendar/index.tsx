@@ -82,7 +82,7 @@ export default function CalendarPage() {
         <View className="cal-month">
           <View
             className={`cal-arrow ${monthIndex <= 0 ? 'is-off' : ''}`}
-            hoverClass="press-dim"
+            hoverClass={monthIndex <= 0 ? 'none' : 'press-dim'}
             onClick={() => switchMonth(-1)}
           >
             <Text>‹</Text>
@@ -90,7 +90,7 @@ export default function CalendarPage() {
           <Text className="cal-month-text">{monthLabel}</Text>
           <View
             className={`cal-arrow ${monthIndex >= monthOptions.length - 1 ? 'is-off' : ''}`}
-            hoverClass="press-dim"
+            hoverClass={monthIndex >= monthOptions.length - 1 ? 'none' : 'press-dim'}
             onClick={() => switchMonth(1)}
           >
             <Text>›</Text>
@@ -98,7 +98,7 @@ export default function CalendarPage() {
         </View>
         <View
           className="cal-user"
-          hoverClass="press-dim"
+          hoverClass={data.isAdmin ? 'press-dim' : 'none'}
           onClick={() => data.isAdmin && setPickerOpen(true)}
         >
           <Text className="cal-user-name">{data.currentUser?.name ?? ''}</Text>
@@ -117,7 +117,7 @@ export default function CalendarPage() {
             <View
               key={cell.key}
               className="cal-cell"
-              hoverClass="press-cell"
+              hoverClass={cell.inCurrentMonth ? 'press-cell' : 'none'}
               onClick={() => cell.inCurrentMonth && openDraft(cell.key)}
             >
               <View

@@ -17,12 +17,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: t.$r-chip;
   background: t.$card;
   font-size: 18px;
-  line-height: 32px;
+  line-height: 36px;
   color: t.$ink-2;
   box-shadow: t.$shadow-card;
 }
@@ -263,7 +263,7 @@
 }
 
 .seg-item {
-  padding: 5px 12px;
+  padding: 7px 14px;
   border-radius: t.$r-pill;
   font-size: 12px;
   line-height: 16px;
@@ -297,11 +297,12 @@
 // 原先用 align-items: baseline 让姓名和班组基线对齐，
 // 但右侧 .mx-cell 是 center 居中，两套对齐方式叠在一起就错开了半行。
 // 水平方向同样居中（表头「姓名/班次」与各行内容一起对齐列中线）。
+// 左列行高必须与右侧 .mx-cell 同步改（32→36），否则整片错行。
 .mx-name {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
+  height: 36px;
   margin-top: 3px;
 }
 
@@ -374,7 +375,7 @@
   justify-content: center;
   flex-shrink: 0;
   width: 38px;
-  height: 32px;
+  height: 36px;
   margin-top: 3px;
 }
 
@@ -382,8 +383,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 26px;
+  width: 36px;
+  height: 30px;
   border-radius: 7px;
   font-size: 10px;
   font-weight: 700;
