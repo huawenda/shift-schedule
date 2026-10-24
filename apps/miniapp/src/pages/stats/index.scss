@@ -1,10 +1,11 @@
 @use '../../styles/tokens' as t;
 
+// ============================================================
+// 统计页（值班白板版）：一张账本报表
+// ============================================================
+
 .stats-top {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding-bottom: 16px;
+  padding-bottom: 14px;
 }
 
 // 月份步进器（‹ › 用全局 .step-arrow / .step-label）
@@ -18,161 +19,158 @@
   margin-top: 2px;
   font-size: 12px;
   line-height: 16px;
-  color: t.$ink-3;
+  color: t.$pencil;
 }
 
-.stats-total {
-  text-align: right;
-}
-
-.stats-total-num {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 26px;
-  color: t.$brand;
-}
-
-.stats-total-unit {
-  display: block;
-  font-size: 11px;
-  line-height: 14px;
-  color: t.$ink-3;
-}
-
-// —— 通用卡片 ——
-.card {
-  margin-top: 14px;
-  padding: 16px;
-  background: t.$card;
-  border-radius: t.$r-card;
-  box-shadow: t.$shadow-card;
-}
-
-.card-title {
-  display: block;
+// —— 加班合计 ——
+.ledger-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   margin-bottom: 10px;
+}
+
+.ledger-title {
   font-size: 15px;
-  font-weight: 600;
-  line-height: 20px;
+  font-weight: 800;
   color: t.$ink;
 }
 
-.card-empty {
-  display: block;
-  padding: 6px 0 2px;
-  font-size: 12px;
-  color: t.$ink-3;
+.ledger-total {
+  @include t.tnum;
+  font-family: t.$font-num;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 36px;
+  color: t.$ink;
 }
 
-// —— 加班分布 ——
+// 条形：刻度轨道 + 直角填充（平日墨、特勤黄、法定红）
 .bar-row {
   display: flex;
   align-items: center;
-  padding: 6px 0;
+  padding: 7px 0;
 }
 
 .bar-key {
   flex-shrink: 0;
   width: 34px;
   font-size: 12px;
-  color: t.$ink-2;
+  color: t.$pencil;
 }
 
 .bar-track {
   flex: 1;
   height: 10px;
-  border-radius: 5px;
-  background: t.$card-2;
-  overflow: hidden;
+  background-image: linear-gradient(90deg, t.$grid 1px, transparent 1px);
+  background-size: 10% 100%;
 }
 
 .bar-fill {
   height: 10px;
-  border-radius: 5px;
 }
 
 .bar-weekday {
-  background: t.$brand;
+  background: t.$ink;
 }
 
 .bar-special {
-  background: t.$s-day;
+  background: t.$tile-day;
 }
 
 .bar-legal {
-  background: t.$s-night;
+  background: t.$red;
 }
 
 .bar-val {
+  @include t.tnum;
   flex-shrink: 0;
   width: 50px;
   text-align: right;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: t.$ink;
 }
 
-// —— 薪资 ——
+.ledger-empty {
+  display: block;
+  padding: 6px 0 2px;
+  font-size: 12px;
+  color: t.$pencil;
+}
+
+// —— 账本行：标签左、数字右 ——
 .pay-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 0;
+  padding: 8px 0;
 }
 
 .pay-label {
   font-size: 13px;
-  color: t.$ink-2;
+  color: t.$pencil;
 }
 
 .pay-input {
+  @include t.tnum;
   width: 124px;
   height: 34px;
   padding: 0 10px;
+  border: 1.5px solid t.$ink;
+  border-radius: t.$r-tile;
+  background: t.$paper;
   text-align: right;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: t.$ink;
-  background: t.$card-2;
-  border-radius: 8px;
 }
 
 .pay-value {
+  @include t.tnum;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: t.$ink;
 }
 
 .pay-value.is-minus {
-  color: t.$danger;
+  color: t.$red;
 }
 
 .pay-split {
   height: 1px;
   margin: 8px 0;
-  background: t.$line;
+  background: t.$grid;
 }
 
-// —— 实发 ——
+// 会计双线：合计行之上的记账语言
+.net-rule {
+  margin-top: 10px;
+  border-top: 3px double t.$ink;
+}
+
+// 结算行：墨底白字（盖章）
 .net {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 14px;
-  padding: 18px;
-  background: t.$brand;
-  border-radius: t.$r-card;
-  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.26);
+  margin-top: 10px;
+  padding: 14px 16px;
+  background: t.$ink;
+  border-radius: t.$r-tile;
+  box-shadow: t.$shadow-stamp;
 }
 
 .net-label {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .net-value {
-  font-size: 28px;
+  @include t.tnum;
+  font-family: t.$font-num;
+  font-size: 26px;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  line-height: 30px;
   color: #ffffff;
 }

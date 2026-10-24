@@ -13,14 +13,25 @@ import { getPersonMonthlyStats } from '../../utils/statistics'
 import { getSafeTop } from '../../utils/safeArea'
 import './index.scss'
 
+/** 账本金额：千分位 + 两位小数，配 tabular-nums 右对齐。 */
+function formatMoney(value: number): string {
+  return value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatHours(hours: number): string {
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
+}
+
+const inputRows: Array<{ field: keyof SalaryInputValues; label: string }> = [
+  { field: 'baseSalary', label: '基本工资' },
+  { field: 'performanceAllowance', label: '绩效津贴' },
+  { field: 'positionAllowance', label: '岗位津贴' },
+  { field: 'otherDeductions', label: '其他扣款' }
+]
+
 /**
- * 统计页（重写）。
- *
- * 旧版把「综合统计 / 每日明细 / 全员统计」三个视图塞进同一个页面，
- * 靠顶部 tab + 横向翻页切换，信息密度高但可读性差。
- *
- * 新版只留三块必要信息：本月加班分布、薪资明细、请假扣款，
- * 全部按「卡片 + 逐行」组织，一屏到底，不再有二级 tab。
+ * 统计页（值班白板版）：一张账本报表。
+ * 金额右对齐 + 千分位 + 会计双线合实发；加班分布用刻度条。
  */
 export default function StatsPage() {
   useDidShow(() => { Taro.eventCenter.trigger('tab-change', 2) })
@@ -102,89 +113,64 @@ export default function StatsPage() {
               <Text>›</Text>
             </View>
           </View>
-          <Text className="stats-sub">{data.currentUser?.name ?? ''} · {data.currentUser?.group ?? ''}</Text>
-        </View>
-        <View className="stats-total">
-          <Text className="stats-total-num">{totalOvertime % 1 === 0 ? totalOvertime : totalOvertime.toFixed(1)}</Text>
-          <Text className="stats-total-unit">小时加班</Text>
+          <Text className="stats-sub">{data.currentUser?.name ?? ''} {data.currentUser?.group ?? ''}</Text>
         </View>
       </View>
 
-      <View className="card">
-        <Text className="card-title">加班分布</Text>
+      <View className="sect">
+        <View className="ledger-head">
+          <Text className="ledger-title">加班合计</Text>
+          <Text className="ledger-total">{formatHours(totalOvertime)}h</Text>
+        </View>
         {bars.map(bar => (
           <View key={bar.key} className="bar-row">
             <Text className="bar-key">{bar.key}</Text>
             <View className="bar-track">
               <View className={`bar-fill ${bar.cls}`} style={{ width: `${(bar.hours / maxHours) * 100}%` }} />
             </View>
-            <Text className="bar-val">{bar.hours % 1 === 0 ? bar.hours : bar.hours.toFixed(1)}h</Text>
+            <Text className="bar-val">{formatHours(bar.hours)}h</Text>
           </View>
         ))}
-        {totalOvertime === 0 ? <Text className="card-empty">本月暂无加班记录</Text> : null}
+        {totalOvertime === 0 ? <Text className="ledger-empty">本月暂无加班记录</Text> : null}
       </View>
 
-      <View className="card">
-        <Text className="card-title">薪资构成</Text>
-        <View className="pay-row">
-          <Text className="pay-label">基本工资</Text>
-          <Input
-            className="pay-input"
-            type="digit"
-            value={inputs.baseSalary}
-            placeholder="0"
-            onInput={event => setInput('baseSalary', String(event.detail.value))}
-          />
+      <View className="sect">
+        <View className="sect-title">
+          <Text className="sect-title-text">薪资</Text>
+          <Text className="sect-title-sub">金额可自行修改，仅存本机</Text>
         </View>
-        <View className="pay-row">
-          <Text className="pay-label">绩效津贴</Text>
-          <Input
-            className="pay-input"
-            type="digit"
-            value={inputs.performanceAllowance}
-            placeholder="0"
-            onInput={event => setInput('performanceAllowance', String(event.detail.value))}
-          />
-        </View>
-        <View className="pay-row">
-          <Text className="pay-label">岗位津贴</Text>
-          <Input
-            className="pay-input"
-            type="digit"
-            value={inputs.positionAllowance}
-            placeholder="0"
-            onInput={event => setInput('positionAllowance', String(event.detail.value))}
-          />
-        </View>
-        <View className="pay-row">
-          <Text className="pay-label">其他扣款</Text>
-          <Input
-            className="pay-input"
-            type="digit"
-            value={inputs.otherDeductions}
-            placeholder="0"
-            onInput={event => setInput('otherDeductions', String(event.detail.value))}
-          />
-        </View>
+        {inputRows.map(row => (
+          <View key={row.field} className="pay-row">
+            <Text className="pay-label">{row.label}</Text>
+            <Input
+              className="pay-input"
+              type="digit"
+              value={inputs[row.field]}
+              placeholder="0"
+              onInput={event => setInput(row.field, String(event.detail.value))}
+            />
+          </View>
+        ))}
 
         <View className="pay-split" />
         <View className="pay-row">
           <Text className="pay-label">时薪</Text>
-          <Text className="pay-value">{calc.hourlyWage.toFixed(2)}</Text>
+          <Text className="pay-value">{formatMoney(calc.hourlyWage)}</Text>
         </View>
         <View className="pay-row">
           <Text className="pay-label">加班费</Text>
-          <Text className="pay-value">{calc.overtimePayTotal.toFixed(2)}</Text>
+          <Text className="pay-value">{formatMoney(calc.overtimePayTotal)}</Text>
         </View>
         <View className="pay-row">
           <Text className="pay-label">请假扣款</Text>
-          <Text className="pay-value is-minus">-{calc.leaveDeduction.toFixed(2)}</Text>
+          <Text className="pay-value is-minus">-{formatMoney(calc.leaveDeduction)}</Text>
         </View>
-      </View>
 
-      <View className="net">
-        <Text className="net-label">本月实发</Text>
-        <Text className="net-value">¥ {calc.netSalary.toFixed(2)}</Text>
+        <View className="net-rule" />
+        <View className="net">
+          <Text className="net-label">本月实发</Text>
+          <Text className="net-value">{formatMoney(calc.netSalary)}</Text>
+        </View>
       </View>
     </View>
   )
