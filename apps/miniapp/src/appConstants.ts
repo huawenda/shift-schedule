@@ -71,6 +71,21 @@ export function getShiftClass(shift: ShiftType): ShiftClassName {
   return shiftClassMap[shift] ?? 's-rest'
 }
 
+/** 浅底徽章类（m-*）：日历标记、矩阵标记、周条标记共用的「浅底 + 深字」呈现。
+ *  实色（s-*）只用于色点 / 色条，不承载文字。 */
+const markClassMap: Record<ShiftType, string> = {
+  白班: 'm-day',
+  夜班: 'm-night',
+  休息: 'm-rest',
+  白特: 'm-dayx',
+  夜特: 'm-nightx',
+  事假: 'm-leave'
+}
+
+export function getMarkClass(shift: ShiftType): string {
+  return markClassMap[shift] ?? 'm-rest'
+}
+
 /** 值班牌「本月」小计的统计键（就是班次本身，Web 端不含「法定」）。 */
 export type TallyKey = ShiftType
 

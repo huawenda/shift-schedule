@@ -1,7 +1,7 @@
 import { ScrollView, Text, View } from '@tarojs/components'
-import { shiftInitial } from '../appConstants'
+import { getMarkClass, shiftInitial } from '../appConstants'
 import { getOverrideKey } from '../services/cloudRecordMaps'
-import type { SchedulePerson, ShiftType } from '../types/schedule'
+import type { SchedulePerson } from '../types/schedule'
 import type { DateLabel } from '../utils/schedule'
 
 export type MatrixMode = 'shift' | 'name'
@@ -17,15 +17,6 @@ interface Props {
   legalKeys: Set<string>
   onOpen: (personName: string, date: string) => void
   onModeChange: (mode: MatrixMode) => void
-}
-
-const MARK_CLASS: Record<ShiftType, string> = {
-  白班: 'm-day',
-  夜班: 'm-night',
-  休息: 'm-rest',
-  白特: 'm-dayx',
-  夜特: 'm-nightx',
-  事假: 'm-leave'
 }
 
 /**
@@ -129,7 +120,7 @@ export default function TeamMatrix({
                       onClick={() => onOpen(person.name, date)}
                     >
                       {shift ? (
-                        <View className={`mx-mark ${MARK_CLASS[shift]}`}>
+                        <View className={`mx-mark ${getMarkClass(shift)}`}>
                           <Text>{byName ? person.name : shiftInitial[shift]}</Text>
                         </View>
                       ) : null}

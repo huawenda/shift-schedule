@@ -64,7 +64,7 @@
   font-weight: 600;
   line-height: 14px;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .hero-main {
@@ -92,7 +92,7 @@
   display: block;
   font-size: 10px;
   line-height: 14px;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .hero-cd-row {
@@ -112,7 +112,7 @@
 .hero-cd-unit {
   margin-left: 2px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .hero-range {
@@ -120,7 +120,7 @@
   margin-top: 8px;
   font-size: 12px;
   line-height: 16px;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .hero-progress {
@@ -177,6 +177,8 @@
   color: t.$ink;
 }
 
+// 徽章底色与字色全部来自全局 m-*（浅底 + 深字），与日历/矩阵同一套呈现。
+// 不再自声明白字：白字在班次实心色（琥珀/绿）上只有 2.1-2.5:1。
 .week-mark {
   display: flex;
   align-items: center;
@@ -187,7 +189,6 @@
   border-radius: 7px;
   font-size: 10px;
   font-weight: 700;
-  color: #ffffff;
 }
 
 .week-mark.is-empty {

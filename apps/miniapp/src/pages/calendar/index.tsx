@@ -1,23 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { monthOptions, shiftInitial, shiftLabels, weekdayLabels } from '../../appConstants'
-import type { ShiftType } from '../../types/schedule'
+import { getMarkClass, monthOptions, shiftInitial, shiftLabels, weekdayLabels } from '../../appConstants'
 import ShiftEditor from '../../components/ShiftEditor'
 import TeamMatrix, { type MatrixMode } from '../../components/TeamMatrix'
 import { useScheduleData, type ShiftDraft } from '../../hooks/useScheduleData'
 import { getSafeTop } from '../../utils/safeArea'
 import { getDateLabels } from '../../utils/schedule'
 import './index.scss'
-
-const MARK_CLASS: Record<ShiftType, string> = {
-  白班: 'm-day',
-  夜班: 'm-night',
-  休息: 'm-rest',
-  白特: 'm-dayx',
-  夜特: 'm-nightx',
-  事假: 'm-leave'
-}
 
 /**
  * 月历页。
@@ -139,7 +129,7 @@ export default function CalendarPage() {
               >
                 <Text className="cal-day">{cell.day}</Text>
                 {cell.shift ? (
-                  <View className={`cal-mark ${MARK_CLASS[cell.shift]}`}>
+                  <View className={`cal-mark ${getMarkClass(cell.shift)}`}>
                     <Text>{shiftInitial[cell.shift]}</Text>
                   </View>
                 ) : null}
@@ -152,10 +142,18 @@ export default function CalendarPage() {
       <View className="legend">
         {shiftLabels.map(shift => (
           <View key={shift} className="legend-item">
-            <View className={`legend-dot ${MARK_CLASS[shift]}`} />
+            <View className={`legend-dot ${getMarkClass(shift)}`} />
             <Text className="legend-text">{shift}</Text>
           </View>
         ))}
+        <View className="legend-item">
+          <View className="legend-dot is-round is-ot" />
+          <Text className="legend-text">加班</Text>
+        </View>
+        <View className="legend-item">
+          <View className="legend-dot is-round is-legal" />
+          <Text className="legend-text">法定</Text>
+        </View>
       </View>
 
       <View className="block-title">
@@ -165,7 +163,7 @@ export default function CalendarPage() {
       <View className="mates">
         {sameDayGroups.length > 0 ? sameDayGroups.map(group => (
           <View key={group.shift} className="mate-row">
-            <View className={`mate-tag ${MARK_CLASS[group.shift]}`}>
+            <View className={`mate-tag ${getMarkClass(group.shift)}`}>
               <Text>{group.shift}</Text>
             </View>
             <Text className="mate-names">{group.names.join('、')}</Text>

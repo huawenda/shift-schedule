@@ -162,6 +162,21 @@
   border-radius: 3px;
 }
 
+// 加班 / 法定标记是圆点语义，与班次方块图例区分开
+.legend-dot.is-round {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.legend-dot.is-ot {
+  background: t.$s-ot;
+}
+
+.legend-dot.is-legal {
+  background: t.$danger;
+}
+
 .legend-text {
   margin-left: 5px;
   font-size: 11px;
@@ -381,7 +396,9 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: t.$s-rest;
+  // 琥珀 = 平日加班（Web 端为纸白点，浅底小程序用深色系）；红 = 法定。
+  // 不能用 $s-rest 绿：那是「休息」的语义色，撞色会误读。
+  background: t.$s-ot;
 }
 
 .mx-dot.is-legal {

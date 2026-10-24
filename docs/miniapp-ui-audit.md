@@ -362,3 +362,148 @@ run.cmd
 | 顶栏 167px 精简 | 需改两行式结构（stepper 并进月份轨），结构改动单独一轮 |
 | 圆角 / 配色 / 字号层级 | 属于"纸面 + 墨牌"的设计基因（`r-data: 2px` 硬朗直角、班次色是语义数据色），不做擅自更改 |
 | 统计页骨架屏 | 需加占位组件，非纯样式 |
+
+---
+
+# Round 3 Audit（2026-10-24，新三页架构）
+
+日期：2026-10-24
+范围：重构后的 `apps/miniapp/src`（today / calendar / stats 三 tab 页 + custom-tab-bar + useScheduleData + tokens v2）。
+基线：全量源码通读 + 与 `apps/web` 功能对等性比对 + `git show 96aee01` 旧版比对；`pnpm typecheck:miniapp` 通过。
+性质变化：本轮不再是「对照 Web 移动断点的像素审计」——新版换了自己的设计语言（tokens v2），Web 断点只作功能对等参照；审计标准改为 PRODUCT.md 六条设计原则 + 平台正确性 + 新旧版功能回归。
+
+## 0. 结论
+
+前两轮的**视觉/布局类缺陷在新架构中全部消失**（结构重写带走），但重写同时丢掉了三层「非视觉」能力：数据一致性、身份绑定、同步可见性。共 **3 项 P0、3 项 P1、4 项 P2、7 项 P3**：
+
+| 级别 | 数量 | 性质 |
+|---|---|---|
+| P0 | 3 | 跨 tab 数据不同步；绑定流程丢失；同步状态不可见（三者均为旧版有、新版无的功能回归） |
+| P1 | 3 | 统计页锁死当前月；矩阵不定位今天；非当月「今天同班」空态误导 |
+| P2 | 4 | 加班点语义色与 Web 相悖；周条色标样式孤立且对比度不足；辅助文字对比度不足；触控目标偏小 |
+| P3 | 7 | 细节与文案 |
+
+## 1. 先说做对的
+
+- 1000 行单页拆成三页 + `useScheduleData`（379 行）数据层抽离，UI 与同步逻辑分离，页面职责注释清晰（今日页「只回答一个问题」的设计取向正确）。
+- tokens v2 克制：两档投影、班次色只做标记不做整格填色、间距收敛，符合 PRODUCT.md「不做企业 OA」的定位。
+- 按压反馈全覆盖（press-cell / press-dim / press-surface / tabbar-press），且按压态只改 transform/opacity 不动尺寸——Round 1 P0-2 与 Round 2 第 9 节的规则被完整继承。
+- `is-by-name` 表头/内容/mark/左列**四者同宽切换**（calendar/index.scss:391-409），Round 1 P0-1 的教训被注释固化下来。
+- 两行式 167px 旧顶栏问题消失：新版无标题行，`safeArea.ts` 的 getSafeTop 直接管到胶囊底部。
+- custom-tab-bar 纯 View 图标 + currentColor + eventCenter 同步选中态，不维护两套 png。
+
+## 2. P0：功能性回归
+
+### P0-1 三个 tab 页各持一份独立数据状态，跨页互不更新
+
+`useScheduleData` 是普通 hook（hooks/useScheduleData.ts:76 起，全部 useState/useEffect 在函数体内），而三个页面各自调用（today/index.tsx:21、calendar/index.tsx:32、stats/index.tsx:28），`app.tsx:9-11` 没有任何 Provider。微信 tab 页首次加载后常驻不卸载，于是：
+
+- 在月历页改今天的班 → 切回今日页：hero 班次、未来 7 天、本月小计**仍是旧数据**，直到杀进程重启；统计页的加班/薪资数字同理。
+- 每个页面首次显示都各自跑一遍 `loadCurrentUserProfile`（云函数 ×3）+ `loadCloudOverrides`（下行 ×3）+ 首次上行 ×3。
+
+修复：把 `useScheduleData` 提升为 app 级 Context Provider（或 zustand/useSyncExternalStore 外部 store），三页消费同一实例；事件同步走 store 而不是各自拉云。此项是 P0-2 / P0-3 的前置——绑定层和同步状态条都应挂在共享数据层上。
+
+### P0-2 绑定流程整体丢失（未绑定用户身份错乱）
+
+全仓 grep 证实：`needsBinding` / `bindProfile` 在所有页面**零使用**。旧版（96aee01）有 UserPickerSheet + bindProfile 完整流程（旧 pages/index/index.tsx:693-712）。现在未绑定的普通用户会经历：
+
+1. `currentUserName` 停在默认值「华文达」（useScheduleData.ts:88），今日页把**别人的排班当成「我的」**展示——这正是上个提交在 userProfile.ts 里刚堵上的「错绑他人」问题的 UI 面；
+2. 点任何格子被 openDraft 拦截 toast「只能修改本人排班」（useScheduleData.ts:326，因 boundPersonName=null）；
+3. 云端下行被关（useScheduleData.ts:184 canLoadCloud=false），看不到共享排班；
+4. **没有任何入口完成绑定**——人员选择器只对管理员开放（calendar/index.tsx:112 `data.isAdmin && setPickerOpen(true)`）。
+
+修复：`needsBinding` 为真时在今日页/月历页弹绑定层（复用现有 pick-row 列表样式），绑定成功后 setCurrentUserName。
+
+### P0-3 云同步状态完全不可见
+
+grep 证实：`refresh` / `refreshing` / `cloudSyncBlocked` 在所有页面**零使用**。对照：
+
+- Web 端常驻同步文案（App.tsx:75 statusText、AppChrome.tsx:80 sync-text：同步中/已同步/同步失败/请登录后同步）+ 统计页同步按钮（StatsView.tsx:118）；
+- 旧版有 toast「云端同步完成/失败」+ 下拉刷新（旧 pages/index/index.tsx:505-517）；
+- PRODUCT.md 原则 4：「Sync should be visible and calm——用户需要显式的 loading/saved/failed/retry 状态」。
+
+新版用户无法分辨数据是本地快照还是已同步，`cloudSyncBlocked`（读失败封锁上行）发生时完全无感、无重试路径。
+
+修复：月历页顶栏加同步状态（icon+短文案，失败时可点重试调 `refresh()`）；保存成功/失败给轻量反馈。建议复用 `refreshing`/`cloudSyncBlocked` 这两个已经存在但没人消费的状态。
+
+## 3. P1：功能与可用性
+
+### P1-1 统计页锁死当前月、不能换人
+
+`stats/index.tsx:32-33` 只把 monthLabel 渲染成标题，无任何切换控件；且因 P0-1 每页独立实例，它永远停在初始月。Web 端统计页有「选择月份」「选择用户」两个 picker（StatsView.tsx:395-430）。结果：10 月看 9 月薪资不可能；管理员看不了他人统计（普通用户只看本人是合理门控，管理员能力应保留）。
+
+修复：stats-top 加月份切换（最小方案复用月历页的 `‹ ›` 箭头样式）；管理员加人员选择入口。
+
+### P1-2 全员矩阵不再自动定位到今天
+
+旧版有 `getCenteredTableScrollLeft` 把 today 列滚到可视区中部；新版 `TeamMatrix.tsx:100` 的 ScrollView 没有 scrollLeft / scroll-into-view，永远从 1 号开始——今天 24 号需要手划 20+ 列。矩阵本来就是本页使用率最高的区块，等于每次都让用户做同一件无谓的滚动。
+
+修复：today 列加 id，挂载后 `scroll-into-view`（ScrollView 自带属性，比 createSelectorQuery 测宽简单且无 Round 2 #4 那类几何估算问题）。
+
+### P1-3 浏览非当月时「今天同班」显示误导性空态
+
+calendar/index.tsx:76-86：切到别的月后 `todayIndex = -1` → sameDayGroups 全空 → 显示「今天没有排班记录」（index.tsx:173），但区块标题仍是「今天同班 · {今天日期}」。实际上今天有记录，只是不在当前浏览的月里。
+
+修复三选一：切月时整块隐藏；改为显示所选月 1 日的同班（改标题）；至少空态文案改成「当月视图不含今天」。
+
+## 4. P2：一致性与可访问性
+
+### P2-1 加班点语义色与 Web 相悖，且与休息色撞色
+
+Web：平日加班 = 纸白点、法定 = 红点（schedule.scss:250-269，注释写明）。小程序：平日加班点用 `t.$s-rest` 绿（app.scss:377-385 `.mx-dot`）——绿色同时是「休息」的语义色，且图例里没有任何加班点说明。用户在矩阵里看到绿点，分不清是「加班」还是和休息有关。
+
+修复：平日加班点改琥珀 `#d97706`（或深墨色），红点保持法定；图例区补「● 加班 / ● 法定」两项。
+
+### P2-2 「未来 7 天」色标是全应用唯一「实心+白字」，孤立且对比度不足
+
+today/index.scss:180-195 `.week-mark` 用班次实心色 + 白字；同页的日历 cal-mark、矩阵 mx-mark 都是「浅底 + 深字」徽章（m-* 体系）。同一班次在今日页/月历页呈现两套视觉。且白字 10px 在 `#f59e0b` 上约 2.1:1、`#10b981` 上约 2.5:1（WCAG AA 要求 4.5:1）。
+
+修复：week-mark 改用 m-* 浅底徽章，一举解决一致性与对比度。
+
+### P2-3 辅助文字 $ink-3（#94a3b8）对比度普遍不足
+
+白卡上约 2.6:1、页面底 #eef1f6 上约 2.3:1，而它在承担大量 11-12px 标签（block-title-sub、stats-sub、top-meta、mx-title-sub、week-wd、cal-user-group、hero 以外的辅助行……）。PRODUCT.md 反引用里明确点名「tiny low-contrast text」。
+
+修复：`$ink-3` 调至 `#64748b`（白卡 4.8:1）；或拆成两档——纯装饰用现值，承载信息的小字用深档。
+
+### P2-4 触控目标偏小
+
+矩阵格 38×32（calendar/index.scss:355-364）、分段控件 seg-item 约 26px 高（:250-256）、chip 约 34px 高（app.scss:190-203），低于 44px 建议。矩阵是密度取舍（Round 1 §5-1 已记录），可把行高提到 36-38；seg/chip 直接加 padding 即可。
+
+## 5. P3：细节
+
+| # | 项 | 位置 | 说明 |
+|---|---|---|---|
+| 1 | 无动作元素仍有按压反馈 | calendar/index.tsx:94-116, 127-131 | is-off 箭头、非管理员的 cal-user、非当月日历格都带 hoverClass，点了「有反应没结果」。建议条件式去掉 hoverClass |
+| 2 | 月份文字不可点 | calendar/index.tsx:100 | 建议点月份文字回当月（「回到本月」），替代反复点箭头 |
+| 3 | 今日页文案与能力不符 | today/index.tsx:78 | 「滑动月历可看整月」，但月历没有滑动手势（Round 2 #1 随旧组件删除）。要么补手势（touchStart 存 ref + changedTouches 的正确写法），要么改文案 |
+| 4 | 月尾「未来 7 天」不满 7 格 | today/index.tsx:32 | slice 不跨月，月末只剩 1-2 格。可跨月补齐或改标题「本月剩余」 |
+| 5 | 薪资输入每击键全量读写 storage | stats/index.tsx:62、services/salaryInputs.ts:32-38 | 无防抖；且薪资输入不进云同步（Web 会），换设备即丢——若为隐私设计，应在 UI 注明「仅存本机」 |
+| 6 | ShiftEditor 的 isAdmin prop 未使用 | components/ShiftEditor.tsx:9-15 | 权限实际在 openDraft 层拦截，prop 传了不用，删掉或注释指向真正的门控点 |
+| 7 | hero 辅助文字偏淡 | today/index.scss:61-67, 91-96 | 72% 白在 #2563eb 上约 3.5:1、10-11px。提到 85% 或纯白 |
+
+## 6. 前两轮问题在新架构中的状态核对
+
+| 来源 | 问题 | 状态 |
+|---|---|---|
+| R1 P0-1 | 按姓名视图表头/内容错位 | **已解决**（结构重写，is-by-name 四处同宽切换） |
+| R1 P0-2 | 全应用零按压反馈 | **已解决**（hoverClass 全覆盖 + press 语义类） |
+| R1 P1-1 | 缺全局 box-sizing | **已解决**（app.scss:12-15，且 Round 1 §7.2 实测本就不成立） |
+| R1 P1-2 | 同步浮层压控件 | 随旧代码删除；但同步 UI 整体消失 → **本轮 P0-3** |
+| R1 P1-3 | 姓名列竖线断开 | 随旧代码删除（新版无竖线设计） |
+| R1 P1-4 | 休息格丢底色 | **已解决**（m-rest 浅底徽章带字） |
+| R1 P1-5 | 顶栏 167px | **已解决**（无标题行顶栏 + getSafeTop） |
+| R2 #1 | 日历滑动手势失效 | 组件已删，问题消失但**能力也删了** → 本轮 P3-3 |
+| R2 #2 | 统计页顶栏重复渲染 | **已解决**（页面重写） |
+| R2 #3-5 | 几何常量与 SCSS 失配 | 相关代码全删；对应缺口转化为**本轮 P1-2**（不定位今天） |
+| R2 #6-7 | 同步浮层提前喊完成 / 滚底触发刷新 | 随旧代码删除 → 并入**本轮 P0-3** |
+| R2 P4 | stats 页复制常量 | **已解决**（直接 import appConstants） |
+
+## 7. 建议修复顺序
+
+1. **P0-1 数据层共享**（Context/外部 store）——P0-2、P0-3 都要挂在它上面，先做避免返工。
+2. **P0-2 绑定流程**——身份错乱是数据正确性问题，优先级高于视觉。
+3. **P0-3 同步状态 UI**——复用现成的 refreshing/cloudSyncBlocked 状态即可，成本低。
+4. P1-1 统计页月份切换 → P1-2 矩阵定位今天（scroll-into-view 一行属性）→ P1-3 空态。
+5. P2 批量：P2-2/P2-3 是纯样式一行级改动，P2-1 改一个色值 + 补图例，P2-4 加 padding。
+6. P3 按顺手程度清理，P3-3 的滑动手势若做，务必用 touchStart 存 ref + changedTouches 的写法（R2 #1 的根因）。

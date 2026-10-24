@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
-import { getShiftClass, shiftInitial, tallyOrder, weekdayLabels } from '../../appConstants'
+import { getMarkClass, shiftInitial, tallyOrder, weekdayLabels } from '../../appConstants'
 import { useCurrentShift } from '../../hooks/useCurrentShift'
 import { useScheduleData } from '../../hooks/useScheduleData'
 import { getDateLabels } from '../../utils/schedule'
@@ -83,7 +83,7 @@ export default function Today() {
             <Text className="week-wd">{item.weekday}</Text>
             <Text className="week-dd">{item.date.slice(3)}</Text>
             {item.shift ? (
-              <View className={`week-mark ${getShiftClass(item.shift)}`}>
+              <View className={`week-mark ${getMarkClass(item.shift)}`}>
                 <Text>{shiftInitial[item.shift]}</Text>
               </View>
             ) : <View className="week-mark is-empty" />}
