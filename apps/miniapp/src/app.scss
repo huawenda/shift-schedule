@@ -149,6 +149,10 @@ text {
 
 .dlg-body {
   flex: 1;
+  // 小程序的 scroll-view 在 flex 容器里不认 min-height:0，
+  // 必须以 height:0 为基准才能被约束出滚动高度，否则列表溢出、
+  // 底部按钮浮在最后一行内容上（真机截图已踩坑）。
+  height: 0;
   min-height: 0;
 }
 
@@ -170,6 +174,7 @@ text {
 
 .dlg-actions {
   display: flex;
+  flex-shrink: 0;
   margin-top: 18px;
 }
 
