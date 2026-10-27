@@ -1,23 +1,29 @@
 import { isShiftType } from './shifts'
-import { normalizeRoster, overrideKey, type DayOverride, type Roster } from './roster'
+import { normalizeRoster, normalizeRosterDetailed, overrideKey, type DayOverride, type Roster } from './roster'
 
 /**
- * 备份：v2（整套花名册）+ v1（旧版只有日记录）兼容导入。
+ * 备份：v3（自定义班序 + 成员 + 改班记录）、v2（成员 + 改班记录）、
+ * v1（旧版只有按姓名索引的日记录）三种都能读。
  *
- * 旧版数据里没有「有哪些人」这个概念，只有一串按姓名索引的改班记录，
- * 所以 v1 导入必须先把姓名映射到当前成员，映射不上的列成清单交给用户决定。
+ * 版本差异：
+ *  - v3 新增 `roster.patterns`。**必须带上**：自定义班序不进备份，
+ *    换台电脑恢复后那些成员的 patternId 就成了「不存在的班序」，
+ *    会被归一化整条丢掉 —— 等于静默的数据丢失。
+ *  - v2 没有 patterns 字段，读出来补空数组，成员全部落在内置 13 条上。
+ *  - v1 连「有哪些人」都没有，只能按姓名往现有成员上映射。
  */
 
 export const BACKUP_APP_ID = 'shift-schedule-local'
-export const BACKUP_VERSION = 2
+export const BACKUP_VERSION = 3
 
-export interface BackupFileV2 {
+export interface BackupFile {
   app: string
   version: number
   exportedAt: string
   roster: {
     members: Roster['members']
     overrides: Roster['overrides']
+    patterns: Roster['patterns']
   }
 }
 
@@ -34,17 +40,20 @@ export interface ImportResult {
   roster: Roster
   memberCount: number
   overrideCount: number
+  /** 因班序不明而没能恢复的成员（正常应为空，出现即说明备份与程序不匹配） */
+  droppedMembers: string[]
   legacy?: LegacyReport
 }
 
-export function createBackup(roster: Roster): BackupFileV2 {
+export function createBackup(roster: Roster): BackupFile {
   return {
     app: BACKUP_APP_ID,
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     roster: {
       members: roster.members,
-      overrides: roster.overrides
+      overrides: roster.overrides,
+      patterns: roster.patterns
     }
   }
 }
@@ -93,13 +102,15 @@ export function parseBackup(text: string, base: Roster): ImportResult {
   }
 
   if (record.roster !== undefined) {
-    const roster = normalizeRoster(record.roster)
+    // v3 与 v2 都走这里：v2 没有 patterns 字段，归一化时补空数组。
+    const { roster, droppedMembers } = normalizeRosterDetailed(record.roster)
     if (roster.members.length === 0) throw new Error('备份文件里没有成员')
 
     return {
       roster,
       memberCount: roster.members.length,
-      overrideCount: roster.overrides.length
+      overrideCount: roster.overrides.length,
+      droppedMembers
     }
   }
 
@@ -151,10 +162,13 @@ function importLegacyRecords(records: unknown[], base: Roster): ImportResult {
     throw new Error('旧版备份里没有一个姓名能和当前成员对上，请先按备份里的姓名建好成员再导入')
   }
 
-  // 只把被映射到的成员写进结果，其余成员保持不变
+  // 只把被映射到的成员写进结果，其余成员保持不变。
+  // ⚠️ patterns 必须一并带过来：漏了的话，挂在自定义班序上的成员
+  // 会因为没有对应的班序定义而被归一化丢掉。
   const roster = normalizeRoster({
     members: base.members.filter(member => usedIds.has(member.id)),
     overrides: dedupe(overrides),
+    patterns: base.patterns,
     updatedAt: Date.now()
   })
 
@@ -166,6 +180,7 @@ function importLegacyRecords(records: unknown[], base: Roster): ImportResult {
     roster,
     memberCount: roster.members.length,
     overrideCount: roster.overrides.length,
+    droppedMembers: [],
     legacy: {
       matchedMembers: roster.members.length,
       unmatchedNames: [...unmatched].sort((a, b) => a.localeCompare(b)),

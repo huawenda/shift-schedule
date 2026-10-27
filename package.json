@@ -13,6 +13,7 @@
     "build:web": "pnpm --filter @shift-schedule/web build",
     "preview:web": "pnpm --filter @shift-schedule/web preview",
     "typecheck:web": "pnpm --filter @shift-schedule/web typecheck",
+    "dev:local": "pnpm --filter shift-schedule-local dev",
     "dev:weapp": "pnpm --filter @shift-schedule/miniapp dev:weapp",
     "build:weapp": "pnpm --filter @shift-schedule/miniapp build:weapp",
     "typecheck:miniapp": "pnpm --filter @shift-schedule/miniapp typecheck",

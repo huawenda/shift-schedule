@@ -81,7 +81,12 @@ export function App() {
         ].filter(Boolean)
         setNotice(parts.join('；'))
       } else {
-        setNotice(`已导入 ${result.memberCount} 位成员、${result.overrideCount} 条改班记录`)
+        const base = `已导入 ${result.memberCount} 位成员、${result.overrideCount} 条改班记录`
+        setNotice(
+          result.droppedMembers.length > 0
+            ? `${base}；另有 ${result.droppedMembers.length} 位成员的班序在备份里不存在，未能恢复：${result.droppedMembers.join('、')}`
+            : base
+        )
       }
     } catch (error) {
       setStatusText(error instanceof Error ? error.message : '导入失败')
@@ -98,7 +103,7 @@ export function App() {
   }
 
   function finishWizard(members: Member[]) {
-    api.replaceRoster({ members, overrides: [], updatedAt: Date.now() })
+    api.replaceRoster({ members, overrides: [], patterns: [], updatedAt: Date.now() })
     setSelectedMemberId(members[0]?.id ?? null)
     setWizardSkipped(true)
     setStatusText(`配置完成：${members.length} 位成员`)
@@ -143,8 +148,10 @@ export function App() {
             roster={api.roster}
             onBackup={backup}
             onClearAll={clearAll}
+            onRemovePattern={api.removePatternById}
             onRestore={file => void restore(file)}
             onSaveMembers={api.replaceMembers}
+            onSavePattern={api.savePattern}
             onStartWizard={() => {
               setWizardSkipped(false)
               navigate('schedule')
@@ -165,10 +172,13 @@ export function App() {
 
       {editor && editorMember ? (
         <ShiftEditor
-          currentShift={overrideMap.get(overrideKey(editorMember.id, editor.date)) ?? getTemplateShift(editorMember, editor.date)}
+          currentShift={
+            overrideMap.get(overrideKey(editorMember.id, editor.date)) ??
+            getTemplateShift(api.roster, editorMember, editor.date)
+          }
           date={editor.date}
           member={editorMember}
-          templateShift={getTemplateShift(editorMember, editor.date)}
+          templateShift={getTemplateShift(api.roster, editorMember, editor.date)}
           onApply={applyShift}
           onClose={() => setEditor(null)}
         />

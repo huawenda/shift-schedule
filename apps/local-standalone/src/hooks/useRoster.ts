@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { applyShiftEdit, isRosterEmpty, loadRoster, saveRoster, type Member, type Roster } from '../data/roster'
+import {
+  applyShiftEdit,
+  isRosterEmpty,
+  loadRoster,
+  removePattern,
+  saveRoster,
+  upsertPattern,
+  type Member,
+  type Roster
+} from '../data/roster'
+import type { CustomPattern } from '../data/patterns'
 import { isPersistenceAvailable } from '../data/storage'
 import type { ShiftType } from '../data/shifts'
 
@@ -17,6 +27,8 @@ export interface RosterApi {
   editShift: (memberId: string, date: string, shift: ShiftType | null) => void
   replaceRoster: (roster: Roster) => void
   replaceMembers: (members: Member[]) => void
+  savePattern: (pattern: CustomPattern) => void
+  removePatternById: (patternId: string) => void
 }
 
 export function useRoster(): RosterApi {
@@ -53,12 +65,24 @@ export function useRoster(): RosterApi {
     })
   }, [])
 
+  /** 新建或更新一条自定义班序（按 id 判断） */
+  const savePattern = useCallback((pattern: CustomPattern) => {
+    setRoster(current => upsertPattern(current, pattern))
+  }, [])
+
+  /** 删除一条自定义班序，连带删除挂在上面的成员与其改班记录（内置由数据层拒绝） */
+  const removePatternById = useCallback((patternId: string) => {
+    setRoster(current => removePattern(current, patternId).roster)
+  }, [])
+
   return {
     roster,
     persisted,
     isEmpty: isRosterEmpty(roster),
     editShift,
     replaceRoster,
-    replaceMembers
+    replaceMembers,
+    savePattern,
+    removePatternById
   }
 }

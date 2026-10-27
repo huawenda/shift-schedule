@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createRow, fromRows, MemberRowsEditor, toRows, type MemberRow } from '../components/MemberRowsEditor'
-import { PATTERN_ANCHOR_DATE, PATTERN_CYCLE_LENGTH, PATTERN_IDS } from '../data/patterns'
+import { fromRows, MemberRowsEditor, toRows, type MemberRow, type PatternOption } from '../components/MemberRowsEditor'
+import { PatternList } from '../components/PatternList'
+import {
+  MAX_CUSTOM_PATTERNS,
+  PATTERN_ANCHOR_DATE,
+  PATTERN_CYCLE_LENGTH,
+  resolvePatterns,
+  type CustomPattern
+} from '../data/patterns'
 import { countOverrides, validateMembers, type Member, type Roster } from '../data/roster'
 
 interface SettingsScreenProps {
   roster: Roster
   persisted: boolean
   onSaveMembers: (members: Member[]) => void
+  onSavePattern: (pattern: CustomPattern) => void
+  onRemovePattern: (patternId: string) => void
   onBackup: () => void
   onRestore: (file: File) => void
   onClearAll: () => void
@@ -17,6 +26,8 @@ export function SettingsScreen({
   roster,
   persisted,
   onSaveMembers,
+  onSavePattern,
+  onRemovePattern,
   onBackup,
   onRestore,
   onClearAll,
@@ -25,7 +36,7 @@ export function SettingsScreen({
   const [rows, setRows] = useState<MemberRow[]>(() => toRows(roster.members))
   const [dirty, setDirty] = useState(false)
   const [confirmText, setConfirmText] = useState('')
-  const [removedNotice, setRemovedNotice] = useState('')
+  const [flash, setFlash] = useState('')
 
   useEffect(() => {
     setRows(toRows(roster.members))
@@ -33,7 +44,21 @@ export function SettingsScreen({
   }, [roster.members])
 
   const drafts = useMemo(() => fromRows(rows), [rows])
-  const errors = useMemo(() => (rows.length === 0 ? [] : validateMembers(drafts)), [drafts, rows.length])
+  const errors = useMemo(
+    () => (rows.length === 0 ? [] : validateMembers(drafts, roster.patterns)),
+    [drafts, rows.length, roster.patterns]
+  )
+
+  const lookup = useMemo(() => resolvePatterns(roster.patterns), [roster.patterns])
+
+  /** 下拉里能选的班序：内置在前、自定义在后 */
+  const patternOptions = useMemo<PatternOption[]>(
+    () => [
+      ...lookup.builtin.map(pattern => ({ id: pattern.id, name: lookup.labelOf(pattern.id), builtin: true })),
+      ...lookup.custom.map(pattern => ({ id: pattern.id, name: pattern.name, builtin: false }))
+    ],
+    [lookup]
+  )
 
   function update(next: MemberRow[]) {
     setRows(next)
@@ -49,7 +74,7 @@ export function SettingsScreen({
 
     onSaveMembers(drafts)
     setDirty(false)
-    setRemovedNotice(
+    setFlash(
       removed.length > 0
         ? `已保存：删除 ${removed.length} 位成员，连带清理 ${removedOverrides} 条改班记录。`
         : `已保存：${drafts.length} 位成员。`
@@ -61,7 +86,7 @@ export function SettingsScreen({
       <div className="canvas-head">
         <div>
           <h1 className="canvas-title">设置</h1>
-          <p className="canvas-sub">成员与班序、备份、清空数据</p>
+          <p className="canvas-sub">班序与成员、备份、清空数据</p>
         </div>
       </div>
 
@@ -71,24 +96,41 @@ export function SettingsScreen({
         </p>
       ) : null}
 
-      {removedNotice ? (
+      {flash ? (
         <p className="banner" role="status">
-          {removedNotice}
-          <button className="banner-close" type="button" onClick={() => setRemovedNotice('')}>知道了</button>
+          {flash}
+          <button className="banner-close" type="button" onClick={() => setFlash('')}>知道了</button>
         </p>
       ) : null}
 
       <section className="settings-section">
         <div className="settings-label">
-          <h2>成员</h2>
-          <p>姓名自定，人数不限；同一班序可以挂多人，这些人每天的班次完全一致。</p>
-          <p className="settings-meta">
-            {PATTERN_IDS.length} 条班序 · 每条 {PATTERN_CYCLE_LENGTH} 天循环 · 起算日 {PATTERN_ANCHOR_DATE}
-          </p>
+          <h2>班序</h2>
+          <p>班序是 {PATTERN_CYCLE_LENGTH} 天一轮的循环，所有班序共用起算日 {PATTERN_ANCHOR_DATE}。</p>
+          <p>内置 {lookup.builtin.length} 条只读；自建的最多 {MAX_CUSTOM_PATTERNS} 条，可改可删。</p>
+          <p className="settings-meta">每格从固定 6 种班次里选：白班 / 夜班 / 休息 / 白特 / 夜特 / 事假</p>
         </div>
 
         <div className="settings-panel">
-          <MemberRowsEditor rows={rows} onChange={update} />
+          <PatternList
+            lookup={lookup}
+            roster={roster}
+            onNotice={setFlash}
+            onRemovePattern={onRemovePattern}
+            onSavePattern={onSavePattern}
+          />
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-label">
+          <h2>成员</h2>
+          <p>姓名自定，人数不限；同一班序可以挂多人，这些人每天的班次完全一致。</p>
+          <p className="settings-meta">当前 {roster.members.length} 位成员</p>
+        </div>
+
+        <div className="settings-panel">
+          <MemberRowsEditor patterns={patternOptions} rows={rows} onChange={update} />
 
           {errors.length > 0 ? (
             <ul className="error-list" role="alert">

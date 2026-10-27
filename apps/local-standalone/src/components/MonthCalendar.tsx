@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { getCalendarMeta } from '../data/calendarMeta'
-import { getEffectiveShift, isEdited, patternLabelOf, type Member } from '../data/roster'
+import { getEffectiveShift, isEdited, patternLabelOf, type Member, type Roster } from '../data/roster'
 import type { Period } from '../data/period'
 import { SHIFT_META, type ShiftType } from '../data/shifts'
 import { formatDayNumber, todayKey, weekdayIndex } from '../data/dateUtils'
 import { WEEKDAY_LABELS } from '../data/dateUtils'
 
 interface MonthCalendarProps {
+  roster: Roster
   member: Member | null
   period: Period
   overrideMap: Map<string, ShiftType>
@@ -17,7 +18,7 @@ interface MonthCalendarProps {
  * 个人日历：7 列，格子里放班次块 + 农历/节日角标。
  * 只有一名成员时它就是「我的月历」；多人时可以在这里切换查看对象。
  */
-export function MonthCalendar({ member, period, overrideMap, onEdit }: MonthCalendarProps) {
+export function MonthCalendar({ roster, member, period, overrideMap, onEdit }: MonthCalendarProps) {
   const today = todayKey()
   const leading = weekdayIndex(period.startDate)
 
@@ -46,7 +47,7 @@ export function MonthCalendar({ member, period, overrideMap, onEdit }: MonthCale
       <header className="calendar-head">
         <div>
           <p className="calendar-name">{member.name}</p>
-          <p className="calendar-sub">{patternLabelOf(member)} · {period.startDate} 起</p>
+          <p className="calendar-sub">{patternLabelOf(roster, member)} · {period.startDate} 起</p>
         </div>
         <p className="calendar-tip">点日期改班</p>
       </header>
@@ -60,7 +61,7 @@ export function MonthCalendar({ member, period, overrideMap, onEdit }: MonthCale
           if (!cell.date) return <div className="cal-cell is-blank" key={cell.key} />
 
           const date = cell.date
-          const shift = getEffectiveShift(member, date, overrideMap)
+          const shift = getEffectiveShift(roster, member, date, overrideMap)
           const edited = isEdited(member.id, date, overrideMap)
           const meta = metas.get(date)
           const isToday = date === today

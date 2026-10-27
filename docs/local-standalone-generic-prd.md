@@ -355,3 +355,78 @@ font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif
 | 6 收口 | ✅ | `pnpm typecheck` / `test`（37 通过）/ `build` 全部通过；`scripts/verify-dist.mjs` 按新流程重写 |
 
 未执行：`pnpm verify:dist`（端到端，会在无头浏览器里真跑一遍）—— 需要你确认后再跑。
+
+---
+
+## 13. 追加需求：自建班序（2026-10-27）
+
+> 本章追加于 v1.0 之后，**部分取代 §2 核心模型里「班序固定不可编辑」的表述**。
+> 术语区分：**班次**＝6 种类型（白/夜/休/白特/夜特/事假，仍不可增删）；
+> **班序**＝24 天循环序列（内置 13 条 + 用户自建）。
+
+### 13.1 已定的 8 条
+
+| # | 决定 |
+| --- | --- |
+| 1 | 新增的是**班序**，不是班次类型；班次仍是 6 种 |
+| 2 | 所有班序**固定 24 天**，共用锚点 `2026-06-07`；`PATTERN_CYCLE_LENGTH` 保持全局常量，推算算法不变 |
+| 3 | 内置 13 条**只读**，全部常驻下拉，可点开预览 24 格 |
+| 4 | 24 格**逐格点选**，选完自动推进下一格（另提供「照现有班序改」作为底稿） |
+| 5 | 自建班序**可改名、可改序列、可删除** |
+| 6 | 改序列**全量生效**（已过去的月份一起变），弹层里明确告知 |
+| 7 | 删除自建班序时**连人一起删**（含这些人的改班记录） |
+| 8 | 自建班序**必须进导出备份** → 备份格式升 v3 |
+
+补充：自定义班序数量上限 **10 条**；`Member.label`（给人起的「别名」）**已删除**，
+不再有 `4F · 甲组` 这种显示 —— 班序的显示名就是它自己的名字（内置是代号，自建是用户起的名字）。
+
+### 13.2 数据模型
+
+```ts
+// data/patterns.ts
+export type BuiltinPatternId = '4F' | … | '4X'          // 13 个字面量，只读
+export interface CustomPattern { id: string; name: string; shifts: ShiftType[] }  // shifts 恰好 24 项
+export interface PatternLookup {                        // 唯一的推算入口
+  has(id): boolean
+  get(id): ShiftPattern | undefined
+  getShift(id, dateKey): ShiftType | null
+  labelOf(id): string
+  readonly builtin: ShiftPattern[]
+  readonly custom: CustomPattern[]
+  readonly all: ShiftPattern[]
+}
+export function resolvePatterns(customs: CustomPattern[]): PatternLookup
+```
+
+- `Member.patternId` 从 13 个字面量放宽为 `string`（内置代号或 `cp-xxxx`）。
+- 自建班序的 id 自动生成（`cp-…`），**不用名字当 id** —— 改名不破坏已挂的引用。
+- 名字撞内置代号（如把自建班序叫 `4F`）一律拒绝：界面无法区分两者。
+- `Roster` 增加 `patterns: CustomPattern[]`，与 `members` / `overrides` 同一次原子写入。
+
+### 13.3 三条必须守住的行为
+
+1. **`normalizeRoster` 必须先解析 patterns、再校验 members。**
+   反过来的话，引用了自建班序的成员会被判成「班序不存在」整条丢掉，用户会看到人凭空消失。
+   为此新增 `normalizeRosterDetailed()`，把被丢的成员收集成 `droppedMembers` 返回，
+   由界面提示「另有 N 位成员的班序在备份里不存在，未能恢复：张三、李四」。
+2. **v1 备份导入时必须把 `base.patterns` 一并带进结果。** 漏了的话，挂在自建班序上的人
+   会在「用现有成员重建花名册」这一步被一起丢掉。
+3. **删除自建班序是不可逆操作**，界面要求输入班序名字才放行，并事先列出将被删除的成员姓名
+   与改班记录条数。
+
+### 13.4 界面
+
+- 设置页新增「班序」区块（在「成员」之前）：内置 13 条平铺成 4 列色条卡片，点开 24 格只读预览；
+  下面是自建列表（名称 + 24 格色条 + 「N 人 / 未使用」+ 查看 / 编辑 / 删除）+「新建班序」。
+- 24 格编辑器：两行各 12 格（一行 24 格在 1440 下每格仅 34px，两字放不下），
+  点格子选中 → 点下方 6 个班次填入 → 自动跳下一格；另可「照着某条现有班序改」。
+- 成员下拉按「内置 / 自建」分组（`<optgroup>`）。
+
+### 13.5 实施记录
+
+| 环节 | 产物 |
+| --- | --- |
+| 数据层 | `data/patterns.ts` 重写（`BUILTIN_*` + `CustomPattern` + `resolvePatterns`）、`data/roster.ts`（`patterns` 字段、`upsertPattern`、`removePattern`、`patternUsage`）、`data/backup.ts` 升 v3 |
+| 测试 | 新增 `customPatterns.test.ts`（21 例）；`roster.test.ts` / `backup.test.ts` / `patterns.test.ts` 增补，共 **75 例** |
+| 界面 | 新增 `components/PatternList.tsx`、`components/PatternEditor.tsx`；改动 `SettingsScreen`、`Wizard`、`useRoster`、`App`、`settings.scss` |
+| 验收 | `typecheck` / `test`（75）/ `build` 全绿；`scripts/verify-dist.mjs` 补 12 项检查覆盖「建班序 → 挂人 → 导出 v3 → 删班序」 |

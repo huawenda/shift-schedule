@@ -18,12 +18,12 @@
         "title": "倒班表 · 本地版",
         "width": 1440,
         "height": 900,
-        "minWidth": 900,
-        "minHeight": 600,
+        "minWidth": 1280,
+        "minHeight": 700,
         "resizable": true,
         "center": true,
         "fullscreen": false,
-        "theme": "Dark"
+        "theme": "Light"
       }
     ],
     "security": {
@@ -47,8 +47,8 @@
     ],
     "copyright": "倒班表 · 本地版",
     "category": "Productivity",
-    "shortDescription": "倒班排班、加班统计与薪资计算",
-    "longDescription": "纯本地运行的倒班表：排班、加班统计与薪资计算，数据只存在本机，不做任何网络请求。",
+    "shortDescription": "离线排班工具：班序固定，成员自定义",
+    "longDescription": "纯本地运行的倒班排班工具：13 条固定班序模板，成员姓名与人数由使用者自定义。数据只存在本机，不做任何网络请求。",
     "windows": {
       "nsis": {
         "installMode": "currentUser",

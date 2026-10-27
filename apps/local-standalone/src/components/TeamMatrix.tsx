@@ -57,16 +57,16 @@ export function TeamMatrix({ roster, period, selectedMemberId, onSelectMember, o
               <button
                 className="matrix-name-cell"
                 type="button"
-                title={`${member.name} · ${patternLabelOf(member)}`}
+                title={`${member.name} · ${patternLabelOf(roster, member)}`}
                 onClick={() => onSelectMember(member.id)}
               >
                 <span className="matrix-name">{member.name}</span>
-                <span className="matrix-pattern">{patternLabelOf(member)}</span>
+                <span className="matrix-pattern">{patternLabelOf(roster, member)}</span>
               </button>
 
               <div className="matrix-days">
                 {period.dates.map(date => {
-                  const shift: ShiftType | null = getEffectiveShift(member, date, overrideMap)
+                  const shift: ShiftType | null = getEffectiveShift(roster, member, date, overrideMap)
                   const edited = isEdited(member.id, date, overrideMap)
                   const isToday = date === today
 

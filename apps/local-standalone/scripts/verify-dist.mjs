@@ -12,8 +12,12 @@
  *   4. 点格子改班 → 弹层 → 保存 → 写入 roster v2
  *   5. 刷新后改动仍在（真持久化）
  *   6. 恢复默认 → 记录被删除
- *   7. 导出备份 → 文件里是 v2 花名册
- *   8. 设置页可进入，能读到成员表
+ *   7. 设置页：13 条内置班序可预览 24 格
+ *   8. 新建自建班序（24 格逐格填）→ 出现在列表 → 能挂到成员上
+ *   9. 矩阵里显示自建班序名
+ *  10. 导出备份是 v3，且带上自建班序
+ *  11. 删除自建班序要输入名字确认，成员与改班记录一并删除
+ *  12. 翻月不崩
  *
  * 依赖：本机 Chrome/Edge，Node 18+（用全局 fetch / WebSocket）。没有第三方依赖。
  */
@@ -206,6 +210,18 @@ function setInputAt(selector, index, value) {
   })()`
 }
 
+/** 按选择器给受控 input 赋值（React 需要原生 setter + input 事件） */
+function setInputBySelector(selector, value) {
+  return `(() => {
+    const input = document.querySelector(${JSON.stringify(selector)})
+    if (!input) return false
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+    setter.call(input, ${JSON.stringify(value)})
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    return true
+  })()`
+}
+
 const firstCell = '.matrix-row .matrix-cell'
 
 async function runScenario(name, url, downloadDir) {
@@ -356,46 +372,169 @@ async function runScenario(name, url, downloadDir) {
     }
     check(`${name}: 恢复默认后记录被删除`, resetParsed?.overrides?.length === 0, JSON.stringify(resetParsed?.overrides ?? null))
 
-    // --- 6. 导出备份 ---
+    // --- 6. 设置页 ---
+    await client.evaluate(clickByText('.rail-item', '设置'))
+    await waitFor(client, 'Boolean(document.querySelector(".settings-section"))', '设置页')
+    const settingsRows = await client.evaluate('document.querySelectorAll(".member-row").length')
+    check(`${name}: 设置页读到 3 位成员`, settingsRows === 3, String(settingsRows))
+
+    const builtinCount = await client.evaluate('document.querySelectorAll(".pattern-chip").length')
+    check(`${name}: 设置页列出 13 条内置班序`, builtinCount === 13, String(builtinCount))
+
+    // 内置班序可点开只读预览
+    await client.evaluate(`document.querySelectorAll('.pattern-chip')[0].click(); true`)
+    await waitFor(client, 'Boolean(document.querySelector(".pattern-preview"))', '班序预览')
+    const previewCells = await client.evaluate('document.querySelectorAll(".pattern-preview .shift-cell").length')
+    check(`${name}: 内置班序可预览 24 格`, previewCells === 24, String(previewCells))
+    await client.evaluate(`document.querySelectorAll('.pattern-chip')[0].click(); true`)
+
+    // --- 7. 新建自建班序：24 格逐格填 ---
+    check(`${name}: 点开新建班序`, await client.evaluate(clickByText('.pattern-block .btn-add', '新建班序')))
+    await waitFor(client, 'Boolean(document.querySelector(".dialog-wide"))', '班序编辑器')
+    const editorCells = await client.evaluate('document.querySelectorAll(".dialog-wide .shift-cell").length')
+    check(`${name}: 编辑器有 24 个格子`, editorCells === 24, String(editorCells))
+
+    check(
+      `${name}: 填班序名称`,
+      await client.evaluate(setInputBySelector('.dialog-wide input[aria-label="班序名称"]', '甲班'))
+    )
+
+    // 点第 1 格 → 连点「夜班」两次 → 再点「白班」：选完自动往后推进一格
+    await client.evaluate(`document.querySelectorAll('.dialog-wide .shift-cell')[0].click(); true`)
+    for (const shiftLabel of ['夜班', '夜班', '白班']) {
+      const ok = await client.evaluate(clickByText('.shift-palette .palette-option', shiftLabel))
+      if (!ok) check(`${name}: 点选班次「${shiftLabel}」`, false)
+    }
+    const filled = await client.evaluate(
+      `Array.from(document.querySelectorAll('.dialog-wide .shift-cell .shift-cell-text')).slice(0, 3).map(node => node.textContent)`
+    )
+    check(
+      `${name}: 前 3 格按顺序填成 夜/夜/白`,
+      JSON.stringify(filled) === JSON.stringify(['夜', '夜', '白']),
+      JSON.stringify(filled)
+    )
+
+    check(`${name}: 保存新班序`, await client.evaluate(clickByText('.dialog-wide .dialog-foot button', '创建班序')))
+    await waitFor(client, 'document.querySelectorAll(".pattern-row").length === 1', '自建班序出现在列表')
+    const patternName = await client.evaluate('document.querySelector(".pattern-row-name").textContent.trim()')
+    check(`${name}: 自建班序出现在列表`, patternName === '甲班', patternName)
+
+    const customId = await client.evaluate(`(() => {
+      const parsed = JSON.parse(window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)}) || '{}')
+      return parsed.patterns?.[0]?.id ?? null
+    })()`)
+    check(`${name}: 自建班序写进 roster v2`, Boolean(customId), String(customId))
+
+    // --- 8. 把成员挂到自建班序 ---
+    const attached = await client.evaluate(`(() => {
+      const select = document.querySelectorAll('.member-row select')[0]
+      if (!select) return false
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set
+      setter.call(select, ${JSON.stringify(customId)})
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+      return select.value === ${JSON.stringify(customId)}
+    })()`)
+    check(`${name}: 成员下拉能选到自建班序`, attached)
+    check(
+      `${name}: 下拉里列出「甲班」`,
+      await client.evaluate(
+        `Array.from(document.querySelectorAll('.member-row select')[0].options).some(option => option.textContent.trim() === '甲班')`
+      )
+    )
+
+    check(`${name}: 保存成员设置`, await client.evaluate(clickByText('.settings-actions button', '保存成员设置')))
+    await sleep(350)
+
+    // --- 9. 排班页用上了新班序 ---
+    await client.evaluate(clickByText('.rail-item', '排班'))
+    await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '回到排班页')
+    await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '矩阵 3 行')
+    const rowLabel = await client.evaluate('document.querySelector(".matrix-row .matrix-pattern").textContent.trim()')
+    check(`${name}: 矩阵里显示自建班序名`, rowLabel === '甲班', rowLabel)
+
+    // --- 10. 导出备份：v3 且带上自建班序 ---
     await client.evaluate(clickByText('.topbar-right button', '导出备份'))
 
     let backupFile = null
     const downloadDeadline = Date.now() + 8000
     while (Date.now() < downloadDeadline && !backupFile) {
-      const files = fs.readdirSync(downloadDir).filter(file => file.endsWith('.json') && !file.endsWith('.crdownload'))
-      if (files.length > 0) backupFile = files[0]
+      const files = fs.readdirSync(downloadDir)
+        .filter(file => file.endsWith('.json') && !file.endsWith('.crdownload'))
+        .map(file => ({ file, mtime: fs.statSync(path.join(downloadDir, file)).mtimeMs }))
+        .sort((left, right) => right.mtime - left.mtime)
+      if (files.length > 0) backupFile = files[0].file
       else await sleep(200)
     }
 
     if (backupFile) {
       const backup = JSON.parse(fs.readFileSync(path.join(downloadDir, backupFile), 'utf8'))
       check(
-        `${name}: 导出备份是 v2 花名册`,
-        backup?.version === 2 && Array.isArray(backup?.roster?.members) && backup.roster.members.length === 3,
-        backupFile
+        `${name}: 导出备份是 v3`,
+        backup?.version === 3,
+        `version=${backup?.version}`
       )
+      check(
+        `${name}: 备份带上自建班序（24 格）`,
+        Array.isArray(backup?.roster?.patterns)
+          && backup.roster.patterns.length === 1
+          && backup.roster.patterns[0].name === '甲班'
+          && backup.roster.patterns[0].shifts.length === 24,
+        JSON.stringify(backup?.roster?.patterns?.map(item => ({ name: item.name, cells: item.shifts?.length })) ?? null)
+      )
+      check(`${name}: 备份带上 3 位成员`, backup?.roster?.members?.length === 3, String(backup?.roster?.members?.length))
     } else {
-      check(`${name}: 导出备份是 v2 花名册`, false, '没有等到下载文件')
+      check(`${name}: 导出备份是 v3`, false, '没有等到下载文件')
     }
 
-    // --- 7. 设置页 ---
+    // --- 11. 删除自建班序：必须输入名字 ---
     await client.evaluate(clickByText('.rail-item', '设置'))
-    await waitFor(client, 'Boolean(document.querySelector(".settings-section"))', '设置页')
-    const settingsRows = await client.evaluate('document.querySelectorAll(".member-row").length')
-    check(`${name}: 设置页读到 3 位成员`, settingsRows === 3, String(settingsRows))
+    await waitFor(client, 'document.querySelectorAll(".pattern-row").length === 1', '回到设置页')
+    check(`${name}: 打开删除确认`, await client.evaluate(clickByText('.pattern-row-actions button', '删除')))
+    await waitFor(client, 'Boolean(document.querySelector(".dialog-narrow"))', '删除确认弹层')
+    check(
+      `${name}: 未输入名字时删除按钮禁用`,
+      await client.evaluate('document.querySelector(".dialog-narrow .btn-danger").disabled === true')
+    )
 
+    await client.evaluate(setInputBySelector('.dialog-narrow .confirm-label input', '甲'))
+    await sleep(150)
+    check(
+      `${name}: 名字不对时仍禁用`,
+      await client.evaluate('document.querySelector(".dialog-narrow .btn-danger").disabled === true')
+    )
+
+    await client.evaluate(setInputBySelector('.dialog-narrow .confirm-label input', '甲班'))
+    await sleep(150)
+    check(
+      `${name}: 输对名字后可以删除`,
+      await client.evaluate('document.querySelector(".dialog-narrow .btn-danger").disabled === false')
+    )
+    check(`${name}: 确认删除班序`, await client.evaluate(clickByText('.dialog-narrow .dialog-foot button', '删除班序')))
+    await waitFor(client, '!document.querySelector(".dialog-narrow")', '弹层关闭')
+    await sleep(350)
+
+    const afterDelete = await client.evaluate(`(() => ({
+      patterns: document.querySelectorAll('.pattern-row').length,
+      members: document.querySelectorAll('.member-row').length
+    }))()`)
+    check(
+      `${name}: 班序与其成员一并删除`,
+      afterDelete.patterns === 0 && afterDelete.members === 2,
+      JSON.stringify(afterDelete)
+    )
+
+    // --- 12. 翻月不崩 ---
     await client.evaluate(clickByText('.rail-item', '排班'))
-    await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '回到排班页')
-    check(`${name}: 能从设置返回排班`, true)
+    await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 2', '矩阵剩 2 行')
+    check(`${name}: 删除后矩阵同步更新`, true)
 
-    // --- 8. 翻月不崩 ---
     await client.evaluate(clickByText('.month-track button', '回到本期'))
     const titleBefore = await client.evaluate('document.querySelector(".month-title").textContent.trim()')
     await client.evaluate(`document.querySelectorAll('.month-step')[1].click(); true`)
     await sleep(200)
     const titleAfter = await client.evaluate('document.querySelector(".month-title").textContent.trim()')
     check(`${name}: 切换月份`, titleBefore !== titleAfter, `${titleBefore} → ${titleAfter}`)
-    check(`${name}: 切月后矩阵仍在`, await client.evaluate('document.querySelectorAll(".matrix-row").length === 3'))
+    check(`${name}: 切月后矩阵仍在`, await client.evaluate('document.querySelectorAll(".matrix-row").length === 2'))
   } catch (error) {
     check(`${name}: 场景执行`, false, error.message)
   } finally {

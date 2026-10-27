@@ -27,7 +27,7 @@ export function SummaryBar({ roster, period }: SummaryBarProps) {
 
   if (inPeriod) {
     roster.members.forEach(member => {
-      const shift: ShiftType | null = getEffectiveShift(member, today, overrideMap)
+      const shift: ShiftType | null = getEffectiveShift(roster, member, today, overrideMap)
       if (!shift) return
       if (shift === '白班') counts.day += 1
       if (shift === '夜班') counts.night += 1

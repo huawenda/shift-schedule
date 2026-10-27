@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react'
-import { fromRows, MemberRowsEditor, createRow, type MemberRow } from '../components/MemberRowsEditor'
-import { PATTERN_ANCHOR_DATE } from '../data/patterns'
+import { fromRows, MemberRowsEditor, createRow, type MemberRow, type PatternOption } from '../components/MemberRowsEditor'
+import { BUILTIN_PATTERNS, PATTERN_ANCHOR_DATE } from '../data/patterns'
 import { validateMembers, type Member } from '../data/roster'
+
+/** 首开时还没有自定义班序，下拉里只有内置 13 条 */
+const BUILTIN_OPTIONS: PatternOption[] = BUILTIN_PATTERNS.map(pattern => ({
+  id: pattern.id,
+  name: pattern.id,
+  builtin: true
+}))
 
 interface WizardProps {
   onFinish: (members: Member[]) => void
@@ -37,10 +44,10 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
         {step === 1 ? (
           <div className="wizard-body">
             <p className="wizard-lead">
-              倒班表按一套固定的 24 天班序循环排班。13 条班序（4F–4X）已经内置好，规律不用你填。
+              倒班表按一套 24 天一轮的班序循环排班。13 条常用班序（4F–4X）已经内置好，规律不用你填。
             </p>
             <ul className="wizard-list">
-              <li><strong>班序是固定的</strong>：规律照搬 4F–4X，只选不改。</li>
+              <li><strong>班序不用自己编</strong>：内置 4F–4X 只选不改；不够用时可以在设置里照 24 格再加一条。</li>
               <li><strong>人是自由的</strong>：姓名自己填，人数不限，同一个班序可以挂多人。</li>
               <li><strong>改班随时可做</strong>：点某天的格子换成别的班次，改回原样就等于撤销。</li>
               <li><strong>数据只在这台电脑</strong>：不联网、不需要账号，记得定期导出备份。</li>
@@ -52,7 +59,7 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
         {step === 2 ? (
           <div className="wizard-body">
             <p className="wizard-lead">填姓名，选他/她对应的班序。同一班序可以挂多个人。</p>
-            <MemberRowsEditor rows={rows} onChange={setRows} />
+            <MemberRowsEditor patterns={BUILTIN_OPTIONS} rows={rows} onChange={setRows} />
             {errors.length > 0 ? (
               <ul className="error-list" role="alert">
                 {errors.map(error => <li key={error}>{error}</li>)}
@@ -70,11 +77,11 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
               {members.map(member => (
                 <div className="wizard-summary-row" key={member.id}>
                   <span>{member.name}</span>
-                  <span className="muted">{member.patternId}{member.label ? ` · ${member.label}` : ''}</span>
+                  <span className="muted">{member.patternId}</span>
                 </div>
               ))}
             </div>
-            <p className="wizard-note">后面想改人、加人或换班序，都可以在「设置」里做。</p>
+            <p className="wizard-note">后面想改人、加人、换班序或新建班序，都可以在「设置」里做。</p>
           </div>
         ) : null}
 

@@ -84,7 +84,13 @@ export function ScheduleScreen({
           onSelectMember={onSelectMember}
         />
       ) : (
-        <MonthCalendar member={selectedMember} onEdit={onEdit} overrideMap={overrideMap} period={period} />
+        <MonthCalendar
+          member={selectedMember}
+          onEdit={onEdit}
+          overrideMap={overrideMap}
+          period={period}
+          roster={roster}
+        />
       )}
     </div>
   )

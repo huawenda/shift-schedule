@@ -6,7 +6,6 @@ import { defineConfig, type Plugin } from 'vite'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 /** 源码根目录在 desktop/ 上一级：两条产物线共用同一份 src/。 */
 const appRoot = path.resolve(__dirname, '..')
-const coreEntry = path.resolve(appRoot, 'src/core/index.ts')
 
 /**
  * 把 Service Worker 和 webmanifest 从壳的产物里摘掉。
@@ -57,9 +56,8 @@ function stripPwaAssetsPlugin(): Plugin {
  *    而壳里的资源由 Tauri 随程序一起安装、更新时整体替换。
  *    留着它反而有害：SW 对同源 GET 是缓存优先，换了新版本之后
  *    打开仍会命中上一版的缓存，界面停在旧代码上。
- *    （main.tsx 里已按 `protocol.startsWith('http')` 跳过注册，
- *      但 tauri:// 与 http://tauri.localhost 都可能命中，这里从构建侧
- *      再堵一道，并且不再产出 service-worker.js。）
+ *    （main.tsx 里已按 `__TAURI_INTERNALS__` 判定壳内并跳过注册，
+ *      这里从构建侧再堵一道：直接不产出 service-worker.js。）
  *
  * 3. 不套 fileProtocolFriendlyPlugin。那个插件把 <script type=module>
  *    改写成 <script defer>，是为了让产物能被 file:// 直接打开；
@@ -69,16 +67,12 @@ function stripPwaAssetsPlugin(): Plugin {
  * base 仍为 './'：Tauri 注入资源时用的是相对路径，保持一致最省事。
  */
 export default defineConfig({
+  // root 指向 apps/local-standalone（而不是 desktop/）：index.html 与 src/ 都在那里，
+  // 壳与静态版共用同一份入口。
   root: appRoot,
   base: './',
-  // desktop/ 下要跑的是 src-tauri，不是 vite.config.ts 本身；
-  // 不写这一行，tauri build 会把它当成配置文件所在目录去找 package.json。
+  // public/ 也要显式指过去，否则 vite 会去 desktop/public 找，图标和说明就丢了。
   publicDir: path.resolve(appRoot, 'public'),
-  resolve: {
-    alias: {
-      '@local/core': coreEntry
-    }
-  },
   plugins: [stripPwaAssetsPlugin()],
 
   server: {
@@ -106,8 +100,9 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2021',
     cssCodeSplit: false,
-    // 壳里没有 file:// 的限制，资源该走相对路径就走相对路径，
-    // 不必像静态版那样把 227KB 的图标全内联成 base64。
+    // 壳里没有 file:// 的限制，小资源走相对路径即可；
+    // 静态版为了 file:// 把图标全内联成 base64（assetsInlineLimit 拉满），
+    // 这里只留一个小阈值，避免为了几个字节多出请求，也不至于把产物撑大。
     assetsInlineLimit: 4096,
     modulePreload: { polyfill: false },
     rollupOptions: {

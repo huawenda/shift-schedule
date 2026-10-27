@@ -47,17 +47,19 @@ pnpm verify:all
 
 ## 纯本地静态页（standalone）
 
-`apps/local-standalone` 是一个**完全自包含**的纯本地版本：不联网、不需要登录和鉴权，
+`apps/local-standalone` 是一个**可分发**的离线排班工具：不联网、不需要登录和鉴权，
 构建产物是一个可以整包拷到其他设备的静态文件夹。
 
-它不依赖 `packages/core`，也不依赖 `apps/web`——逻辑和界面是拷贝过来的独立副本，
-`@shift-schedule/core` 已替换为项目内的 `@local/core` 路径别名。
+**班序固定（4F–4X 的 24 天循环）、成员自定义**，所以同一份程序可以给不同的小组各自用。
+它不依赖 `packages/core`，也不依赖 `apps/web`——**没有任何共享代码**（v1 时代的
+`src/core` 副本与 `@local/core` 别名已在通用化重写中删除）。
 
 ```bash
 cd apps/local-standalone
 pnpm build        # 产出 dist/，可直接双击 index.html 或挂静态服务器
-pnpm test         # 62 个测试（含拷贝自 core 的 50 个，用于校验副本一致性）
-pnpm verify:dist  # 无头浏览器真实跑一遍：改班次→落盘→刷新→统计页→导出备份
+pnpm dev          # 开发服务器 127.0.0.1:6180（也可直接双击 dev.bat）
+pnpm test         # 37 个数据层测试（班序 / 结算月 / 花名册 / 备份）
+pnpm verify:dist  # 无头浏览器真实跑一遍：向导→建人→改班→落盘→刷新→恢复默认→导出→翻月
 ```
 
 详见 `apps/local-standalone/README.md` 和产物内的 `使用说明.txt`。
