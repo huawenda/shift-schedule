@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const coreEntry = path.resolve(__dirname, 'src/core/index.ts')
 
 /**
  * 让 dist 目录既能被静态服务器托管，也能直接双击 index.html（file://）打开：
@@ -66,11 +65,6 @@ function serviceWorkerBuildIdPlugin(): Plugin {
 export default defineConfig({
   // 相对路径：dist 放到任意目录、任意子路径下都能用
   base: './',
-  resolve: {
-    alias: {
-      '@local/core': coreEntry
-    }
-  },
   plugins: [fileProtocolFriendlyPlugin(), serviceWorkerBuildIdPlugin()],
 
   // dev server 默认监听整个项目目录，于是这些「产物目录」一有变动就触发整页 reload：

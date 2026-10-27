@@ -1,13 +1,13 @@
 {
   "name": "倒班表 · 本地版",
   "short_name": "倒班表",
-  "description": "倒班排班、加班统计和薪资计算 · 纯本地版",
+  "description": "倒班排班 · 纯本地版：班序固定，成员自定义",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0e1216",
-  "theme_color": "#0e1216",
+  "orientation": "any",
+  "background_color": "#f9fbfc",
+  "theme_color": "#f9fbfc",
   "icons": [
     {
       "src": "./icons/icon-192.png",

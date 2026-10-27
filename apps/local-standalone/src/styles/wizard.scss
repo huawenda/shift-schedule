@@ -1,0 +1,99 @@
+/* 首次配置向导：居中卡片，三步 */
+
+.wizard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px;
+  background: var(--ground);
+}
+
+.wizard-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 760px;
+  max-width: 100%;
+  padding: 28px 32px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sheet);
+  background: var(--surface);
+}
+
+.wizard-step {
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.wizard-title {
+  margin-top: 4px;
+  font-size: var(--fs-title);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.wizard-body {
+  min-height: 236px;
+}
+
+.wizard-lead {
+  margin-bottom: 14px;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.wizard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #3c4145;
+}
+
+.wizard-list strong {
+  font-weight: 600;
+}
+
+.wizard-note {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.wizard-summary {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.wizard-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px;
+}
+
+.wizard-summary-row:last-child {
+  border-bottom: 0;
+}
+
+.wizard-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.wizard-foot-left {
+  display: flex;
+  gap: 8px;
+}

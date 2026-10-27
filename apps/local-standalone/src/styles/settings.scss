@@ -1,0 +1,135 @@
+/* 设置页：成员表、备份、危险区 */
+
+.settings-section {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: var(--gap);
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.settings-section:last-of-type {
+  border-bottom: 0;
+}
+
+.settings-label h2 {
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.settings-label p {
+  margin-bottom: 6px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.settings-meta {
+  color: var(--faint) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: #fafbfc;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.settings-footnote {
+  padding-top: 4px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+/* ── 成员表 ───────────────────────────────────────────── */
+
+.member-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.member-editor-head,
+.member-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) 92px minmax(0, 1fr) 60px;
+  gap: 8px;
+  align-items: center;
+}
+
+.member-editor-head {
+  padding: 0 1px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.member-row .input {
+  min-width: 0;
+}
+
+.member-editor-empty {
+  padding: 8px 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.error-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 8px 10px 8px 26px;
+  border-radius: var(--radius-control);
+  background: var(--danger-weak);
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ── 提示条 ───────────────────────────────────────────── */
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: #fbfcfd;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.banner-warn {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+
+/* ── 危险区 ───────────────────────────────────────────── */
+
+.danger-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.danger-row .input {
+  max-width: 220px;
+}

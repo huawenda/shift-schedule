@@ -1,93 +1,92 @@
-/* 01 foundation — 设计令牌 + 基础排版
- * 原则：纸面中性、结构用线不用影、数字等宽、颜色只属于班次。 */
+/* 设计令牌 + 全局基础
+ *
+ * 方向：framed-sheet（tinted L 形外框 + 白色画布）。
+ * 硬约束：全站强制浅色 —— 办公 PC 显示器对比与色彩表现有限，深色系观感差。
+ * 所以这里固定 color-scheme: light，且不提供任何暗色分支。
+ */
 
 :root {
-  /* 纸面与墨色 */
-  --paper: #f4f4f0;
+  color-scheme: light;
+
+  --ground: #f9fbfc;
   --surface: #ffffff;
-  --ink: #14171a;
-  --ink-2: #464c52;
-  --ink-3: #62686e;
-  --rule: #dcdcd5;
-  --rule-strong: #bfc1b8;
+  --raised: #f4f6f8;
+  --active: #ebedee;
+  --border: #e8eaec;
+  --rule: #f0f1f2;
+  --control: #cdced1;
 
-  /* 班次（实心块 + 反白字，对比度均 ≥ 5:1） */
-  --s-day: #e9a426;
-  --s-day-ink: #2a1a02;
-  --s-day-x: #92570a;
-  --s-day-x-ink: #ffffff;
-  --s-night: #2e3a75;
-  --s-night-ink: #f3f2ec;
-  --s-night-x: #1a2150;
-  --s-night-x-ink: #ddd8ff;
-  --s-rest-cell: #c9d7c3;
-  --s-rest-ink: #3f5b47;
-  --s-rest-bar: #7d9a82;
-  --s-leave: #e9e8e2;
-  --s-leave-ink: #5c6167;
+  --text: #131416;
+  --muted: #5d5f60;
+  --faint: #8a9299;
 
-  /* 现在 / 法定 / 警告 */
-  --now: #b3392e;
+  --accent: #1b6c80;
+  --accent-weak: #eaf2f4;
 
-  /* 形状与尺寸 */
-  --r-data: 2px;
-  --r-sheet: 12px;
-  --page-max: 1560px;
-  --page-pad: 24px;
-  --name-col: 96px;
-  --shadow-sheet: 0 24px 60px rgba(20, 23, 26, 0.18);
+  --danger: #b42318;
+  --danger-weak: #fdecea;
+  --warning-ink: #92400e;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
 
-  --font-sans: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", Arial, sans-serif;
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-sheet: 16px;
 
-  color: var(--ink);
-  background: var(--paper);
-  font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.45;
+  --sidebar-width: 228px;
+  --topbar-height: 48px;
+  --gap: 24px;
+  --pad: 24px;
+  --row-height: 40px;
+  --control-height: 30px;
+
+  --fs-title: 22px;
+  --fs-section: 16px;
+  --fs-kpi: 28px;
+  --fs-body: 14px;
+  --fs-small: 12px;
 }
 
-/* 整数行高：字号都是整数，`1em + 6px` 得到的行高也一定是整数，
-   避免半像素基线让中文笔画发虚（Windows / DPR 1 最明显） */
-* {
-  line-height: calc(1em + 6px);
-  font-variant-numeric: tabular-nums;
-  font-synthesis: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-@media (max-width: 720px) {
-  :root {
-    --page-pad: 14px;
-    --name-col: 84px;
-  }
-}
-
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
 }
 
-html {
-  min-width: 320px;
-  min-height: 100%;
-  background: var(--paper);
+html,
+body,
+#root {
+  height: 100%;
 }
 
 body {
-  min-width: 320px;
-  min-height: 100vh;
   margin: 0;
-  overflow-x: hidden;
-  background: var(--paper);
-  color: var(--ink);
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
+  background: var(--ground);
+  color: var(--text);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-#root {
-  min-height: 100vh;
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 h1,
@@ -97,274 +96,146 @@ p {
   margin: 0;
 }
 
-h1 {
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-h2 {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-h3 {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
-
-button {
-  appearance: none;
-  background: none;
-  border: 0;
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
   padding: 0;
-  cursor: pointer;
-  -webkit-user-drag: none;
-  -webkit-touch-callout: none;
-}
-
-img,
-a {
-  -webkit-user-drag: none;
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-input,
-select,
-textarea {
-  -webkit-touch-callout: default;
-  -webkit-user-select: auto;
-  user-select: auto;
-}
-
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-[tabindex]:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-
-button:focus:not(:focus-visible),
-a:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* ── 页面骨架 ───────────────────────────────────────────── */
-
-.app-shell {
-  max-width: var(--page-max);
-  margin: 0 auto;
-  padding: 0 var(--page-pad) 48px;
-}
-
-.page-section {
-  margin-top: 30px;
-}
-
-.sec-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 9px;
-  border-bottom: 1px solid var(--rule-strong);
-}
-
-.sec-head .sub,
-.sub {
-  font-size: 12px;
-  color: var(--ink-3);
-  letter-spacing: 0.02em;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .muted {
-  color: var(--ink-3);
+  color: var(--muted);
 }
 
-.footnote {
-  margin-top: 26px;
-  font-size: 11px;
-  color: var(--ink-3);
-  letter-spacing: 0.04em;
+/* ------------------------------------------------------------ 班次语义色
+ * 六种班次是数据色，不是装饰色；永远配文字，不靠色块单独表意。
+ * 夜班已从紫改为深蓝墨：廉价屏上紫色显廉价，且与另三色凑成彩虹。
+ */
+
+.t-day {
+  background: #dff3ff;
+  color: #02689f;
 }
 
-/* ── 按钮 ──────────────────────────────────────────────── */
-
-.act {
-  font-size: 13px;
-  font-weight: 700;
-  padding: 6px 10px;
-  border-radius: var(--r-data);
-  white-space: nowrap;
-  transition: background-color 120ms ease, color 120ms ease;
+.t-night {
+  background: #e3eaf3;
+  color: #1e3a5f;
 }
 
-.act:hover {
-  background: rgba(20, 23, 26, 0.06);
+.t-rest {
+  background: #dcfce7;
+  color: #047857;
 }
 
-.act-ink {
-  background: var(--ink);
-  color: var(--paper);
+.t-dayx {
+  background: #fff0c2;
+  color: #b45309;
 }
 
-.act-ink:hover {
-  background: #000;
+.t-nightx {
+  background: #fde7c7;
+  color: #9a3412;
 }
 
-.live-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 6px;
-  border-radius: 50%;
-  background: var(--s-rest-bar);
-  vertical-align: 1px;
+.t-leave {
+  background: #e5e7eb;
+  color: #475467;
 }
 
-.live-dot.busy {
-  background: var(--s-day);
-}
+/* ------------------------------------------------------------ 控件 */
 
-.live-dot.off {
-  background: var(--ink-3);
-}
-
-/* ── 班次块（唯一允许使用彩色的地方） ────────────────────── */
-
-.shift-block {
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
-  min-width: 20px;
-  padding: 0 5px;
+  gap: 6px;
+  height: var(--control-height);
+  padding: 0 12px;
+  border: 1px solid var(--control);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1.05;
-  border-radius: var(--r-data);
 }
 
-.s-day {
-  background: var(--s-day);
-  color: var(--s-day-ink);
+.btn:hover:not(:disabled) {
+  background: var(--raised);
 }
 
-.s-night {
-  background: var(--s-night);
-  color: var(--s-night-ink);
+.btn:disabled {
+  border-color: var(--border);
+  background: var(--raised);
+  color: var(--faint);
 }
 
-.s-rest {
-  background: var(--s-rest-cell);
-  color: var(--s-rest-ink);
+.btn-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
 }
 
-.s-dayx {
-  background: var(--s-day-x);
-  color: var(--s-day-x-ink);
+.btn-quiet:hover:not(:disabled) {
+  background: var(--active);
+  color: var(--text);
 }
 
-.s-nightx {
-  background: var(--s-night-x);
-  color: var(--s-night-x-ink);
+.btn-primary {
+  border-color: var(--text);
+  background: var(--text);
+  color: #fff;
 }
 
-.s-leave {
-  background: var(--s-leave);
-  color: var(--s-leave-ink);
+.btn-primary:hover:not(:disabled) {
+  background: #000;
 }
 
-/* 图例色块 */
-.swatch {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 1px;
-  box-shadow: inset 0 0 0 1px rgba(20, 23, 26, 0.16);
+.btn-danger {
+  border-color: #e3b5b0;
+  color: var(--danger);
 }
 
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  align-items: center;
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-weak);
 }
 
-.legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--ink-2);
-  letter-spacing: 0.06em;
+.btn-add {
+  align-self: flex-start;
+  border-style: dashed;
+  color: var(--muted);
 }
 
-.legal-dot {
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--now);
+.btn-file {
+  cursor: pointer;
 }
 
-/* 平日加班点：与日历/矩阵色块上的角标同色（纸白点）。
-   图例画在纸色背景上，白点本身看不见，所以给它套一圈墨色环 —— 读起来就是
-   「深色块上的白点」，与格子里的实际观感一致。 */
-.ot-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--paper);
-  box-shadow: inset 0 0 0 2px var(--ink-2);
+.input {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: 13px;
 }
 
-/* ── 提示条 ────────────────────────────────────────────── */
-
-.error-banner,
-.dev-strip {
-  margin: 12px 0 0;
-  font-size: 12px;
-  letter-spacing: 0.02em;
+.input:hover {
+  border-color: var(--control);
 }
 
-.error-banner {
-  padding: 8px 12px;
-  border-left: 2px solid var(--now);
-  background: rgba(179, 57, 46, 0.07);
-  color: var(--now);
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-weak);
 }
 
-.dev-strip {
-  padding: 7px 12px;
-  border-left: 2px solid var(--rule-strong);
-  background: rgba(20, 23, 26, 0.04);
-  color: var(--ink-2);
-}
-
-.dev-strip code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  padding: 1px 4px;
-  border-radius: 2px;
-  background: rgba(20, 23, 26, 0.08);
+.input-compact {
+  width: auto;
+  min-width: 132px;
 }

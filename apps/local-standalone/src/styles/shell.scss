@@ -1,0 +1,310 @@
+/* 外壳：228px 侧栏 + 48px 顶栏共用一块 tinted 底（L 形），
+ * 画布是缩进 8px 的白色卡片 —— 层次只靠一个色调台阶和 1px 边，没有阴影。
+ */
+
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: var(--topbar-height) minmax(0, 1fr);
+  height: 100vh;
+  background: var(--ground);
+}
+
+/* ------------------------------------------------------------ 侧栏 */
+
+.rail {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 14px 12px 12px;
+  min-height: 0;
+}
+
+.rail-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  height: 24px;
+}
+
+/* 字标：一块小排班格（两条横线），不用黑方块加字母 */
+.rail-mark {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--accent);
+  flex: 0 0 auto;
+}
+
+.rail-mark::before,
+.rail-mark::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.rail-mark::before {
+  top: 5px;
+}
+
+.rail-mark::after {
+  top: 9px;
+}
+
+.rail-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.rail-version {
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  line-height: 16px;
+}
+
+.rail-nav,
+.rail-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rail-foot {
+  margin-top: auto;
+}
+
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.rail-item:hover:not(:disabled) {
+  background: var(--active);
+  color: var(--text);
+}
+
+.rail-item.is-active {
+  background: var(--surface);
+  color: var(--text);
+  border-left-color: var(--accent);
+}
+
+.rail-item:disabled {
+  color: #a8afb4;
+}
+
+.rail-tag {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  line-height: 15px;
+}
+
+.rail-note {
+  padding: 6px 10px 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--faint);
+}
+
+/* ------------------------------------------------------------ 顶栏 */
+
+.topbar {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px 0 24px;
+  min-width: 0;
+}
+
+.month-track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.month-step {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.month-step:hover {
+  background: var(--active);
+  color: var(--text);
+}
+
+.month-title {
+  min-width: 104px;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.year-track-pad {
+  padding-left: 8px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.topbar-status {
+  max-width: 300px;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-warning {
+  padding: 2px 8px;
+  border: 1px solid var(--warning-border);
+  border-radius: 4px;
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ 画布 */
+
+.sheet {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 8px 8px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sheet);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.sheet-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 24px;
+  border-bottom: 1px solid var(--rule);
+  background: #fbfcfd;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.banner-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ 画布内容 */
+
+.canvas {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  padding: var(--pad);
+  overflow: auto;
+}
+
+.canvas-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.canvas-title {
+  font-size: var(--fs-title);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.canvas-sub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.canvas-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.segmented-item {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.segmented-item:hover {
+  background: var(--raised);
+}
+
+.segmented-item.is-on {
+  background: var(--text);
+  color: #fff;
+}

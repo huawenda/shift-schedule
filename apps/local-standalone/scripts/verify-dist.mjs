@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 /**
- * 产物验收脚本：真实启动一个无头浏览器，把 dist/ 打开并跑一遍关键流程。
+ * 产物验收：真实启动无头浏览器，把 dist/ 打开跑一遍关键流程。
  *
- *   node scripts/verify-dist.mjs            # HTTP 托管 + file:// 双击，两种都测
+ *   node scripts/verify-dist.mjs                # HTTP 托管 + file:// 双击，两种都测
  *   node scripts/verify-dist.mjs --only=file
  *
- * 覆盖：
- *   1. 页面能渲染出排班表（JS 没被 file:// 的 CORS 拦掉）
- *   2. localStorage 是否可用（file:// 下尤其要确认）
- *   3. 改班次 -> 落盘 -> 刷新后仍在（持久化）
- *   4. 改回默认 -> 记录被删除
- *   5. 统计页的团队视图可用（本地版视为管理员）
- *   6. 导出备份真的落出一个 JSON，内容是刚才的记录
+ * 覆盖（对应 PRD §8 验收标准）：
+ *   1. 空数据首次打开 → 出现三步向导
+ *   2. 向导建 3 人 → 排班页出现 3 行
+ *   3. 独立浏览器存储可写（file:// 下尤其要确认）
+ *   4. 点格子改班 → 弹层 → 保存 → 写入 roster v2
+ *   5. 刷新后改动仍在（真持久化）
+ *   6. 恢复默认 → 记录被删除
+ *   7. 导出备份 → 文件里是 v2 花名册
+ *   8. 设置页可进入，能读到成员表
  *
- * 依赖：本机 Chrome/Edge，Node 18+（用到全局 fetch / WebSocket）。没有第三方依赖。
+ * 依赖：本机 Chrome/Edge，Node 18+（用全局 fetch / WebSocket）。没有第三方依赖。
  */
 
 import { spawn } from 'node:child_process'
@@ -28,9 +30,12 @@ const projectDir = path.resolve(__dirname, '..')
 const distDir = path.join(projectDir, 'dist')
 const distIndex = path.join(distDir, 'index.html')
 
-const DAY_RECORDS_KEY = 'shift-schedule:local:day-records:v1'
-const SALARY_KEY = 'shift-schedule:local:salary-inputs:v1'
-const SETTINGS_KEY = 'shift-schedule:local:settings:v1'
+const ROSTER_KEY = 'shift-schedule:local:roster:v2'
+const LEGACY_RECORDS_KEY = 'shift-schedule:local:day-records:v1'
+const LEGACY_SETTINGS_KEY = 'shift-schedule:local:settings:v1'
+
+/** 班次 → 矩阵格子里的单字，与 src/data/shifts.ts 保持一致 */
+const SHORT_LABEL = { 白班: '白', 夜班: '夜', 休息: '休', 白特: '特', 夜特: '特', 事假: '假' }
 
 const onlyArg = process.argv.find(arg => arg.startsWith('--only='))
 const only = onlyArg ? onlyArg.slice('--only='.length) : null
@@ -83,7 +88,6 @@ function startStaticServer(rootDir) {
         response.writeHead(404).end('not found')
         return
       }
-
       response.writeHead(200, { 'Content-Type': mimeTypes[path.extname(filePath)] || 'application/octet-stream' })
       response.end(data)
     })
@@ -108,7 +112,6 @@ async function waitForJsonEndpoint(port, timeoutMs = 20000) {
     } catch {
       // 浏览器还没起来
     }
-
     await new Promise(resolve => setTimeout(resolve, 200))
   }
 
@@ -124,7 +127,6 @@ function createCdpClient(webSocketUrl) {
     socket.addEventListener('open', () => resolve())
     socket.addEventListener('error', () => reject(new Error('CDP WebSocket 连接失败')))
   })
-  // 连接失败时，调用方可能已经走了清理分支；这里先吞掉，避免未处理的拒绝把进程带崩。
   ready.catch(() => {})
 
   socket.addEventListener('message', event => {
@@ -134,12 +136,10 @@ function createCdpClient(webSocketUrl) {
     } catch {
       return
     }
-
     if (!message.id || !pending.has(message.id)) return
 
     const { resolve, reject } = pending.get(message.id)
     pending.delete(message.id)
-
     if (message.error) reject(new Error(`${message.error.message || 'CDP 调用失败'}`))
     else resolve(message.result)
   })
@@ -153,17 +153,11 @@ function createCdpClient(webSocketUrl) {
   }
 
   async function evaluate(expression) {
-    const result = await send('Runtime.evaluate', {
-      expression,
-      awaitPromise: true,
-      returnByValue: true
-    })
-
+    const result = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })
     if (result.exceptionDetails) {
       const description = result.exceptionDetails.exception?.description
       throw new Error(description || result.exceptionDetails.text || '页面内求值失败')
     }
-
     return result.result.value
   }
 
@@ -182,29 +176,43 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 async function waitFor(client, expression, label, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs
-
   while (Date.now() < deadline) {
     if (await client.evaluate(expression)) return true
     await sleep(120)
   }
-
   throw new Error(`等待超时：${label}`)
 }
 
-async function reload(client) {
-  await client.send('Page.reload', { ignoreCache: true })
-  await waitFor(client, 'document.readyState === "complete"', '页面重新加载')
-  await waitFor(client, 'Boolean(document.querySelector(".matrix .grid-row .m-body .shift-block"))', '排班表渲染')
+/** 点文字匹配的按钮（button 或 label） */
+function clickByText(selector, text) {
+  return `(() => {
+    const target = Array.from(document.querySelectorAll(${JSON.stringify(selector)}))
+      .find(item => item.textContent.trim() === ${JSON.stringify(text)})
+    if (!target) return false
+    target.click()
+    return true
+  })()`
 }
 
-const cellSelector = '.matrix .grid-row .m-body'
+/** 给受控 input 赋值（React 需要原生 setter + input 事件）；用索引取第 n 个 */
+function setInputAt(selector, index, value) {
+  return `(() => {
+    const input = document.querySelectorAll(${JSON.stringify(selector)})[${index}]
+    if (!input) return false
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+    setter.call(input, ${JSON.stringify(value)})
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    return true
+  })()`
+}
+
+const firstCell = '.matrix-row .matrix-cell'
 
 async function runScenario(name, url, downloadDir) {
   console.log(`\n=== 场景：${name} ===`)
-
   fs.mkdirSync(downloadDir, { recursive: true })
 
-  const userDataDir = path.join(os.tmpdir(), `dsh-verify-${name}-${Date.now()}`)
+  const userDataDir = path.join(os.tmpdir(), `shift-verify-${name}-${Date.now()}`)
   const debugPort = 9333 + Math.floor(Math.random() * 400)
   const browser = findBrowser()
 
@@ -228,16 +236,22 @@ async function runScenario(name, url, downloadDir) {
     await client.ready
     await client.send('Runtime.enable')
     await client.send('Page.enable')
-
     try {
       await client.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir })
     } catch {
-      // 老版本 Chrome 走 Page 域
       await client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir }).catch(() => {})
     }
 
-    await waitFor(client, 'Boolean(document.querySelector(".matrix .grid-row .m-body .shift-block"))', '排班表渲染')
-    check(`${name}: 排班表渲染成功`, true)
+    // --- 1. 空数据首次打开 → 向导 ---
+    await client.evaluate(`(() => {
+      [${JSON.stringify(ROSTER_KEY)}, ${JSON.stringify(LEGACY_RECORDS_KEY)}, ${JSON.stringify(LEGACY_SETTINGS_KEY)}]
+        .forEach(key => window.localStorage.removeItem(key))
+      return true
+    })()`)
+    await client.send('Page.reload', { ignoreCache: true })
+    await waitFor(client, 'document.readyState === "complete"', '页面加载')
+    await waitFor(client, 'Boolean(document.querySelector(".wizard"))', '首次配置向导')
+    check(`${name}: 无数据时进入三步向导`, true)
 
     const storageState = await client.evaluate(`(() => {
       try {
@@ -248,106 +262,102 @@ async function runScenario(name, url, downloadDir) {
         return 'unavailable: ' + error.message
       }
     })()`)
-    check(`${name}: localStorage 可用`, storageState === 'ok', storageState === 'ok' ? '' : storageState)
+    check(`${name}: 本机存储可用`, storageState === 'ok', storageState === 'ok' ? '' : storageState)
+    if (storageState !== 'ok') return
 
-    if (storageState !== 'ok') {
-      // 存不了的话后面的持久化断言没有意义
-      return
+    // --- 2. 向导建 3 人 ---
+    check(`${name}: 向导第 1 步可继续`, await client.evaluate(clickByText('.wizard-foot button', '下一步')))
+    await waitFor(client, 'Boolean(document.querySelector(".member-editor"))', '成员表')
+
+    const names = ['张三', '李四', '王五']
+    for (let index = 0; index < names.length; index += 1) {
+      const ok = await client.evaluate(setInputAt('.member-row input', index, names[index]))
+      check(`${name}: 填第 ${index + 1} 位成员姓名`, ok)
     }
 
-    // 从干净状态开始
-    await client.evaluate(`(() => {
-      [${JSON.stringify(DAY_RECORDS_KEY)}, ${JSON.stringify(SALARY_KEY)}, ${JSON.stringify(SETTINGS_KEY)}]
-        .forEach(key => window.localStorage.removeItem(key))
-      return true
-    })()`)
-    await reload(client)
+    await sleep(150)
+    check(`${name}: 向导第 2 步可继续`, await client.evaluate(clickByText('.wizard-foot button', '下一步')))
+    await waitFor(client, 'Boolean(document.querySelector(".wizard-summary"))', '确认页')
+    check(`${name}: 向导进入第 3 步`, await client.evaluate(clickByText('.wizard-foot button', '进入排班表')))
 
-    // --- 改班次并落盘 ---
+    await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '矩阵出现 3 行')
+    check(`${name}: 排班页出现 3 位成员`, true)
+
+    // --- 3. 改班 ---
+    const before = await client.evaluate(`document.querySelector(${JSON.stringify(firstCell)}).textContent.trim()`)
+    const targetShift = ['白特', '夜特', '事假', '休息', '白班', '夜班'].find(shift => SHORT_LABEL[shift] !== before) ?? '白特'
+
+    await client.evaluate(`document.querySelector(${JSON.stringify(firstCell)}).click(); true`)
+    await waitFor(client, 'Boolean(document.querySelector(".dialog"))', '改班弹层')
+    check(`${name}: 点击格子打开改班弹层`, true)
+
     const picked = await client.evaluate(`(() => {
-      const cell = document.querySelector(${JSON.stringify(cellSelector)})
-      if (!cell) return null
-      const block = cell.querySelector('.shift-block')
-      return { shift: block ? block.textContent.trim() : '' }
-    })()`)
-
-    const nextShift = ['夜班', '白班', '休息', '白特', '夜特'].find(shift => shift !== picked?.shift)
-    check(`${name}: 找到可编辑的排班单元格`, Boolean(picked && nextShift), `当前「${picked?.shift}」→「${nextShift}」`)
-
-    await client.evaluate(`document.querySelector(${JSON.stringify(cellSelector)}).click(); true`)
-    await waitFor(client, 'Boolean(document.querySelector(".sheet"))', '班次编辑弹窗')
-    check(`${name}: 点击单元格能打开编辑弹窗`, true)
-
-    const shiftClicked = await client.evaluate(`(() => {
-      const target = document.querySelector('.sheet .shift-choice[aria-label="' + ${JSON.stringify(nextShift)} + '"]:not([data-role="base"])')
-      if (!target) return false
-      target.click()
+      const option = Array.from(document.querySelectorAll('.dialog-options .option'))
+        .find(item => item.textContent.trim() === ${JSON.stringify(targetShift)})
+      if (!option) return false
+      option.click()
       return true
     })()`)
-    check(`${name}: 选中目标班次「${nextShift}」`, shiftClicked)
-
-    // 必须等 React 重新渲染：选班次与保存若在同一次求值里，保存读到的还是旧 state
+    check(`${name}: 选中「${targetShift}」`, picked)
     await sleep(200)
-    const saveClicked = await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.sheet-actions button'))
-        .find(item => item.textContent.trim() === '保存')
-      if (!button) return false
-      button.click()
-      return true
-    })()`)
-    check(`${name}: 点击保存`, saveClicked)
 
-    await waitFor(client, '!document.querySelector(".sheet")', '弹窗关闭')
+    check(`${name}: 点击保存`, await client.evaluate(clickByText('.dialog-foot button', '保存')))
+    await waitFor(client, '!document.querySelector(".dialog")', '弹层关闭')
 
-    // 落盘是异步的（保存要等 React 重渲染 + 写库），这里轮询而不是读一次
-    let storedRaw = null
+    let stored = null
     const saveDeadline = Date.now() + 3000
     while (Date.now() < saveDeadline) {
-      storedRaw = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(DAY_RECORDS_KEY)})`)
-      if (storedRaw && storedRaw !== '[]') break
+      stored = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})`)
+      if (stored && stored.includes('overrides')) break
       await sleep(150)
     }
-    let storedRecords = []
-    try {
-      storedRecords = JSON.parse(storedRaw || '[]')
-    } catch {
-      storedRecords = []
-    }
 
-    const savedRecord = storedRecords[0]
+    let parsed = null
+    try {
+      parsed = JSON.parse(stored || 'null')
+    } catch {
+      parsed = null
+    }
     check(
-      `${name}: 改动写入 localStorage`,
-      Boolean(savedRecord && savedRecord.shiftOverride === nextShift),
-      savedRecord ? `${savedRecord.personName} ${savedRecord.date} = ${savedRecord.shiftOverride}` : String(storedRaw)
+      `${name}: 改动写入 roster v2`,
+      Boolean(parsed?.overrides?.length === 1 && parsed.overrides[0].shift === targetShift),
+      JSON.stringify(parsed?.overrides ?? null)
     )
 
-    // --- 刷新后仍然存在 ---
-    await reload(client)
+    // --- 4. 刷新后仍在 ---
+    await client.send('Page.reload', { ignoreCache: true })
+    await waitFor(client, 'document.readyState === "complete"', '页面重新加载')
+    await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '矩阵重新渲染')
 
     const afterReload = await client.evaluate(`(() => {
-      const cell = document.querySelector(${JSON.stringify(cellSelector)})
+      const cell = document.querySelector(${JSON.stringify(firstCell)})
       if (!cell) return null
-      const block = cell.querySelector('.shift-block')
-      return {
-        shift: block ? block.textContent.trim() : '',
-        marked: cell.classList.contains('is-edited')
-      }
+      return { text: cell.textContent.trim(), edited: cell.classList.contains('is-edited') }
     })()`)
-
     check(
-      `${name}: 刷新后改动仍在（真正的持久化）`,
-      Boolean(afterReload && afterReload.shift === nextShift && afterReload.marked),
+      `${name}: 刷新后改动仍在`,
+      Boolean(afterReload && afterReload.text === SHORT_LABEL[targetShift] && afterReload.edited),
       JSON.stringify(afterReload)
     )
 
-    // --- 导出备份真的落文件 ---
-    await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.masthead button'))
-        .find(item => item.textContent.trim() === '导出')
-      if (!button) return false
-      button.click()
-      return true
-    })()`)
+    // --- 5. 恢复默认 ---
+    await client.evaluate(`document.querySelector(${JSON.stringify(firstCell)}).click(); true`)
+    await waitFor(client, 'Boolean(document.querySelector(".dialog"))', '改班弹层')
+    check(`${name}: 点击恢复默认`, await client.evaluate(clickByText('.dialog-foot button', '恢复默认')))
+    await waitFor(client, '!document.querySelector(".dialog")', '弹层关闭')
+
+    await sleep(300)
+    const afterReset = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})`)
+    let resetParsed = null
+    try {
+      resetParsed = JSON.parse(afterReset || 'null')
+    } catch {
+      resetParsed = null
+    }
+    check(`${name}: 恢复默认后记录被删除`, resetParsed?.overrides?.length === 0, JSON.stringify(resetParsed?.overrides ?? null))
+
+    // --- 6. 导出备份 ---
+    await client.evaluate(clickByText('.topbar-right button', '导出备份'))
 
     let backupFile = null
     const downloadDeadline = Date.now() + 8000
@@ -360,139 +370,32 @@ async function runScenario(name, url, downloadDir) {
     if (backupFile) {
       const backup = JSON.parse(fs.readFileSync(path.join(downloadDir, backupFile), 'utf8'))
       check(
-        `${name}: 导出备份文件内容正确`,
-        Array.isArray(backup.dayRecords) && backup.dayRecords.some(record => record.shiftOverride === nextShift),
+        `${name}: 导出备份是 v2 花名册`,
+        backup?.version === 2 && Array.isArray(backup?.roster?.members) && backup.roster.members.length === 3,
         backupFile
       )
     } else {
-      check(`${name}: 导出备份文件内容正确`, false, '没有等到下载文件')
+      check(`${name}: 导出备份是 v2 花名册`, false, '没有等到下载文件')
     }
 
-    // --- 改回默认 -> 记录被删除 ---
-    await client.evaluate(`document.querySelector(${JSON.stringify(cellSelector)}).click(); true`)
-    await waitFor(client, 'Boolean(document.querySelector(".sheet"))', '班次编辑弹窗')
-    const resetClicked = await client.evaluate(`(() => {
-      // 「默认班次」的文案在 editor-label 上，按钮本体只有班次 chip
-      const label = Array.from(document.querySelectorAll('.sheet .label'))
-        .find(item => item.textContent.trim() === '默认班次')
-      const option = label?.parentElement?.querySelector('.shift-choice')
-      if (!option) return false
-      option.click()
-      return true
-    })()`)
-    // 必须等 React 重新渲染：把「选班次」和「保存」放在同一次求值里，
-    // 保存读到的还是旧 state（React 会批处理）。
+    // --- 7. 设置页 ---
+    await client.evaluate(clickByText('.rail-item', '设置'))
+    await waitFor(client, 'Boolean(document.querySelector(".settings-section"))', '设置页')
+    const settingsRows = await client.evaluate('document.querySelectorAll(".member-row").length')
+    check(`${name}: 设置页读到 3 位成员`, settingsRows === 3, String(settingsRows))
+
+    await client.evaluate(clickByText('.rail-item', '排班'))
+    await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '回到排班页')
+    check(`${name}: 能从设置返回排班`, true)
+
+    // --- 8. 翻月不崩 ---
+    await client.evaluate(clickByText('.month-track button', '回到本期'))
+    const titleBefore = await client.evaluate('document.querySelector(".month-title").textContent.trim()')
+    await client.evaluate(`document.querySelectorAll('.month-step')[1].click(); true`)
     await sleep(200)
-    const saveClickedReset = await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.sheet-actions button'))
-        .find(item => item.textContent.trim() === '保存')
-      if (!button) return false
-      button.click()
-      return true
-    })()`)
-    check(`${name}: 选中「默认班次」并保存`, resetClicked && saveClickedReset)
-    await waitFor(client, '!document.querySelector(".sheet")', '弹窗关闭')
-
-    const afterDelete = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(DAY_RECORDS_KEY)})`)
-    let afterDeleteRecords = []
-    try {
-      afterDeleteRecords = JSON.parse(afterDelete || '[]')
-    } catch {
-      afterDeleteRecords = []
-    }
-    check(`${name}: 改回默认后记录被删除`, afterDeleteRecords.length === 0, afterDelete)
-
-    // --- 团队统计（本地版视为管理员） ---
-    await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.masthead button')).find(b => b.textContent.trim() === '统计')
-      if (!button) return false
-      button.click()
-      return true
-    })()`)
-    await waitFor(client, 'Boolean(document.querySelector(".stats-head"))', '统计页')
-    check(`${name}: 能进入统计页`, true)
-
-    const statsTabs = await client.evaluate(`(() => {
-      const labels = Array.from(document.querySelectorAll('.stats-tabs button')).map(item => item.textContent.trim())
-      return labels
-    })()`)
-    check(
-      `${name}: 统计页显示两个视图标签（综合统计 / 每日明细）`,
-      statsTabs.includes('综合统计') && statsTabs.includes('每日明细'),
-      JSON.stringify(statsTabs)
-    )
-
-    const dailyTabClicked = await client.evaluate(`(() => {
-      const tab = Array.from(document.querySelectorAll('.stats-tabs button'))
-        .find(item => item.textContent.includes('每日明细'))
-      if (!tab) return false
-      tab.click()
-      return true
-    })()`)
-    check(`${name}: 能切到每日明细`, dailyTabClicked)
-
-    if (dailyTabClicked) {
-      const hasDaily = await waitFor(client, 'Boolean(document.querySelector(".daily"))', '每日明细表', 8000)
-        .then(() => true)
-        .catch(() => false)
-      check(`${name}: 每日明细表渲染`, hasDaily)
-    }
-
-    /* 全员排名页已按产品决策删除。这里显式断言它不在，
-       免得以后有人「顺手加回来」而没人发现。 */
-    const hasTeamTab = statsTabs.some(label => label.includes('全员'))
-    check(`${name}: 全员排名已移除`, !hasTeamTab, JSON.stringify(statsTabs))
-
-    const backClicked = await client.evaluate(`(() => {
-      const button = document.querySelector('.stats-head .back')
-      if (!button) return false
-      button.click()
-      return true
-    })()`)
-    const backHome = backClicked
-      ? await waitFor(client, 'Boolean(document.querySelector(".cal"))', '返回排班页', 8000).then(() => true).catch(() => false)
-      : false
-    check(`${name}: 从统计页返回排班页`, backHome)
-
-    // --- 薪资输入能落盘 ---
-    await client.evaluate(`(() => {
-      const button = Array.from(document.querySelectorAll('.masthead button')).find(b => b.textContent.trim() === '统计')
-      if (button) button.click()
-      return true
-    })()`)
-    await waitFor(client, 'Boolean(document.querySelector(".stats-head"))', '统计页')
-
-    // 薪资输入在「综合统计」页
-    await client.evaluate(`(() => {
-      const tab = Array.from(document.querySelectorAll('.stats-tabs button'))
-        .find(item => item.textContent.includes('综合统计'))
-      if (tab) tab.click()
-      return true
-    })()`)
-    const hasSalaryInput = await waitFor(client, 'Boolean(document.querySelector(".pay-input input"))', '薪资输入框', 8000)
-      .then(() => true)
-      .catch(() => false)
-
-    const salaryFilled = hasSalaryInput && await client.evaluate(`(() => {
-      const input = document.querySelector('.pay-input input')
-      if (!input) return false
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
-      setter.call(input, '5000')
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-      return true
-    })()`)
-
-    if (salaryFilled) {
-      let salaryRaw = null
-      const salaryDeadline = Date.now() + 5000
-      while (Date.now() < salaryDeadline && !salaryRaw) {
-        salaryRaw = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(SALARY_KEY)})`)
-        if (!salaryRaw) await sleep(200)
-      }
-      check(`${name}: 薪资输入写入 localStorage`, Boolean(salaryRaw && salaryRaw.includes('5000')), salaryRaw ?? '(空)')
-    } else {
-      check(`${name}: 薪资输入写入 localStorage`, false, '没找到薪资输入框')
-    }
+    const titleAfter = await client.evaluate('document.querySelector(".month-title").textContent.trim()')
+    check(`${name}: 切换月份`, titleBefore !== titleAfter, `${titleBefore} → ${titleAfter}`)
+    check(`${name}: 切月后矩阵仍在`, await client.evaluate('document.querySelectorAll(".matrix-row").length === 3'))
   } catch (error) {
     check(`${name}: 场景执行`, false, error.message)
   } finally {
@@ -517,7 +420,7 @@ async function main() {
 
   console.log(`浏览器: ${browser}`)
 
-  const downloadDir = path.join(os.tmpdir(), `dsh-verify-download-${Date.now()}`)
+  const downloadDir = path.join(os.tmpdir(), `shift-verify-download-${Date.now()}`)
   fs.mkdirSync(downloadDir, { recursive: true })
 
   const { server, port } = await startStaticServer(distDir)

@@ -1,10 +1,10 @@
-/* 倒班表 · 本地版 —— 视觉体系入口
+/* 倒班表 · 本地版 —— 样式入口
  *
- * 与 apps/web 共用同一套视觉语言（tokens → chrome → schedule → stats）。
- * 层序即优先级：后面的文件覆盖前面的同名规则。
+ * 顺序即优先级：令牌 → 外壳 → 排班页 → 设置页 → 向导。
+ * 只有这五层，没有「局部补丁」文件 —— 新样式请改对应层，不要再加覆盖层。
  */
-@use './styles/tokens' as *;
-@use './styles/chrome' as *;
-@use './styles/schedule' as *;
-@use './styles/stats' as *;
-@use './styles/local' as *;
+@use './styles/tokens';
+@use './styles/shell';
+@use './styles/schedule';
+@use './styles/settings';
+@use './styles/wizard';
