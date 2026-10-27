@@ -259,6 +259,13 @@ async function runScenario(name, url, downloadDir) {
     }
 
     // --- 1. 空数据首次打开 → 向导 ---
+    // 连上来时标签页可能还停在 about:blank，此时访问 localStorage 会抛 SecurityError，
+    // 所以先等真正加载到目标地址（否则整场会因为一个竞态直接判失败）。
+    await waitFor(
+      client,
+      `location.href.startsWith(${JSON.stringify(url.replace(/[^/]*$/, ''))})`,
+      '标签页加载到目标地址'
+    )
     await client.evaluate(`(() => {
       [${JSON.stringify(ROSTER_KEY)}, ${JSON.stringify(LEGACY_RECORDS_KEY)}, ${JSON.stringify(LEGACY_SETTINGS_KEY)}]
         .forEach(key => window.localStorage.removeItem(key))
@@ -393,6 +400,15 @@ async function runScenario(name, url, downloadDir) {
     await waitFor(client, 'Boolean(document.querySelector(".dialog-wide"))', '班序编辑器')
     const editorCells = await client.evaluate('document.querySelectorAll(".dialog-wide .shift-cell").length')
     check(`${name}: 编辑器有 24 个格子`, editorCells === 24, String(editorCells))
+
+    const palette = await client.evaluate(
+      `Array.from(document.querySelectorAll('.shift-palette .palette-option')).map(node => node.textContent.trim())`
+    )
+    check(
+      `${name}: 班次选项只有白/夜/休三种`,
+      JSON.stringify(palette) === JSON.stringify(['白班', '夜班', '休息']),
+      JSON.stringify(palette)
+    )
 
     check(
       `${name}: 填班序名称`,

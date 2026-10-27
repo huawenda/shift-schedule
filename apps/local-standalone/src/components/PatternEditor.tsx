@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import {
   PATTERN_ANCHOR_DATE,
   PATTERN_CYCLE_LENGTH,
+  PATTERN_SHIFT_OPTIONS,
   createBlankCustomPattern,
   validateCustomPattern,
   type CustomPattern,
   type PatternLookup
 } from '../data/patterns'
-import { SHIFT_META, SHIFT_TYPES, shiftToneClass, type ShiftType } from '../data/shifts'
+import { SHIFT_META, shiftToneClass, type ShiftType } from '../data/shifts'
 
 interface PatternEditorProps {
   /** 传入 = 编辑已有；不传 = 新建 */
@@ -127,7 +128,7 @@ export function PatternEditor({ pattern, existing, lookup, onSave, onClose }: Pa
           </p>
 
           <div className="shift-palette" role="group" aria-label="选择班次">
-            {SHIFT_TYPES.map(shift => (
+            {PATTERN_SHIFT_OPTIONS.map(shift => (
               <button
                 aria-pressed={activeShift === shift}
                 className={`palette-option ${shiftToneClass(shift)}${activeShift === shift ? ' is-on' : ''}`}
@@ -139,6 +140,10 @@ export function PatternEditor({ pattern, existing, lookup, onSave, onClose }: Pa
               </button>
             ))}
           </div>
+
+          <p className="editor-hint">
+            班序只填这三种基础班次。白特、夜特、事假属于临时安排，改班时单天设置，不写进班序。
+          </p>
 
           <label className="field-row">
             <span className="field-label">照着改（可选）</span>

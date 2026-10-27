@@ -1,5 +1,5 @@
 import { daysBetween, positiveModulo } from './dateUtils'
-import { SHIFT_TYPES, isShiftType, type ShiftType } from './shifts'
+import { isShiftType, type ShiftType } from './shifts'
 
 /**
  * 班序：**24 天循环**，所有班序共用同一个锚点。
@@ -228,5 +228,11 @@ export function getPatternPreview(patternId: string, dateKeys: string[]): ShiftT
     .filter((shift): shift is ShiftType => shift !== null)
 }
 
-/** 全部合法班次，供编辑器的选项栏使用 */
-export const PATTERN_SHIFT_OPTIONS = SHIFT_TYPES
+/**
+ * 班序格子里能填的班次 —— **只有白班 / 夜班 / 休息**。
+ *
+ * 这三者是客观的排班节奏（谁上什么班、哪天休），一条班序必然由它们构成；
+ * 白特、夜特、事假属于临时或人为决定的事，改班时单天设，不写进 24 格循环。
+ * 数据层仍接受六种班次（旧数据、改班记录都用得到），这里限定的只是**录入入口**。
+ */
+export const PATTERN_SHIFT_OPTIONS: readonly ShiftType[] = ['白班', '夜班', '休息']

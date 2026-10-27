@@ -7,6 +7,7 @@ import {
   normalizeCustomPatterns,
   PATTERN_ANCHOR_DATE,
   PATTERN_CYCLE_LENGTH,
+  PATTERN_SHIFT_OPTIONS,
   resolvePatterns,
   validateCustomPattern,
   type CustomPattern
@@ -185,5 +186,17 @@ describe('resolvePatterns', () => {
     const lookup = resolvePatterns()
     expect(lookup.getShift('nope', PATTERN_ANCHOR_DATE)).toBeNull()
     expect(lookup.get('nope')).toBeUndefined()
+  })
+
+  it('录入入口只提供白班 / 夜班 / 休息三种基础班次', () => {
+    expect([...PATTERN_SHIFT_OPTIONS]).toEqual(['白班', '夜班', '休息'])
+  })
+
+  it('班序的 24 格只由基础班次构成 —— 特殊班次走单天改班，不进班序', () => {
+    BUILTIN_PATTERNS.forEach(pattern => {
+      pattern.shifts.forEach(shift => {
+        expect(PATTERN_SHIFT_OPTIONS).toContain(shift)
+      })
+    })
   })
 })

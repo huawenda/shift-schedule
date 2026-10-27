@@ -318,9 +318,10 @@ button.shift-cell:hover {
   font-weight: 500;
 }
 
+/* 只放白/夜/休三种基础班次，所以是 3 列而不是 6 列 */
 .shift-palette {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
 
