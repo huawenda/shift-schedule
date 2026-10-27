@@ -1,0 +1,3 @@
+# Windows 批处理必须是 CRLF 行尾：纯 LF 下 goto / 标签定位会失效
+*.bat  eol=crlf
+*.cmd  eol=crlf
