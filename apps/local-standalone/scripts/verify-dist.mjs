@@ -325,7 +325,7 @@ async function runScenario(name, url, downloadDir) {
 
     const names = ['李四', '王五']
     for (let index = 0; index < names.length; index += 1) {
-      const ok = await client.evaluate(setInputAt('.member-row input', index, names[index]))
+      const ok = await client.evaluate(setInputAt('.member-row input[aria-label$="姓名"]', index, names[index]))
       check(`${name}: 填第 ${index + 1} 位同事姓名`, ok)
     }
 
@@ -482,6 +482,22 @@ async function runScenario(name, url, downloadDir) {
       `document.querySelector('.settings-section .settings-meta')?.textContent.trim() ?? ''`
     )
     check(`${name}: 个人资料页标出本人`, profileMeta.includes('张三'), profileMeta)
+
+    // 本人岗位：在个人信息里填，应落到本人那条 member 上（只改岗位不触发换人清空）
+    check(`${name}: 填本人岗位`, await client.evaluate(setInputBySelector('input[aria-label="本人岗位"]', '班长')))
+    await sleep(150)
+    check(
+      `${name}: 保存本人信息（只改岗位）`,
+      await client.evaluate(clickByText('.profile-block .btn-primary', '保存本人信息'))
+    )
+    await sleep(300)
+    const selfPosition = await client.evaluate(`(() => {
+      const raw = window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})
+      const parsed = raw ? JSON.parse(raw) : null
+      const self = parsed?.members?.find(member => member.id === parsed?.profile?.memberId)
+      return self?.position ?? null
+    })()`)
+    check(`${name}: 本人岗位写进 member`, selfPosition === '班长', JSON.stringify(selfPosition))
 
     check(`${name}: 填基本工资`, await client.evaluate(setInputBySelector('.salary-grid input', '8000')))
     await sleep(150)
@@ -654,6 +670,13 @@ async function runScenario(name, url, downloadDir) {
     if (workCell) {
       await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
       await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+
+      // 焦点必须进弹层：留在背景格子上时，用户一按 ESC（键盘交互），
+      // Chrome 会给那个格子补上 :focus-visible 焦点环 —— 弹层关了，框线还留着
+      check(
+        `${name}: 弹层打开时焦点在弹层内`,
+        await client.evaluate(`Boolean(document.activeElement?.closest('.dialog'))`)
+      )
 
       // 三段加两个按钮全堆起来仍要放得进 900 高的办公屏
       const dialogSize = await client.evaluate(`(() => {
@@ -885,9 +908,16 @@ async function runScenario(name, url, downloadDir) {
       await waitFor(client, 'Boolean(document.querySelector(".member-editor"))', '成员表')
       check(`${name}: 成员表加一行`, await client.evaluate(clickByText('.btn-add', '添加成员')))
       await sleep(150)
-      const lastRowIndex = await client.evaluate('document.querySelectorAll(".member-row").length - 1')
-      const lockedCount = await client.evaluate('document.querySelectorAll(".member-row .member-locked").length')
-      await client.evaluate(setInputAt('.member-row input', lastRowIndex - lockedCount, '张三'))
+      // 每行现在有「姓名 + 岗位」两个 input，不能再用全局索引定位姓名框，直接取末行
+      await client.evaluate(`(() => {
+        const rows = Array.from(document.querySelectorAll('.member-row'))
+        const input = rows[rows.length - 1]?.querySelector('input[aria-label$="姓名"]')
+        if (!input) return false
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+        setter.call(input, '张三')
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+        return true
+      })()`)
       await sleep(200)
       const sameNameError = await client.evaluate(
         `document.querySelector('.error-list')?.textContent.trim() ?? ''`
@@ -938,7 +968,7 @@ async function runScenario(name, url, downloadDir) {
         JSON.stringify(statsAfterRestore)
       )
 
-      // --- 5c. 事假时长：半天要真的从工资里扣 ---
+      // --- 5c. 事假时长：4h 要真的从工资里扣 ---
       await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
       await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
       check(`${name}: 弹层里选事假`, await client.evaluate(clickByText('.dialog-day .option', '事假')))
@@ -947,18 +977,18 @@ async function runScenario(name, url, downloadDir) {
       const leaveSection = await client.evaluate(`(() => ({
         durations: Array.from(document.querySelectorAll('.dialog-day .segmented-item'))
           .map(node => node.textContent.trim())
-          .filter(text => text === '半天' || text === '一天'),
+          .filter(text => text === '4h' || text === '8h'),
         note: document.querySelector('.dialog-day .section-note:last-of-type')?.textContent.trim() ?? ''
       }))()`)
       check(
-        `${name}: 选事假后出现「半天 / 一天」`,
-        JSON.stringify(leaveSection.durations) === JSON.stringify(['半天', '一天']),
+        `${name}: 选事假后出现「4h / 8h」`,
+        JSON.stringify(leaveSection.durations) === JSON.stringify(['4h', '8h']),
         JSON.stringify(leaveSection)
       )
 
-      check(`${name}: 选半天`, await client.evaluate(clickByText('.dialog-day .segmented-item', '半天')))
+      check(`${name}: 选 4h`, await client.evaluate(clickByText('.dialog-day .segmented-item', '4h')))
       await sleep(120)
-      check(`${name}: 保存半天事假`, await client.evaluate(clickByText('.dialog-foot button', '保存')))
+      check(`${name}: 保存 4h 事假`, await client.evaluate(clickByText('.dialog-foot button', '保存')))
       await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
       await sleep(300)
 
@@ -969,8 +999,8 @@ async function runScenario(name, url, downloadDir) {
         return { shift: record?.shift ?? null, duration: record?.leaveDuration ?? null, count: parsed?.overrides?.length ?? -1 }
       })()`)
       check(
-        `${name}: 半天事假落盘（只存「半天」，一天走默认值）`,
-        leaveStored.shift === '事假' && leaveStored.duration === '半天' && leaveStored.count === 1,
+        `${name}: 4h 事假落盘（只存「4h」，8h 走默认值）`,
+        leaveStored.shift === '事假' && leaveStored.duration === '4h' && leaveStored.count === 1,
         JSON.stringify(leaveStored)
       )
 
@@ -992,7 +1022,7 @@ async function runScenario(name, url, downloadDir) {
           net: rows.find(text => text.startsWith('实发')) ?? ''
         }
       })()`)
-      check(`${name}: 日历角标标出「半天」`, leaveUi.corner === '半天', JSON.stringify(leaveUi))
+      check(`${name}: 日历角标标出「4h」`, leaveUi.corner === '4h', JSON.stringify(leaveUi))
       check(
         `${name}: 事假卡片写 4h，底部不再重复小时`,
         leaveUi.leaveCardExtra === '4h' && leaveUi.leaveCardIsLeave === true &&
@@ -1006,10 +1036,23 @@ async function runScenario(name, url, downloadDir) {
         JSON.stringify(leaveUi)
       )
 
+      // 改选 8h：8h 是默认值不落字段，但角标也要标出实际时长
+      await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+      check(`${name}: 改选 8h`, await client.evaluate(clickByText('.dialog-day .segmented-item', '8h')))
+      await sleep(120)
+      check(`${name}: 保存 8h 事假`, await client.evaluate(clickByText('.dialog-foot button', '保存')))
+      await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+      await sleep(250)
+      const leave8hCorner = await client.evaluate(
+        `document.querySelectorAll('.cal-cell')[${workCell.index}].querySelector('.cal-leave')?.textContent.trim() ?? null`
+      )
+      check(`${name}: 8h 事假也挂角标`, leave8hCorner === '8h', JSON.stringify(leave8hCorner))
+
       // 收尾：清掉这条事假，后续步骤从干净状态开始
       await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
       await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
-      check(`${name}: 清掉半天事假`, await client.evaluate(clickByText('.dialog-foot button', '恢复默认')))
+      check(`${name}: 清掉事假`, await client.evaluate(clickByText('.dialog-foot button', '恢复默认')))
       await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
       await sleep(250)
 
@@ -1342,9 +1385,28 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(imported)
     )
 
+    // 成员表新增「岗位」列；本人行岗位只读显示（fixture 里华文达 = 班长）
+    const positionCol = await client.evaluate(`(() => {
+      const head = document.querySelector('.member-editor-head')
+      const first = document.querySelector('.member-row')
+      return {
+        hasCol: Array.from(head.querySelectorAll('span')).some(s => s.textContent.trim() === '岗位'),
+        selfPosition: first.querySelector('.member-locked-position')?.textContent.trim() ?? ''
+      }
+    })()`)
+    check(
+      `${name}: 成员表有岗位列且本人行只读显示岗位`,
+      positionCol.hasCol && positionCol.selfPosition === '班长',
+      JSON.stringify(positionCol)
+    )
+
     await client.evaluate(clickByText('.rail-item', '全员矩阵'))
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 13', '矩阵 13 行')
     check(`${name}: 导入后矩阵 13 行`, true)
+    const firstPattern = await client.evaluate(
+      `document.querySelector('.matrix-row .matrix-pattern')?.textContent.trim() ?? ''`
+    )
+    check(`${name}: 矩阵班序旁拼岗位（4F · 班长）`, firstPattern === '4F · 班长', firstPattern)
 
     // --- 14. 人员排序：设置里的行顺序必须映射成矩阵的行顺序 ---
     await client.evaluate(clickByText('.rail-item', '设置'))

@@ -199,9 +199,9 @@ describe('空薪资', () => {
 
 
 describe('事假扣款', () => {
-  it('半天事假计 4 小时，按 时薪 × 4 扣款', () => {
+  it('4h 事假计 4 小时，按 时薪 × 4 扣款', () => {
     const roster = makeRoster(
-      [{ memberId: 'm1', date: period.dates[3], shift: '事假', leaveDuration: '半天' }],
+      [{ memberId: 'm1', date: period.dates[3], shift: '事假', leaveDuration: '4h' }],
       filledSalary
     )
     const stats = computeMonthStats(roster, member, period)
@@ -213,17 +213,17 @@ describe('事假扣款', () => {
     expect(stats.salary.net).toBe(roundMoney(9800 - 1500 - stats.salary.leaveDeduction))
   })
 
-  it('没记时长的事假按一天 8 小时算', () => {
+  it('没记时长的事假按 8h（一天）算', () => {
     const roster = makeRoster([{ memberId: 'm1', date: period.dates[3], shift: '事假' }], filledSalary)
     const stats = computeMonthStats(roster, member, period)
     expect(stats.leave.hours).toBe(8)
   })
 
-  it('多天事假小时累加（半天 + 一天 = 12h）', () => {
+  it('多天事假小时累加（4h + 8h = 12h）', () => {
     const roster = makeRoster(
       [
-        { memberId: 'm1', date: period.dates[3], shift: '事假', leaveDuration: '半天' },
-        { memberId: 'm1', date: period.dates[4], shift: '事假', leaveDuration: '一天' }
+        { memberId: 'm1', date: period.dates[3], shift: '事假', leaveDuration: '4h' },
+        { memberId: 'm1', date: period.dates[4], shift: '事假', leaveDuration: '8h' }
       ],
       filledSalary
     )
@@ -235,7 +235,7 @@ describe('事假扣款', () => {
     const roster = makeRoster(
       [
         { memberId: 'm1', date: period.dates[0], shift: '白班', overtimeHours: 2 },
-        { memberId: 'm1', date: period.dates[3], shift: '事假', leaveDuration: '半天' }
+        { memberId: 'm1', date: period.dates[3], shift: '事假', leaveDuration: '4h' }
       ],
       filledSalary
     )
@@ -247,7 +247,7 @@ describe('事假扣款', () => {
 
   it('没填基本工资：事假小时照常统计，但扣款为 0', () => {
     const roster = makeRoster([
-      { memberId: 'm1', date: period.dates[3], shift: '事假', leaveDuration: '半天' }
+      { memberId: 'm1', date: period.dates[3], shift: '事假', leaveDuration: '4h' }
     ])
     const stats = computeMonthStats(roster, member, period)
     expect(stats.leave.hours).toBe(4)

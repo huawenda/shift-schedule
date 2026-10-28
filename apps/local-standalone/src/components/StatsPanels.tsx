@@ -155,7 +155,7 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
               </li>
             </ul>
             {salary.leaveHours > 0 ? null : (
-              <p className="stat-hint">事假按「时薪 × 请假小时」扣款，半天 4h、一天 8h。</p>
+              <p className="stat-hint">事假按「时薪 × 请假小时」扣款，半天记 4h、一天记 8h。</p>
             )}
           </>
         ) : (

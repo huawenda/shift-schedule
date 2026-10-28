@@ -6,6 +6,7 @@ export interface MemberRow {
   id: string
   name: string
   patternId: string
+  position: string
 }
 
 /** 班序下拉的一项。内置与自定义由调用方决定怎么分组传入 */
@@ -20,22 +21,27 @@ export function toRows(members: Member[]): MemberRow[] {
     key: member.id,
     id: member.id,
     name: member.name,
-    patternId: member.patternId
+    patternId: member.patternId,
+    position: member.position ?? ''
   }))
 }
 
 export function createRow(patternId = '4F'): MemberRow {
-  return { key: createMemberId(), id: createMemberId(), name: '', patternId }
+  return { key: createMemberId(), id: createMemberId(), name: '', patternId, position: '' }
 }
 
 export function fromRows(rows: MemberRow[]): Member[] {
   return rows
     .filter(row => row.name.trim())
-    .map(row => ({
-      id: row.id,
-      name: row.name.trim(),
-      patternId: row.patternId
-    }))
+    .map(row => {
+      const position = row.position.trim()
+      return {
+        id: row.id,
+        name: row.name.trim(),
+        patternId: row.patternId,
+        ...(position ? { position } : {})
+      }
+    })
 }
 
 interface MemberRowsEditorProps {
@@ -116,6 +122,7 @@ export function MemberRowsEditor({
         {sortable ? <span aria-hidden="true" /> : null}
         <span>姓名</span>
         <span>班序</span>
+        <span>岗位</span>
         <span>{sortable ? '排序 / 删除' : ''}</span>
       </div>
 
@@ -210,6 +217,24 @@ export function MemberRowsEditor({
                   </>
                 )}
             </select>
+          )}
+
+          {isSelfRow ? (
+            <span
+              className="member-locked member-locked-position"
+              title="本人的岗位请在「个人信息」里改"
+            >
+              {row.position || '—'}
+            </span>
+          ) : (
+            <input
+              aria-label={`${row.name || `第 ${index + 1} 位成员`} 的岗位`}
+              className="input"
+              maxLength={12}
+              placeholder="岗位（可选）"
+              value={row.position}
+              onChange={event => patch(index, { position: event.target.value })}
+            />
           )}
 
           <div className="member-row-actions">

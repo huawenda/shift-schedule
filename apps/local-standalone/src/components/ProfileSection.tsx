@@ -9,6 +9,7 @@ import {
   type SelfIdentity
 } from '../data/profile'
 import { getSelf, patternNameOf, selfImpact, validateSelf, type Roster, type SelfImpact } from '../data/roster'
+import { useDialogFocus } from '../hooks/useDialogFocus'
 
 interface ProfileSectionProps {
   roster: Roster
@@ -29,11 +30,13 @@ interface ProfileSectionProps {
  * 成员表里那一行是只读的，避免出现两条编辑路径。
  */
 export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onNotice }: ProfileSectionProps) {
+  const dialogRef = useDialogFocus<HTMLElement>()
   const self = getSelf(roster)
   const fallbackPattern = patterns[0]?.id ?? '4F'
 
   const [name, setName] = useState(self?.name ?? '')
   const [patternId, setPatternId] = useState(self?.patternId ?? fallbackPattern)
+  const [position, setPosition] = useState(self?.position ?? '')
   const [errors, setErrors] = useState<string[]>([])
   const [pending, setPending] = useState<SelfImpact | null>(null)
   const [salary, setSalary] = useState<SalaryInput>(roster.profile?.salary ?? { ...emptySalary })
@@ -43,9 +46,10 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
   useEffect(() => {
     setName(self?.name ?? '')
     setPatternId(self?.patternId ?? fallbackPattern)
+    setPosition(self?.position ?? '')
     setErrors([])
     setPending(null)
-  }, [self?.id, self?.name, self?.patternId, fallbackPattern])
+  }, [self?.id, self?.name, self?.patternId, self?.position, fallbackPattern])
 
   useEffect(() => {
     setSalary(roster.profile?.salary ?? { ...emptySalary })
@@ -54,14 +58,18 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
 
   const identityDirty = useMemo(() => {
     if (!self) return Boolean(name.trim())
-    return name.trim() !== self.name || patternId !== self.patternId
-  }, [self, name, patternId])
+    return (
+      name.trim() !== self.name ||
+      patternId !== self.patternId ||
+      position.trim() !== (self.position ?? '')
+    )
+  }, [self, name, patternId, position])
 
   const builtin = patterns.filter(option => option.builtin)
   const custom = patterns.filter(option => !option.builtin)
 
   function submitIdentity() {
-    const input: SelfIdentity = { name: name.trim(), patternId }
+    const input: SelfIdentity = { name: name.trim(), patternId, position: position.trim() }
     const found = validateSelf(roster, input)
     if (found.length > 0) {
       setErrors(found)
@@ -78,7 +86,13 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
 
     const impact = selfImpact(roster, input)
     if (!impact.changed) {
-      onNotice('本人信息没有变化。')
+      // 姓名与班序都没变 = 没换人。只可能是改了岗位，或什么都没改。
+      if (position.trim() !== (self.position ?? '')) {
+        onSaveSelf(input)
+        onNotice('已更新本人的岗位。')
+      } else {
+        onNotice('本人信息没有变化。')
+      }
       return
     }
     // 有东西会丢才弹确认；只是改个名字而一条记录都没有时不必吓人
@@ -91,7 +105,7 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
   }
 
   function confirmSwap() {
-    const input: SelfIdentity = { name: name.trim(), patternId }
+    const input: SelfIdentity = { name: name.trim(), patternId, position: position.trim() }
     onSaveSelf(input)
     setPending(null)
     onNotice(`已更换本人为「${input.name}」，此前的考勤记录与薪资已清空。`)
@@ -167,6 +181,18 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
                   )}
               </select>
             </label>
+
+            <label className="field">
+              <span className="field-label">岗位</span>
+              <input
+                aria-label="本人岗位"
+                className="input"
+                maxLength={12}
+                placeholder="岗位（可选）"
+                value={position}
+                onChange={event => setPosition(event.target.value)}
+              />
+            </label>
           </div>
 
           {errors.length > 0 ? (
@@ -191,7 +217,6 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
         <div className="profile-block">
           <h3 className="profile-title">
             薪资
-            <span className="profile-tag">为统计页准备，全年通用</span>
           </h3>
 
           {self ? null : <p className="settings-hint">先设置本人，才能填薪资。</p>}
@@ -238,7 +263,9 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
             aria-label="确认更换本人"
             aria-modal="true"
             className="dialog"
+            ref={dialogRef}
             role="dialog"
+            tabIndex={-1}
             onMouseDown={event => event.stopPropagation()}
           >
             <header className="dialog-head">

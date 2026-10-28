@@ -64,11 +64,11 @@
   gap: 8px;
 }
 
-/* 姓名 / 班序 / 删除 —— 三列。班序列宽一点，自定义班序的名字可能较长 */
+/* 姓名 / 班序 / 岗位 / 删除 —— 四列。班序列宽一点（名字可能较长），岗位列稍窄 */
 .member-editor-head,
 .member-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) 60px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.8fr) 60px;
   gap: 8px;
   align-items: center;
 }
@@ -76,7 +76,7 @@
 /* 可排序时多一列拖动把手，末列改成能放下「↑ ↓ 删除」 */
 .member-editor.is-sortable .member-editor-head,
 .member-editor.is-sortable .member-row {
-  grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1.1fr) auto;
+  grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.8fr) auto;
 }
 
 .member-editor.is-sortable .member-editor-head span:last-child {
@@ -604,4 +604,12 @@ button.shift-cell:hover {
   font-size: 12px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+.member-locked-position {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

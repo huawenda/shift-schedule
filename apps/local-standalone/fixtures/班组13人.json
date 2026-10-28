@@ -7,12 +7,14 @@
       {
         "id": "m-01",
         "name": "华文达",
-        "patternId": "4F"
+        "patternId": "4F",
+        "position": "班长"
       },
       {
         "id": "m-02",
         "name": "张舒棋",
-        "patternId": "4G"
+        "patternId": "4G",
+        "position": "组长"
       },
       {
         "id": "m-03",

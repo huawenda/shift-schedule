@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { DayOverride, Member } from '../data/roster'
+import { useDialogFocus } from '../hooks/useDialogFocus'
 import { canRecordOvertime, formatOvertimeHours } from '../data/overtime'
 import { SHIFT_META, SHIFT_TYPES, shiftToneClass, type ShiftType } from '../data/shifts'
 import { formatMonthDay, weekdayLabel } from '../data/dateUtils'
@@ -30,6 +31,7 @@ export function ShiftEditor({
   onApply,
   onClose
 }: ShiftEditorProps) {
+  const dialogRef = useDialogFocus<HTMLElement>()
   const [selected, setSelected] = useState<ShiftType | null>(currentShift)
   const edited = Boolean(record)
 
@@ -59,7 +61,9 @@ export function ShiftEditor({
         aria-label="修改班次"
         aria-modal="true"
         className="dialog"
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         onMouseDown={event => event.stopPropagation()}
       >
         <header className="dialog-head">

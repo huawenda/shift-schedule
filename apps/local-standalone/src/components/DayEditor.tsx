@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DayOverride, DayRecordInput, Member } from '../data/roster'
+import { useDialogFocus } from '../hooks/useDialogFocus'
 import {
   MAX_OVERTIME_HOURS,
   OVERTIME_STEP,
@@ -40,7 +41,7 @@ const LEGAL_OPTIONS: Array<{ value: boolean; label: string }> = [
  *
  * 与矩阵弹层（`ShiftEditor`）的区别：这里能记加班、法定与事假时长。
  * 加班与法定只对有工时的班次开放；事假时长只在选到「事假」时出现 ——
- * 薪资里的扣款按「时薪 × 请假小时」算，半天和一天差一倍，所以必须记。
+ * 薪资里的扣款按「时薪 × 请假小时」算，4h 和 8h 差一倍，所以必须记。
  */
 export function DayEditor({
   member,
@@ -52,6 +53,7 @@ export function DayEditor({
   onRestore,
   onClose
 }: DayEditorProps) {
+  const dialogRef = useDialogFocus<HTMLElement>()
   const [shift, setShift] = useState<ShiftType | null>(currentShift)
   const [overtimeText, setOvertimeText] = useState(() => {
     const hours = record?.overtimeHours
@@ -116,7 +118,9 @@ export function DayEditor({
         aria-label="修改当天记录"
         aria-modal="true"
         className="dialog dialog-day"
+        ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         onMouseDown={event => event.stopPropagation()}
       >
         <header className="dialog-head">

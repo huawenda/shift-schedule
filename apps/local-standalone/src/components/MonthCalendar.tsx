@@ -27,7 +27,7 @@ export function MonthCalendar({ roster, member, period, recordMap, onEdit }: Mon
   /**
    * 补齐 7 × N 的网格：前导补上个月的日期，末尾补下个月的日期。
    *
-   * 周期外的格子**信息和周期内完全一样**（农历 + 班次 + 加班 / 法定 / 半天事假），
+   * 周期外的格子**信息和周期内完全一样**（农历 + 班次 + 加班 / 法定 / 4h 事假），
    * 区别只在两处：样式淡化一档，以及不可点击 —— 它们属于相邻两期，
    * 改这里的班等于改另一期，应该翻到那一期去做。
    */
@@ -76,8 +76,8 @@ export function MonthCalendar({ roster, member, period, recordMap, onEdit }: Mon
           const meta = metas.get(date)
           const isToday = date === today
 
-          // 半天事假才挂角标：一天是默认值，每格都挂就成了噪音
-          const halfLeave = shift === '事假' && record?.leaveDuration === '半天'
+          // 事假都挂角标，显示实际时长（4h 或 8h；没记时长默认 8h）
+          const leaveLabel = shift === '事假' ? formatLeaveDuration(record?.leaveDuration) : ''
 
           const titleParts = [
             date,
@@ -94,10 +94,10 @@ export function MonthCalendar({ roster, member, period, recordMap, onEdit }: Mon
               <span className="cal-day">{formatDayNumber(date)}</span>
               <span className={`cal-meta${meta?.isFestival ? ' is-festival' : ''}`}>{meta?.label ?? ''}</span>
 
-              {/* 加班、法定、半天事假挂在右上角，不挤班次那一行 */}
-              {overtime > 0 || record?.isLegal || halfLeave ? (
+              {/* 加班、法定、事假时长挂在右上角，不挤班次那一行 */}
+              {overtime > 0 || record?.isLegal || leaveLabel ? (
                 <span className="cal-corner">
-                  {halfLeave ? <span className="cal-leave">半天</span> : null}
+                  {leaveLabel ? <span className="cal-leave">{leaveLabel}</span> : null}
                   {record?.isLegal ? <span className="cal-legal" aria-hidden="true">法</span> : null}
                   {overtime > 0 ? <span className="cal-ot">+{formatOvertimeHours(overtime)}</span> : null}
                 </span>

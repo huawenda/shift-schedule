@@ -62,7 +62,9 @@ export function TeamMatrix({ roster, period, onEdit }: TeamMatrixProps) {
                   <span className="matrix-name">{member.name}</span>
                   {selfRow ? <span className="badge-self">本人</span> : null}
                 </span>
-                <span className="matrix-pattern">{patternLabelOf(roster, member)}</span>
+                <span className="matrix-pattern">
+                  {[patternLabelOf(roster, member), member.position].filter(Boolean).join(' · ')}
+                </span>
               </>
             )
 
@@ -70,7 +72,7 @@ export function TeamMatrix({ roster, period, onEdit }: TeamMatrixProps) {
             <div className={`matrix-row${selfRow ? ' is-self' : ''}`} key={member.id}>
               <div
                 className={`matrix-name-cell${selfRow ? ' is-self' : ''}`}
-                title={`${member.name} · ${patternLabelOf(roster, member)}`}
+                title={`${member.name} · ${[patternLabelOf(roster, member), member.position].filter(Boolean).join(' · ')}`}
               >
                 {nameContent}
               </div>

@@ -6,6 +6,7 @@ import {
   type ShiftPattern
 } from '../data/patterns'
 import { getSelf, patternUsage, type Roster } from '../data/roster'
+import { useDialogFocus } from '../hooks/useDialogFocus'
 import { SHIFT_META, shiftToneClass, type ShiftType } from '../data/shifts'
 import { PatternEditor } from './PatternEditor'
 
@@ -57,6 +58,7 @@ function PatternGrid({ shifts }: { shifts: ShiftType[] }) {
  * 删除是不可逆操作，而且会连带删掉挂在上面的成员，所以要输入班序名字才放行。
  */
 export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, onNotice }: PatternListProps) {
+  const dialogRef = useDialogFocus<HTMLElement>()
   // 内置与自建分开记：内置共用一个预览区（在色条卡片下方），
   // 自建的详情直接展开在**它自己那一行下面**，避免详情跑到别的分组里去。
   const [builtinPreviewId, setBuiltinPreviewId] = useState<string | null>(null)
@@ -230,7 +232,9 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
             aria-label="删除班序"
             aria-modal="true"
             className="dialog dialog-narrow"
+            ref={dialogRef}
             role="dialog"
+            tabIndex={-1}
             onMouseDown={event => event.stopPropagation()}
           >
             <header className="dialog-head">

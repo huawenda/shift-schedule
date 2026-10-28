@@ -31,6 +31,8 @@ import {
 export interface Member {
   id: string
   name: string
+  /** 岗位（可空）：缺省即无岗位；矩阵里拼在班序旁展示，如「4F · 班长」 */
+  position?: string
   /** 内置代号（4F…4X）或自定义班序的 id */
   patternId: string
 }
@@ -45,7 +47,7 @@ export interface DayOverride {
   /** 是否法定节假日上班（影响加班费倍率，统计用） */
   isLegal?: boolean
   /**
-   * 事假时长。**只在「半天」时才写进记录** —— 一天是默认值，
+   * 事假时长。**只在「4h」时才写进记录** —— 8h（一天）是默认值，
    * 存下来只会让每条事假记录都多一个字段，且要额外判断它算不算「与默认不同」。
    */
   leaveDuration?: LeaveDuration
@@ -183,11 +185,13 @@ function normalizeMember(value: unknown, knownPatternIds: Set<string>): Member |
 
   const id = typeof record.id === 'string' ? record.id.trim() : ''
   const name = typeof record.name === 'string' ? record.name.trim() : ''
+  const position = typeof record.position === 'string' ? record.position.trim() : ''
   const patternId = typeof record.patternId === 'string' ? record.patternId.trim() : ''
 
   if (!id || !name || !knownPatternIds.has(patternId)) return null
 
-  return { id, name, patternId }
+  // 岗位为空就不落字段（缺省即无岗位），旧数据没这个字段时也不会多出来
+  return { id, name, patternId, ...(position ? { position } : {}) }
 }
 
 function normalizeOverride(value: unknown, memberIds: Set<string>): DayOverride | null {
@@ -215,8 +219,8 @@ function normalizeOverride(value: unknown, memberIds: Set<string>): DayOverride 
     date,
     shift,
     ...extra,
-    // 一天是默认值，不必落库；只有半天需要显式记住
-    ...(leave === '半天' ? { leaveDuration: leave } : {})
+    // 8h（一天）是默认值，不必落库；只有 4h 需要显式记住
+    ...(leave === '4h' ? { leaveDuration: leave } : {})
   }
 }
 
@@ -419,8 +423,8 @@ export function applyDayRecord(
   const leave = sanitizeLeave(input.shift, input.leaveDuration)
 
   const sameAsTemplate = input.shift === templateShift
-  // 半天事假也算「和默认不一样」——否则「模板本就事假、今天改成半天」会被当场删掉
-  const hasExtra = (extra.overtimeHours ?? 0) > 0 || extra.isLegal === true || leave === '半天'
+  // 4h 事假也算「和默认不一样」——否则「模板本就事假、今天改成 4h」会被当场删掉
+  const hasExtra = (extra.overtimeHours ?? 0) > 0 || extra.isLegal === true || leave === '4h'
 
   if (sameAsTemplate && !hasExtra) {
     return { ...roster, overrides: rest, updatedAt: Date.now() }
@@ -435,7 +439,7 @@ export function applyDayRecord(
         date,
         shift: input.shift,
         ...extra,
-        ...(leave === '半天' ? { leaveDuration: leave } : {})
+        ...(leave === '4h' ? { leaveDuration: leave } : {})
       }
     ],
     updatedAt: Date.now()
@@ -538,6 +542,8 @@ export function validateSelf(roster: Roster, input: SelfIdentity): string[] {
     if (clash) errors.push(`「${name}」已经是一位同事了，本人姓名不能和同事重名`)
   }
 
+  if ((input.position ?? '').trim().length > 12) errors.push('岗位请控制在 12 个字以内')
+
   return errors
 }
 
@@ -553,16 +559,18 @@ export interface ApplySelfResult {
  * 设置 / 修改本人身份。
  *
  * 没设过 → 直接往 members 里加一条并挂上 profile；
- * 改过 → 更新那一条，并把**该人名下的改班记录与薪资一起清空**（视为换了个人）。
- * 姓名与班序都没变时原样返回，不动任何数据。
+ * 姓名或班序变了 → 更新那一条，并把**该人名下的改班记录与薪资一起清空**（视为换了个人）；
+ * 只改岗位 → 原地更新岗位，不碰考勤与薪资（岗位不是身份的一部分）。
+ * 姓名、班序、岗位都没变时原样返回，不动任何数据。
  */
 export function applySelf(roster: Roster, input: SelfIdentity): ApplySelfResult {
   const name = input.name.trim()
   const patternId = input.patternId
+  const position = (input.position ?? '').trim()
   const self = getSelf(roster)
 
   if (!self) {
-    const member: Member = { id: createMemberId(), name, patternId }
+    const member: Member = { id: createMemberId(), name, patternId, ...(position ? { position } : {}) }
     return {
       roster: {
         ...roster,
@@ -575,8 +583,22 @@ export function applySelf(roster: Roster, input: SelfIdentity): ApplySelfResult 
     }
   }
 
+  // 姓名与班序都没变 → 不是换人，只可能改了岗位（或什么都没改），原地更新岗位
   if (self.name === name && self.patternId === patternId) {
-    return { roster, created: false, clearedOverrides: 0 }
+    if ((self.position ?? '') === position) {
+      return { roster, created: false, clearedOverrides: 0 }
+    }
+    return {
+      roster: {
+        ...roster,
+        members: roster.members.map(member =>
+          member.id === self.id ? { ...member, position: position || undefined } : member
+        ),
+        updatedAt: Date.now()
+      },
+      created: false,
+      clearedOverrides: 0
+    }
   }
 
   const keptOverrides = roster.overrides.filter(override => override.memberId !== self.id)
@@ -584,7 +606,7 @@ export function applySelf(roster: Roster, input: SelfIdentity): ApplySelfResult 
     roster: {
       ...roster,
       members: roster.members.map(member =>
-        member.id === self.id ? { ...member, name, patternId } : member
+        member.id === self.id ? { ...member, name, patternId, position: position || undefined } : member
       ),
       overrides: keptOverrides,
       // 换人 → 薪资也回到空白，不把上一个人的钱带过来

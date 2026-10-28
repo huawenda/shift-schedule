@@ -39,6 +39,20 @@ describe('backup 当前格式', () => {
     expect(BACKUP_VERSION).toBe(4)
   })
 
+  it('岗位字段随备份往返：有岗位保留，无岗位缺省', () => {
+    const withPosition: Roster = {
+      ...roster,
+      members: [
+        { id: 'm1', name: '王磊', patternId: '4F', position: '班长' },
+        { id: 'm2', name: '李静', patternId: '4J' }
+      ]
+    }
+    const text = JSON.stringify(createBackup(withPosition))
+    const result = parseBackup(text)
+    expect(result.roster.members[0].position).toBe('班长')
+    expect(result.roster.members[1].position).toBeUndefined()
+  })
+
   it('自定义班序会写进备份，并在导入后还原', () => {
     const withPattern: Roster = {
       ...roster,

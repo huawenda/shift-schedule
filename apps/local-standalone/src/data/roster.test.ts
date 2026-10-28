@@ -122,6 +122,20 @@ describe('normalizeRoster', () => {
     expect(normalized.members).toEqual([{ id: 'm1', name: '王磊', patternId: '4F' }])
   })
 
+  it('岗位字段：有就保留，缺省即无岗位，空白也丢掉', () => {
+    const normalized = normalizeRoster({
+      members: [
+        { id: 'm1', name: '王磊', patternId: '4F', position: '班长' },
+        { id: 'm2', name: '李静', patternId: '4J' },
+        { id: 'm3', name: '周涛', patternId: '4K', position: '  ' }
+      ],
+      overrides: []
+    })
+    expect(normalized.members[0].position).toBe('班长')
+    expect(normalized.members[1].position).toBeUndefined()
+    expect(normalized.members[2].position).toBeUndefined()
+  })
+
   it('引用了自定义班序的成员不会被丢掉 —— 解析顺序的回归测试', () => {
     const normalized = normalizeRoster({
       // 故意把 patterns 放在 members 后面，模拟键顺序不同的 JSON
@@ -384,28 +398,28 @@ describe('overrideKey', () => {
 describe('事假时长', () => {
   const date = '2026-10-20'
 
-  it('半天事假写进记录，一天事假不写（默认值不占字段）', () => {
-    const half = applyDayRecord(roster, 'm1', date, { shift: '事假', leaveDuration: '半天' })
-    expect(half.overrides[0]).toEqual({ memberId: 'm1', date, shift: '事假', leaveDuration: '半天' })
+  it('4h 事假写进记录，8h 事假不写（默认值不占字段）', () => {
+    const half = applyDayRecord(roster, 'm1', date, { shift: '事假', leaveDuration: '4h' })
+    expect(half.overrides[0]).toEqual({ memberId: 'm1', date, shift: '事假', leaveDuration: '4h' })
 
-    const full = applyDayRecord(roster, 'm1', date, { shift: '事假', leaveDuration: '一天' })
+    const full = applyDayRecord(roster, 'm1', date, { shift: '事假', leaveDuration: '8h' })
     expect(full.overrides[0]).toEqual({ memberId: 'm1', date, shift: '事假' })
   })
 
-  it('事假没传时长时按一天处理，同样不写字段', () => {
+  it('事假没传时长时按 8h（一天）处理，同样不写字段', () => {
     const next = applyDayRecord(roster, 'm1', date, { shift: '事假' })
     expect(next.overrides[0]).toEqual({ memberId: 'm1', date, shift: '事假' })
   })
 
   it('改成别的班次时，事假时长被清掉', () => {
-    const withLeave = applyDayRecord(roster, 'm1', date, { shift: '事假', leaveDuration: '半天' })
+    const withLeave = applyDayRecord(roster, 'm1', date, { shift: '事假', leaveDuration: '4h' })
     const backToDay = applyDayRecord(withLeave, 'm1', date, { shift: '白班' })
     // 白班与模板相同、又没有加班法定 → 整条记录被删
     expect(backToDay.overrides).toHaveLength(0)
   })
 
-  it('矩阵改班时，改成事假会沿用已有的半天，改成工时班会丢掉', () => {
-    const withLeave = applyDayRecord(roster, 'm1', date, { shift: '事假', leaveDuration: '半天' })
+  it('矩阵改班时，改成事假会沿用已有的 4h，改成工时班会丢掉', () => {
+    const withLeave = applyDayRecord(roster, 'm1', date, { shift: '事假', leaveDuration: '4h' })
 
     // 改到夜班：事假时长不再有意义
     const toNight = applyShiftEdit(withLeave, 'm1', date, '夜班')
@@ -415,9 +429,9 @@ describe('事假时长', () => {
     const backToLeave = applyShiftEdit(toNight, 'm1', date, '事假')
     expect(backToLeave.overrides[0]).toEqual({ memberId: 'm1', date, shift: '事假' })
 
-    // 本来就是事假半天，矩阵里再点一次事假不该把半天丢掉
+    // 本来就是事假 4h，矩阵里再点一次事假不该把 4h 丢掉
     const keep = applyShiftEdit(withLeave, 'm1', date, '事假')
-    expect(keep.overrides[0].leaveDuration).toBe('半天')
+    expect(keep.overrides[0].leaveDuration).toBe('4h')
   })
 
   it('归一化：手改 JSON 塞了非法时长会被收敛成默认，非事假则整个丢掉', () => {
@@ -425,7 +439,7 @@ describe('事假时长', () => {
       members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
       overrides: [
         { memberId: 'm1', date: '2026-10-20', shift: '事假', leaveDuration: '两周' },
-        { memberId: 'm1', date: '2026-10-21', shift: '白班', leaveDuration: '半天' }
+        { memberId: 'm1', date: '2026-10-21', shift: '白班', leaveDuration: '4h' }
       ],
       patterns: [],
       profile: null,
@@ -433,7 +447,7 @@ describe('事假时长', () => {
     })
 
     const leave = next.overrides.find(item => item.date === '2026-10-20')
-    // 非法值收敛成一天 → 一天是默认值，不落字段
+    // 非法值收敛成 8h（一天）→ 8h 是默认值，不落字段
     expect(leave?.leaveDuration).toBe(undefined)
 
     const workDay = next.overrides.find(item => item.date === '2026-10-21')

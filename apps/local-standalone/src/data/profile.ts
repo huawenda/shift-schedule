@@ -27,10 +27,10 @@ export interface SalaryInput {
 export type SalaryKey = keyof SalaryInput
 
 export const SALARY_FIELDS: Array<{ key: SalaryKey; label: string; note?: string }> = [
-  { key: 'baseSalary', label: '基本工资', note: '加班时薪 = 基本工资 ÷ 21.75 ÷ 8' },
+  { key: 'baseSalary', label: '基本工资'},
   { key: 'performanceAllowance', label: '绩效津贴' },
   { key: 'positionAllowance', label: '岗位津贴' },
-  { key: 'socialFund', label: '社保公积金', note: '每月个人缴纳合计，算作扣款' }
+  { key: 'socialFund', label: '社保公积金'}
 ]
 
 export const emptySalary: SalaryInput = {
@@ -102,8 +102,10 @@ export function formatMoney(value: number): string {
   return `${negative ? '-' : ''}${grouped}.${decimal}`
 }
 
-/** 身份信息（姓名 + 班序）：本人身份的唯一来源，改动即视为换人 */
+/** 身份信息（姓名 + 班序 + 岗位）：姓名与班序改动即视为换人，岗位不算身份、可空 */
 export interface SelfIdentity {
   name: string
   patternId: string
+  /** 岗位（可选）：缺省等于空岗位 */
+  position?: string
 }

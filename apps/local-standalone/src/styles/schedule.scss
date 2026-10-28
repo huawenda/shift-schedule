@@ -149,9 +149,12 @@
 }
 
 .matrix-pattern {
+  overflow: hidden;
   font-size: 11px;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .matrix-days {
@@ -390,7 +393,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 半天事假：中性底，和「法」「+3h」区分开（事假不会有那两者，所以不会撞） */
+/* 4h 事假：中性底，和「法」「+3h」区分开（事假不会有那两者，所以不会撞） */
 .cal-leave {
   height: 15px;
   padding: 0 4px;
@@ -464,6 +467,13 @@
   border-radius: 12px;
   background: var(--surface);
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.16);
+}
+
+/* 弹层容器靠脚本 focus 接管焦点（见 useDialogFocus），
+ * 别让它自己冒出一圈强调色描边 —— 那看着就像残留的框线。 */
+.dialog:focus,
+.dialog:focus-visible {
+  outline: none;
 }
 
 .dialog-head {

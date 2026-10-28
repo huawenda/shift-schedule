@@ -137,7 +137,9 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
               {colleagues.map(member => (
                 <div className="wizard-summary-row" key={member.id}>
                   <span>{member.name}</span>
-                  <span className="muted">{member.patternId}</span>
+                  <span className="muted">
+                    {[member.patternId, member.position].filter(Boolean).join(' · ')}
+                  </span>
                 </div>
               ))}
             </div>

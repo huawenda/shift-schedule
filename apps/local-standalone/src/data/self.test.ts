@@ -112,6 +112,32 @@ describe('设置本人', () => {
     expect(result.roster.members[0].patternId).toBe('4G')
   })
 
+  it('只改岗位不算换人：原地更新岗位，不清考勤也不清薪资', () => {
+    const result = applySelf(withSelf, { name: '王磊', patternId: '4F', position: '班长' })
+    expect(result.clearedOverrides).toBe(0)
+    expect(result.roster.members[0].position).toBe('班长')
+    expect(result.roster.overrides).toEqual(withSelf.overrides)
+    expect(result.roster.profile?.salary).toEqual(withSelf.profile?.salary)
+  })
+
+  it('清空岗位也只是原地更新，不动数据', () => {
+    const withPosition: Roster = {
+      ...withSelf,
+      members: withSelf.members.map(member =>
+        member.id === 'm1' ? { ...member, position: '班长' } : member
+      )
+    }
+    const result = applySelf(withPosition, { name: '王磊', patternId: '4F', position: '' })
+    expect(result.clearedOverrides).toBe(0)
+    expect(result.roster.members[0].position).toBeUndefined()
+  })
+
+  it('换人时岗位一并写入', () => {
+    const result = applySelf(withSelf, { name: '王小明', patternId: '4F', position: '主管' })
+    expect(result.roster.members[0].position).toBe('主管')
+    expect(result.clearedOverrides).toBe(2)
+  })
+
   it('自建班序也能设成本人的班序', () => {
     const withPattern = upsertPattern(base, customPattern())
     const result = applySelf(withPattern, { name: '王磊', patternId: 'cp-1' })
@@ -147,6 +173,12 @@ describe('本人身份的校验', () => {
       '姓名请控制在 12 个字以内'
     )
     expect(validateSelf(base, { name: '王磊', patternId: 'nope' })).toContain('请选择本人的班序')
+  })
+
+  it('岗位超过 12 字要拦', () => {
+    expect(validateSelf(base, { name: '王磊', patternId: '4F', position: '一二三四五六七八九十一二三' })).toContain(
+      '岗位请控制在 12 个字以内'
+    )
   })
 
   it('本人姓名不能和同事重名，但不能把自己判成重名', () => {
