@@ -28,6 +28,7 @@ const roster: Roster = {
   ],
   overrides: [],
   patterns: [],
+  todos: [],
   profile: null,
   updatedAt: 0
 }
@@ -442,6 +443,7 @@ describe('事假时长', () => {
         { memberId: 'm1', date: '2026-10-21', shift: '白班', leaveDuration: '4h' }
       ],
       patterns: [],
+      todos: [],
       profile: null,
       updatedAt: 0
     })

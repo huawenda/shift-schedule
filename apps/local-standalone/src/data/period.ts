@@ -95,11 +95,11 @@ export function formatMonthTitle(key: MonthKey): string {
   return `${key.year} 年 ${key.month} 月`
 }
 
-/** '9月20日 — 10月19日' */
+/** '9月20日 - 10月19日' */
 export function formatPeriodRange(period: Period): string {
   const start = parseDateKey(period.startDate)
   const end = parseDateKey(period.endDate)
-  return `${start.getMonth() + 1}月${start.getDate()}日 — ${end.getMonth() + 1}月${end.getDate()}日`
+  return `${start.getMonth() + 1}月${start.getDate()}日 - ${end.getMonth() + 1}月${end.getDate()}日`
 }
 
 export interface CalendarCell {

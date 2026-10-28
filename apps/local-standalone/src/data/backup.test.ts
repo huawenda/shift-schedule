@@ -10,6 +10,7 @@ const roster: Roster = {
   ],
   overrides: [{ memberId: 'm1', date: '2026-10-20', shift: '白特' }],
   patterns: [],
+  todos: [],
   profile: null,
   updatedAt: 0
 }
@@ -34,9 +35,9 @@ describe('backup 当前格式', () => {
     expect(result.droppedMembers).toEqual([])
   })
 
-  it('版本号是 4', () => {
-    expect(createBackup(roster).version).toBe(4)
-    expect(BACKUP_VERSION).toBe(4)
+  it('版本号是 5', () => {
+    expect(createBackup(roster).version).toBe(5)
+    expect(BACKUP_VERSION).toBe(5)
   })
 
   it('岗位字段随备份往返：有岗位保留，无岗位缺省', () => {
@@ -72,7 +73,7 @@ describe('backup 当前格式', () => {
   })
 
   it('拒收别的应用导出的文件', () => {
-    const text = JSON.stringify({ app: 'someone-else', version: 4, roster: { members: [], overrides: [] } })
+    const text = JSON.stringify({ app: 'someone-else', version: 5, roster: { members: [], overrides: [] } })
     expect(() => parseBackup(text)).toThrow('不是「倒班表 · 本地版」导出的')
   })
 
@@ -81,25 +82,25 @@ describe('backup 当前格式', () => {
   })
 
   it('没有成员的备份不予导入', () => {
-    const text = JSON.stringify({ app: 'shift-schedule-local', version: 4, roster: { members: [], overrides: [] } })
+    const text = JSON.stringify({ app: 'shift-schedule-local', version: 5, roster: { members: [], overrides: [] } })
     expect(() => parseBackup(text)).toThrow('没有成员')
   })
 
   it('没有 roster 字段的文件报「没有可恢复的数据」', () => {
-    expect(() => parseBackup(JSON.stringify({ app: 'shift-schedule-local', version: 4 }))).toThrow(
+    expect(() => parseBackup(JSON.stringify({ app: 'shift-schedule-local', version: 5 }))).toThrow(
       '没有可恢复的数据'
     )
   })
 })
 
 describe('旧格式一律拒绝（开发期不做兼容）', () => {
-  it('上一版（v3）会明确报版本不符，而不是含糊地报格式错', () => {
+  it('上一版（v4）会明确报版本不符，而不是含糊地报格式错', () => {
     const text = JSON.stringify({
       app: 'shift-schedule-local',
-      version: 3,
+      version: 4,
       roster: { members: [{ id: 'm1', name: '王磊', patternId: '4F' }], overrides: [], patterns: [] }
     })
-    expect(() => parseBackup(text)).toThrow('只认 v4')
+    expect(() => parseBackup(text)).toThrow('只认 v5')
   })
 
   it('没有版本号的文件也拒收', () => {
@@ -119,6 +120,53 @@ describe('旧格式一律拒绝（开发期不做兼容）', () => {
       dayRecords: [{ personName: '王磊', date: '2026-10-20', shiftOverride: '白特' }]
     })
     expect(() => parseBackup(text)).toThrow('旧版本的备份文件')
+  })
+})
+
+describe('待办的备份往返', () => {
+  const withTodos: Roster = {
+    ...roster,
+    todos: [
+      { id: 't-1', date: '2026-10-21', text: '交班记录表', done: false, createdAt: 1765000000000 },
+      { id: 't-2', date: '2026-10-21', text: '买台灯', done: true, createdAt: 1765000001000 },
+      { id: 't-3', date: '2026-10-25', text: '年休申请', done: false, createdAt: 1765000002000 }
+    ]
+  }
+
+  it('导出再导入，待办原样还原', () => {
+    const result = parseBackup(JSON.stringify(createBackup(withTodos)))
+    expect(result.todoCount).toBe(3)
+    expect(result.roster.todos).toEqual(withTodos.todos)
+  })
+
+  it('待办是 v5 才有的字段：v4 备份会被版本检查拦下', () => {
+    const text = JSON.stringify({
+      app: 'shift-schedule-local',
+      version: 4,
+      roster: { members: [{ id: 'm1', name: '王磊', patternId: '4F' }], overrides: [], patterns: [] }
+    })
+    expect(() => parseBackup(text)).toThrow('只认 v5')
+  })
+
+  it('待办里的脏数据被丢掉，不影响其它待办', () => {
+    const dirty = {
+      app: 'shift-schedule-local',
+      version: 5,
+      roster: {
+        members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
+        overrides: [],
+        patterns: [],
+        todos: [
+          { id: 't-1', date: '2026-10-21', text: '正常待办', done: false, createdAt: 1 },
+          { id: '', date: '2026-10-21', text: '没 id', done: false, createdAt: 2 },
+          { id: 't-3', date: '不是日期', text: '日期非法', done: false, createdAt: 3 },
+          { id: 't-4', date: '2026-10-21', text: '   ', done: false, createdAt: 4 }
+        ]
+      }
+    }
+    const result = parseBackup(JSON.stringify(dirty))
+    expect(result.roster.todos).toHaveLength(1)
+    expect(result.roster.todos[0].text).toBe('正常待办')
   })
 })
 
@@ -164,7 +212,7 @@ describe('个人信息（本人 + 薪资）的备份往返', () => {
   it('薪资值在导入时会被清洗（手改的 JSON 塞了脏字符也能收敛）', () => {
     const dirty = {
       app: 'shift-schedule-local',
-      version: 4,
+      version: 5,
       roster: {
         members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
         overrides: [],
@@ -182,7 +230,7 @@ describe('个人信息（本人 + 薪资）的备份往返', () => {
   it('本人指向一个不存在的成员时，profile 归零而不是让整个导入失败', () => {
     const broken = {
       app: 'shift-schedule-local',
-      version: 4,
+      version: 5,
       roster: {
         members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
         overrides: [],

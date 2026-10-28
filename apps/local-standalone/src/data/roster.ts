@@ -17,6 +17,7 @@ import {
   type SalaryInput,
   type SelfIdentity
 } from './profile'
+import { createTodoId, normalizeTodos, sortTodos, type Todo } from './todos'
 
 /**
  * 花名册：自定义班序 + 成员 + 改班记录。
@@ -77,6 +78,12 @@ export interface Roster {
   overrides: DayOverride[]
   /** 用户自建的班序，上限 MAX_CUSTOM_PATTERNS */
   patterns: CustomPattern[]
+  /**
+   * 待办清单（只给本人用，不带 memberId）。
+   *
+   * 与考勤记录互不影响：记一条待办不会动班次，换人也不会清掉待办。
+   */
+  todos: Todo[]
   /** null = 还没设置本人（跳过向导、或导入了没有 profile 的备份） */
   profile: Profile | null
   updatedAt: number
@@ -86,6 +93,7 @@ export const emptyRoster: Roster = {
   members: [],
   overrides: [],
   patterns: [],
+  todos: [],
   profile: null,
   updatedAt: 0
 }
@@ -299,6 +307,7 @@ export function normalizeRosterDetailed(value: unknown): NormalizeResult {
       overrides: [...byKey.values()].sort((left, right) =>
         overrideKey(left.memberId, left.date).localeCompare(overrideKey(right.memberId, right.date))
       ),
+      todos: normalizeTodos(record.todos),
       profile,
       updatedAt:
         typeof record.updatedAt === 'number' && Number.isFinite(record.updatedAt) ? record.updatedAt : 0
@@ -624,6 +633,53 @@ export function saveSalary(roster: Roster, salary: SalaryInput): Roster {
   return {
     ...roster,
     profile: { ...roster.profile, salary: normalizeSalary(salary) },
+    updatedAt: Date.now()
+  }
+}
+
+/* ------------------------------------------------------------ 待办维护 */
+
+/**
+ * 新增一条待办。
+ *
+ * 正文 trim 后为空就什么都不做（返回原 roster）——
+ * 空待办在界面上表现为「加了个空行」，没有任何意义。
+ */
+export function addTodo(roster: Roster, date: string, text: string): Roster {
+  const body = text.trim()
+  if (!body) return roster
+  const todo: Todo = {
+    id: createTodoId(),
+    date,
+    text: body,
+    done: false,
+    createdAt: Date.now()
+  }
+  return {
+    ...roster,
+    todos: sortTodos([...roster.todos, todo]),
+    updatedAt: Date.now()
+  }
+}
+
+/** 勾选 / 取消勾选一条待办；找不到就原样返回 */
+export function toggleTodo(roster: Roster, todoId: string): Roster {
+  if (!roster.todos.some(todo => todo.id === todoId)) return roster
+  return {
+    ...roster,
+    todos: roster.todos.map(todo =>
+      todo.id === todoId ? { ...todo, done: !todo.done } : todo
+    ),
+    updatedAt: Date.now()
+  }
+}
+
+/** 删除一条待办；找不到就原样返回 */
+export function removeTodo(roster: Roster, todoId: string): Roster {
+  if (!roster.todos.some(todo => todo.id === todoId)) return roster
+  return {
+    ...roster,
+    todos: roster.todos.filter(todo => todo.id !== todoId),
     updatedAt: Date.now()
   }
 }

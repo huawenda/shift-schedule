@@ -9,7 +9,7 @@ import { normalizeRosterDetailed, type Roster } from './roster'
  */
 
 export const BACKUP_APP_ID = 'shift-schedule-local'
-export const BACKUP_VERSION = 4
+export const BACKUP_VERSION = 5
 
 export interface BackupFile {
   app: string
@@ -19,6 +19,7 @@ export interface BackupFile {
     members: Roster['members']
     overrides: Roster['overrides']
     patterns: Roster['patterns']
+    todos: Roster['todos']
     profile: Roster['profile']
   }
 }
@@ -27,6 +28,8 @@ export interface ImportResult {
   roster: Roster
   memberCount: number
   overrideCount: number
+  /** 恢复的待办条数 */
+  todoCount: number
   /** 因班序不存在 / 重名 / 重复 id 而没能恢复的成员姓名（正常应为空） */
   droppedMembers: string[]
 }
@@ -40,6 +43,7 @@ export function createBackup(roster: Roster): BackupFile {
       members: roster.members,
       overrides: roster.overrides,
       patterns: roster.patterns,
+      todos: roster.todos,
       profile: roster.profile
     }
   }
@@ -65,7 +69,7 @@ export function downloadBackup(roster: Roster): string {
 /**
  * 解析备份文本。格式不对时抛出可直接展示给用户的中文错误。
  *
- * 只认一种形状：`{ app, version: 4, roster: { members, overrides, patterns, profile } }`。
+ * 只认一种形状：`{ app, version: 5, roster: { members, overrides, patterns, todos, profile } }`。
  * 开发期不做旧格式迁移 —— 见到别的版本号、`dayRecords` 或顶层数组，直接报错。
  */
 export function parseBackup(text: string): ImportResult {
@@ -109,6 +113,7 @@ export function parseBackup(text: string): ImportResult {
     roster,
     memberCount: roster.members.length,
     overrideCount: roster.overrides.length,
+    todoCount: roster.todos.length,
     droppedMembers
   }
 }

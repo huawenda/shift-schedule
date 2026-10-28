@@ -46,6 +46,9 @@
   --pad: 24px;
   --row-height: 40px;
   --control-height: 30px;
+  /* 矩阵姓名列宽：两行字（姓名 13px / 班序·岗位 11px）实测 88px 就够，
+   * 原 148px 里空了 60px，白占横向空间、挤压日期列。 */
+  --matrix-name-width: 120px;
 
   --fs-title: 22px;
   --fs-section: 16px;
@@ -133,33 +136,45 @@ p {
  */
 
 .t-day {
-  background: #dff3ff;
-  color: #02689f;
+  --tone-bg: #dff3ff;
+  --tone-ink: #02689f;
+  background: var(--tone-bg);
+  color: var(--tone-ink);
 }
 
 .t-night {
-  background: #e3eaf3;
-  color: #1e3a5f;
+  --tone-bg: #e3eaf3;
+  --tone-ink: #1e3a5f;
+  background: var(--tone-bg);
+  color: var(--tone-ink);
 }
 
 .t-rest {
-  background: #dcfce7;
-  color: #047857;
+  --tone-bg: #dcfce7;
+  --tone-ink: #047857;
+  background: var(--tone-bg);
+  color: var(--tone-ink);
 }
 
 .t-dayx {
-  background: #fff0c2;
-  color: #b45309;
+  --tone-bg: #fff0c2;
+  --tone-ink: #b45309;
+  background: var(--tone-bg);
+  color: var(--tone-ink);
 }
 
 .t-nightx {
-  background: #fde7c7;
-  color: #9a3412;
+  --tone-bg: #fde7c7;
+  --tone-ink: #9a3412;
+  background: var(--tone-bg);
+  color: var(--tone-ink);
 }
 
 .t-leave {
-  background: #e5e7eb;
-  color: #475467;
+  --tone-bg: #e5e7eb;
+  --tone-ink: #475467;
+  background: var(--tone-bg);
+  color: var(--tone-ink);
 }
 
 /* 「本人」徽章：矩阵姓名列、成员表、向导确认页三处共用。

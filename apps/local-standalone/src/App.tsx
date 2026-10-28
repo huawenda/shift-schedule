@@ -121,6 +121,7 @@ export function App() {
       members: [selfMember, ...members],
       overrides: [],
       patterns: [],
+      todos: [],
       profile: { memberId: selfMember.id, salary: { ...emptySalary } },
       updatedAt: Date.now()
     })
@@ -222,6 +223,7 @@ export function App() {
             period={period}
             roster={api.roster}
             onEdit={(member, date) => openEditor(member, date, 'calendar')}
+            onToggleTodo={api.toggleTodo}
             onOpenProfile={openProfileTab}
           />
         )}
@@ -235,9 +237,13 @@ export function App() {
             member={editorMember}
             record={editorRecord}
             templateShift={editorTemplate}
+            todos={api.roster.todos.filter(todo => todo.date === editor.date)}
+            onAddTodo={text => api.addTodo(editor.date, text)}
             onApply={applyDay}
             onClose={() => setEditor(null)}
+            onRemoveTodo={api.removeTodo}
             onRestore={restoreDay}
+            onToggleTodo={api.toggleTodo}
           />
         ) : (
           <ShiftEditor

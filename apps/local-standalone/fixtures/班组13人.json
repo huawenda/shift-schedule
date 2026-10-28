@@ -1,6 +1,6 @@
 {
   "app": "shift-schedule-local",
-  "version": 4,
+  "version": 5,
   "exportedAt": "2026-10-28T05:49:55.661Z",
   "roster": {
     "members": [
@@ -74,6 +74,29 @@
     ],
     "overrides": [],
     "patterns": [],
+    "todos": [
+      {
+        "id": "t-01",
+        "date": "2026-11-21",
+        "text": "交班记录表",
+        "done": false,
+        "createdAt": 1765000000000
+      },
+      {
+        "id": "t-02",
+        "date": "2026-11-21",
+        "text": "买台灯",
+        "done": true,
+        "createdAt": 1765000001000
+      },
+      {
+        "id": "t-03",
+        "date": "2026-11-25",
+        "text": "年休申请",
+        "done": false,
+        "createdAt": 1765000002000
+      }
+    ],
     "profile": {
       "memberId": "m-01",
       "salary": {

@@ -1,0 +1,272 @@
+/* ── 待办卡片 ───────────────────────────────────────────── */
+
+/*
+ * 日历 + 待办并排的那一行。
+ *
+ * 用 grid 而不是 flex，因为「待办卡与**日历网格**等高」这个要求用 flex 做不到：
+ * flex 只能让待办卡拉到与整个日历容器（头 + 星期 + 网格 + 图例）一样高。
+ * 这里把日历用 display:contents 拆成四块直接参与父级 grid 布局，
+ * 待办卡与 .calendar-grid 落在**同一行**，于是两者行高天然一致。
+ *
+ * 列宽：日历 900（它的信息密度就那么多），待办吃掉右边剩下的宽度 ——
+ * 于是待办卡的右边界与下面统计块的右边界自然对齐，不用额外对数字。
+ */
+.overview-top {
+  display: grid;
+  grid-template-columns: 900px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  column-gap: 14px;
+  row-gap: 12px;
+  width: 100%;
+}
+
+/* ------------------------------------------------------------ 待办卡 */
+
+.todo-card {
+  /*
+   * 外壳不流内容：真正的内容绝对定位铺满它。
+   *
+   * 这样这张卡对 grid 行高的贡献是 0 —— 行高完全由左边的 .calendar-grid 决定，
+   * 于是两者的「等高」不是靠对齐硬凑的，而是同一行的必然结果；
+   * 待办再多也不会把日历网格撑高（多出来的内容在卡内自己滚动）。
+   */
+  position: relative;
+  display: block;
+  grid-column: 2;
+  /* 与 .calendar-grid 同一行 → 高度天然等于日历网格 */
+  grid-row: 2;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.todo-card-fill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px 16px;
+}
+
+.todo-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.todo-card-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.todo-card-stat {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.todo-empty {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--faint);
+}
+
+/* 滚动区：吃掉卡片的剩余高度 */
+.todo-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* 滚动条彻底隐藏 —— 与每日明细同一套（见 shell.scss 的覆盖式滚动条区块） */
+  scrollbar-width: none;
+}
+
+.todo-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* 一个日期下的若干条待办 */
+.todo-group + .todo-group {
+  margin-top: 12px;
+}
+
+.todo-group-date {
+  margin: 0 0 5px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.todo-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 勾选框：用一个空心方块，已完成时打勾 */
+.todo-check {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  margin-top: 2px;
+  padding: 0;
+  border: 1px solid var(--control);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.todo-check:hover {
+  border-color: var(--accent);
+}
+
+.todo-item.is-done .todo-check {
+  border-color: var(--accent);
+  background: var(--accent);
+  /* 用两条线拼一个勾 */
+  background-image:
+    linear-gradient(45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%),
+    linear-gradient(-45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%);
+  background-size: 7px 7px, 7px 7px;
+  background-position: 2px 5px, 2px 2px;
+  background-repeat: no-repeat;
+}
+
+.todo-text {
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* 已完成：划线 + 置灰 */
+.todo-item.is-done .todo-text {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+/* ── 弹层里的标签页与待办页 ─────────────────────────────── */
+
+/*
+ * 弹层顶部的两个标签（班次 / 待办）。
+ *
+ * 用下划线表示当前页，而不是实心按钮 —— 弹层头部已经有标题了，
+ * 再压一条实心色带会显得头重脚轻。
+ */
+.dialog-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.dialog-tab {
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dialog-tab:hover {
+  color: var(--text);
+}
+
+.dialog-tab.is-on {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* 标签页的内容区 */
+.dialog-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px 4px;
+}
+
+/* 新增待办：输入框 + 添加按钮 */
+.todo-add {
+  display: flex;
+  gap: 8px;
+}
+
+.todo-add .input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 待办清单 */
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.todo-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.todo-list-item .todo-text {
+  /* flex-basis 0 → 文字撑满剩余宽度，删除按钮永远在最右 */
+  flex: 1 1 0;
+}
+
+/* 删除按钮 */
+.todo-remove {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--faint);
+  font-size: 14px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.todo-remove:hover {
+  background: var(--raised);
+  color: var(--danger);
+}
+
+/* 弹层底部的说明文字 */
+.dialog-tip {
+  margin: 0;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+/* 底栏按钮靠右（待办页只有一个「完成」） */
+.dialog-actions-end {
+  margin-left: auto;
+}

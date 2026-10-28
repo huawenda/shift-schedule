@@ -19,6 +19,7 @@ function makeRoster(overrides: Roster['overrides'] = [], salary = emptySalary): 
     members: [member],
     overrides,
     patterns: [],
+    todos: [],
     profile: { memberId: 'm1', salary },
     updatedAt: 0
   }

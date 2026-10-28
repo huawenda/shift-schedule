@@ -61,8 +61,8 @@ describe('period', () => {
   })
 
   it('周期文案', () => {
-    expect(formatPeriodRange(getPeriod({ year: 2026, month: 10 }))).toBe('9月20日 — 10月19日')
-    expect(formatPeriodRange(getPeriod({ year: 2026, month: 1 }))).toBe('12月20日 — 1月19日')
+    expect(formatPeriodRange(getPeriod({ year: 2026, month: 10 }))).toBe('9月20日 - 10月19日')
+    expect(formatPeriodRange(getPeriod({ year: 2026, month: 1 }))).toBe('12月20日 - 1月19日')
   })
 })
 

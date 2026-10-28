@@ -3,13 +3,16 @@ import {
   applyDayRecord,
   applySelf,
   applyShiftEdit,
+  addTodo,
   findMember,
   isRosterEmpty,
   loadRoster,
   removePattern,
+  removeTodo,
   restoreDay,
   saveRoster,
   saveSalary as applySalary,
+  toggleTodo,
   upsertPattern,
   type DayRecordInput,
   type Member,
@@ -44,6 +47,10 @@ export interface RosterApi {
   saveSelf: (input: SelfIdentity) => void
   /** 只改薪资，不碰身份 */
   saveSalary: (salary: SalaryInput) => void
+  /** 待办：新增 / 勾选 / 删除（改动立即生效，不走班次那套保存流程） */
+  addTodo: (date: string, text: string) => void
+  toggleTodo: (todoId: string) => void
+  removeTodo: (todoId: string) => void
 }
 
 export function useRoster(): RosterApi {
@@ -119,6 +126,18 @@ export function useRoster(): RosterApi {
     setRoster(current => applySalary(current, salary))
   }, [])
 
+  const addTodoItem = useCallback((date: string, text: string) => {
+    setRoster(current => addTodo(current, date, text))
+  }, [])
+
+  const toggleTodoItem = useCallback((todoId: string) => {
+    setRoster(current => toggleTodo(current, todoId))
+  }, [])
+
+  const removeTodoItem = useCallback((todoId: string) => {
+    setRoster(current => removeTodo(current, todoId))
+  }, [])
+
   return {
     roster,
     persisted,
@@ -131,6 +150,9 @@ export function useRoster(): RosterApi {
     savePattern,
     removePatternById,
     saveSelf,
-    saveSalary
+    saveSalary,
+    addTodo: addTodoItem,
+    toggleTodo: toggleTodoItem,
+    removeTodo: removeTodoItem
   }
 }

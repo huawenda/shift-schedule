@@ -16,7 +16,7 @@
  *   7. 设置页：13 条内置班序可预览 24 格
  *   8. 新建自建班序（24 格逐格填）→ 出现在列表 → 能挂到成员上
  *   9. 矩阵里显示自建班序名
- *  10. 导出备份是 v4，且带上自建班序
+ *  10. 导出备份是 v5，且带上自建班序
  *  11. 删除自建班序要输入名字确认，成员与改班记录一并删除
  *  12. 翻月不崩
  *
@@ -350,7 +350,9 @@ async function runScenario(name, url, downloadDir) {
       rails: Array.from(document.querySelectorAll('.rail-item')).map(node => node.textContent.trim()),
       cards: document.querySelectorAll('.stat-card').length,
       summary: document.querySelectorAll('.summary').length,
-      calendar: document.querySelectorAll('.calendar').length
+      calendar: document.querySelectorAll('.calendar').length,
+      sub: (document.querySelector('.canvas.is-overview .canvas-sub')?.textContent ?? '')
+        .replace(/\\s+/g, ' ').trim()
     }))()`)
     check(`${name}: 默认落在月度概览`, landing.active === '月度概览', JSON.stringify(landing))
     check(
@@ -363,9 +365,14 @@ async function runScenario(name, url, downloadDir) {
       landing.calendar === 1 && landing.cards === 4 && landing.summary === 0,
       JSON.stringify(landing)
     )
+    check(
+      `${name}: 结算周期用「-」连接（不用长破折号）`,
+      /月\d+日 - \d+月\d+日/.test(landing.sub) && !landing.sub.includes('—'),
+      landing.sub
+    )
 
     const layout = await client.evaluate(`(() => {
-      const cal = document.querySelector('.calendar')?.getBoundingClientRect()
+      const cal = document.querySelector('.calendar-grid')?.getBoundingClientRect()
       const grid = document.querySelector('.stats-grid')?.getBoundingClientRect()
       return {
         cal: Math.round(cal?.width ?? 0),
@@ -377,6 +384,36 @@ async function runScenario(name, url, downloadDir) {
       `${name}: 日历保持 900 上限、统计区更宽`,
       layout.cal <= 901 && layout.cal > 700 && layout.grid > layout.cal,
       JSON.stringify(layout)
+    )
+
+    // 待办卡片：日历右侧，高度与**日历网格**等高，右边界与统计块对齐
+    const todoLayout = await client.evaluate(`(() => {
+      const rect = sel => document.querySelector(sel)?.getBoundingClientRect()
+      const calGrid = rect('.calendar-grid')
+      const todo = rect('.todo-card')
+      const grid = rect('.stats-grid')
+      const top = rect('.overview-top')
+      return {
+        calGridH: Math.round(calGrid?.height ?? 0),
+        todoH: Math.round(todo?.height ?? 0),
+        todoW: Math.round(todo?.width ?? 0),
+        calRight: Math.round(calGrid?.right ?? 0),
+        todoLeft: Math.round(todo?.left ?? 0),
+        todoRight: Math.round(todo?.right ?? 0),
+        gridRight: Math.round(grid?.right ?? 0),
+        topW: Math.round(top?.width ?? 0)
+      }
+    })()`)
+    check(
+      `${name}: 待办卡在日历右侧，与日历网格等高`,
+      todoLayout.todoH === todoLayout.calGridH && todoLayout.todoH > 0 &&
+        todoLayout.todoLeft > todoLayout.calRight,
+      JSON.stringify(todoLayout)
+    )
+    check(
+      `${name}: 待办卡右边界与统计块对齐`,
+      todoLayout.todoRight === todoLayout.gridRight,
+      JSON.stringify(todoLayout)
     )
 
     // 统计区块：刚建完数据还没有加班，也没有薪资
@@ -418,15 +455,65 @@ async function runScenario(name, url, downloadDir) {
     )
     check(`${name}: 矩阵姓名不再可点（日历已锁本人）`, selfBadges.nameIsButton === false)
 
-    // 切到日历：没有人员下拉，标题就是本人
+    // 矩阵观感：药丸块由 ::before 画（格子保持直角 → 列线连续）；今天只在表头标
+    const matrixLook = await client.evaluate(`(() => {
+      const cell = document.querySelector('.matrix-row .matrix-cell')
+      const cs = cell ? getComputedStyle(cell) : null
+      const before = cell ? getComputedStyle(cell, '::before') : null
+      const rect = cell?.getBoundingClientRect()
+      const head = document.querySelector('.matrix-day.is-today')
+      const todayCell = document.querySelector('.matrix-cell.is-today')
+      const nameCell = document.querySelector('.matrix-row .matrix-name-cell')
+      const names = Array.from(document.querySelectorAll('.matrix-row .matrix-name, .matrix-row .matrix-pattern'))
+      return {
+        // 格子本身是直角 + 透明底，列线才是连续的
+        cellRadius: cs?.borderRadius ?? '',
+        cellBg: cs?.backgroundColor ?? '',
+        // 药丸画在 ::before 上：上下 6px / 左右 2px、3px 圆角、有底色
+        pillTop: before ? parseFloat(before.top) : -1,
+        pillLeft: before ? parseFloat(before.left) : -1,
+        pillRadius: before?.borderRadius ?? '',
+        pillBg: before?.backgroundColor ?? '',
+        cellH: rect ? Math.round(rect.height) : -1,
+        todayHeadBg: head ? getComputedStyle(head).backgroundColor : '',
+        todayHeadBand: head ? getComputedStyle(head).boxShadow : '',
+        todayCellShadow: todayCell ? getComputedStyle(todayCell).boxShadow : 'none',
+        nameW: nameCell ? Math.round(nameCell.getBoundingClientRect().width) : -1,
+        // 姓名 / 班序两行都不该被省略号截断
+        nameClipped: names.some(node => node.scrollWidth > node.clientWidth + 1)
+      }
+    })()`)
+    check(
+      `${name}: 矩阵色块收成药丸块（格子直角 + ::before 画块，列线才连续）`,
+      matrixLook.cellRadius === '0px' && matrixLook.cellBg === 'rgba(0, 0, 0, 0)' &&
+        matrixLook.pillTop === 6 && matrixLook.pillLeft === 2 &&
+        matrixLook.pillRadius === '3px' && matrixLook.pillBg !== 'rgba(0, 0, 0, 0)',
+      JSON.stringify(matrixLook)
+    )
+    check(
+      `${name}: 今天只标在表头，正文格子不再画描边`,
+      matrixLook.todayHeadBg !== '' && matrixLook.todayHeadBand !== 'none' &&
+        matrixLook.todayCellShadow === 'none',
+      JSON.stringify(matrixLook)
+    )
+    check(
+      `${name}: 成员列收窄到 120（内容不被省略号截断）`,
+      matrixLook.nameW >= 100 && matrixLook.nameW <= 124 && matrixLook.nameClipped === false,
+      JSON.stringify(matrixLook)
+    )
+
+    // 切到日历：没有人员下拉，本人只由页面副标题说明（日历上方不再重复一遍）
     await goOverview(client)
     const calendarLock = await client.evaluate(`(() => ({
       selects: document.querySelectorAll('.canvas-tools select, .calendar select').length,
-      name: document.querySelector('.calendar-name')?.textContent.trim() ?? ''
+      // 日历自己不该有标题块 —— 姓名/班序只在页面副标题出现一次
+      dupHead: document.querySelectorAll('.calendar-head, .calendar-name, .calendar-sub').length,
+      sub: (document.querySelector('.canvas.is-overview .canvas-sub')?.textContent ?? '')
+        .replace(/\\s+/g, ' ').trim()
     }))()`)
     check(
-      `${name}: 个人日历锁定本人且没有切换入口`,
-      calendarLock.selects === 0 && calendarLock.name === '张三',
+      `${name}: 个人日历锁定本人、且不再重复一遍姓名`,
+      calendarLock.selects === 0 && calendarLock.dupHead === 0 && calendarLock.sub.includes('张三'),
       JSON.stringify(calendarLock)
     )
     await goMatrix(client)
@@ -703,6 +790,162 @@ async function runScenario(name, url, downloadDir) {
         `${name}: 日历弹层有法定选项`,
         await client.evaluate('document.querySelectorAll(".dialog-day .segmented-sm .segmented-item").length === 2')
       )
+
+      // ── 待办页：弹层分两页，待办改动立即生效 ──
+      const todoTabs = await client.evaluate(`(() => {
+        const tabs = Array.from(document.querySelectorAll('.dialog-tab'))
+        return {
+          labels: tabs.map(node => node.textContent.trim()),
+          // 默认停在「班次」页
+          active: tabs.find(node => node.classList.contains('is-on'))?.textContent.trim() ?? ''
+        }
+      })()`)
+      check(
+        `${name}: 弹层分「班次 / 待办」两页，默认停在班次页`,
+        todoTabs.labels.length === 2 &&
+          todoTabs.labels[0] === '班次' &&
+          todoTabs.labels[1].startsWith('待办') &&
+          todoTabs.active === '班次',
+        JSON.stringify(todoTabs)
+      )
+
+      check(
+        `${name}: 切到待办页`,
+        await client.evaluate(clickByText('.dialog-tab', '待办'))
+      )
+      await sleep(200)
+      const todoPage = await client.evaluate(`(() => ({
+        hasInput: Boolean(document.querySelector('.dialog-page input[aria-label="新增待办"]')),
+        hasAdd: Boolean(Array.from(document.querySelectorAll('.dialog-page button'))
+          .find(node => node.textContent.trim() === '添加')),
+        emptyText: document.querySelector('.dialog-page .stat-empty')?.textContent.trim() ?? '',
+        // 待办页底栏只有「完成」，没有「保存 / 恢复默认」
+        footButtons: Array.from(document.querySelectorAll('.dialog-foot button'))
+          .map(node => node.textContent.trim()),
+        // 班次页的内容不该露出来
+        shiftOptions: document.querySelectorAll('.dialog-day .option').length
+      }))()`)
+      check(
+        `${name}: 待办页有输入框与添加按钮，空态给提示`,
+        todoPage.hasInput && todoPage.hasAdd &&
+          todoPage.emptyText.includes('还没有待办') &&
+          todoPage.shiftOptions === 0,
+        JSON.stringify(todoPage)
+      )
+      check(
+        `${name}: 待办页底栏只有「完成」（改动立即生效，不走保存）`,
+        JSON.stringify(todoPage.footButtons) === JSON.stringify(['完成']),
+        JSON.stringify(todoPage.footButtons)
+      )
+
+      // 添加一条待办
+      check(
+        `${name}: 输入待办并添加`,
+        await client.evaluate(setInputBySelector('.dialog-page input[aria-label="新增待办"]', '交班记录表'))
+      )
+      await sleep(120)
+      check(
+        `${name}: 点「添加」`,
+        await client.evaluate(clickByText('.dialog-page button', '添加'))
+      )
+      await sleep(250)
+
+      const todoAdded = await client.evaluate(`(() => {
+        const raw = window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})
+        let parsed = null
+        try { parsed = JSON.parse(raw || 'null') } catch { parsed = null }
+        const items = Array.from(document.querySelectorAll('.dialog-page .todo-list-item'))
+        return {
+          count: parsed?.todos?.length ?? -1,
+          text: parsed?.todos?.[0]?.text ?? '',
+          date: parsed?.todos?.[0]?.date ?? '',
+          done: parsed?.todos?.[0]?.done ?? null,
+          listItems: items.length,
+          listText: items.map(node => node.textContent.replace(/\\s+/g, ' ').trim())
+        }
+      })()`)
+      check(
+        `${name}: 待办立即写入存储（不走保存按钮）`,
+        todoAdded.count === 1 &&
+          todoAdded.text === '交班记录表' &&
+          todoAdded.done === false &&
+          todoAdded.listItems === 1,
+        JSON.stringify(todoAdded)
+      )
+
+      // 勾选完成 → 立即生效
+      check(
+        `${name}: 点勾选框标记完成`,
+        await client.evaluate(`(() => {
+          const box = document.querySelector('.dialog-page .todo-list-item .todo-check')
+          if (!box) return false
+          box.click()
+          return true
+        })()`)
+      )
+      await sleep(250)
+      const todoDone = await client.evaluate(`(() => {
+        const raw = window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})
+        let parsed = null
+        try { parsed = JSON.parse(raw || 'null') } catch { parsed = null }
+        return {
+          done: parsed?.todos?.[0]?.done ?? null,
+          // 界面上要划线置灰
+          struck: Boolean(document.querySelector('.dialog-page .todo-list-item.is-done'))
+        }
+      })()`)
+      check(
+        `${name}: 勾选立即生效且界面划线`,
+        todoDone.done === true && todoDone.struck === true,
+        JSON.stringify(todoDone)
+      )
+
+      // 关闭弹层 → 待办卡上应出现这条待办，日历格子上应有小圆点
+      check(`${name}: 关掉待办页弹层`, await client.evaluate(clickByText('.dialog-foot button', '完成')))
+      await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+      await sleep(300)
+
+      const todoCard = await client.evaluate(`(() => {
+        const card = document.querySelector('.todo-card')
+        const dots = document.querySelectorAll('.cal-todo')
+        const dot = dots[0]
+        const day = dot?.closest('.cal-dayline')?.querySelector('.cal-day')
+        const dotRect = dot?.getBoundingClientRect()
+        const dayRect = day?.getBoundingClientRect()
+        return {
+          items: Array.from(card?.querySelectorAll('.todo-item') ?? [])
+            .map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
+          // 已完成的那条要划线
+          doneItems: card?.querySelectorAll('.todo-item.is-done').length ?? -1,
+          stat: card?.querySelector('.todo-card-stat')?.textContent.trim() ?? '',
+          dots: dots.length,
+          // 圆点必须跟日期数字同一行、紧挨它右侧（不是角标区，也不是格子左下角）
+          dotInCorner: Array.from(dots).some(d => Boolean(d.closest('.cal-corner'))),
+          dotNextToDay: Boolean(
+            dot && day && dotRect && dayRect &&
+            Math.abs(dotRect.top + dotRect.height / 2 - (dayRect.top + dayRect.height / 2)) < 4 &&
+            dotRect.left >= dayRect.right - 1 &&
+            dotRect.left - dayRect.right < 8
+          )
+        }
+      })()`)
+      check(
+        `${name}: 待办卡上出现这条待办（已完成划线）`,
+        todoCard.items.length === 1 &&
+          todoCard.items[0].includes('交班记录表') &&
+          todoCard.doneItems === 1,
+        JSON.stringify(todoCard)
+      )
+      check(
+        `${name}: 日历格子上标出当天有待办（圆点紧挨左上角日期）`,
+        todoCard.dots === 1 && todoCard.dotInCorner === false && todoCard.dotNextToDay,
+        JSON.stringify(todoCard)
+      )
+
+      // 重新打开弹层，接着走加班流程（待办页把弹层关掉了）
+      await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+      await sleep(200)
 
       check(`${name}: 点选加班预设 3h`, await client.evaluate(clickByText('.ot-presets .chip-mini', '3h')))
       await sleep(120)
@@ -1523,8 +1766,8 @@ async function runScenario(name, url, downloadDir) {
     if (backupFile) {
       const backup = JSON.parse(fs.readFileSync(path.join(downloadDir, backupFile), 'utf8'))
       check(
-        `${name}: 导出备份是 v4`,
-        backup?.version === 4,
+        `${name}: 导出备份是 v5`,
+        backup?.version === 5,
         `version=${backup?.version}`
       )
       check(
@@ -1537,7 +1780,7 @@ async function runScenario(name, url, downloadDir) {
       )
       check(`${name}: 备份带上 3 位成员`, backup?.roster?.members?.length === 3, String(backup?.roster?.members?.length))
     } else {
-      check(`${name}: 导出备份是 v4`, false, '没有等到下载文件')
+      check(`${name}: 导出备份是 v5`, false, '没有等到下载文件')
     }
 
     // --- 11. 删除自建班序：必须输入名字 ---

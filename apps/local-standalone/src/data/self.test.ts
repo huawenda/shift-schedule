@@ -26,6 +26,7 @@ const base: Roster = {
     { memberId: 'm2', date: '2026-10-22', shift: '休息' }
   ],
   patterns: [],
+  todos: [],
   profile: null,
   updatedAt: 0
 }

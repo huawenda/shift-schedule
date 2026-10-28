@@ -69,7 +69,7 @@
 .matrix-head,
 .matrix-row {
   display: grid;
-  grid-template-columns: 148px minmax(0, 1fr);
+  grid-template-columns: var(--matrix-name-width) minmax(0, 1fr);
   min-width: max-content;
 }
 
@@ -105,9 +105,9 @@
   flex-direction: column;
   justify-content: center;
   gap: 1px;
-  width: 148px;
+  width: var(--matrix-name-width);
   height: var(--row-height);
-  padding: 0 12px;
+  padding: 0 10px;
   border: 0;
   border-right: 1px solid var(--border);
   border-left: 2px solid transparent;
@@ -183,7 +183,10 @@
   background: #fafbfc;
 }
 
+/* 今天**只标在表头**：底色微染 + 数字加重 + 底部 2px 色带。
+ * 正文格子一律不画描边 —— 30 列 × 13 行各画一圈，叠出来就是一条刺眼的粗线。 */
 .matrix-day.is-today {
+  background: var(--accent-weak);
   color: var(--text);
   font-weight: 600;
   box-shadow: inset 0 -2px 0 var(--accent);
@@ -198,16 +201,41 @@
   font-size: 11px;
 }
 
+/*
+ * 矩阵格子：色块收成「药丸块」，但**格子本身保持直角**。
+ *
+ * 为什么不用 `background-clip: content-box` 的老写法：那样圆角必须加在格子上，
+ * 而 `border-right` 是画在边框盒上的、必须跟着圆角走 —— 每格的列线就变成
+ * 「中间直、上下两头弯」的一小段，13 行叠起来视觉上就是一条断断续续的虚线。
+ *
+ * 现在的做法：格子 `border-radius: 0`、背景透明，药丸由 `::before` 画在内容区里
+ * （inset 6px 2px + 3px 圆角 + `var(--tone-bg)`）。列线走的是直边，从表头一笔到底。
+ *
+ * ⚠️ `isolation: isolate` 让格子自成层叠上下文，`::before` 的 `z-index: -1`
+ * 才会只沉到「格子背景之上、文字之下」—— 不然它会掉到整张表格的背景后面去。
+ */
 .matrix-cell {
   position: relative;
+  isolation: isolate;
   height: var(--row-height);
   padding: 0;
   border: 0;
   border-right: 1px solid var(--rule);
   border-radius: 0;
+  background: transparent;
   font-size: 12px;
   font-weight: 500;
   line-height: 1;
+}
+
+/* 药丸块：上下各留 6px、左右各留 2px，颜色取 `.t-*` 给出的 --tone-bg */
+.matrix-cell::before {
+  position: absolute;
+  inset: 6px 2px;
+  z-index: -1;
+  border-radius: 3px;
+  background: var(--tone-bg, transparent);
+  content: '';
 }
 
 .matrix-cell:last-child {
@@ -222,8 +250,14 @@
   color: var(--faint);
 }
 
+/*
+ * 今天**只在表头标**（见 `.matrix-day.is-today`：底色微染 + 数字加重 + 2px 色带）。
+ *
+ * 这里绝对不能再画「每格一圈内描边」—— 13 行 × 1.5px 纵向叠起来就是一条粗黑线，
+ * 比整屏任何元素都重，那正是原来看着刺眼的原因。
+ */
 .matrix-cell.is-today {
-  box-shadow: inset 0 0 0 1.5px var(--accent);
+  box-shadow: none;
 }
 
 /* 矩阵格子里只显示班次，不加「改过 / 有加班」的小点 —— 见 TeamMatrix 的注释 */
@@ -257,36 +291,16 @@
 
 /* ── 个人日历 ─────────────────────────────────────────── */
 
+/*
+ * 日历在概览页是「网格行」的一部分，用 display:contents 把自己拆开 ——
+ * 星期栏、日期网格、图例分别落到父级 grid 的三行，
+ * 于是右侧的待办卡可以跟 .calendar-grid 精确对齐同一行（等高）。
+ * 宽度由父级 grid 的列宽（900）决定，这里不再自己限宽。
+ *
+ * 日历上方**不放标题**：本人姓名/班序已经在页面副标题里，重复一遍没有信息量。
+ */
 .calendar {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 900px;
-}
-
-.calendar-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.calendar-name {
-  font-size: var(--fs-section);
-  font-weight: 500;
-}
-
-.calendar-sub {
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.calendar-tip {
-  font-size: 12px;
-  color: var(--faint);
+  display: contents;
 }
 
 .calendar-weekdays {
@@ -297,6 +311,8 @@
   color: var(--muted);
   font-size: 11px;
   text-align: center;
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .calendar-grid {
@@ -307,6 +323,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--border);
+  grid-column: 1;
+  grid-row: 2;
 }
 
 .cal-cell {
@@ -345,6 +363,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 日期数字 + 待办圆点同一行，圆点紧贴数字右侧 */
+.cal-dayline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .cal-cell.is-today .cal-day {
   color: var(--text);
   font-weight: 600;
@@ -378,6 +403,27 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/*
+ * 待办小圆点：紧挨左上角的日期数字。
+ *
+ * 不放右上角 —— 那里已经有加班小时与「法」角标了，再塞一个会挤成一团。
+ */
+.cal-todo {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  /* 用加班橙 —— 与「这一格有加班」的提示同一套语言，
+   * 一眼能看出「这天有事」 */
+  background: var(--overtime-bg);
+  box-shadow: inset 0 0 0 1px var(--overtime-ink);
+}
+
+/* 周期外的圆点淡一档，跟整格的淡化一致 */
+.cal-todo.is-outside {
+  opacity: 0.45;
 }
 
 .cal-ot {
@@ -428,6 +474,8 @@
   gap: 6px;
   font-size: 11px;
   color: var(--faint);
+  grid-column: 1;
+  grid-row: 3;
 }
 
 .calendar-legend .legend-text:not(:last-child) {

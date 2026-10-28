@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { getCalendarMeta } from '../data/calendarMeta'
-import { getTemplateShift, overrideKey, patternLabelOf, type DayOverride, type Member, type Roster } from '../data/roster'
+import { getTemplateShift, overrideKey, type DayOverride, type Member, type Roster } from '../data/roster'
 import { formatOvertimeHours } from '../data/overtime'
 import { formatLeaveDuration } from '../data/leave'
 import type { Period } from '../data/period'
@@ -14,14 +14,27 @@ interface MonthCalendarProps {
   period: Period
   /** 整天记录（班次 + 加班 + 法定） */
   recordMap: Map<string, DayOverride>
+  /** 有待办的日期 → 待办条数（画格子上的小圆点） */
+  todoCounts: Map<string, number>
   onEdit: (member: Member, date: string) => void
 }
 
 /**
  * 个人日历：7 列，格子里放班次块 + 农历/节日角标。
  * 加班小时与「法」角标都挂在格子右上角；班次块的 1px 描边表示「与默认班次不同」。
+ * 有待办的日子在日期数字右侧画一个小圆点。
+ *
+ * 日历自己**没有标题**：本人姓名与班序已经写在页面副标题（月度概览 · 10月20日 - 11月19日 ·
+ * 华文达 · 4F）里了，再在网格上方重复一遍是同一句话说两次。
  */
-export function MonthCalendar({ roster, member, period, recordMap, onEdit }: MonthCalendarProps) {
+export function MonthCalendar({
+  roster,
+  member,
+  period,
+  recordMap,
+  todoCounts,
+  onEdit
+}: MonthCalendarProps) {
   const today = todayKey()
 
   /**
@@ -51,13 +64,6 @@ export function MonthCalendar({ roster, member, period, recordMap, onEdit }: Mon
 
   return (
     <section className="calendar" aria-label={`${member.name} 的月历`}>
-      <header className="calendar-head">
-        <div>
-          <p className="calendar-name">{member.name}</p>
-          <p className="calendar-sub">{patternLabelOf(roster, member)} · {period.startDate} 起</p>
-        </div>
-      </header>
-
       <div className="calendar-weekdays" aria-hidden="true">
         {WEEKDAY_LABELS.map(label => <span key={label}>{label}</span>)}
       </div>
@@ -75,6 +81,8 @@ export function MonthCalendar({ roster, member, period, recordMap, onEdit }: Mon
           const overtime = record?.overtimeHours ?? 0
           const meta = metas.get(date)
           const isToday = date === today
+          // 有待办：格子左下角画一个小圆点（与右上角的加班/法定角标分开）
+          const todoCount = todoCounts.get(date) ?? 0
 
           // 事假都挂角标，显示实际时长（4h 或 8h；没记时长默认 8h）
           const leaveLabel = shift === '事假' ? formatLeaveDuration(record?.leaveDuration) : ''
@@ -86,12 +94,23 @@ export function MonthCalendar({ roster, member, period, recordMap, onEdit }: Mon
             overtime > 0 ? `加班 ${formatOvertimeHours(overtime)}` : '',
             record?.isLegal ? '法定' : '',
             shiftChanged ? '班次已改' : '',
+            todoCount > 0 ? `待办 ${todoCount} 项` : '',
             cell.inPeriod ? '' : '不在本期'
           ].filter(Boolean)
 
           const body = (
             <>
-              <span className="cal-day">{formatDayNumber(date)}</span>
+              {/* 日期 + 待办圆点同一行：圆点紧挨日期数字（左上角），不占右下角 */}
+              <span className="cal-dayline">
+                <span className="cal-day">{formatDayNumber(date)}</span>
+                {todoCount > 0 ? (
+                  <span
+                    aria-hidden="true"
+                    className={`cal-todo${cell.inPeriod ? '' : ' is-outside'}`}
+                    title={`${todoCount} 项待办`}
+                  />
+                ) : null}
+              </span>
               <span className={`cal-meta${meta?.isFestival ? ' is-festival' : ''}`}>{meta?.label ?? ''}</span>
 
               {/* 加班、法定、事假时长挂在右上角，不挤班次那一行 */}
