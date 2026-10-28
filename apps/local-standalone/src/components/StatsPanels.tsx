@@ -4,6 +4,7 @@ import { formatMonthDay, weekdayLabel } from '../data/dateUtils'
 import { SHIFT_META, shiftToneClass, type ShiftType } from '../data/shifts'
 import {
   OVERTIME_KIND_LABEL,
+  OVERTIME_PAY_FIELD,
   OVERTIME_RATES,
   type MonthStats,
   type OvertimeKind
@@ -127,26 +128,51 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
         {salary.hasBase ? (
           <>
             <ul className="money-list">
-              <li className="money-row">
-                <span>固定应发</span>
+              <li className="money-group">
+                <span>基本项</span>
                 <span>{formatMoney(salary.fixedTotal)}</span>
               </li>
-              <li className="money-row">
+              <li className="money-row is-sub">
+                <span>基本工资</span>
+                <span>{formatMoney(salary.base)}</span>
+              </li>
+              <li className="money-row is-sub">
+                <span>绩效津贴</span>
+                <span>{formatMoney(salary.performance)}</span>
+              </li>
+              <li className="money-row is-sub">
+                <span>岗位津贴</span>
+                <span>{formatMoney(salary.position)}</span>
+              </li>
+
+              <li className="money-group">
                 <span>加班工资</span>
                 <span>{formatMoney(salary.overtimePay)}</span>
               </li>
-              <li className="money-row is-deduct">
+              {OVERTIME_KINDS.map(kind => (
+                <li className="money-row is-sub" key={kind}>
+                  <span>{OVERTIME_KIND_LABEL[kind]}</span>
+                  <span>{formatMoney(salary[OVERTIME_PAY_FIELD[kind]])}</span>
+                </li>
+              ))}
+
+              <li className="money-group">
+                <span>扣款项</span>
+                <span>{formatMoney(salary.socialFund + salary.leaveDeduction)}</span>
+              </li>
+              <li className="money-row is-sub is-deduct">
                 <span>社保公积金</span>
-                <span>−{formatMoney(salary.socialFund)}</span>
+                <span>{formatMoney(salary.socialFund)}</span>
               </li>
               {salary.leaveHours > 0 ? (
-                <li className="money-row is-deduct">
+                <li className="money-row is-sub is-deduct">
                   <span>事假扣款（{formatOvertimeHours(salary.leaveHours)}）</span>
-                  <span>−{formatMoney(salary.leaveDeduction)}</span>
-                </li>
+                  <span>{formatMoney(salary.leaveDeduction)}</span>
+              </li>
               ) : null}
+
               <li className="money-row is-strong">
-                <span>应发合计</span>
+                <span>应发</span>
                 <span>{formatMoney(salary.gross)}</span>
               </li>
               <li className="money-row is-total">

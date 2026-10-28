@@ -220,6 +220,29 @@
   color: var(--danger);
 }
 
+/* 组标题（基本项 / 加班工资 / 扣款项）：右侧跟一个该组的小计 */
+.money-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 头一个组贴着列表顶部，不必再留间距 */
+.money-group:first-child {
+  margin-top: 0;
+}
+
+/* 组内明细：缩进对齐到组标题下方 */
+.money-row.is-sub {
+  padding-left: 12px;
+}
+
 .money-row.is-strong {
   margin-top: 2px;
   padding-top: 6px;
@@ -240,13 +263,20 @@
 /* ── 每日明细 ─────────────────────────────────────────── */
 
 /* 表格滚动区：吃掉卡片的剩余高度。原来的 max-height: 190px 会让卡片
- * 「3 行以内矮、超过就变高」，这正是要修掉的行为。 */
+ * 「3 行以内矮、超过就变高」，这正是要修掉的行为。
+ *
+ * 滚动条彻底隐藏（见 shell.scss 的覆盖式滚动条区块）：卡片内部就几行，
+ * 一条常驻滑块反而抢眼；鼠标滚轮照常能滚。 */
 .detail-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  /* 滚动条出现时不挤动列宽 */
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
+}
+
+.detail-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .detail-table {

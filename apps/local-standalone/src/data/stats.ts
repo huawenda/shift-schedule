@@ -29,6 +29,13 @@ export const OVERTIME_KIND_LABEL: Record<OvertimeKind, string> = {
   legal: '法定加班'
 }
 
+/** 三个计价桶各自的金额字段：界面按桶逐项列工资时用它取值 */
+export const OVERTIME_PAY_FIELD: Record<OvertimeKind, 'weekdayPay' | 'specialPay' | 'legalPay'> = {
+  weekday: 'weekdayPay',
+  special: 'specialPay',
+  legal: 'legalPay'
+}
+
 /** 一间公司一年才变一次的口径，集中放这里，将来要改只改这一处 */
 export const MONTHLY_WORK_DAYS = 21.75
 export const HOURS_PER_DAY = 8
