@@ -5,8 +5,7 @@ import {
   PATTERN_SHIFT_OPTIONS,
   createBlankCustomPattern,
   validateCustomPattern,
-  type CustomPattern,
-  type PatternLookup
+  type CustomPattern
 } from '../data/patterns'
 import { SHIFT_META, shiftToneClass, type ShiftType } from '../data/shifts'
 
@@ -15,8 +14,6 @@ interface PatternEditorProps {
   pattern?: CustomPattern
   /** 现有的全部自定义班序，用于重名与数量校验 */
   existing: CustomPattern[]
-  /** 用来「照着某条改」的底稿来源（内置 + 自定义） */
-  lookup: PatternLookup
   onSave: (pattern: CustomPattern) => void
   onClose: () => void
 }
@@ -28,7 +25,7 @@ interface PatternEditorProps {
  * 之所以不用「一行 24 格」：1440 下每格只剩 34px，两字的「白特」放不下，
  * 而矩阵里靠单字区分、编辑时用户需要看清全称，所以拆成两行各 12 格。
  */
-export function PatternEditor({ pattern, existing, lookup, onSave, onClose }: PatternEditorProps) {
+export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEditorProps) {
   const [draft, setDraft] = useState<CustomPattern>(() => pattern ?? createBlankCustomPattern())
   const [active, setActive] = useState(0)
   const [showErrors, setShowErrors] = useState(false)
@@ -48,7 +45,6 @@ export function PatternEditor({ pattern, existing, lookup, onSave, onClose }: Pa
   )
 
   const activeShift = draft.shifts[active]
-  const sources = lookup.all.filter(item => item.id !== pattern?.id)
 
   function assign(shift: ShiftType) {
     setDraft(current => ({
@@ -56,11 +52,6 @@ export function PatternEditor({ pattern, existing, lookup, onSave, onClose }: Pa
       shifts: current.shifts.map((item, index) => (index === active ? shift : item))
     }))
     setActive(current => (current + 1) % PATTERN_CYCLE_LENGTH)
-  }
-
-  function loadSource(patternId: string) {
-    const source = lookup.get(patternId)
-    if (source) setDraft(current => ({ ...current, shifts: [...source.shifts] }))
   }
 
   function commit() {
@@ -144,21 +135,6 @@ export function PatternEditor({ pattern, existing, lookup, onSave, onClose }: Pa
           <p className="editor-hint">
             班序只填这三种基础班次。白特、夜特、事假属于临时安排，改班时单天设置，不写进班序。
           </p>
-
-          <label className="field-row">
-            <span className="field-label">照着改（可选）</span>
-            <select
-              aria-label="从现有班序复制 24 格"
-              className="input input-compact"
-              value=""
-              onChange={event => loadSource(event.target.value)}
-            >
-              <option value="">复制一条现有班序的 24 格…</option>
-              {sources.map(item => (
-                <option key={item.id} value={item.id}>{lookup.labelOf(item.id)}</option>
-              ))}
-            </select>
-          </label>
 
           {showErrors && errors.length > 0 ? (
             <ul className="error-list" role="alert">

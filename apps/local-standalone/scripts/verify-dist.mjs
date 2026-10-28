@@ -9,9 +9,10 @@
  *   1. 空数据首次打开 → 出现三步向导
  *   2. 向导建 3 人 → 排班页出现 3 行
  *   3. 独立浏览器存储可写（file:// 下尤其要确认）
- *   4. 点格子改班 → 弹层 → 保存 → 写入 roster v2
+ *   4. 点格子改班 → 弹层 → 保存 → 写入 roster v2（矩阵弹层不含加班录入）
  *   5. 刷新后改动仍在（真持久化）
  *   6. 恢复默认 → 记录被删除
+ *   6b. 个人日历记加班 3h → 落盘 → 格子显示 +3h → 恢复默认连加班清掉
  *   7. 设置页：13 条内置班序可预览 24 格
  *   8. 新建自建班序（24 格逐格填）→ 出现在列表 → 能挂到成员上
  *   9. 矩阵里显示自建班序名
@@ -33,10 +34,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectDir = path.resolve(__dirname, '..')
 const distDir = path.join(projectDir, 'dist')
 const distIndex = path.join(distDir, 'index.html')
+/** 真实班组的样例备份：13 人挂在内置 4F–4X 上，用来验导入链路 */
+const fixturePath = path.join(projectDir, 'fixtures', '班组13人.json')
 
 const ROSTER_KEY = 'shift-schedule:local:roster:v2'
-const LEGACY_RECORDS_KEY = 'shift-schedule:local:day-records:v1'
-const LEGACY_SETTINGS_KEY = 'shift-schedule:local:settings:v1'
 
 /** 班次 → 矩阵格子里的单字，与 src/data/shifts.ts 保持一致 */
 const SHORT_LABEL = { 白班: '白', 夜班: '夜', 休息: '休', 白特: '特', 夜特: '特', 事假: '假' }
@@ -267,8 +268,7 @@ async function runScenario(name, url, downloadDir) {
       '标签页加载到目标地址'
     )
     await client.evaluate(`(() => {
-      [${JSON.stringify(ROSTER_KEY)}, ${JSON.stringify(LEGACY_RECORDS_KEY)}, ${JSON.stringify(LEGACY_SETTINGS_KEY)}]
-        .forEach(key => window.localStorage.removeItem(key))
+      window.localStorage.clear()
       return true
     })()`)
     await client.send('Page.reload', { ignoreCache: true })
@@ -313,6 +313,16 @@ async function runScenario(name, url, downloadDir) {
     await client.evaluate(`document.querySelector(${JSON.stringify(firstCell)}).click(); true`)
     await waitFor(client, 'Boolean(document.querySelector(".dialog"))', '改班弹层')
     check(`${name}: 点击格子打开改班弹层`, true)
+    // 矩阵弹层只能改班次：不该出现加班/法定两段
+    const matrixDialog = await client.evaluate(`(() => ({
+      day: document.querySelectorAll('.dialog-day').length,
+      overtime: document.querySelectorAll('.ot-presets, .ot-input').length
+    }))()`)
+    check(
+      `${name}: 矩阵弹层不含加班录入`,
+      matrixDialog.day === 0 && matrixDialog.overtime === 0,
+      JSON.stringify(matrixDialog)
+    )
 
     const picked = await client.evaluate(`(() => {
       const option = Array.from(document.querySelectorAll('.dialog-options .option'))
@@ -379,6 +389,105 @@ async function runScenario(name, url, downloadDir) {
     }
     check(`${name}: 恢复默认后记录被删除`, resetParsed?.overrides?.length === 0, JSON.stringify(resetParsed?.overrides ?? null))
 
+    // --- 5b. 个人日历：加班 + 法定 ---
+    await client.evaluate(clickByText('.segmented-item', '个人日历'))
+    await waitFor(client, 'document.querySelectorAll(".cal-cell:not(.is-blank)").length > 0', '个人日历')
+
+    // 找一个白班/夜班的格子（休息/事假不记加班）
+    const workCell = await client.evaluate(`(() => {
+      const cells = Array.from(document.querySelectorAll('.cal-cell'))
+      for (let index = 0; index < cells.length; index += 1) {
+        const label = cells[index].querySelector('.cal-shift-label')
+        const text = label ? label.textContent.trim() : ''
+        if (text === '白班' || text === '夜班') return { index, shift: text, date: cells[index].title }
+      }
+      return null
+    })()`)
+    check(`${name}: 日历里找到可记加班的日子`, Boolean(workCell), JSON.stringify(workCell))
+
+    if (workCell) {
+      await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+
+      // 三段加两个按钮全堆起来仍要放得进 900 高的办公屏
+      const dialogSize = await client.evaluate(`(() => {
+        const dialog = document.querySelector('.dialog-day')
+        if (!dialog) return null
+        const rect = dialog.getBoundingClientRect()
+        return { w: Math.round(rect.width), h: Math.round(rect.height), viewH: window.innerHeight }
+      })()`)
+      check(
+        `${name}: 日历弹层放得进视口`,
+        Boolean(dialogSize && dialogSize.h <= dialogSize.viewH && dialogSize.w <= 520),
+        JSON.stringify(dialogSize)
+      )
+
+      const presets = await client.evaluate(
+        `Array.from(document.querySelectorAll('.ot-presets .chip-mini')).map(node => node.textContent.trim())`
+      )
+      check(
+        `${name}: 日历弹层有加班预设且不含「恢复默认」误置灰`,
+        JSON.stringify(presets) === JSON.stringify(['2h', '3h', '3.5h']),
+        JSON.stringify(presets)
+      )
+      check(
+        `${name}: 日历弹层有法定选项`,
+        await client.evaluate('document.querySelectorAll(".dialog-day .segmented-sm .segmented-item").length === 2')
+      )
+
+      check(`${name}: 点选加班预设 3h`, await client.evaluate(clickByText('.ot-presets .chip-mini', '3h')))
+      await sleep(120)
+      check(`${name}: 保存整天记录`, await client.evaluate(clickByText('.dialog-foot button', '保存')))
+      await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+
+      let dayStored = null
+      const dayDeadline = Date.now() + 3000
+      while (Date.now() < dayDeadline) {
+        const raw = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})`)
+        try {
+          dayStored = JSON.parse(raw || 'null')
+        } catch {
+          dayStored = null
+        }
+        if (dayStored?.overrides?.length === 1 && dayStored.overrides[0].overtimeHours === 3) break
+        await sleep(150)
+      }
+      check(
+        `${name}: 加班写进记录（班次不变、只加 3h）`,
+        Boolean(dayStored?.overrides?.length === 1 && dayStored.overrides[0].overtimeHours === 3),
+        JSON.stringify(dayStored?.overrides ?? null)
+      )
+
+      const otLabel = await client.evaluate(`(() => {
+        const cell = document.querySelectorAll('.cal-cell')[${workCell.index}]
+        const tag = cell ? cell.querySelector('.cal-ot') : null
+        return tag ? tag.textContent.trim() : null
+      })()`)
+      check(`${name}: 日历格子里显示 +3h`, otLabel === '+3h', String(otLabel))
+
+      // 恢复默认：加班一并清掉
+      await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+      check(`${name}: 日历弹层能恢复默认`, await client.evaluate(clickByText('.dialog-foot button', '恢复默认')))
+      await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+      await sleep(250)
+      const afterRestore = await client.evaluate(`window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})`)
+      let restoreParsed = null
+      try {
+        restoreParsed = JSON.parse(afterRestore || 'null')
+      } catch {
+        restoreParsed = null
+      }
+      check(
+        `${name}: 恢复默认连加班一起清掉`,
+        restoreParsed?.overrides?.length === 0,
+        JSON.stringify(restoreParsed?.overrides ?? null)
+      )
+    }
+
+    await client.evaluate(clickByText('.segmented-item', '全员矩阵'))
+    await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '切回矩阵')
+
     // --- 6. 设置页 ---
     await client.evaluate(clickByText('.rail-item', '设置'))
     await waitFor(client, 'Boolean(document.querySelector(".settings-section"))', '设置页')
@@ -434,6 +543,38 @@ async function runScenario(name, url, downloadDir) {
     await waitFor(client, 'document.querySelectorAll(".pattern-row").length === 1', '自建班序出现在列表')
     const patternName = await client.evaluate('document.querySelector(".pattern-row-name").textContent.trim()')
     check(`${name}: 自建班序出现在列表`, patternName === '甲班', patternName)
+
+    // 详情必须展开在这张卡片自己下方，而不是共用内置班序那块预览区
+    const inlinePanel = await client.evaluate(`(() => {
+      const panel = document.querySelector('.pattern-item .pattern-preview')
+      if (!panel) return null
+      return {
+        cells: panel.querySelectorAll('.shift-cell').length,
+        // 详情里只放 24 格，不重复班序名与说明
+        head: panel.querySelectorAll('.pattern-preview-head').length,
+        text: panel.textContent.trim()
+      }
+    })()`)
+    check(`${name}: 自建班序详情就地展开在卡片下方`, inlinePanel?.cells === 24, String(inlinePanel?.cells))
+    check(`${name}: 详情里没有标题文字`, inlinePanel?.head === 0, JSON.stringify(inlinePanel?.text ?? null))
+
+    check(`${name}: 再点「收起」能关掉详情`, await client.evaluate(clickByText('.pattern-row-actions button', '收起')))
+    await sleep(150)
+    const collapsed = await client.evaluate('document.querySelectorAll(".pattern-item .pattern-preview").length')
+    check(`${name}: 收起后详情消失`, collapsed === 0, String(collapsed))
+
+    // 文档层不能出现第二根滚动条：.visually-hidden 用 absolute 时会以初始包含块定位，
+    // 逃出 .canvas 的 overflow 裁剪把文档撑高，表现就是「双层滚动条 + 底部空白」。
+    const overflow = await client.evaluate(`(() => ({
+      doc: document.documentElement.scrollHeight,
+      view: window.innerHeight,
+      bar: window.innerWidth - document.documentElement.clientWidth
+    }))()`)
+    check(
+      `${name}: 设置页没有文档层滚动条`,
+      overflow.doc <= overflow.view + 1 && overflow.bar === 0,
+      JSON.stringify(overflow)
+    )
 
     const customId = await client.evaluate(`(() => {
       const parsed = JSON.parse(window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)}) || '{}')
@@ -551,6 +692,81 @@ async function runScenario(name, url, downloadDir) {
     const titleAfter = await client.evaluate('document.querySelector(".month-title").textContent.trim()')
     check(`${name}: 切换月份`, titleBefore !== titleAfter, `${titleBefore} → ${titleAfter}`)
     check(`${name}: 切月后矩阵仍在`, await client.evaluate('document.querySelectorAll(".matrix-row").length === 2'))
+
+    const scheduleOverflow = await client.evaluate(
+      'document.documentElement.scrollHeight <= window.innerHeight + 1'
+    )
+    check(`${name}: 排班页也没有文档层滚动条`, scheduleOverflow)
+
+    // --- 13. 导入 fixtures/班组13人.json（真实班组数据的导入链路） ---
+    await client.evaluate(clickByText('.rail-item', '设置'))
+    await waitFor(client, 'Boolean(document.querySelector(".btn-file input[type=file]"))', '导入入口')
+    await client.send('DOM.enable')
+    const { root } = await client.send('DOM.getDocument', { depth: -1 })
+    const { nodeId } = await client.send('DOM.querySelector', {
+      nodeId: root.nodeId,
+      selector: '.btn-file input[type=file]'
+    })
+    check(`${name}: 找到导入用的文件输入框`, Boolean(nodeId), String(nodeId))
+
+    await client.send('DOM.setFileInputFiles', { files: [fixturePath], nodeId })
+    await sleep(400)
+    const imported = await client.evaluate(`(() => {
+      const rows = Array.from(document.querySelectorAll('.member-row'))
+      const first = rows[0]?.querySelector('select')
+      return {
+        count: rows.length,
+        firstName: rows[0]?.querySelector('input')?.value ?? '',
+        firstPattern: first ? first.options[first.selectedIndex].textContent.trim() : ''
+      }
+    })()`)
+    check(
+      `${name}: 导入 13 人样例备份`,
+      imported.count === 13 && imported.firstName === '华文达' && imported.firstPattern === '4F',
+      JSON.stringify(imported)
+    )
+
+    await client.evaluate(clickByText('.rail-item', '排班'))
+    await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 13', '矩阵 13 行')
+    check(`${name}: 导入后矩阵 13 行`, true)
+
+    // --- 14. 人员排序：设置里的行顺序必须映射成矩阵的行顺序 ---
+    await client.evaluate(clickByText('.rail-item', '设置'))
+    await waitFor(client, 'document.querySelectorAll(".member-row").length === 13', '回到成员表')
+
+    // 把第 1 行（华文达）下移一位
+    const moved = await client.evaluate(`(() => {
+      const row = document.querySelectorAll('.member-row')[0]
+      const buttons = row.querySelectorAll('.btn-icon')
+      if (buttons.length < 2) return false
+      buttons[1].click()
+      return true
+    })()`)
+    check(`${name}: 成员行可以下移`, moved)
+    await sleep(150)
+
+    const orderAfterMove = await client.evaluate(
+      `Array.from(document.querySelectorAll('.member-row input')).slice(0, 3).map(node => node.value)`
+    )
+    check(
+      `${name}: 下移一位后表内顺序变化`,
+      JSON.stringify(orderAfterMove) === JSON.stringify(['张舒棋', '华文达', '陈泳智']),
+      JSON.stringify(orderAfterMove)
+    )
+
+    check(`${name}: 保存排序`, await client.evaluate(clickByText('.settings-actions button', '保存成员设置')))
+    await sleep(300)
+
+    await client.evaluate(clickByText('.rail-item', '排班'))
+    await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 13', '矩阵 13 行')
+    const matrixOrder = await client.evaluate(
+      `Array.from(document.querySelectorAll('.matrix-name')).slice(0, 3).map(node => node.textContent.trim())`
+    )
+    check(
+      `${name}: 矩阵行顺序跟随设置`,
+      JSON.stringify(matrixOrder) === JSON.stringify(['张舒棋', '华文达', '陈泳智']),
+      JSON.stringify(matrixOrder)
+    )
   } catch (error) {
     check(`${name}: 场景执行`, false, error.message)
   } finally {

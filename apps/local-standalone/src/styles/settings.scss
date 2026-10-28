@@ -73,6 +73,74 @@
   align-items: center;
 }
 
+/* 可排序时多一列拖动把手，末列改成能放下「↑ ↓ 删除」 */
+.member-editor.is-sortable .member-editor-head,
+.member-editor.is-sortable .member-row {
+  grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1.1fr) auto;
+}
+
+.member-editor.is-sortable .member-editor-head span:last-child {
+  text-align: right;
+}
+
+.member-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 1;
+  cursor: grab;
+  user-select: none;
+}
+
+.member-handle:hover {
+  color: var(--muted);
+}
+
+.member-handle:active {
+  cursor: grabbing;
+}
+
+.member-row-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 2px;
+}
+
+/* 方形图标按钮：上移 / 下移 */
+.btn-icon {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.btn-icon:disabled {
+  background: transparent;
+  color: #c9cdd1;
+}
+
+.member-row.is-dragging {
+  opacity: 0.45;
+}
+
+/* 拖到哪一行就在那一行上沿画一条线：不占布局，不会让整表跳动 */
+.member-row.is-drop-target {
+  box-shadow: 0 -2px 0 var(--accent);
+}
+
 .member-editor-head {
   padding: 0 1px;
   color: var(--muted);
@@ -212,6 +280,13 @@
   gap: 6px;
 }
 
+/* 一行卡片 + 它自己就地展开的详情：两块是独立卡片，间距与列表间距一致 */
+.pattern-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .pattern-row {
   display: grid;
   grid-template-columns: minmax(0, 140px) minmax(0, 1fr) 58px auto;
@@ -221,6 +296,11 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface);
+}
+
+/* 展开时只把这张卡片描深一点，不改成和详情连体 */
+.pattern-row.is-open {
+  border-color: var(--control);
 }
 
 .pattern-row-name {
@@ -250,6 +330,13 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface);
+}
+
+/* 自建班序的就地详情：独立卡片，紧跟在自己那张下面。
+ * 边框比列表卡片深一档（--control），否则浅灰在廉价办公屏上几乎看不出边界。 */
+.pattern-preview-inline {
+  border-color: var(--control);
+  background: #fbfcfd;
 }
 
 .pattern-preview-head {
@@ -362,12 +449,6 @@ button.shift-cell:hover {
   display: flex;
   flex-direction: column;
   gap: 5px;
-}
-
-.field-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 .field-label {

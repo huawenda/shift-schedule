@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyDayRecord,
   applyShiftEdit,
   countOverrides,
+  getDayRecord,
   getEffectiveShift,
   getOverrideMap,
   normalizeRoster,
@@ -11,6 +13,7 @@ import {
   patternUsage,
   removeMember,
   removePattern,
+  restoreDay,
   upsertPattern,
   validateMembers,
   type Roster
@@ -191,6 +194,108 @@ describe('applyShiftEdit', () => {
     // 锚点日取自定义序列第一位 = 白班，改成白班应视为「没改」
     expect(applyShiftEdit(withMember, 'm4', '2026-06-07', '白班').overrides).toHaveLength(0)
     expect(applyShiftEdit(withMember, 'm4', '2026-06-07', '夜班').overrides).toHaveLength(1)
+  })
+
+  it('改成休息/事假时，已有的加班与法定被一并清掉', () => {
+    const withOt = applyDayRecord(roster, 'm1', date, {
+      shift: templateShift,
+      overtimeHours: 3,
+      isLegal: true
+    })
+    const rest = applyShiftEdit(withOt, 'm1', date, '休息')
+    expect(rest.overrides).toEqual([{ memberId: 'm1', date, shift: '休息', overtimeHours: undefined, isLegal: undefined }])
+  })
+
+  it('改成另一个能加班的班次时，加班与法定保留', () => {
+    const withOt = applyDayRecord(roster, 'm1', date, { shift: '白特', overtimeHours: 2, isLegal: true })
+    const next = applyShiftEdit(withOt, 'm1', date, '夜特')
+    expect(next.overrides[0]).toMatchObject({ shift: '夜特', overtimeHours: 2, isLegal: true })
+  })
+})
+
+describe('applyDayRecord', () => {
+  const date = '2026-10-20'
+  const templateShift = getPatternShift('4F', date)!
+
+  it('班次与模板相同但记了加班 —— 记录必须保留（这是最容易写错的一条）', () => {
+    const next = applyDayRecord(roster, 'm1', date, { shift: templateShift, overtimeHours: 2 })
+    expect(next.overrides).toHaveLength(1)
+    expect(next.overrides[0]).toMatchObject({ shift: templateShift, overtimeHours: 2 })
+  })
+
+  it('只标法定、没有加班，也要保留记录', () => {
+    const next = applyDayRecord(roster, 'm1', date, { shift: templateShift, isLegal: true })
+    expect(next.overrides[0]).toMatchObject({ isLegal: true })
+    expect(next.overrides[0].overtimeHours).toBeUndefined()
+  })
+
+  it('班次回模板且加班/法定都清空 —— 才删除记录', () => {
+    let next = applyDayRecord(roster, 'm1', date, { shift: templateShift, overtimeHours: 2, isLegal: true })
+    next = applyDayRecord(next, 'm1', date, { shift: templateShift, overtimeHours: 0, isLegal: false })
+    expect(next.overrides).toEqual([])
+  })
+
+  it('休息/事假上的加班与法定被忽略', () => {
+    const next = applyDayRecord(roster, 'm1', date, { shift: '休息', overtimeHours: 3, isLegal: true })
+    expect(next.overrides[0]).toMatchObject({ shift: '休息' })
+    expect(next.overrides[0].overtimeHours).toBeUndefined()
+    expect(next.overrides[0].isLegal).toBeUndefined()
+  })
+
+  it('加班小时按 0.5 向上向下收敛', () => {
+    const next = applyDayRecord(roster, 'm1', date, { shift: '白特', overtimeHours: 2.7 })
+    expect(next.overrides[0].overtimeHours).toBe(2.5)
+  })
+
+  it('不存在的成员原样返回', () => {
+    expect(applyDayRecord(roster, 'ghost', date, { shift: '白班' })).toBe(roster)
+  })
+})
+
+describe('restoreDay', () => {
+  const date = '2026-10-20'
+
+  it('恢复默认把班次、加班、法定一起清掉', () => {
+    const withRecord = applyDayRecord(roster, 'm1', date, { shift: '白特', overtimeHours: 3, isLegal: true })
+    expect(withRecord.overrides).toHaveLength(1)
+    expect(restoreDay(withRecord, 'm1', date).overrides).toEqual([])
+  })
+
+  it('没有记录时原样返回（不产生无谓的新对象）', () => {
+    expect(restoreDay(roster, 'm1', date)).toBe(roster)
+  })
+})
+
+describe('readDay / 读取侧归一化', () => {
+  const date = '2026-10-20'
+
+  it('getDayRecord 取出完整记录', () => {
+    const next = applyDayRecord(roster, 'm1', date, { shift: '白特', overtimeHours: 3, isLegal: true })
+    expect(getDayRecord(next, 'm1', date)).toMatchObject({ shift: '白特', overtimeHours: 3, isLegal: true })
+    expect(getDayRecord(next, 'm2', date)).toBeUndefined()
+  })
+
+  it('normalizeRoster 保留合法加班字段', () => {
+    const normalized = normalizeRoster({
+      members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
+      overrides: [{ memberId: 'm1', date, shift: '白班', overtimeHours: 3, isLegal: true }]
+    })
+    expect(normalized.overrides[0]).toMatchObject({ overtimeHours: 3, isLegal: true })
+  })
+
+  it('normalizeRoster 把不合法的加班字段吃掉（休息带加班、超上限、非数字）', () => {
+    const normalized = normalizeRoster({
+      members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
+      overrides: [
+        { memberId: 'm1', date: '2026-10-20', shift: '休息', overtimeHours: 3, isLegal: true },
+        { memberId: 'm1', date: '2026-10-21', shift: '白班', overtimeHours: 99 },
+        { memberId: 'm1', date: '2026-10-22', shift: '白班', overtimeHours: '2' }
+      ]
+    })
+    expect(normalized.overrides[0].overtimeHours).toBeUndefined()
+    expect(normalized.overrides[0].isLegal).toBeUndefined()
+    expect(normalized.overrides[1].overtimeHours).toBe(24)
+    expect(normalized.overrides[2].overtimeHours).toBeUndefined()
   })
 })
 

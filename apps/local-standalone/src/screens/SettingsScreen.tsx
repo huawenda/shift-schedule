@@ -126,11 +126,12 @@ export function SettingsScreen({
         <div className="settings-label">
           <h2>成员</h2>
           <p>姓名自定，人数不限；同一班序可以挂多人，这些人每天的班次完全一致。</p>
+          <p>表里的顺序就是全员矩阵的行顺序：拖行首把手，或点 ↑ ↓ 调整。</p>
           <p className="settings-meta">当前 {roster.members.length} 位成员</p>
         </div>
 
         <div className="settings-panel">
-          <MemberRowsEditor patterns={patternOptions} rows={rows} onChange={update} />
+          <MemberRowsEditor patterns={patternOptions} rows={rows} sortable onChange={update} />
 
           {errors.length > 0 ? (
             <ul className="error-list" role="alert">

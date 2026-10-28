@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { Member } from '../data/roster'
+import type { DayOverride, Member } from '../data/roster'
+import { canRecordOvertime, formatOvertimeHours } from '../data/overtime'
 import { SHIFT_META, SHIFT_TYPES, shiftToneClass, type ShiftType } from '../data/shifts'
 import { formatMonthDay, weekdayLabel } from '../data/dateUtils'
 
@@ -8,17 +9,41 @@ interface ShiftEditorProps {
   date: string
   currentShift: ShiftType | null
   templateShift: ShiftType | null
+  /** 这一天已有的整天记录 —— 只用来提示「改班会不会连带清掉加班」 */
+  record?: DayOverride
   onApply: (shift: ShiftType | null) => void
   onClose: () => void
 }
 
 /**
- * 改班弹层：六个班次 + 恢复默认。
- * 只有真的和模板不同才会落记录，改回模板值等于删除（由数据层保证）。
+ * 全员矩阵用的改班弹层：只能改班次，不能记加班（加班只在个人日历里录）。
+ * 只有真的和模板不同才会落记录；改回模板值等于删除（由数据层保证）。
+ *
+ * 例外：这天原本有加班/法定时，改成休息或事假会连带清掉它们，这里提前提示。
  */
-export function ShiftEditor({ member, date, currentShift, templateShift, onApply, onClose }: ShiftEditorProps) {
+export function ShiftEditor({
+  member,
+  date,
+  currentShift,
+  templateShift,
+  record,
+  onApply,
+  onClose
+}: ShiftEditorProps) {
   const [selected, setSelected] = useState<ShiftType | null>(currentShift)
-  const edited = Boolean(currentShift && templateShift && currentShift !== templateShift)
+  const edited = Boolean(record)
+
+  const extraText = [
+    record?.overtimeHours ? `+${formatOvertimeHours(record.overtimeHours)} 加班` : '',
+    record?.isLegal ? '法定' : ''
+  ].filter(Boolean).join('、')
+
+  const willClearExtra = Boolean(
+    extraText &&
+      selected &&
+      !canRecordOvertime(selected) &&
+      (record?.overtimeHours || record?.isLegal)
+  )
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -60,6 +85,13 @@ export function ShiftEditor({ member, date, currentShift, templateShift, onApply
             </button>
           ))}
         </div>
+
+        {willClearExtra ? (
+          <p className="dialog-warn" role="status">
+            这天有 {extraText} 记录，改为「{selected ? SHIFT_META[selected].label : ''}」会一并清除。
+            加班请在「个人日历」里录入。
+          </p>
+        ) : null}
 
         <footer className="dialog-foot">
           <button

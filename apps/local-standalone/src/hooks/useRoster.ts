@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  applyDayRecord,
   applyShiftEdit,
   isRosterEmpty,
   loadRoster,
   removePattern,
+  restoreDay,
   saveRoster,
   upsertPattern,
+  type DayRecordInput,
   type Member,
   type Roster
 } from '../data/roster'
@@ -25,6 +28,10 @@ export interface RosterApi {
   persisted: boolean
   isEmpty: boolean
   editShift: (memberId: string, date: string, shift: ShiftType | null) => void
+  /** 写整天内容（班次 + 加班 + 法定），日历弹层用 */
+  saveDay: (memberId: string, date: string, input: DayRecordInput) => void
+  /** 恢复默认：删掉这一天的整条记录 */
+  resetDay: (memberId: string, date: string) => void
   replaceRoster: (roster: Roster) => void
   replaceMembers: (members: Member[]) => void
   savePattern: (pattern: CustomPattern) => void
@@ -46,6 +53,14 @@ export function useRoster(): RosterApi {
 
   const editShift = useCallback((memberId: string, date: string, shift: ShiftType | null) => {
     setRoster(current => applyShiftEdit(current, memberId, date, shift))
+  }, [])
+
+  const saveDay = useCallback((memberId: string, date: string, input: DayRecordInput) => {
+    setRoster(current => applyDayRecord(current, memberId, date, input))
+  }, [])
+
+  const resetDay = useCallback((memberId: string, date: string) => {
+    setRoster(current => restoreDay(current, memberId, date))
   }, [])
 
   const replaceRoster = useCallback((next: Roster) => {
@@ -80,6 +95,8 @@ export function useRoster(): RosterApi {
     persisted,
     isEmpty: isRosterEmpty(roster),
     editShift,
+    saveDay,
+    resetDay,
     replaceRoster,
     replaceMembers,
     savePattern,

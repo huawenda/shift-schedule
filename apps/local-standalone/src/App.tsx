@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Shell, type Route } from './components/Shell'
+import { DayEditor } from './components/DayEditor'
 import { ShiftEditor } from './components/ShiftEditor'
-import { ScheduleScreen, type ScheduleView } from './screens/ScheduleScreen'
+import { ScheduleScreen, type EditSource, type ScheduleView } from './screens/ScheduleScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { Wizard } from './screens/Wizard'
 import { downloadBackup, parseBackup } from './data/backup'
 import { currentMonthKey, formatMonthTitle, getPeriod, shiftMonth, type MonthKey } from './data/period'
-import { emptyRoster, getOverrideMap, getTemplateShift, overrideKey, type Member } from './data/roster'
+import {
+  emptyRoster,
+  getDayRecord,
+  getTemplateShift,
+  type DayRecordInput,
+  type Member
+} from './data/roster'
+import { formatOvertimeHours } from './data/overtime'
 import { SHIFT_META, type ShiftType } from './data/shifts'
 import { useRoster } from './hooks/useRoster'
 
@@ -21,12 +29,11 @@ export function App() {
   const [view, setView] = useState<ScheduleView>('matrix')
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
   const [wizardSkipped, setWizardSkipped] = useState(false)
-  const [editor, setEditor] = useState<{ memberId: string; date: string } | null>(null)
+  const [editor, setEditor] = useState<{ memberId: string; date: string; source: EditSource } | null>(null)
   const [statusText, setStatusText] = useState('数据已就绪')
   const [notice, setNotice] = useState('')
 
   const period = useMemo(() => getPeriod(monthKey), [monthKey])
-  const overrideMap = useMemo(() => getOverrideMap(api.roster), [api.roster])
 
   useEffect(() => {
     function onHashChange() {
@@ -64,30 +71,17 @@ export function App() {
   async function restore(file: File) {
     setStatusText('正在导入…')
     try {
-      const result = parseBackup(await file.text(), api.roster)
+      const result = parseBackup(await file.text())
       api.replaceRoster(result.roster)
       setSelectedMemberId(result.roster.members[0]?.id ?? null)
       setStatusText('导入完成')
 
-      if (result.legacy) {
-        const parts = [
-          `旧版备份：对照上 ${result.legacy.matchedMembers} 人、${result.overrideCount} 条改班记录`,
-          result.legacy.unmatchedNames.length > 0
-            ? `未匹配的姓名：${result.legacy.unmatchedNames.join('、')}`
-            : '所有姓名都匹配上了',
-          result.legacy.skippedRecords > 0
-            ? `另有 ${result.legacy.skippedRecords} 条只有加班/法定的记录，本版不承载，已跳过`
-            : ''
-        ].filter(Boolean)
-        setNotice(parts.join('；'))
-      } else {
-        const base = `已导入 ${result.memberCount} 位成员、${result.overrideCount} 条改班记录`
-        setNotice(
-          result.droppedMembers.length > 0
-            ? `${base}；另有 ${result.droppedMembers.length} 位成员的班序在备份里不存在，未能恢复：${result.droppedMembers.join('、')}`
-            : base
-        )
-      }
+      const base = `已导入 ${result.memberCount} 位成员、${result.overrideCount} 条记录`
+      setNotice(
+        result.droppedMembers.length > 0
+          ? `${base}；另有 ${result.droppedMembers.length} 位成员的班序在备份里不存在，未能恢复：${result.droppedMembers.join('、')}`
+          : base
+      )
     } catch (error) {
       setStatusText(error instanceof Error ? error.message : '导入失败')
     }
@@ -110,10 +104,11 @@ export function App() {
     navigate('schedule')
   }
 
-  function openEditor(member: Member, date: string) {
-    setEditor({ memberId: member.id, date })
+  function openEditor(member: Member, date: string, source: EditSource) {
+    setEditor({ memberId: member.id, date, source })
   }
 
+  /** 矩阵弹层：只改班次 */
   function applyShift(shift: ShiftType | null) {
     if (!editor) return
     api.editShift(editor.memberId, editor.date, shift)
@@ -121,7 +116,33 @@ export function App() {
     setEditor(null)
   }
 
+  /** 日历弹层：班次 + 加班 + 法定一起写 */
+  function applyDay(input: DayRecordInput) {
+    if (!editor) return
+    api.saveDay(editor.memberId, editor.date, input)
+    const extra = [
+      input.overtimeHours ? `加班 ${formatOvertimeHours(input.overtimeHours)}` : '',
+      input.isLegal ? '法定' : ''
+    ].filter(Boolean)
+    setStatusText(
+      extra.length > 0
+        ? `已保存：${SHIFT_META[input.shift].label} · ${extra.join(' · ')}`
+        : `已保存：${SHIFT_META[input.shift].label}`
+    )
+    setEditor(null)
+  }
+
+  function restoreDay() {
+    if (!editor) return
+    api.resetDay(editor.memberId, editor.date)
+    setStatusText('已恢复默认（班次、加班、法定一并清空）')
+    setEditor(null)
+  }
+
   const editorMember = editor ? api.roster.members.find(member => member.id === editor.memberId) ?? null : null
+  const editorRecord = editor ? getDayRecord(api.roster, editor.memberId, editor.date) : undefined
+  const editorTemplate = editorMember && editor ? getTemplateShift(api.roster, editorMember, editor.date) : null
+  const editorShift = editorRecord?.shift ?? editorTemplate
 
   if (api.isEmpty && !wizardSkipped) {
     return <Wizard onFinish={finishWizard} onSkip={() => setWizardSkipped(true)} />
@@ -171,17 +192,28 @@ export function App() {
       </Shell>
 
       {editor && editorMember ? (
-        <ShiftEditor
-          currentShift={
-            overrideMap.get(overrideKey(editorMember.id, editor.date)) ??
-            getTemplateShift(api.roster, editorMember, editor.date)
-          }
-          date={editor.date}
-          member={editorMember}
-          templateShift={getTemplateShift(api.roster, editorMember, editor.date)}
-          onApply={applyShift}
-          onClose={() => setEditor(null)}
-        />
+        editor.source === 'calendar' ? (
+          <DayEditor
+            currentShift={editorShift}
+            date={editor.date}
+            member={editorMember}
+            record={editorRecord}
+            templateShift={editorTemplate}
+            onApply={applyDay}
+            onClose={() => setEditor(null)}
+            onRestore={restoreDay}
+          />
+        ) : (
+          <ShiftEditor
+            currentShift={editorShift}
+            date={editor.date}
+            member={editorMember}
+            record={editorRecord}
+            templateShift={editorTemplate}
+            onApply={applyShift}
+            onClose={() => setEditor(null)}
+          />
+        )
       ) : null}
     </>
   )

@@ -10,12 +10,13 @@ const memoryFallback = new Map<string, string>()
 const probeKey = 'shift-schedule:local:probe'
 
 export const STORAGE_KEYS = {
-  /** v2：整套花名册 + 改班记录 */
-  roster: 'shift-schedule:local:roster:v2',
-  /** v1（旧版）改班记录，仅用于兼容导入 */
-  legacyDayRecords: 'shift-schedule:local:day-records:v1',
-  /** v1（旧版）设置，仅用于兼容导入 */
-  legacySettings: 'shift-schedule:local:settings:v1'
+  /**
+   * 唯一的业务数据：整套花名册（成员 + 自建班序 + 改班/加班记录）。
+   *
+   * 键名里的 `v2` 是历史遗留（当时从「按姓名索引的日记录」换成「按 memberId 的整套花名册」），
+   * 与备份文件的 `version` 不是同一个编号体系，别按它推断备份格式版本。
+   */
+  roster: 'shift-schedule:local:roster:v2'
 } as const
 
 function getBrowserStorage(): Storage | null {
@@ -73,8 +74,4 @@ export function isPersistenceAvailable(): boolean {
   } catch {
     return false
   }
-}
-
-export function hasLegacyData(): boolean {
-  return readRaw(STORAGE_KEYS.legacyDayRecords) !== null
 }

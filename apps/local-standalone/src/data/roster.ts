@@ -1,4 +1,5 @@
 import { isShiftType, type ShiftType } from './shifts'
+import { canRecordOvertime, sanitizeOvertime } from './overtime'
 import {
   BUILTIN_PATTERN_IDS,
   isBuiltinPatternId,
@@ -31,6 +32,17 @@ export interface DayOverride {
   /** 'YYYY-MM-DD' */
   date: string
   shift: ShiftType
+  /** 当天加班小时数（0.5 步长）；undefined = 没有加班 */
+  overtimeHours?: number
+  /** 是否法定节假日上班（影响加班费倍率，统计页用） */
+  isLegal?: boolean
+}
+
+/** 弹层一次要写的整天内容 */
+export interface DayRecordInput {
+  shift: ShiftType
+  overtimeHours?: number
+  isLegal?: boolean
 }
 
 export interface Roster {
@@ -134,7 +146,14 @@ function normalizeOverride(value: unknown, memberIds: Set<string>): DayOverride 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
   if (!isShiftType(shift)) return null
 
-  return { memberId, date, shift }
+  // 加班与法定是可选字段：旧数据里没有，手改 JSON 也可能填错，一律收敛
+  const extra = sanitizeOvertime(
+    shift,
+    typeof record.overtimeHours === 'number' ? record.overtimeHours : undefined,
+    record.isLegal === true ? true : undefined
+  )
+
+  return { memberId, date, shift, ...extra }
 }
 
 export interface NormalizeResult {
@@ -256,6 +275,20 @@ export function getOverrideMap(roster: Roster): Map<string, ShiftType> {
   return map
 }
 
+/** 整天记录（班次 + 加班 + 法定）—— 日历与弹层用这份，矩阵只需要班次那一份 */
+export function getRecordMap(roster: Roster): Map<string, DayOverride> {
+  const map = new Map<string, DayOverride>()
+  roster.overrides.forEach(override => {
+    map.set(overrideKey(override.memberId, override.date), override)
+  })
+  return map
+}
+
+export function getDayRecord(roster: Roster, memberId: string, date: string): DayOverride | undefined {
+  const key = overrideKey(memberId, date)
+  return roster.overrides.find(override => overrideKey(override.memberId, override.date) === key)
+}
+
 /** 某人某天的实际班次：优先改班记录，否则回落到模板 */
 export function getEffectiveShift(
   roster: Roster,
@@ -277,8 +310,55 @@ export function isEdited(memberId: string, date: string, overrideMap: Map<string
 }
 
 /**
- * 改某人某天的班。
- * `shift === null` 或改回模板值时，删除记录（不留空值）。
+ * 写入某人某天的整天内容（班次 + 加班 + 法定）。
+ *
+ * **删除条件已从「与模板相同」改成三元判断**：
+ * `班次 == 模板 && 无加班 && 无法定` 才删除记录。
+ * 不改的话，「模板本来就是白班、今天加了 2h」会被当成"与模板相同"整条删掉，加班凭空消失。
+ */
+export function applyDayRecord(
+  roster: Roster,
+  memberId: string,
+  date: string,
+  input: DayRecordInput
+): Roster {
+  const member = findMember(roster, memberId)
+  if (!member) return roster
+
+  const key = overrideKey(memberId, date)
+  const rest = roster.overrides.filter(override => overrideKey(override.memberId, override.date) !== key)
+  const templateShift = getTemplateShift(roster, member, date)
+  const extra = sanitizeOvertime(input.shift, input.overtimeHours, input.isLegal)
+
+  const sameAsTemplate = input.shift === templateShift
+  const hasExtra = (extra.overtimeHours ?? 0) > 0 || extra.isLegal === true
+
+  if (sameAsTemplate && !hasExtra) {
+    return { ...roster, overrides: rest, updatedAt: Date.now() }
+  }
+
+  return {
+    ...roster,
+    overrides: [...rest, { memberId, date, shift: input.shift, ...extra }],
+    updatedAt: Date.now()
+  }
+}
+
+/**
+ * 「恢复默认」：把这一天的记录整条删掉 —— 班次回模板，**加班与法定一并清空**。
+ */
+export function restoreDay(roster: Roster, memberId: string, date: string): Roster {
+  const key = overrideKey(memberId, date)
+  const kept = roster.overrides.filter(override => overrideKey(override.memberId, override.date) !== key)
+  if (kept.length === roster.overrides.length) return roster
+  return { ...roster, overrides: kept, updatedAt: Date.now() }
+}
+
+/**
+ * 只改班次（矩阵弹层用）。
+ *
+ * 新班次不支持加班时（改成休息/事假），已有的加班与法定会被**一并清掉**，
+ * 否则会留下「休息 + 3h 加班」这种脏数据。矩阵弹层里会提前提示这一点。
  */
 export function applyShiftEdit(
   roster: Roster,
@@ -289,19 +369,17 @@ export function applyShiftEdit(
   const member = findMember(roster, memberId)
   if (!member) return roster
 
-  const key = overrideKey(memberId, date)
-  const rest = roster.overrides.filter(override => overrideKey(override.memberId, override.date) !== key)
-  const templateShift = getTemplateShift(roster, member, date)
+  if (!shift) return restoreDay(roster, memberId, date)
 
-  if (!shift || shift === templateShift) {
-    return { ...roster, overrides: rest, updatedAt: Date.now() }
-  }
+  const existing = getDayRecord(roster, memberId, date)
+  const keepOvertime = canRecordOvertime(shift) ? existing?.overtimeHours : undefined
+  const keepLegal = canRecordOvertime(shift) ? existing?.isLegal : undefined
 
-  return {
-    ...roster,
-    overrides: [...rest, { memberId, date, shift }],
-    updatedAt: Date.now()
-  }
+  return applyDayRecord(roster, memberId, date, {
+    shift,
+    overtimeHours: keepOvertime,
+    isLegal: keepLegal
+  })
 }
 
 /* ------------------------------------------------------------ 成员维护 */

@@ -2,9 +2,12 @@ import { MonthCalendar } from '../components/MonthCalendar'
 import { SummaryBar } from '../components/SummaryBar'
 import { TeamMatrix } from '../components/TeamMatrix'
 import { formatPeriodRange, type Period } from '../data/period'
-import { getOverrideMap, type Member, type Roster } from '../data/roster'
+import { getRecordMap, type Member, type Roster } from '../data/roster'
 
 export type ScheduleView = 'matrix' | 'calendar'
+
+/** 从哪儿点开的格子：矩阵只能改班次，日历能记加班 */
+export type EditSource = 'matrix' | 'calendar'
 
 interface ScheduleScreenProps {
   roster: Roster
@@ -13,7 +16,7 @@ interface ScheduleScreenProps {
   selectedMemberId: string | null
   onViewChange: (view: ScheduleView) => void
   onSelectMember: (memberId: string) => void
-  onEdit: (member: Member, date: string) => void
+  onEdit: (member: Member, date: string, source: EditSource) => void
 }
 
 export function ScheduleScreen({
@@ -25,7 +28,7 @@ export function ScheduleScreen({
   onSelectMember,
   onEdit
 }: ScheduleScreenProps) {
-  const overrideMap = getOverrideMap(roster)
+  const recordMap = getRecordMap(roster)
   const selectedMember = roster.members.find(member => member.id === selectedMemberId) ?? roster.members[0] ?? null
 
   return (
@@ -80,15 +83,15 @@ export function ScheduleScreen({
           period={period}
           roster={roster}
           selectedMemberId={selectedMember?.id ?? null}
-          onEdit={onEdit}
+          onEdit={(member, date) => onEdit(member, date, 'matrix')}
           onSelectMember={onSelectMember}
         />
       ) : (
         <MonthCalendar
           member={selectedMember}
-          onEdit={onEdit}
-          overrideMap={overrideMap}
+          onEdit={(member, date) => onEdit(member, date, 'calendar')}
           period={period}
+          recordMap={recordMap}
           roster={roster}
         />
       )}

@@ -309,6 +309,7 @@
 }
 
 .cal-cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -355,12 +356,65 @@
 }
 
 .cal-shift {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
   margin-top: auto;
   padding: 3px 0;
   border-radius: 3px;
   font-size: 11px;
   font-weight: 500;
   text-align: center;
+  white-space: nowrap;
+}
+
+/* 加班小时：同色系、小一号，附在班次后面而不是另起一行 */
+.cal-ot {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.82;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 法定：右上角角标，不占格子里原本三行的位置 */
+.cal-legal {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  background: var(--warning-bg);
+  box-shadow: inset 0 0 0 1px var(--warning-border);
+  color: var(--warning-ink);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.calendar-legend .legend-shift {
+  margin-top: 0;
+  padding: 2px 8px;
+}
+
+.calendar-legend .legend-text:not(:last-child) {
+  margin-right: 14px;
+}
+
+.calendar-legend .legend-legal {
+  position: static;
 }
 
 .cal-shift.is-blank {
@@ -387,6 +441,9 @@
 .dialog {
   width: 420px;
   max-width: 100%;
+  /* 兜底：窗口矮的时候弹层内部滚动，而不是把底部按钮顶出屏幕 */
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
   border-radius: 12px;
   background: var(--surface);
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.16);
@@ -447,6 +504,134 @@
 .dialog-actions {
   display: flex;
   gap: 8px;
+}
+
+/* ── 日历弹层的「加班 / 法定」两段 ─────────────────────── */
+
+.dialog-day {
+  width: 480px;
+}
+
+.dialog-day .dialog-options {
+  padding-bottom: 14px;
+}
+
+.dialog-section {
+  margin: 0 18px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--ground);
+}
+
+.dialog-section.is-disabled {
+  opacity: 0.55;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.section-note {
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.ot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ot-presets {
+  display: flex;
+  gap: 6px;
+}
+
+.chip-mini {
+  min-width: 48px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--control);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip-mini:hover:not(:disabled) {
+  background: var(--raised);
+}
+
+.chip-mini.is-on {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.chip-mini:disabled {
+  border-color: var(--border);
+  color: var(--faint);
+  cursor: not-allowed;
+}
+
+.ot-empty {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.ot-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.ot-input .input {
+  width: 84px;
+}
+
+.ot-unit {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.segmented-sm .segmented-item {
+  height: 26px;
+  padding: 0 14px;
+}
+
+.segmented-sm .segmented-item:disabled {
+  color: var(--faint);
+  cursor: not-allowed;
+}
+
+.segmented-sm .segmented-item.is-on:disabled {
+  background: var(--control);
+  color: var(--surface);
+}
+
+/* 矩阵弹层里的「改班会连带清掉加班」提示 */
+.dialog-warn {
+  margin: 0 18px 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--warning-bg);
+  box-shadow: inset 0 0 0 1px var(--warning-border);
+  color: var(--warning-ink);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 /* ── 空状态 ───────────────────────────────────────────── */

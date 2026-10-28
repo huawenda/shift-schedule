@@ -5,6 +5,8 @@
 - 范围：`apps/local-standalone`（技术栈不变）
 - 状态：需求、视觉方向、5 项待确认事项均已定；**只做排班页**，统计/薪资/加班一律不在第一版
 - v1.0 变更：视觉基调定为**强制浅色**（§5.0）；确定夜班配色、弹层班次、班序别名、备份兼容、删成员五件事（§9）
+- **v1.1 变更（2026-10-28）**：**备份与存储不再兼容旧格式**（§15）。本文中所有「兼容 v1/v2 备份」的条目 ——
+  §7 验收清单、§9 第 4 项、§12 第 5 行、§13.3 第 2 条、§14.4 —— **均已废止**，以 §15 为准。
 
 ---
 
@@ -418,8 +420,14 @@ export function resolvePatterns(customs: CustomPattern[]): PatternLookup
 
 - 设置页新增「班序」区块（在「成员」之前）：内置 13 条平铺成 4 列色条卡片，点开 24 格只读预览；
   下面是自建列表（名称 + 24 格色条 + 「N 人 / 未使用」+ 查看 / 编辑 / 删除）+「新建班序」。
+- **预览的就位位置不同**：内置 13 条共用色条卡片下方那块预览区（点哪条看哪条，带标题与只读说明）；
+  自建班序的详情**作为独立卡片就地展开在它自己那张下面**（卡片描深一点表示展开中、按钮变「收起」，
+  详情里只有 24 格、不再重复班序名）—— 早期版本把自建详情也塞到内置区域上方，
+  看起来像“点到别的分组去了”。
 - 24 格编辑器：两行各 12 格（一行 24 格在 1440 下每格仅 34px，两字放不下），
-  点格子选中 → 点下方班次填入 → 自动跳下一格；另可「照着某条现有班序改」。
+  点格子选中 → 点下方班次填入 → 自动跳下一格。**没有「照现有班序复制」入口**
+  （做过一版，2026-10-28 按用户要求删除：底稿只有 13+10 条，选中一条再改几格，
+  与直接点 24 次相比省不了多少，却让弹层多一行、多一个需要解释的概念）。
 - **格子选项只有白班 / 夜班 / 休息三种**（`PATTERN_SHIFT_OPTIONS`）：这三者是客观的排班节奏，
   一条班序必然由它们构成；白特、夜特、事假属于临时或人为决定，走改班记录单天设置，不进 24 格循环。
   数据层仍接受六种班次（旧数据与改班记录都需要），限制的只是**录入入口**。
@@ -433,3 +441,130 @@ export function resolvePatterns(customs: CustomPattern[]): PatternLookup
 | 测试 | 新增 `customPatterns.test.ts`（21 例）；`roster.test.ts` / `backup.test.ts` / `patterns.test.ts` 增补，共 **75 例** |
 | 界面 | 新增 `components/PatternList.tsx`、`components/PatternEditor.tsx`；改动 `SettingsScreen`、`Wizard`、`useRoster`、`App`、`settings.scss` |
 | 验收 | `typecheck` / `test`（75）/ `build` 全绿；`scripts/verify-dist.mjs` 补 12 项检查覆盖「建班序 → 挂人 → 导出 v3 → 删班序」 |
+
+---
+
+## 14. 追加需求：加班数录入（2026-10-28）
+
+> 本章追加于 v1.0 之后。目的：**为统计页准备数据**，本版不出现任何汇总。
+> 术语不变：**班次**＝6 种类型；**班序**＝24 天循环。
+
+### 14.1 已定的四条
+
+| # | 决定 |
+| --- | --- |
+| 1 | 加班只在**个人日历**的弹层里录；全员矩阵弹层保持只改班次 |
+| 2 | 参考 Web 端面板：班次 → 加班（预设 + 数字）→ 法定（否/是） |
+| 3 | 加班与法定**并进改班记录**，不另开一张表 |
+| 4 | 有加班的日子在日历格班次块内显示 `+3h`，法定日右上角挂「法」角标；矩阵不做提示 |
+
+### 14.2 数据模型
+
+```ts
+export interface DayOverride {
+  memberId: string
+  date: string
+  shift: ShiftType
+  overtimeHours?: number   // 0.5 步长，0/undefined = 没有
+  isLegal?: boolean
+}
+
+export interface DayRecordInput { shift: ShiftType; overtimeHours?: number; isLegal?: boolean }
+
+export function applyDayRecord(roster, memberId, date, input): Roster
+export function applyShiftEdit(roster, memberId, date, shift | null): Roster  // 矩阵用，内部委托上面那个
+export function restoreDay(roster, memberId, date): Roster                    // 恢复默认
+export function getRecordMap(roster): Map<string, DayOverride>
+```
+
+规则集中在新文件 `data/overtime.ts`（不 import core，按同一口径重写）：
+
+- `canRecordOvertime` / `canMarkLegal`：只有 白班/夜班/白特/夜特 为真
+- `getOvertimePresets`：白/夜普通 → `[2,3,3.5]`；白特/夜特或标了法定 → `[10,11,11.5]`
+- `normalizeOvertimeHours`：非法/≤0 → 0，向下取到 0.5，封顶 24（与 core 一致：2.7 → 2.5）
+- `sanitizeOvertime`：班次不支持加班时一律清空 —— 不留「休息 + 3h」这种脏数据
+
+### 14.3 最容易写错的一条（改动前必读）
+
+原删除条件是「班次与模板相同 → 删记录」。加了加班之后这条会**静默吃掉加班**：
+模板本来就是白班、今天加了 2h，此时「与模板相同」成立，整条记录被删，2 小时消失。
+
+所以删除条件必须是三元判断：
+
+```
+班次 == 模板 && 无加班 && 无法定  →  删
+否则                             →  留
+```
+
+而「恢复默认」的定义随之变成：**删掉整条记录，班次回模板，加班与法定一起清空**。
+
+配套的联动：矩阵里把某天改成休息/事假时，已有的加班与法定**一并清掉**
+（否则留下「休息 + 3h」），矩阵弹层会提前显示黄提示说明这一点。
+
+### 14.4 备份
+
+`overtimeHours` / `isLegal` 是**可选字段**，所以备份格式**不升版本**（仍 v3）：
+旧程序读新备份只会忽略这两个字段，不会报错。
+
+v1 旧格式的加班字段名是 **`isLegalOvertime`**（不是 `isLegal`）。既然本版开始承载加班，
+v1 导入现在会把它一起带过来；缺少 `shiftOverride` 的记录用**模板班次兜底**，
+所以旧版「只记了加班」的日子也能恢复。模板班次当天是休息/事假而旧记录却有加班时，
+按脏数据丢弃并计入 `skippedRecords`。
+
+### 14.5 界面
+
+- **日历弹层**（新增 `components/DayEditor.tsx`）：班次 6 格 → 「加班」段（3 个预设 chip + 数字输入，
+  单位小时）→「法定节假日上班」段（否/是）。选到休息/事假时后两段整体置灰（`opacity .55`）并清零。
+- **矩阵弹层**（`ShiftEditor` 原样保留）：只有班次与「恢复默认 / 取消 / 保存」，**一行加班控件都没有**。
+- **日历格**：班次块内 `<班次> +3h`（同色系、小一号），法定角标固定右上角 15px；
+  日历下方补一行图例解释这两者。
+- **概览条不动**：加「本月加班合计」属于统计页的活，现在加会在下一版重做。
+
+### 14.6 实施记录
+
+| 环节 | 产物 |
+| --- | --- |
+| 数据层 | 新增 `data/overtime.ts`；`data/roster.ts` 扩 `DayOverride`、新增 `applyDayRecord` / `restoreDay` / `getRecordMap` / `getDayRecord`，`applyShiftEdit` 改为委托并做联动清理；`data/backup.ts` 支持 v1 的 `isLegalOvertime` 与模板兜底 |
+| 测试 | 新增 `overtime.test.ts`（15 例）；`roster.test.ts` 39 例、`backup.test.ts` 15 例，共 **108 例** |
+| 界面 | 新增 `components/DayEditor.tsx`；改动 `MonthCalendar`（`+h` 与「法」角标）、`ShiftEditor`（清理提示）、`ScheduleScreen`（区分弹层来源）、`App`、`schedule.scss` |
+| 验收 | `typecheck` / `test`（108）/ `build` 全绿；`verify-dist.mjs` 补 10 项检查（矩阵弹层无加班控件、日历记 3h、落盘、格子显示 `+3h`、恢复默认连加班清掉），共 **132/132 通过**（http 66 + `file://` 66） |
+
+---
+
+## 15. 开发阶段：放弃备份兼容（2026-10-28，v1.1）
+
+### 15.1 用户的决定
+
+> 「以后升级备份结构时不必考虑前代备份的兼容性，因为目前在开发阶段，没有用户也就没有有用的数据。」
+
+据此定了三条长期规矩：
+
+1. 升级备份 / 存储结构时**直接改版本号**，旧读取分支一并删掉；
+2. **不为旧版本写适配层**（不做字段迁移、不做姓名映射、不做「读到什么就猜什么」）；
+3. **不写「旧备份一定能读」这类测试** —— 改为断言「旧格式必须被明确拒绝」。
+
+### 15.2 本次清掉的东西
+
+| 位置 | 删除内容 |
+| --- | --- |
+| `data/backup.ts` | `importLegacyRecords()`（v1 姓名映射、加班兜底、去重）、顶层数组与 `dayRecords` 两条旧分支、`LegacyReport` 类型与 `ImportResult.legacy`；`parseBackup(text)` 去掉 `base` 入参 |
+| `data/storage.ts` | `legacyDayRecords` / `legacySettings` 两个键、`hasLegacyData()`（无人调用） |
+| `App.tsx` | 导入后的「旧版备份：对照上 N 人…未匹配姓名…」整段提示 |
+| `backup.test.ts` | `backup v1 兼容导入` 5 例 → 换成 2 例「旧格式必须被拒绝」 |
+| `verify-dist.mjs` | 两个旧 key 常量，清库改为 `localStorage.clear()` |
+
+### 15.3 保留与影响
+
+- **只认一种形状**：`{ app, version, roster: { members, overrides, patterns } }`。
+  见到顶层数组或 `dayRecords`，报「这是旧版本的备份文件，当前版本不再支持导入，请用当前版本重新导出」，
+  **不猜、不迁移**。
+- **存储键 `roster:v2` 没改名**：它和备份的 `version` 不是同一套编号，改键会无谓地清掉现有开发数据。
+  这条已在 `storage.ts` 与 README 里注明，避免以后有人按它推断备份版本。
+- **13 人样例文件不受影响**：`fixtures/班组13人.json` 是当前格式（`version: 3` + `roster`），
+  走的是正常分支，删掉兼容代码后照常导入 —— `verify:dist` 里那一步就是它的回归。
+- 代价：重写前那版导出的 `dayRecords` 备份、以及浏览器里现存的 `day-records:v1`，此后无法再导入。
+
+### 15.4 校验
+
+`typecheck` / `test`（**103 例**，backup 由 15 降到 10：删 7 增 2）/ `build` 全绿；
+`verify:dist` **132/132**（含导入 13 人样例那一步）。

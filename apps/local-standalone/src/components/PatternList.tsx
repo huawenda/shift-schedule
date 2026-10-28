@@ -57,7 +57,10 @@ function PatternGrid({ shifts }: { shifts: ShiftType[] }) {
  * 删除是不可逆操作，而且会连带删掉挂在上面的成员，所以要输入班序名字才放行。
  */
 export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, onNotice }: PatternListProps) {
-  const [previewId, setPreviewId] = useState<string | null>(null)
+  // 内置与自建分开记：内置共用一个预览区（在色条卡片下方），
+  // 自建的详情直接展开在**它自己那一行下面**，避免详情跑到别的分组里去。
+  const [builtinPreviewId, setBuiltinPreviewId] = useState<string | null>(null)
+  const [customPreviewId, setCustomPreviewId] = useState<string | null>(null)
   const [editing, setEditing] = useState<{ pattern?: CustomPattern } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<CustomPattern | null>(null)
   const [confirmText, setConfirmText] = useState('')
@@ -71,12 +74,13 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [pendingDelete])
 
-  // 预览的班序被删掉时自动收起
+  // 正在预览的班序被删掉时自动收起
   useEffect(() => {
-    if (previewId && !lookup.has(previewId)) setPreviewId(null)
-  }, [lookup, previewId])
+    if (builtinPreviewId && !lookup.has(builtinPreviewId)) setBuiltinPreviewId(null)
+    if (customPreviewId && !lookup.has(customPreviewId)) setCustomPreviewId(null)
+  }, [lookup, builtinPreviewId, customPreviewId])
 
-  const preview: ShiftPattern | undefined = previewId ? lookup.get(previewId) : undefined
+  const builtinPreview: ShiftPattern | undefined = builtinPreviewId ? lookup.get(builtinPreviewId) : undefined
   const atLimit = roster.patterns.length >= MAX_CUSTOM_PATTERNS
 
   function startDelete(pattern: CustomPattern) {
@@ -106,11 +110,11 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
         <div className="pattern-chips">
           {lookup.builtin.map(pattern => (
             <button
-              aria-pressed={previewId === pattern.id}
-              className={`pattern-chip${previewId === pattern.id ? ' is-on' : ''}`}
+              aria-pressed={builtinPreviewId === pattern.id}
+              className={`pattern-chip${builtinPreviewId === pattern.id ? ' is-on' : ''}`}
               key={pattern.id}
               type="button"
-              onClick={() => setPreviewId(previewId === pattern.id ? null : pattern.id)}
+              onClick={() => setBuiltinPreviewId(builtinPreviewId === pattern.id ? null : pattern.id)}
             >
               <span className="pattern-chip-name">{pattern.id}</span>
               <ShiftBar shifts={pattern.shifts} />
@@ -119,17 +123,13 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
         </div>
       </div>
 
-      {preview ? (
+      {builtinPreview ? (
         <div className="pattern-preview">
           <div className="pattern-preview-head">
-            <span className="pattern-preview-title">{lookup.labelOf(preview.id)}</span>
-            <span className="pattern-preview-note">
-              {lookup.custom.some(item => item.id === preview.id)
-                ? '自建班序 · 可以编辑'
-                : '内置班序只读，要改请新建一条'}
-            </span>
+            <span className="pattern-preview-title">{lookup.labelOf(builtinPreview.id)}</span>
+            <span className="pattern-preview-note">内置班序只读，要改请新建一条</span>
           </div>
-          <PatternGrid shifts={preview.shifts} />
+          <PatternGrid shifts={builtinPreview.shifts} />
         </div>
       ) : null}
 
@@ -145,36 +145,46 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
           <div className="pattern-rows">
             {roster.patterns.map(pattern => {
               const usage = patternUsage(roster, pattern.id)
+              const open = customPreviewId === pattern.id
               return (
-                <div className="pattern-row" key={pattern.id}>
-                  <span className="pattern-row-name" title={pattern.name}>{pattern.name}</span>
-                  <ShiftBar shifts={pattern.shifts} />
-                  <span className="pattern-row-usage">
-                    {usage.members.length > 0 ? `${usage.members.length} 人` : '未使用'}
-                  </span>
-                  <div className="pattern-row-actions">
-                    <button
-                      className="btn btn-quiet"
-                      type="button"
-                      onClick={() => setPreviewId(previewId === pattern.id ? null : pattern.id)}
-                    >
-                      查看
-                    </button>
-                    <button
-                      className="btn btn-quiet"
-                      type="button"
-                      onClick={() => setEditing({ pattern })}
-                    >
-                      编辑
-                    </button>
-                    <button
-                      className="btn btn-quiet"
-                      type="button"
-                      onClick={() => startDelete(pattern)}
-                    >
-                      删除
-                    </button>
+                <div className="pattern-item" key={pattern.id}>
+                  <div className={`pattern-row${open ? ' is-open' : ''}`}>
+                    <span className="pattern-row-name" title={pattern.name}>{pattern.name}</span>
+                    <ShiftBar shifts={pattern.shifts} />
+                    <span className="pattern-row-usage">
+                      {usage.members.length > 0 ? `${usage.members.length} 人` : '未使用'}
+                    </span>
+                    <div className="pattern-row-actions">
+                      <button
+                        aria-expanded={open}
+                        className="btn btn-quiet"
+                        type="button"
+                        onClick={() => setCustomPreviewId(open ? null : pattern.id)}
+                      >
+                        {open ? '收起' : '查看'}
+                      </button>
+                      <button
+                        className="btn btn-quiet"
+                        type="button"
+                        onClick={() => setEditing({ pattern })}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        className="btn btn-quiet"
+                        type="button"
+                        onClick={() => startDelete(pattern)}
+                      >
+                        删除
+                      </button>
+                    </div>
                   </div>
+
+                  {open ? (
+                    <div className="pattern-preview pattern-preview-inline">
+                      <PatternGrid shifts={pattern.shifts} />
+                    </div>
+                  ) : null}
                 </div>
               )
             })}
@@ -194,14 +204,14 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
       {editing ? (
         <PatternEditor
           existing={roster.patterns}
-          lookup={lookup}
           pattern={editing.pattern}
           onClose={() => setEditing(null)}
           onSave={pattern => {
             onSavePattern(pattern)
             onNotice(`已保存班序「${pattern.name}」，24 格已全量生效（含已过去的月份）。`)
             setEditing(null)
-            setPreviewId(pattern.id)
+            setBuiltinPreviewId(null)
+            setCustomPreviewId(pattern.id)
           }}
         />
       ) : null}
