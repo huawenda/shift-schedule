@@ -10,6 +10,7 @@ import {
 } from '../data/profile'
 import { getSelf, patternNameOf, selfImpact, validateSelf, type Roster, type SelfImpact } from '../data/roster'
 import { useDialogFocus } from '../hooks/useDialogFocus'
+import { Select } from './Select'
 
 interface ProfileSectionProps {
   roster: Roster
@@ -155,31 +156,19 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
 
             <label className="field">
               <span className="field-label">班序</span>
-              <select
-                aria-label="本人的班序"
-                className="input"
+              <Select
+                ariaLabel="本人的班序"
+                groups={
+                  custom.length === 0
+                    ? [{ options: patterns.map(option => ({ value: option.id, label: option.name })) }]
+                    : [
+                      { label: '内置', options: builtin.map(option => ({ value: option.id, label: option.name })) },
+                      { label: '自定义', options: custom.map(option => ({ value: option.id, label: option.name })) }
+                    ]
+                }
                 value={patternId}
-                onChange={event => setPatternId(event.target.value)}
-              >
-                {custom.length === 0
-                  ? patterns.map(option => (
-                    <option key={option.id} value={option.id}>{option.name}</option>
-                  ))
-                  : (
-                    <>
-                      <optgroup label="内置">
-                        {builtin.map(option => (
-                          <option key={option.id} value={option.id}>{option.name}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="自定义">
-                        {custom.map(option => (
-                          <option key={option.id} value={option.id}>{option.name}</option>
-                        ))}
-                      </optgroup>
-                    </>
-                  )}
-              </select>
+                onChange={setPatternId}
+              />
             </label>
 
             <label className="field">

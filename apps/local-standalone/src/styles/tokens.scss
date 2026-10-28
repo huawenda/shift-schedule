@@ -42,6 +42,17 @@
    * 取两者中间一档饱和度，仍是橙色系，一眼能和「加班角标」认成一家。 */
   --todo-ink: #c1712a;
 
+  /* 加班费胶囊的三档：**用三个色相**区分金额高低，不是同一支色的深浅。
+   * 一档一小笔 → 中性冷灰（几乎不占视线）；二档有进账 → 浅绿；
+   * 三档大额 → 暖金（最厚的一笔才配最亮的颜色）。
+   * 单纯调深浅在廉价屏上会糊成一片，扫一眼分不出哪档更值钱。 */
+  --pay-1-bg: #e9eff2;
+  --pay-1-ink: #4e6470;
+  --pay-2-bg: #ddf3e4;
+  --pay-2-ink: #2c6a41;
+  --pay-3-bg: #ffe0a8;
+  --pay-3-ink: #7a4400;
+
   /* 六种班次的颜色 = 「浅底 + 墨字」一对，全局唯一来源。
    *
    * 之所以抽到 :root：同一个班次在两个地方要用不同的部分 ——
@@ -316,4 +327,141 @@ p {
 .input-compact {
   width: auto;
   min-width: 132px;
+}
+
+/* ── 下拉框（自己画弹层，替掉原生 select）─────────────────
+ * 原生弹层改不动：直角、零内边距、选中行一条系统死灰。这里只补两件事 ——
+ * 触发按钮与 .input 完全同款（同高 / 同边 / 同圆角 / 同字号，连 hover 与 focus 也照抄），
+ * 弹层沿用面板那套 1px 边 + 白底 + 6px 圆角，只多一层极淡投影说明「浮在上面」。
+ * 不做强调色高亮条、不做大圆角气泡：成员表是密集表格，任何一处抢色都会被放大。
+ */
+.select-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: var(--control-height);
+  padding: 0 26px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: 13px;
+  text-align: left;
+}
+
+.select-trigger:hover:not(:disabled) {
+  border-color: var(--control);
+}
+
+.select-trigger[aria-expanded="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-weak);
+}
+
+/* 焦点环与 .input:focus 同款，并去掉全局那道 2px outline ——
+ * 否则键盘打开时是「outline + 自身光晕」两圈，比输入框厚一层。 */
+.select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-weak);
+}
+
+.select-trigger:disabled {
+  background: var(--raised);
+  color: var(--muted);
+}
+
+.select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  color: var(--faint);
+  transition: transform 120ms ease;
+  pointer-events: none;
+}
+
+.select-trigger[aria-expanded="true"] .select-arrow {
+  color: var(--accent);
+  transform: rotate(180deg);
+}
+
+.select-popup {
+  position: fixed;
+  z-index: 70;
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  box-shadow: 0 10px 24px rgba(19, 20, 22, 0.09), 0 2px 6px rgba(19, 20, 22, 0.05);
+}
+
+/* 弹层自己的滚动条：原生那条 14px 深灰 + 两端箭头，在 260px 高的小面板里特别抢眼。
+ * 收成 8px 轨道（2px 透明边只留 4px 滑块），颜色压到 0.14 灰 —— 只在悬停时加深到
+ * 与覆盖式滚动条同一档（rgba(19,20,22,.24)）。轨道透明，箭头直接去掉。
+ * 只写 ::-webkit-scrollbar，不写 scrollbar-width：两套同时写时 Chromium 会整套忽略伪元素。 */
+.select-popup::-webkit-scrollbar {
+  width: 8px;
+}
+
+.select-popup::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.select-popup::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(19, 20, 22, 0.14);
+  background-clip: content-box;
+}
+
+.select-popup::-webkit-scrollbar-thumb:hover {
+  background: rgba(19, 20, 22, 0.24);
+  background-clip: content-box;
+}
+
+.select-popup::-webkit-scrollbar-button {
+  display: none;
+}
+
+.select-group {
+  padding: 6px 8px 3px;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.select-option {
+  height: 28px;
+  padding: 0 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 28px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* 悬停与键盘高亮同一档：浅灰抬起一层，不用强调色 —— 一列 13 行扫下来不刺眼 */
+.select-option.is-active {
+  background: var(--raised);
+}
+
+.select-option.is-selected {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.select-option.is-selected.is-active {
+  background: var(--accent-weak);
 }

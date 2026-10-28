@@ -6,6 +6,7 @@ import {
   OVERTIME_KIND_LABEL,
   OVERTIME_PAY_FIELD,
   OVERTIME_RATES,
+  payTier,
   type MonthStats,
   type OvertimeKind
 } from '../data/stats'
@@ -57,6 +58,20 @@ const OVERTIME_COLUMNS = [
  */
 export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProps) {
   const { days, leave, overtime, overtimeByGroup, salary, overtimeDays } = stats
+
+  /**
+   * 加班费胶囊的档位范围：当月最低 / 最高那天。
+   * 放在这里算一次，避免每行都重新扫一遍列表。
+   */
+  const payRange = overtimeDays.reduce(
+    (range, day) => ({
+      min: Math.min(range.min, day.pay),
+      max: Math.max(range.max, day.pay)
+    }),
+    { min: Infinity, max: 0 }
+  )
+  const minPay = Number.isFinite(payRange.min) ? payRange.min : 0
+  const maxPay = payRange.max
 
   /**
    * 六张卡片：白 / 夜 / 休 / 特勤 / 事假 / 法定。
@@ -295,13 +310,26 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
                         <span className="detail-week">周{weekdayLabel(day.date)}</span>
                       </td>
                       <td>
-                        <span className={`detail-shift ${shiftToneClass(day.shift)}`}>
-                          {SHIFT_META[day.shift].label}
+                        {/*
+                          班次块外面套一层：『法』用绝对定位挂在它右侧，
+                          不参与宽度 —— 否则带法定标的那一行整体被挤偏，
+                          同一列里各行的班次块对不齐（截图里看着"夜班"跳了一下）。
+                        */}
+                        <span className="detail-shift-wrap">
+                          <span className={`detail-shift ${shiftToneClass(day.shift)}`}>
+                            {SHIFT_META[day.shift].label}
+                          </span>
+                          {day.isLegal ? <span className="detail-legal">法</span> : null}
                         </span>
-                        {day.isLegal ? <span className="detail-legal">法</span> : null}
                       </td>
                       <td className="is-num">{formatOvertimeHours(day.hours)}</td>
-                      <td className="is-num">{salary.hasBase ? formatMoney(day.pay) : '—'}</td>
+                      <td className="is-num">
+                        {salary.hasBase ? (
+                          <span className={`pay-pill is-t${payTier(day.pay, maxPay, minPay)}`}>
+                            {formatMoney(day.pay)}
+                          </span>
+                        ) : '—'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

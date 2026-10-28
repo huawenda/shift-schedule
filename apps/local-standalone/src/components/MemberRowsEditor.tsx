@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createMemberId, type Member } from '../data/roster'
+import { Select } from './Select'
 
 export interface MemberRow {
   key: string
@@ -116,6 +117,15 @@ export function MemberRowsEditor({
   const builtin = patterns.filter(option => option.builtin)
   const custom = patterns.filter(option => !option.builtin)
 
+  // 有自建班序才分组：只有内置时多一行「内置」标题纯属噪音
+  const patternGroups =
+    custom.length === 0
+      ? [{ options: patterns.map(option => ({ value: option.id, label: option.name })) }]
+      : [
+        { label: '内置', options: builtin.map(option => ({ value: option.id, label: option.name })) },
+        { label: '自定义', options: custom.map(option => ({ value: option.id, label: option.name })) }
+      ]
+
   return (
     <div className={`member-editor${sortable ? ' is-sortable' : ''}`}>
       <div className="member-editor-head">
@@ -191,31 +201,12 @@ export function MemberRowsEditor({
               {patternNames.get(row.patternId) ?? row.patternId}
             </span>
           ) : (
-            <select
-              aria-label={`${row.name || `第 ${index + 1} 位成员`} 的班序`}
-              className="input"
+            <Select
+              ariaLabel={`${row.name || `第 ${index + 1} 位成员`} 的班序`}
+              groups={patternGroups}
               value={row.patternId}
-              onChange={event => patch(index, { patternId: event.target.value })}
-            >
-              {custom.length === 0
-                ? patterns.map(option => (
-                  <option key={option.id} value={option.id}>{option.name}</option>
-                ))
-                : (
-                  <>
-                    <optgroup label="内置">
-                      {builtin.map(option => (
-                        <option key={option.id} value={option.id}>{option.name}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="自定义">
-                      {custom.map(option => (
-                        <option key={option.id} value={option.id}>{option.name}</option>
-                      ))}
-                    </optgroup>
-                  </>
-                )}
-            </select>
+              onChange={next => patch(index, { patternId: next })}
+            />
           )}
 
           {isSelfRow ? (

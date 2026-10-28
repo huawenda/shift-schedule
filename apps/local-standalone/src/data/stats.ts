@@ -176,6 +176,25 @@ export function roundMoney(value: number): number {
 }
 
 /**
+ * 加班费胶囊的分量档（1 最轻、3 最重），给「每日明细」的金额上色用。
+ *
+ * 按**当月最低～最高**归一化，而不是拿绝对金额卡阈值：
+ * 基本工资因人而异，68 块对高薪的人是一顿零头、对低薪的人是一天饭钱，
+ * 固定阈值会让某些人整列都落在最重的一档，反而没有层次。
+ *
+ * 一个月只有一种金额时（比如全是 2h 白班）没有高低可比，统一给中间档，
+ * 否则整列都会是最深的那一档。
+ */
+export function payTier(pay: number, maxPay: number, minPay: number): 1 | 2 | 3 {
+  if (!(pay > 0)) return 1
+  if (!(maxPay > minPay)) return 2
+  const ratio = (pay - minPay) / (maxPay - minPay)
+  if (ratio >= 2 / 3) return 3
+  if (ratio >= 1 / 3) return 2
+  return 1
+}
+
+/**
  * 一条记录的加班属于哪一桶。
  *
  * 顺序不能反：**法定优先**（标了法定的白班按 ×3，不再走 ×1.5），

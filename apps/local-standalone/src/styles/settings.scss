@@ -483,8 +483,14 @@ button.shift-cell:hover {
   filter: brightness(0.97);
 }
 
+/*
+ * 选中态不描框。这三个按钮是「填入」动作，不是开关：
+ * 当前格子是什么班次，上方「第 N 天 · 现在是…」和格子的选中框已经说清，
+ * 再套一道 2px 黑框既压色块又和全站 1px 细线的语言打架（配色块旁边那一圈最显眼）。
+ * 只留字重变化，不占视觉重量。
+ */
 .palette-option.is-on {
-  box-shadow: inset 0 0 0 2px var(--text);
+  font-weight: 600;
 }
 
 /* ── 班序编辑弹层 ─────────────────────────────────────── */
@@ -576,10 +582,15 @@ button.shift-cell:hover {
   background: var(--surface);
 }
 
+/* 抬头下一条发丝线：两块（本人 / 薪资）都是「标题 + 一堆输入框」，
+ * 没有这条线时标题像飘在表单上面，两块之间的分界全靠卡片边框。
+ * 线画在标题盒子的下沿（含 9px 内边距），所以仍然贴着卡片左右内边距对齐。 */
 .profile-title {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--rule);
   font-size: 13px;
   font-weight: 500;
 }

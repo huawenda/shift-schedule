@@ -535,10 +535,35 @@
   height: 0;
 }
 
+/*
+ * 明细表四列**一律居中**（表头与内容同一条中心线）。
+ *
+ * 用 `table-layout: fixed` + 百分比列宽，而不是让内容自己撑：
+ * auto 布局下列宽跟着内容跑，日期那列字最多就最宽，右边永远留着一段空白，
+ * 整张表看着是「靠左堆着」而不是铺满。固定布局之后日期压最左、加班费压最右，
+ * 两列都贴住卡片的左右边界。
+ */
 .detail-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
+}
+
+.detail-table th:nth-child(1) {
+  width: 30%;
+}
+
+.detail-table th:nth-child(2) {
+  width: 22%;
+}
+
+.detail-table th:nth-child(3) {
+  width: 18%;
+}
+
+.detail-table th:nth-child(4) {
+  width: 30%;
 }
 
 .detail-table th {
@@ -547,7 +572,7 @@
   color: var(--muted);
   font-size: 11px;
   font-weight: 500;
-  text-align: left;
+  text-align: center;
 }
 
 /* 表头随滚动冻结在滚动区上沿。border-collapse 的表格里 sticky 的边框会跟着滚，
@@ -566,14 +591,15 @@
 .detail-table td {
   padding: 6px 0;
   border-bottom: 1px solid var(--rule);
+  text-align: center;
 }
 
 .detail-table tr:last-child td {
   border-bottom: 0;
 }
 
+/* 数字列只加等宽数字，不再单独右对齐 —— 四列已经统一居中 */
 .detail-table .is-num {
-  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
@@ -583,6 +609,17 @@
   font-size: 11px;
 }
 
+/*
+ * 班次块 + 法定标的定位基准。
+ *
+ * 「法」绝对定位挂在它右边、不占宽度 —— 否则带法定标的那一行
+ * 整块被往左挤，同一列里各行的班次块就对不齐了。
+ */
+.detail-shift-wrap {
+  position: relative;
+  display: inline-block;
+}
+
 .detail-shift {
   padding: 1px 6px;
   border-radius: 3px;
@@ -590,11 +627,45 @@
 }
 
 .detail-legal {
-  margin-left: 4px;
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 3px);
+  transform: translateY(-50%);
   padding: 0 4px;
   border-radius: 3px;
   background: var(--warning-bg);
   box-shadow: inset 0 0 0 1px var(--warning-border);
   color: var(--warning-ink);
   font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/*
+ * 加班费胶囊：金额越高的那天颜色越「贵」——一档中性冷灰、二档浅绿、三档暖金，
+ * 三档是**三个色相**（见 tokens 里的 --pay-*），不是同一支色的深浅；
+ * 单纯调明度在廉价屏上会糊成一片，扫一眼分不出哪天更值钱。
+ *
+ * min-width 让短的金额也撑出同样的胶囊宽度，整列居中时右边界仍是一条线。
+ */
+.pay-pill {
+  display: inline-block;
+  min-width: 68px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--pay-1-bg);
+  color: var(--pay-1-ink);
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pay-pill.is-t2 {
+  background: var(--pay-2-bg);
+  color: var(--pay-2-ink);
+}
+
+.pay-pill.is-t3 {
+  background: var(--pay-3-bg);
+  color: var(--pay-3-ink);
 }

@@ -4,6 +4,7 @@ import {
   emptySalaryBreakdown,
   NIGHT_ALLOWANCE_PER_DAY,
   overtimeKindOf,
+  payTier,
   rawHourlyWage,
   roundMoney
 } from './stats'
@@ -57,6 +58,25 @@ describe('时薪', () => {
   it('没填基本工资时是 0，不会算出负数或 NaN', () => {
     expect(rawHourlyWage('')).toBe(0)
     expect(rawHourlyWage('abc')).toBe(0)
+  })
+})
+
+describe('加班费胶囊档位', () => {
+  it('按当月最低～最高归一化分三档', () => {
+    const min = 68.66
+    const max = 686.55
+    expect(payTier(min, max, min)).toBe(1)
+    expect(payTier(max, max, min)).toBe(3)
+    // 正好落在区间中间 → 中间档
+    expect(payTier((min + max) / 2, max, min)).toBe(2)
+  })
+
+  it('只有一种金额时统一中间档（没有高低可比，别整列都最深）', () => {
+    expect(payTier(68.66, 68.66, 68.66)).toBe(2)
+  })
+
+  it('没有金额时给最轻档', () => {
+    expect(payTier(0, 686.55, 68.66)).toBe(1)
   })
 })
 

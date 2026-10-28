@@ -160,20 +160,34 @@
 
 /* ------------------------------------------------------------ 顶栏 */
 
+/*
+ * 顶栏三列：左空 / 中间月份胶囊 / 右操作区。
+ *
+ * 月份胶囊原先靠左（`justify-content: space-between`），左边距只有 24px，
+ * 而它下面对着的是一整张从侧栏边一路铺到右边的白色大卡片 ——
+ * 视线上这条胶囊挂在大卡片的左上角，整个顶栏显得"左重右空"。
+ * 改成 `1fr auto 1fr` 之后左右两列等宽，中间列自动落在大卡片的水平中线上。
+ * 内边距同时改成左右对称（原来 24 / 16），否则内容中心会再偏 4px。
+ *
+ * 实测胶囊中心 834、卡片中心 830 —— 剩下这 4px 是卡片自己只留了右边 8px
+ * 外边距（`margin: 0 8px 8px 0`）导致的，肉眼不可见，不再为它加偏移常量。
+ */
 .topbar {
   grid-column: 2;
   grid-row: 1;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
-  padding: 0 16px 0 24px;
+  padding: 0 16px;
   min-width: 0;
 }
 
 .month-track {
+  grid-column: 2;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   min-width: 0;
 }
@@ -285,8 +299,11 @@
 }
 
 .topbar-right {
+  /* 显式放第 3 列：月份胶囊已经占了中间列，靠自动放置会落到第 1 列去 */
+  grid-column: 3;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   min-width: 0;
 }
@@ -469,11 +486,28 @@
   letter-spacing: -0.015em;
 }
 
+/*
+ * 页面副标题做成一块「铭牌」：浅底 + 1px 边 + 全圆角。
+ *
+ * 它原来是一行 12px 灰字，和大标题一起读像「标题的第二行」，
+ * 但这行的内容是**结算区间 / 天数 / 成员**这类参数，性质不同。
+ * 收进胶囊后它有了自己的边界，一眼能分出「标题」和「这批数据的前提」。
+ * `inline-block` 是必须的：p 是块级元素，不收缩的话胶囊会横贯整个画布。
+ *
+ * 边框用 `--border` 而不是 `--rule`：后者几乎等于白底，只剩一层淡淡的底色，
+ * 在办公屏上看不出「牌子」的轮廓。
+ */
 .canvas-sub {
-  margin-top: 3px;
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--raised);
   font-size: 12px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .canvas-tools {

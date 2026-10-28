@@ -401,6 +401,34 @@ async function runScenario(name, url, downloadDir) {
       landing.sub
     )
 
+    // 副标题（结算区间 / 天数 / 成员）做成铭牌：胶囊底 + 1px 边 + 不横贯整行
+    const subBadge = await client.evaluate(`(() => {
+      const sub = document.querySelector('.canvas-sub')
+      const canvas = document.querySelector('.canvas')
+      if (!sub) return null
+      const cs = getComputedStyle(sub)
+      const rect = sub.getBoundingClientRect()
+      return {
+        display: cs.display,
+        radius: parseFloat(cs.borderTopLeftRadius),
+        borderW: parseFloat(cs.borderTopWidth),
+        bg: cs.backgroundColor,
+        padX: [parseFloat(cs.paddingLeft), parseFloat(cs.paddingRight)],
+        subW: Math.round(rect.width),
+        canvasW: canvas ? Math.round(canvas.getBoundingClientRect().width) : -1
+      }
+    })()`)
+    check(
+      `${name}: 副标题是铭牌胶囊（浅底 + 全圆角，宽度贴合内容）`,
+      Boolean(subBadge) &&
+        subBadge.display === 'inline-block' &&
+        subBadge.radius >= 999 && subBadge.borderW === 1 &&
+        subBadge.bg === 'rgb(244, 246, 248)' &&
+        JSON.stringify(subBadge.padX) === JSON.stringify([10, 10]) &&
+        subBadge.subW < subBadge.canvasW / 2,
+      JSON.stringify(subBadge)
+    )
+
     // 统计卡观感：抬头有发丝线 + 强调色小竖条；六格带班次色条；实发是浅青结论条
     const statLook = await client.evaluate(`(() => {
       const head = document.querySelector('.stat-card .stat-head')
@@ -678,7 +706,7 @@ async function runScenario(name, url, downloadDir) {
     // 切到日历：没有人员下拉，本人只由页面副标题说明（日历上方不再重复一遍）
     await goOverview(client)
     const calendarLock = await client.evaluate(`(() => ({
-      selects: document.querySelectorAll('.canvas-tools select, .calendar select').length,
+      selects: document.querySelectorAll('.canvas-tools select, .canvas-tools .select-trigger, .calendar select, .calendar .select-trigger').length,
       // 日历自己不该有标题块 —— 姓名/班序只在页面副标题出现一次
       dupHead: document.querySelectorAll('.calendar-head, .calendar-name, .calendar-sub').length,
       sub: (document.querySelector('.canvas.is-overview .canvas-sub')?.textContent ?? '')
@@ -784,7 +812,7 @@ async function runScenario(name, url, downloadDir) {
 
     const selfRow = await client.evaluate(`(() => ({
       selfBadges: document.querySelectorAll('.member-row .badge-self').length,
-      selfInputs: document.querySelectorAll('.member-row.is-self input, .member-row.is-self select').length,
+      selfInputs: document.querySelectorAll('.member-row.is-self input, .member-row.is-self select, .member-row.is-self .select-trigger').length,
       selfDeleteDisabled: Boolean(document.querySelector('.member-row.is-self .btn-quiet[disabled]'))
     }))()`)
     check(
@@ -1631,6 +1659,87 @@ async function runScenario(name, url, downloadDir) {
         JSON.stringify(tallCards)
       )
 
+      // 每日明细：四列都居中，日期压最左、加班费压最右（table-layout: fixed 铺满）
+      const detailLook = await client.evaluate(`(() => {
+        const table = document.querySelector('.detail-table')
+        const ths = Array.from(table?.querySelectorAll('thead th') ?? [])
+        const pill = table?.querySelector('tbody .pay-pill')
+        const cells = Array.from(table?.querySelector('tbody tr')?.querySelectorAll('td') ?? [])
+        const tRect = table?.getBoundingClientRect()
+        const firstRect = cells[0]?.getBoundingClientRect()
+        const lastRect = cells[cells.length - 1]?.getBoundingClientRect()
+        const pillRect = pill?.getBoundingClientRect()
+        const cellRect = pill?.closest('td')?.getBoundingClientRect()
+        // 三档底色：临时挂三个胶囊读计算样式（真实数据未必一次凑齐三档）
+        const host = document.createElement('div')
+        host.style.cssText = 'position:fixed;left:-9999px;top:0;visibility:hidden'
+        document.body.appendChild(host)
+        const tierBgs = [1, 2, 3].map(tier => {
+          const node = document.createElement('span')
+          node.className = 'pay-pill is-t' + tier
+          host.appendChild(node)
+          return getComputedStyle(node).backgroundColor
+        })
+        // 「法」标不能参与宽度：临时挂一组「班次块 + 法」，量它是不是绝对定位、贴没贴右侧
+        const probe = document.createElement('span')
+        probe.className = 'detail-shift-wrap'
+        probe.innerHTML = '<span class="detail-shift">夜班</span><span class="detail-legal">法</span>'
+        host.appendChild(probe)
+        const legalNode = probe.querySelector('.detail-legal')
+        const shiftNode = probe.querySelector('.detail-shift')
+        const legalPos = legalNode ? getComputedStyle(legalNode).position : ''
+        const legalGap = legalNode && shiftNode
+          ? Math.round(legalNode.getBoundingClientRect().left - shiftNode.getBoundingClientRect().right)
+          : -1
+        // 各行班次块的左边界必须一致（带法定标的那行不能把块挤偏）
+        const shiftLefts = Array.from(new Set(
+          Array.from(table?.querySelectorAll('tbody .detail-shift') ?? [])
+            .map(node => Math.round(node.getBoundingClientRect().left))
+        ))
+        host.remove()
+        return {
+          headAlign: ths.map(th => getComputedStyle(th).textAlign),
+          cellAlign: cells.map(td => getComputedStyle(td).textAlign),
+          pill: Boolean(pill),
+          pillAlign: pill ? getComputedStyle(pill).textAlign : '',
+          pillW: pillRect ? Math.round(pillRect.width) : -1,
+          // 胶囊中心与所在单元格中心的偏差
+          pillCenterDelta: pillRect && cellRect
+            ? Math.abs(Math.round(pillRect.left + pillRect.width / 2) -
+                Math.round(cellRect.left + cellRect.width / 2))
+            : -1,
+          // 第一列贴表格左边、末列贴表格右边 → 整张表铺满
+          leftGap: tRect && firstRect ? Math.round(firstRect.left - tRect.left) : -1,
+          rightGap: tRect && lastRect ? Math.round(tRect.right - lastRect.right) : -1,
+          tableLayout: table ? getComputedStyle(table).tableLayout : '',
+          distinctTierBgs: new Set(tierBgs).size,
+          tierBgs,
+          shiftLeftCount: shiftLefts.length,
+          legalPos,
+          legalGap
+        }
+      })()`)
+      check(
+        `${name}: 明细四列居中、日期压左、加班费压右、胶囊三色分档`,
+        detailLook.headAlign.length === 4 &&
+          detailLook.headAlign.every(align => align === 'center') &&
+          detailLook.cellAlign.length === 4 &&
+          detailLook.cellAlign.every(align => align === 'center') &&
+          detailLook.pill && detailLook.pillAlign === 'center' &&
+          detailLook.pillW >= 68 && detailLook.pillCenterDelta <= 1 &&
+          detailLook.tableLayout === 'fixed' &&
+          detailLook.leftGap === 0 && detailLook.rightGap === 0 &&
+          detailLook.distinctTierBgs === 3,
+        JSON.stringify(detailLook)
+      )
+      check(
+        `${name}: 班次块各行对齐，「法」标绝对定位挂在右侧（不挤动班次块）`,
+        detailLook.shiftLeftCount === 1 &&
+          detailLook.legalPos === 'absolute' &&
+          detailLook.legalGap >= 0 && detailLook.legalGap <= 6,
+        JSON.stringify({ lefts: detailLook.shiftLeftCount, pos: detailLook.legalPos, gap: detailLook.legalGap })
+      )
+
       // P1/P2 观感：明细表头有浅底、卡片内边距与网格间距；薪资列表疏朗化
       const polish = await client.evaluate(`(() => {
         const th = document.querySelector('.detail-table thead th')
@@ -2146,21 +2255,53 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 自建班序写进 roster v2`, Boolean(customId), String(customId))
 
     // --- 8. 把成员挂到自建班序 ---
-    const attached = await client.evaluate(`(() => {
-      const select = document.querySelectorAll('.member-row select')[0]
-      if (!select) return false
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set
-      setter.call(select, ${JSON.stringify(customId)})
-      select.dispatchEvent(new Event('change', { bubbles: true }))
-      return select.value === ${JSON.stringify(customId)}
+    // 班序是自绘下拉（原生 select 的弹层改不动样式），所以这里要点开弹层再点选项
+    check(
+      `${name}: 成员行有班序下拉`,
+      await client.evaluate(`Boolean(document.querySelector('.member-row .select-trigger'))`)
+    )
+    await client.evaluate(`document.querySelectorAll('.member-row .select-trigger')[0].click()`)
+    await waitFor(client, `Boolean(document.querySelector('.select-popup'))`, '班序弹层')
+    const dropdown = await client.evaluate(`(() => {
+      const popup = document.querySelector('.select-popup')
+      const option = document.querySelector('.select-popup .select-option')
+      const trigger = document.querySelector('.member-row .select-trigger')
+      const input = document.querySelector('.member-row input')
+      const cs = popup ? getComputedStyle(popup) : null
+      return {
+        options: document.querySelectorAll('.select-popup .select-option').length,
+        groups: Array.from(document.querySelectorAll('.select-popup .select-group')).map(node => node.textContent.trim()),
+        radius: cs ? parseFloat(cs.borderTopLeftRadius) : -1,
+        bg: cs?.backgroundColor ?? '',
+        optionH: option ? Math.round(option.getBoundingClientRect().height) : -1,
+        triggerH: trigger ? Math.round(trigger.getBoundingClientRect().height) : -1,
+        inputH: input ? Math.round(input.getBoundingClientRect().height) : -1,
+        triggerRadius: trigger ? parseFloat(getComputedStyle(trigger).borderTopLeftRadius) : -1
+      }
     })()`)
-    check(`${name}: 成员下拉能选到自建班序`, attached)
+    check(
+      `${name}: 自绘下拉（触发按钮与输入框同款、弹层分内置/自定义）`,
+      dropdown.options >= 14 &&
+        dropdown.groups.join('|') === '内置|自定义' &&
+        dropdown.radius === 6 &&
+        dropdown.bg === 'rgb(255, 255, 255)' &&
+        dropdown.triggerH === dropdown.inputH &&
+        dropdown.triggerRadius === 6,
+      JSON.stringify(dropdown)
+    )
     check(
       `${name}: 下拉里列出「甲班」`,
       await client.evaluate(
-        `Array.from(document.querySelectorAll('.member-row select')[0].options).some(option => option.textContent.trim() === '甲班')`
+        `Array.from(document.querySelectorAll('.select-popup .select-option')).some(node => node.textContent.trim() === '甲班')`
       )
     )
+    await client.evaluate(clickByText('.select-popup .select-option', '甲班'))
+    await waitFor(client, `!document.querySelector('.select-popup')`, '班序弹层关闭')
+    const attached = await client.evaluate(`(() => {
+      const trigger = document.querySelectorAll('.member-row .select-trigger')[0]
+      return trigger ? trigger.textContent.trim() === '甲班' : false
+    })()`)
+    check(`${name}: 成员下拉能选到自建班序`, attached)
 
     check(`${name}: 保存成员设置`, await client.evaluate(clickByText('.settings-actions button', '保存成员设置')))
     await sleep(350)
@@ -2292,6 +2433,25 @@ async function runScenario(name, url, downloadDir) {
       `${name}: 已在本期时「回到本期」置灰禁用（没有可做的事就别勾人点）`,
       monthLook.todayDisabledAtCurrent === true && monthLook.todayColor === 'rgb(138, 146, 153)',
       JSON.stringify(monthLook)
+    )
+
+    // 月份胶囊要落在大卡片的水平中线上（顶栏三列 grid：左空 / 中 / 右操作区）
+    const midAlign = await client.evaluate(`(() => {
+      const rect = selector => document.querySelector(selector)?.getBoundingClientRect() ?? null
+      const box = rect('.month-switch')
+      const sheet = rect('.sheet')
+      const right = rect('.topbar-right')
+      return {
+        boxMid: box ? Math.round(box.left + box.width / 2) : -1,
+        sheetMid: sheet ? Math.round(sheet.left + sheet.width / 2) : -1,
+        // 右侧操作区仍贴着右边（不能因为改 grid 被挤到中间）
+        rightGap: sheet && right ? Math.round(sheet.right - right.right) : -1
+      }
+    })()`)
+    check(
+      `${name}: 月份胶囊居中于大卡片的水平中线`,
+      Math.abs(midAlign.boxMid - midAlign.sheetMid) <= 6 && midAlign.rightGap >= 0,
+      JSON.stringify(midAlign)
     )
 
     await client.evaluate(`document.querySelectorAll('.month-step')[1].click(); true`)

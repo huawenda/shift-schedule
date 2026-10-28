@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { fromRows, MemberRowsEditor, createRow, type MemberRow, type PatternOption } from '../components/MemberRowsEditor'
+import { Select } from '../components/Select'
 import { BUILTIN_PATTERNS, PATTERN_ANCHOR_DATE } from '../data/patterns'
 import { validateMembers, type Member } from '../data/roster'
 import type { SelfIdentity } from '../data/profile'
@@ -82,16 +83,12 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
 
               <label className="field">
                 <span className="field-label">你的班序</span>
-                <select
-                  aria-label="本人的班序"
-                  className="input"
+                <Select
+                  ariaLabel="本人的班序"
+                  groups={[{ options: BUILTIN_OPTIONS.map(option => ({ value: option.id, label: option.name })) }]}
                   value={selfPattern}
-                  onChange={event => setSelfPattern(event.target.value)}
-                >
-                  {BUILTIN_OPTIONS.map(option => (
-                    <option key={option.id} value={option.id}>{option.name}</option>
-                  ))}
-                </select>
+                  onChange={setSelfPattern}
+                />
               </label>
             </div>
 
