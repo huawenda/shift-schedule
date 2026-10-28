@@ -1,4 +1,4 @@
-import { getEffectiveShift, getOverrideMap, isEdited, patternLabelOf, type Member, type Roster } from '../data/roster'
+import { getEffectiveShift, getOverrideMap, isSelf, patternLabelOf, type Member, type Roster } from '../data/roster'
 import type { Period } from '../data/period'
 import { SHIFT_META, SHIFT_TYPES, shiftToneClass, type ShiftType } from '../data/shifts'
 import { formatDayNumber, isWeekend, todayKey, weekdayLabel } from '../data/dateUtils'
@@ -6,17 +6,22 @@ import { formatDayNumber, isWeekend, todayKey, weekdayLabel } from '../data/date
 interface TeamMatrixProps {
   roster: Roster
   period: Period
-  selectedMemberId: string | null
-  onSelectMember: (memberId: string) => void
   onEdit: (member: Member, date: string) => void
 }
 
 /**
  * 全员矩阵：姓名列固定，日期列平铺。
  *
+ * 格子**只显示班次单字**，不加任何「改过 / 有加班」的标记 ——
+ * 矩阵是扫一眼看谁上什么班的视图，多一个小点就会让人以为那格有别的含义。
+ * 想看某天有没有加班，去个人日历或者点开格子。
+ *
+ * 本人那一行带「本人」标记、姓名不可点：日历已经锁定本人，
+ * 点别人的名字再跳日历这条路已经不存在了。格子本身仍可改（全组总览要能维护）。
+ *
  * 列宽在 22px 以下是读不了的，所以窄屏交给横向滚动，不压缩字号。
  */
-export function TeamMatrix({ roster, period, selectedMemberId, onSelectMember, onEdit }: TeamMatrixProps) {
+export function TeamMatrix({ roster, period, onEdit }: TeamMatrixProps) {
   const today = todayKey()
   const overrideMap = getOverrideMap(roster)
   const dayCount = period.dates.length
@@ -49,25 +54,30 @@ export function TeamMatrix({ roster, period, selectedMemberId, onSelectMember, o
         </div>
 
         <div className="matrix-body">
-          {roster.members.map(member => (
-            <div
-              className={`matrix-row${member.id === selectedMemberId ? ' is-selected' : ''}`}
-              key={member.id}
-            >
-              <button
-                className="matrix-name-cell"
-                type="button"
-                title={`${member.name} · ${patternLabelOf(roster, member)}`}
-                onClick={() => onSelectMember(member.id)}
-              >
-                <span className="matrix-name">{member.name}</span>
+          {roster.members.map(member => {
+            const selfRow = isSelf(roster, member.id)
+            const nameContent = (
+              <>
+                <span className="matrix-name-line">
+                  <span className="matrix-name">{member.name}</span>
+                  {selfRow ? <span className="badge-self">本人</span> : null}
+                </span>
                 <span className="matrix-pattern">{patternLabelOf(roster, member)}</span>
-              </button>
+              </>
+            )
+
+            return (
+            <div className={`matrix-row${selfRow ? ' is-self' : ''}`} key={member.id}>
+              <div
+                className={`matrix-name-cell${selfRow ? ' is-self' : ''}`}
+                title={`${member.name} · ${patternLabelOf(roster, member)}`}
+              >
+                {nameContent}
+              </div>
 
               <div className="matrix-days">
                 {period.dates.map(date => {
                   const shift: ShiftType | null = getEffectiveShift(roster, member, date, overrideMap)
-                  const edited = isEdited(member.id, date, overrideMap)
                   const isToday = date === today
 
                   return (
@@ -75,11 +85,10 @@ export function TeamMatrix({ roster, period, selectedMemberId, onSelectMember, o
                       className={[
                         'matrix-cell',
                         shift ? shiftToneClass(shift) : 'is-blank',
-                        edited ? 'is-edited' : '',
                         isToday ? 'is-today' : ''
                       ].filter(Boolean).join(' ')}
                       key={date}
-                      title={shift ? `${member.name} ${date} ${SHIFT_META[shift].label}${edited ? '（已改）' : ''}` : ''}
+                      title={shift ? `${member.name} ${date} ${SHIFT_META[shift].label}` : ''}
                       type="button"
                       onClick={() => onEdit(member, date)}
                     >
@@ -89,7 +98,8 @@ export function TeamMatrix({ roster, period, selectedMemberId, onSelectMember, o
                 })}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -100,7 +110,6 @@ export function TeamMatrix({ roster, period, selectedMemberId, onSelectMember, o
             {SHIFT_META[shift].label}
           </span>
         ))}
-        <span className="legend-hint">点格子改班 · 带圆点的是改过的日子</span>
       </div>
     </section>
   )

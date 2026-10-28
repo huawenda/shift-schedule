@@ -5,7 +5,7 @@ import {
   type PatternLookup,
   type ShiftPattern
 } from '../data/patterns'
-import { patternUsage, type Roster } from '../data/roster'
+import { getSelf, patternUsage, type Roster } from '../data/roster'
 import { SHIFT_META, shiftToneClass, type ShiftType } from '../data/shifts'
 import { PatternEditor } from './PatternEditor'
 
@@ -83,7 +83,14 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
   const builtinPreview: ShiftPattern | undefined = builtinPreviewId ? lookup.get(builtinPreviewId) : undefined
   const atLimit = roster.patterns.length >= MAX_CUSTOM_PATTERNS
 
+  /** 本人所在的班序不能删 —— 删班序会连人带记录一起删，等于把本人删了 */
+  const selfPatternId = getSelf(roster)?.patternId ?? null
+
   function startDelete(pattern: CustomPattern) {
+    if (pattern.id === selfPatternId) {
+      onNotice('本人正挂在这条班序上。请先在「个人信息」里把本人换到别的班序，再来删。')
+      return
+    }
     setPendingDelete(pattern)
     setConfirmText('')
   }
@@ -105,7 +112,7 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
     <div className="pattern-block">
       <div className="pattern-group">
         <p className="pattern-group-label">
-          <span>内置 {lookup.builtin.length} 条 · 只读，点开看 24 格</span>
+          <span>内置 {lookup.builtin.length} 条 · 只读</span>
         </p>
         <div className="pattern-chips">
           {lookup.builtin.map(pattern => (
@@ -127,7 +134,6 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
         <div className="pattern-preview">
           <div className="pattern-preview-head">
             <span className="pattern-preview-title">{lookup.labelOf(builtinPreview.id)}</span>
-            <span className="pattern-preview-note">内置班序只读，要改请新建一条</span>
           </div>
           <PatternGrid shifts={builtinPreview.shifts} />
         </div>
@@ -140,7 +146,7 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
         </p>
 
         {roster.patterns.length === 0 ? (
-          <p className="member-editor-empty">还没有自建班序。点下面的「新建班序」，照着 24 格填一条。</p>
+          <p className="member-editor-empty">还没有自建班序。自建班序第一天对应锚点日 2026-06-07 的班次</p>
         ) : (
           <div className="pattern-rows">
             {roster.patterns.map(pattern => {
@@ -172,6 +178,8 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
                       </button>
                       <button
                         className="btn btn-quiet"
+                        disabled={pattern.id === selfPatternId}
+                        title={pattern.id === selfPatternId ? '本人正用着这条班序，先把本人换到别的班序' : undefined}
                         type="button"
                         onClick={() => startDelete(pattern)}
                       >

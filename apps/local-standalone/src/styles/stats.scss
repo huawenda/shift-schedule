@@ -1,0 +1,312 @@
+/* 月度概览：日历 + 四块统计
+ *
+ * 版面上的两个约束：
+ * 1. 整页限宽 1228（内容 1180 + 左右 padding）并居中 —— 日历本身只需要 900，
+ *    撑宽只会更空；宽屏多出来的空间做成左右对称的边距。
+ * 2. 统计块两列铺满 1180，比日历宽，正好把右下的空白吃掉。
+ */
+
+.canvas.is-overview {
+  width: 100%;
+  max-width: 1228px;
+  margin: 0 auto;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+/*
+ * 每日明细卡：**高度由左边的薪资卡决定**，自己不贡献高度。
+ *
+ * 做法是外壳不放任何流内内容（padding 归 0），真正的内容绝对定位铺满它 ——
+ * 于是这一格对 grid 行高的贡献是 0，行高完全由薪资卡算；随后 grid 的 stretch
+ * 把外壳拉成同高，绝对定位的内层跟着铺满。
+ *
+ * 好处：不需要维护任何「高度常量」。薪资项将来变多 / 窗口变窄导致换行，
+ * 两张卡都会一起长高，永远不会一高一矮。
+ */
+.stat-card-detail {
+  position: relative;
+  display: block;
+  padding: 0;
+}
+
+.stat-card-fill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* 固定高度下必须允许子项收缩，否则 .detail-scroll 的 overflow 不会触发 */
+  min-height: 0;
+  padding: 15px 16px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.stat-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stat-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stat-note {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.stat-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-foot strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.stat-hint {
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.stat-empty {
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.stat-empty-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* ── 本月概览：六个班次的天数 ─────────────────────────── */
+
+.day-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.day-count {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 6px 9px;
+  border-radius: var(--radius-control);
+  background: var(--raised);
+}
+
+.day-count-num {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.day-count-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* 卡片右侧的小时标记：加班用日历同款的暖橙，靠右对齐不挤天数 */
+.day-count-extra {
+  margin-left: auto;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--overtime-bg);
+  color: var(--overtime-ink);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 事假那格写的是请假小时，不是加班 —— 用中性底，别和加班橙混在一起 */
+.day-count-extra.is-leave {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ── 加班分布 ─────────────────────────────────────────── */
+
+.ot-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ot-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 12px;
+}
+
+.ot-row:last-child {
+  border-bottom: 0;
+}
+
+.ot-row-label {
+  color: var(--muted);
+}
+
+.ot-rate {
+  margin-left: 6px;
+  color: var(--faint);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.ot-row-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 薪资计算 ─────────────────────────────────────────── */
+
+.money-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.money-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.money-row.is-deduct span:last-child {
+  color: var(--danger);
+}
+
+.money-row.is-strong {
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid var(--rule);
+  color: var(--text);
+}
+
+.money-row.is-total {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.money-row.is-total span:last-child {
+  font-size: 16px;
+}
+
+/* ── 每日明细 ─────────────────────────────────────────── */
+
+/* 表格滚动区：吃掉卡片的剩余高度。原来的 max-height: 190px 会让卡片
+ * 「3 行以内矮、超过就变高」，这正是要修掉的行为。 */
+.detail-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* 滚动条出现时不挤动列宽 */
+  scrollbar-gutter: stable;
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.detail-table th {
+  padding: 0 0 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+}
+
+/* 表头随滚动冻结在滚动区上沿。border-collapse 的表格里 sticky 的边框会跟着滚，
+ * 所以把 border 换成 inset 阴影，视觉上仍是那根 1px 线。 */
+.detail-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 0;
+  background: var(--surface);
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+
+.detail-table td {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.detail-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.detail-table .is-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-week {
+  margin-left: 4px;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.detail-shift {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.detail-legal {
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--warning-bg);
+  box-shadow: inset 0 0 0 1px var(--warning-border);
+  color: var(--warning-ink);
+  font-size: 10px;
+}

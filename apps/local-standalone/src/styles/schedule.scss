@@ -97,11 +97,6 @@
   background: #fbfcfd;
 }
 
-.matrix-row.is-selected .matrix-name-cell {
-  border-left: 2px solid var(--accent);
-  padding-left: 10px;
-}
-
 .matrix-name-cell {
   position: sticky;
   left: 0;
@@ -118,7 +113,8 @@
   border-left: 2px solid transparent;
   background: var(--surface);
   text-align: left;
-  cursor: pointer;
+  /* 姓名不再可点（日历已锁本人），别让光标暗示可以点 */
+  cursor: default;
 }
 
 .matrix-head .matrix-name-cell {
@@ -129,6 +125,19 @@
   font-size: 12px;
   font-weight: 500;
   cursor: default;
+}
+
+.matrix-name-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* 本人那一行：姓名后挂徽章，左侧那道 2px 竖线换成强调色（本来就预留了 2px，
+ * 只改颜色不动布局，否则整行文字会比其他行右移）。 */
+.matrix-row.is-self .matrix-name-cell {
+  border-left-color: var(--accent);
 }
 
 .matrix-name {
@@ -214,18 +223,7 @@
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
-/* 改过的日子：一个小圆点，不靠描边（描边会和今天列的框打架） */
-.matrix-cell.is-edited::after {
-  content: "";
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.6;
-}
+/* 矩阵格子里只显示班次，不加「改过 / 有加班」的小点 —— 见 TeamMatrix 的注释 */
 
 .matrix-legend {
   display: flex;
@@ -321,12 +319,16 @@
   text-align: left;
 }
 
-.cal-cell:hover:not(.is-blank) {
+.cal-cell:hover:not(.is-outside) {
   background: #fbfcfd;
 }
 
-.cal-cell.is-blank {
-  background: #fcfcfd;
+/* 周期外的日期：内容和周期内完全一样（农历 + 班次 + 角标），
+ * 只靠「底色压暗 + 整体淡一档 + 不可点」区分。
+ * 底色比目标色深一档，是因为 opacity 会把它一起提亮。 */
+.cal-cell.is-outside {
+  background: #f1f3f5;
+  opacity: 0.72;
   cursor: default;
 }
 
@@ -356,10 +358,6 @@
 }
 
 .cal-shift {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 3px;
   margin-top: auto;
   padding: 3px 0;
   border-radius: 3px;
@@ -369,19 +367,44 @@
   white-space: nowrap;
 }
 
-/* 加班小时：同色系、小一号，附在班次后面而不是另起一行 */
-.cal-ot {
-  font-size: 10px;
-  font-weight: 600;
-  opacity: 0.82;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 法定：右上角角标，不占格子里原本三行的位置 */
-.cal-legal {
+/* 右上角：加班小时与「法」角标并排，不占班次那一行 */
+.cal-corner {
   position: absolute;
   top: 4px;
   right: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cal-ot {
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--overtime-bg);
+  color: var(--overtime-ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 半天事假：中性底，和「法」「+3h」区分开（事假不会有那两者，所以不会撞） */
+.cal-leave {
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  white-space: nowrap;
+}
+
+.cal-legal {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -404,24 +427,18 @@
   color: var(--faint);
 }
 
-.calendar-legend .legend-shift {
-  margin-top: 0;
-  padding: 2px 8px;
-}
-
 .calendar-legend .legend-text:not(:last-child) {
   margin-right: 14px;
-}
-
-.calendar-legend .legend-legal {
-  position: static;
 }
 
 .cal-shift.is-blank {
   color: var(--faint);
 }
 
-.cal-shift.is-edited {
+/* 班次块描边 = 「这天班次与默认不同」。
+ * 只表示这一件事：加班有右上角橙标、法定有「法」角标，三者不重复表达。
+ * 用 inset 阴影而不是 border —— 加 border 会让块高 +2px，整行格子对不齐。 */
+.cal-shift.is-changed {
   box-shadow: inset 0 0 0 1px rgba(19, 20, 22, 0.45);
 }
 

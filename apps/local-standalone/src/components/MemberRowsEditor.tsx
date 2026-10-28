@@ -48,6 +48,8 @@ interface MemberRowsEditorProps {
    * 数组顺序就是全员矩阵的行顺序，所以这里不只是「看着舒服」。
    */
   sortable?: boolean
+  /** 本人的 memberId：这一行只读，改名/换班序要去「个人信息」 */
+  selfId?: string
 }
 
 /**
@@ -59,9 +61,17 @@ interface MemberRowsEditorProps {
  * 排序留两条路：拖行首的把手（快，一次到位）、点 ↑ ↓（键盘可达，微调一格）。
  * 只做拖拽的话键盘用户完全没法排序，所以两个都要。
  */
-export function MemberRowsEditor({ rows, patterns, onChange, sortable = false }: MemberRowsEditorProps) {
+export function MemberRowsEditor({
+  rows,
+  patterns,
+  onChange,
+  sortable = false,
+  selfId
+}: MemberRowsEditorProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
+
+  const patternNames = new Map(patterns.map(option => [option.id, option.name]))
 
   function patch(index: number, next: Partial<MemberRow>) {
     onChange(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...next } : row)))
@@ -113,10 +123,13 @@ export function MemberRowsEditor({ rows, patterns, onChange, sortable = false }:
         <p className="member-editor-empty">还没有人。点下面的「添加成员」开始。</p>
       ) : null}
 
-      {rows.map((row, index) => (
+      {rows.map((row, index) => {
+        const isSelfRow = Boolean(selfId && row.id === selfId)
+        return (
         <div
           className={[
             'member-row',
+            isSelfRow ? 'is-self' : '',
             dragIndex === index ? 'is-dragging' : '',
             overIndex === index && dragIndex !== null && dragIndex !== index ? 'is-drop-target' : ''
           ].filter(Boolean).join(' ')}
@@ -151,39 +164,53 @@ export function MemberRowsEditor({ rows, patterns, onChange, sortable = false }:
             </span>
           ) : null}
 
-          <input
-            aria-label={`第 ${index + 1} 位成员的姓名`}
-            className="input"
-            maxLength={12}
-            placeholder="姓名"
-            value={row.name}
-            onChange={event => patch(index, { name: event.target.value })}
-          />
-          <select
-            aria-label={`${row.name || `第 ${index + 1} 位成员`} 的班序`}
-            className="input"
-            value={row.patternId}
-            onChange={event => patch(index, { patternId: event.target.value })}
-          >
-            {custom.length === 0
-              ? patterns.map(option => (
-                <option key={option.id} value={option.id}>{option.name}</option>
-              ))
-              : (
-                <>
-                  <optgroup label="内置">
-                    {builtin.map(option => (
-                      <option key={option.id} value={option.id}>{option.name}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="自定义">
-                    {custom.map(option => (
-                      <option key={option.id} value={option.id}>{option.name}</option>
-                    ))}
-                  </optgroup>
-                </>
-              )}
-          </select>
+          {isSelfRow ? (
+            <span className="member-locked" title="本人的姓名与班序请在「个人信息」里改">
+              <span className="member-locked-name">{row.name}</span>
+              <span className="badge-self">本人</span>
+            </span>
+          ) : (
+            <input
+              aria-label={`第 ${index + 1} 位成员的姓名`}
+              className="input"
+              maxLength={12}
+              placeholder="姓名"
+              value={row.name}
+              onChange={event => patch(index, { name: event.target.value })}
+            />
+          )}
+
+          {isSelfRow ? (
+            <span className="member-locked member-locked-pattern">
+              {patternNames.get(row.patternId) ?? row.patternId}
+            </span>
+          ) : (
+            <select
+              aria-label={`${row.name || `第 ${index + 1} 位成员`} 的班序`}
+              className="input"
+              value={row.patternId}
+              onChange={event => patch(index, { patternId: event.target.value })}
+            >
+              {custom.length === 0
+                ? patterns.map(option => (
+                  <option key={option.id} value={option.id}>{option.name}</option>
+                ))
+                : (
+                  <>
+                    <optgroup label="内置">
+                      {builtin.map(option => (
+                        <option key={option.id} value={option.id}>{option.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="自定义">
+                      {custom.map(option => (
+                        <option key={option.id} value={option.id}>{option.name}</option>
+                      ))}
+                    </optgroup>
+                  </>
+                )}
+            </select>
+          )}
 
           <div className="member-row-actions">
             {sortable ? (
@@ -208,10 +235,19 @@ export function MemberRowsEditor({ rows, patterns, onChange, sortable = false }:
                 </button>
               </>
             ) : null}
-            <button className="btn btn-quiet" type="button" onClick={() => remove(index)}>删除</button>
+            <button
+              className="btn btn-quiet"
+              disabled={isSelfRow}
+              title={isSelfRow ? '本人不能在这里删除，请到「个人信息」里更换' : undefined}
+              type="button"
+              onClick={() => remove(index)}
+            >
+              删除
+            </button>
           </div>
         </div>
-      ))}
+        )
+      })}
 
       <button className="btn btn-add" type="button" onClick={append}>添加成员</button>
     </div>

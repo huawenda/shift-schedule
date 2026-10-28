@@ -7,7 +7,7 @@
  *
  * 覆盖（对应 PRD §8 验收标准）：
  *   1. 空数据首次打开 → 出现三步向导
- *   2. 向导建 3 人 → 排班页出现 3 行
+ *   2. 向导先填本人（姓名 + 班序）再加 2 位同事 → 排班页出现 3 行
  *   3. 独立浏览器存储可写（file:// 下尤其要确认）
  *   4. 点格子改班 → 弹层 → 保存 → 写入 roster v2（矩阵弹层不含加班录入）
  *   5. 刷新后改动仍在（真持久化）
@@ -16,7 +16,7 @@
  *   7. 设置页：13 条内置班序可预览 24 格
  *   8. 新建自建班序（24 格逐格填）→ 出现在列表 → 能挂到成员上
  *   9. 矩阵里显示自建班序名
- *  10. 导出备份是 v3，且带上自建班序
+ *  10. 导出备份是 v4，且带上自建班序
  *  11. 删除自建班序要输入名字确认，成员与改班记录一并删除
  *  12. 翻月不崩
  *
@@ -223,6 +223,23 @@ function setInputBySelector(selector, value) {
   })()`
 }
 
+/** 侧栏跳转：三页各自等一个稳定标记 */
+async function goMatrix(client) {
+  await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+  await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '全员矩阵页')
+}
+
+async function goOverview(client) {
+  await client.evaluate(clickByText('.rail-item', '月度概览'))
+  await waitFor(client, 'Boolean(document.querySelector(".stats-grid"))', '月度概览页')
+}
+
+/** 设置页分两个 tab：人员配置 / 个人资料。切页后给 React 一拍时间 */
+async function switchSettingsTab(client, label) {
+  await client.evaluate(clickByText('.canvas-tools .segmented-item', label))
+  await sleep(150)
+}
+
 const firstCell = '.matrix-row .matrix-cell'
 
 async function runScenario(name, url, downloadDir) {
@@ -253,6 +270,14 @@ async function runScenario(name, url, downloadDir) {
     await client.ready
     await client.send('Runtime.enable')
     await client.send('Page.enable')
+    // 固定到设计基准 1440×900：headless 默认 800×600，
+    // 在那种宽度下「日历 900 上限」「统计两列」这些布局判断根本测不出来。
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: 1440,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false
+    })
     try {
       await client.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloadDir })
     } catch {
@@ -288,23 +313,197 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 本机存储可用`, storageState === 'ok', storageState === 'ok' ? '' : storageState)
     if (storageState !== 'ok') return
 
-    // --- 2. 向导建 3 人 ---
+    // --- 2. 向导：第 1 步先填本人，第 2 步加同事 ---
+    check(`${name}: 向导第 1 步先问本人`, await client.evaluate(setInputBySelector('.wizard-self input', '张三')))
+    await sleep(150)
     check(`${name}: 向导第 1 步可继续`, await client.evaluate(clickByText('.wizard-foot button', '下一步')))
-    await waitFor(client, 'Boolean(document.querySelector(".member-editor"))', '成员表')
+    await waitFor(client, 'Boolean(document.querySelector(".member-editor"))', '同事表')
 
-    const names = ['张三', '李四', '王五']
+    // 同事这一步初始只有一行空行，先加一行凑成两位
+    check(`${name}: 同事表可以再加一行`, await client.evaluate(clickByText('.btn-add', '添加成员')))
+    await sleep(150)
+
+    const names = ['李四', '王五']
     for (let index = 0; index < names.length; index += 1) {
       const ok = await client.evaluate(setInputAt('.member-row input', index, names[index]))
-      check(`${name}: 填第 ${index + 1} 位成员姓名`, ok)
+      check(`${name}: 填第 ${index + 1} 位同事姓名`, ok)
     }
 
     await sleep(150)
     check(`${name}: 向导第 2 步可继续`, await client.evaluate(clickByText('.wizard-foot button', '下一步')))
     await waitFor(client, 'Boolean(document.querySelector(".wizard-summary"))', '确认页')
+
+    const summarySelf = await client.evaluate(
+      `document.querySelector('.wizard-summary-row.is-self')?.textContent.trim() ?? ''`
+    )
+    check(
+      `${name}: 确认页把本人单独标出来`,
+      summarySelf.includes('张三') && summarySelf.includes('本人'),
+      summarySelf
+    )
     check(`${name}: 向导进入第 3 步`, await client.evaluate(clickByText('.wizard-foot button', '进入排班表')))
 
+    // 默认落地是「月度概览」：日历 + 四块统计，且不再有今日概览条
+    await waitFor(client, 'Boolean(document.querySelector(".stats-grid"))', '月度概览页')
+    const landing = await client.evaluate(`(() => ({
+      active: document.querySelector('.rail-item.is-active')?.textContent.trim() ?? '',
+      rails: Array.from(document.querySelectorAll('.rail-item')).map(node => node.textContent.trim()),
+      cards: document.querySelectorAll('.stat-card').length,
+      summary: document.querySelectorAll('.summary').length,
+      calendar: document.querySelectorAll('.calendar').length
+    }))()`)
+    check(`${name}: 默认落在月度概览`, landing.active === '月度概览', JSON.stringify(landing))
+    check(
+      `${name}: 侧栏是全员矩阵 / 月度概览 / 设置`,
+      JSON.stringify(landing.rails) === JSON.stringify(['全员矩阵', '月度概览', '设置']),
+      JSON.stringify(landing.rails)
+    )
+    check(
+      `${name}: 概览页有日历和四块统计、没有今日概览条`,
+      landing.calendar === 1 && landing.cards === 4 && landing.summary === 0,
+      JSON.stringify(landing)
+    )
+
+    const layout = await client.evaluate(`(() => {
+      const cal = document.querySelector('.calendar')?.getBoundingClientRect()
+      const grid = document.querySelector('.stats-grid')?.getBoundingClientRect()
+      return {
+        cal: Math.round(cal?.width ?? 0),
+        grid: Math.round(grid?.width ?? 0),
+        viewport: window.innerWidth
+      }
+    })()`)
+    check(
+      `${name}: 日历保持 900 上限、统计区更宽`,
+      layout.cal <= 901 && layout.cal > 700 && layout.grid > layout.cal,
+      JSON.stringify(layout)
+    )
+
+    // 统计区块：刚建完数据还没有加班，也没有薪资
+    const emptyStats = await client.evaluate(`(() => ({
+      days: document.querySelectorAll('.day-count').length,
+      noOvertime: Array.from(document.querySelectorAll('.stat-empty')).map(node => node.textContent.trim()),
+      profileCta: Boolean(Array.from(document.querySelectorAll('.stat-empty-block button'))
+        .find(node => node.textContent.trim() === '去「个人资料」填'))
+    }))()`)
+    check(`${name}: 本月概览列出六个班次天数`, emptyStats.days === 6, JSON.stringify(emptyStats))
+    check(
+      `${name}: 没有加班时两块给空态，薪资块给填工资的入口`,
+      // 加班分布 + 每日明细各一条「还没有加班记录」，薪资块一条「还没填基本工资」
+      emptyStats.noOvertime.filter(text => text === '这个月还没有加班记录。').length === 2 &&
+        emptyStats.noOvertime.some(text => text.includes('基本工资')) &&
+        emptyStats.profileCta === true,
+      JSON.stringify(emptyStats)
+    )
+
+    await goMatrix(client)
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '矩阵出现 3 行')
-    check(`${name}: 排班页出现 3 位成员`, true)
+    check(`${name}: 矩阵页出现 1 本人 + 2 同事`, true)
+    check(`${name}: 今日概览条只在矩阵页`, await client.evaluate('document.querySelectorAll(".summary").length === 1'))
+
+    // 矩阵里本人那一行带徽章，同事没有
+    const selfBadges = await client.evaluate(`(() => {
+      const badges = document.querySelectorAll('.matrix-row .badge-self').length
+      const selfRow = document.querySelector('.matrix-row.is-self')
+      return {
+        badges,
+        selfName: selfRow?.querySelector('.matrix-name')?.textContent.trim() ?? '',
+        nameIsButton: Boolean(document.querySelector('.matrix-name-cell button'))
+      }
+    })()`)
+    check(
+      `${name}: 矩阵里只有本人行带徽章`,
+      selfBadges.badges === 1 && selfBadges.selfName.startsWith('张三'),
+      JSON.stringify(selfBadges)
+    )
+    check(`${name}: 矩阵姓名不再可点（日历已锁本人）`, selfBadges.nameIsButton === false)
+
+    // 切到日历：没有人员下拉，标题就是本人
+    await goOverview(client)
+    const calendarLock = await client.evaluate(`(() => ({
+      selects: document.querySelectorAll('.canvas-tools select, .calendar select').length,
+      name: document.querySelector('.calendar-name')?.textContent.trim() ?? ''
+    }))()`)
+    check(
+      `${name}: 个人日历锁定本人且没有切换入口`,
+      calendarLock.selects === 0 && calendarLock.name === '张三',
+      JSON.stringify(calendarLock)
+    )
+    await goMatrix(client)
+
+    // --- 2b. 设置分页 + 个人信息：区块到位，薪资能落盘 ---
+    await client.evaluate(clickByText('.rail-item', '设置'))
+    await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
+
+    const tabState = await client.evaluate(`(() => ({
+      labels: Array.from(document.querySelectorAll('.canvas-tools .segmented-item')).map(node => node.textContent.trim()),
+      active: document.querySelector('.canvas-tools .segmented-item.is-on')?.textContent.trim() ?? '',
+      patterns: document.querySelectorAll('.pattern-block').length,
+      members: document.querySelectorAll('.member-editor').length,
+      profile: document.querySelectorAll('.profile-block').length
+    }))()`)
+    check(
+      `${name}: 设置分两页且默认落在人员配置`,
+      JSON.stringify(tabState.labels) === JSON.stringify(['人员配置', '个人资料']) &&
+        tabState.active === '人员配置' &&
+        tabState.patterns === 1 &&
+        tabState.members === 1 &&
+        tabState.profile === 0,
+      JSON.stringify(tabState)
+    )
+
+    const selfRow = await client.evaluate(`(() => ({
+      selfBadges: document.querySelectorAll('.member-row .badge-self').length,
+      selfInputs: document.querySelectorAll('.member-row.is-self input, .member-row.is-self select').length,
+      selfDeleteDisabled: Boolean(document.querySelector('.member-row.is-self .btn-quiet[disabled]'))
+    }))()`)
+    check(
+      `${name}: 成员表里的本人行只读且删除禁用`,
+      selfRow.selfBadges === 1 && selfRow.selfInputs === 0 && selfRow.selfDeleteDisabled === true,
+      JSON.stringify(selfRow)
+    )
+
+    await switchSettingsTab(client, '个人资料')
+    await waitFor(client, 'Boolean(document.querySelector(".profile-block"))', '个人信息区块')
+
+    const profilePageOnly = await client.evaluate(`(() => ({
+      patterns: document.querySelectorAll('.pattern-block').length,
+      members: document.querySelectorAll('.member-editor').length,
+      profile: document.querySelectorAll('.profile-block').length
+    }))()`)
+    check(
+      `${name}: 切到个人资料后班序与成员不再渲染`,
+      // profile 是 2：本人一块 + 薪资一块
+      profilePageOnly.patterns === 0 && profilePageOnly.members === 0 && profilePageOnly.profile === 2,
+      JSON.stringify(profilePageOnly)
+    )
+
+    const profileMeta = await client.evaluate(
+      `document.querySelector('.settings-section .settings-meta')?.textContent.trim() ?? ''`
+    )
+    check(`${name}: 个人资料页标出本人`, profileMeta.includes('张三'), profileMeta)
+
+    check(`${name}: 填基本工资`, await client.evaluate(setInputBySelector('.salary-grid input', '8000')))
+    await sleep(150)
+    check(`${name}: 保存薪资`, await client.evaluate(clickByText('.profile-block .btn-primary', '保存薪资')))
+    await sleep(300)
+
+    const salaryStored = await client.evaluate(`(() => {
+      const raw = window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})
+      const parsed = raw ? JSON.parse(raw) : null
+      return {
+        base: parsed?.profile?.salary?.baseSalary ?? null,
+        hasMemberId: Boolean(parsed?.profile?.memberId)
+      }
+    })()`)
+    check(
+      `${name}: 薪资写进 profile 并落盘`,
+      salaryStored.base === '8000' && salaryStored.hasMemberId,
+      JSON.stringify(salaryStored)
+    )
+
+    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+    await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '回到矩阵')
 
     // --- 3. 改班 ---
     const before = await client.evaluate(`document.querySelector(${JSON.stringify(firstCell)}).textContent.trim()`)
@@ -365,11 +564,11 @@ async function runScenario(name, url, downloadDir) {
     const afterReload = await client.evaluate(`(() => {
       const cell = document.querySelector(${JSON.stringify(firstCell)})
       if (!cell) return null
-      return { text: cell.textContent.trim(), edited: cell.classList.contains('is-edited') }
+      return { text: cell.textContent.trim(), marked: cell.classList.contains('is-edited') }
     })()`)
     check(
-      `${name}: 刷新后改动仍在`,
-      Boolean(afterReload && afterReload.text === SHORT_LABEL[targetShift] && afterReload.edited),
+      `${name}: 刷新后改动仍在且矩阵不带标记`,
+      Boolean(afterReload && afterReload.text === SHORT_LABEL[targetShift] && afterReload.marked === false),
       JSON.stringify(afterReload)
     )
 
@@ -389,16 +588,63 @@ async function runScenario(name, url, downloadDir) {
     }
     check(`${name}: 恢复默认后记录被删除`, resetParsed?.overrides?.length === 0, JSON.stringify(resetParsed?.overrides ?? null))
 
-    // --- 5b. 个人日历：加班 + 法定 ---
-    await client.evaluate(clickByText('.segmented-item', '个人日历'))
-    await waitFor(client, 'document.querySelectorAll(".cal-cell:not(.is-blank)").length > 0', '个人日历')
+    // --- 5b. 月度概览（日历）：加班 + 法定 ---
+    await goOverview(client)
+    await waitFor(client, 'document.querySelectorAll(".cal-cell").length > 0', '月度概览日历')
+
+    // 周期外的日期补齐网格：信息与周期内一致（农历 + 班次），只靠样式与是否可点区分
+    const gridFill = await client.evaluate(`(() => {
+      const cells = Array.from(document.querySelectorAll('.cal-cell'))
+      const outside = cells.filter(cell => cell.classList.contains('is-outside'))
+      const inside = cells.filter(cell => !cell.classList.contains('is-outside'))
+      const bg = node => getComputedStyle(node).backgroundColor
+      return {
+        total: cells.length,
+        outside: outside.length,
+        inside: inside.length,
+        // 每格都要有日号、农历、班次 —— 周期外不能只剩一个日号
+        outsideDay: outside.filter(cell => /^\\d{1,2}$/.test(cell.querySelector('.cal-day')?.textContent.trim() ?? '')).length,
+        outsideMeta: outside.filter(cell => (cell.querySelector('.cal-meta')?.textContent ?? '').trim().length > 0).length,
+        outsideShift: outside.filter(cell => (cell.querySelector('.cal-shift')?.textContent ?? '').trim().length > 0).length,
+        outsideTag: outside[0]?.tagName ?? '',
+        insideTag: inside[0]?.tagName ?? '',
+        // 样式区别：底色不同、整格更淡
+        outsideBg: outside[0] ? bg(outside[0]) : '',
+        insideBg: inside[0] ? bg(inside[0]) : '',
+        outsideOpacity: outside[0] ? getComputedStyle(outside[0]).opacity : '',
+        insideOpacity: inside[0] ? getComputedStyle(inside[0]).opacity : '',
+        outsideTitles: outside.slice(0, 2).map(cell => cell.title)
+      }
+    })()`)
+    check(
+      `${name}: 日历补齐到整 7 列（无空白格）`,
+      gridFill.total % 7 === 0 && gridFill.outside > 0 && gridFill.outside + gridFill.inside === gridFill.total,
+      JSON.stringify(gridFill)
+    )
+    check(
+      `${name}: 周期外也有日号、农历与班次（信息与周期内一致）`,
+      gridFill.outsideDay === gridFill.outside &&
+        gridFill.outsideMeta === gridFill.outside &&
+        gridFill.outsideShift === gridFill.outside,
+      JSON.stringify(gridFill)
+    )
+    check(
+      `${name}: 周期外只靠样式区分（底色更深、更淡）且不可点`,
+      gridFill.outsideBg !== gridFill.insideBg &&
+        Number(gridFill.outsideOpacity) < Number(gridFill.insideOpacity) &&
+        gridFill.outsideTag === 'DIV' &&
+        gridFill.insideTag === 'BUTTON',
+      JSON.stringify(gridFill)
+    )
 
     // 找一个白班/夜班的格子（休息/事假不记加班）
     const workCell = await client.evaluate(`(() => {
       const cells = Array.from(document.querySelectorAll('.cal-cell'))
       for (let index = 0; index < cells.length; index += 1) {
-        const label = cells[index].querySelector('.cal-shift-label')
-        const text = label ? label.textContent.trim() : ''
+        // 周期外的格子是不可点的 <div>，记不了加班，得跳过
+        if (cells[index].classList.contains('is-outside')) continue
+        const block = cells[index].querySelector('.cal-shift')
+        const text = block ? block.textContent.trim() : ''
         if (text === '白班' || text === '夜班') return { index, shift: text, date: cells[index].title }
       }
       return null
@@ -460,10 +706,199 @@ async function runScenario(name, url, downloadDir) {
 
       const otLabel = await client.evaluate(`(() => {
         const cell = document.querySelectorAll('.cal-cell')[${workCell.index}]
-        const tag = cell ? cell.querySelector('.cal-ot') : null
-        return tag ? tag.textContent.trim() : null
+        if (!cell) return null
+        const tag = cell.querySelector('.cal-ot')
+        return {
+          text: tag ? tag.textContent.trim() : null,
+          // 必须在右上角（.cal-corner 里），不能塞进班次色块
+          inCorner: Boolean(tag && tag.closest('.cal-corner')),
+          inShiftBlock: Boolean(tag && tag.closest('.cal-shift'))
+        }
       })()`)
-      check(`${name}: 日历格子里显示 +3h`, otLabel === '+3h', String(otLabel))
+      check(
+        `${name}: 加班数显示在格子右上角`,
+        otLabel?.text === '+3h' && otLabel.inCorner === true && otLabel.inShiftBlock === false,
+        JSON.stringify(otLabel)
+      )
+
+      // 统计跟着记录走：加班分布、每日明细、薪资三块都要立刻更新
+      const statsWithOvertime = await client.evaluate(`(() => {
+        const cards = Array.from(document.querySelectorAll('.stat-card'))
+        const card = label => cards.find(item => item.querySelector('.stat-title')?.textContent.trim() === label)
+        const ot = card('加班分布')
+        const salaryCard = card('薪资计算')
+        const detail = card('每日明细')
+        return {
+          otFoot: ot?.querySelector('.stat-foot')?.textContent.replace(/\\s+/g, '') ?? '',
+          moneyRows: salaryCard?.querySelectorAll('.money-row').length ?? 0,
+          net: salaryCard?.querySelector('.money-row.is-total span:last-child')?.textContent.trim() ?? '',
+          detailRows: detail?.querySelectorAll('tbody tr').length ?? 0,
+          detailPay: detail?.querySelector('tbody tr td.is-num:last-child')?.textContent.trim() ?? ''
+        }
+      })()`)
+      check(
+        `${name}: 加班分布与每日明细立刻跟上`,
+        statsWithOvertime.otFoot.includes('3h') && statsWithOvertime.detailRows === 1,
+        JSON.stringify(statsWithOvertime)
+      )
+      check(
+        `${name}: 每日明细算出了当天加班费`,
+        // 基本工资 8000 → 时薪 45.977；平日 3h × 1.5 = 206.90
+        statsWithOvertime.detailPay === '206.90',
+        JSON.stringify(statsWithOvertime)
+      )
+      check(
+        `${name}: 薪资块算到实发（8000 + 加班费）`,
+        statsWithOvertime.moneyRows === 5 && statsWithOvertime.net === '8,206.90',
+        JSON.stringify(statsWithOvertime)
+      )
+
+      // 本月概览的六张卡片：加了班的那个班次要带上小时数（不带 + 号）
+      const shiftCardOt = await client.evaluate(`(() => {
+        const counts = Array.from(document.querySelectorAll('.stat-card .day-count'))
+        const target = counts.find(node =>
+          node.querySelector('.day-count-label')?.textContent.trim() === ${JSON.stringify(workCell.shift)}
+        )
+        const extra = target?.querySelector('.day-count-extra')
+        return {
+          text: extra?.textContent.trim() ?? '',
+          isLeave: extra ? extra.classList.contains('is-leave') : null,
+          allBadges: document.querySelectorAll('.stat-card .day-count-extra').length
+        }
+      })()`)
+      check(
+        `${name}: 班次卡片写出该班次的加班小时`,
+        shiftCardOt.text === '3h' && shiftCardOt.isLeave === false && shiftCardOt.allBadges === 1,
+        JSON.stringify(shiftCardOt)
+      )
+
+      // 薪资 / 每日明细两张卡：明细不自定高度，跟随薪资卡；内容在卡片里滚
+      const tallCards = await client.evaluate(`(() => {
+        const salary = document.querySelector('.stat-card[aria-label="薪资计算"]')
+        const detail = document.querySelector('.stat-card-detail')
+        const fill = detail?.querySelector('.stat-card-fill')
+        const scroll = detail?.querySelector('.detail-scroll')
+        const foot = detail?.querySelector('.stat-foot')
+        const th = detail?.querySelector('.detail-table thead th')
+        const h = node => (node ? Math.round(node.getBoundingClientRect().height) : -1)
+        return {
+          salaryH: h(salary),
+          detailH: h(detail),
+          fillH: h(fill),
+          // 明细外壳必须没有写死高度，否则「跟随薪资卡」就不成立了
+          detailInlineHeight: detail ? detail.style.height || '' : 'missing',
+          scrollH: h(scroll),
+          scrollOverflow: scroll ? getComputedStyle(scroll).overflowY : '',
+          thPosition: th ? getComputedStyle(th).position : '',
+          // 合计行必须在滚动区之外，否则它会跟着内容一起滚走
+          footInsideScroll: foot ? Boolean(foot.closest('.detail-scroll')) : null
+        }
+      })()`)
+      check(
+        `${name}: 每日明细高度跟随薪资卡（两卡等高）`,
+        tallCards.salaryH > 200 &&
+          Math.abs(tallCards.salaryH - tallCards.detailH) <= 1 &&
+          tallCards.detailInlineHeight === '',
+        JSON.stringify(tallCards)
+      )
+      check(
+        `${name}: 明细内层铺满、表格区可滚、表头冻结、合计行在滚动区外`,
+        Math.abs(tallCards.fillH - tallCards.detailH) <= 2 &&
+          tallCards.scrollOverflow === 'auto' &&
+          tallCards.thPosition === 'sticky' &&
+          tallCards.footInsideScroll === false &&
+          tallCards.scrollH > 0 &&
+          tallCards.scrollH < tallCards.detailH,
+        JSON.stringify(tallCards)
+      )
+
+      // 描边只表示「班次与默认不同」。刚才只记了加班、班次没动，所以不该有描边。
+      const ringOnOvertimeOnly = await client.evaluate(`(() => {
+        const cell = document.querySelectorAll('.cal-cell')[${workCell.index}]
+        const block = cell ? cell.querySelector('.cal-shift') : null
+        return { hasRing: Boolean(block && block.classList.contains('is-changed')) }
+      })()`)
+      check(
+        `${name}: 只记加班、班次未动 → 班次块不加描边`,
+        ringOnOvertimeOnly?.hasRing === false,
+        JSON.stringify(ringOnOvertimeOnly)
+      )
+
+      // 真改班次后描边必须出现，否则上面那条是空断言
+      await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+      check(`${name}: 日历弹层里把班次改成休息`, await client.evaluate(clickByText('.dialog-day .option', '休息')))
+      await sleep(120)
+      check(`${name}: 保存改班`, await client.evaluate(clickByText('.dialog-foot button', '保存')))
+      await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+      await sleep(250)
+      const ringAfterShiftChange = await client.evaluate(`(() => {
+        const cell = document.querySelectorAll('.cal-cell')[${workCell.index}]
+        const block = cell ? cell.querySelector('.cal-shift') : null
+        return {
+          hasRing: Boolean(block && block.classList.contains('is-changed')),
+          text: block ? block.textContent.trim() : null
+        }
+      })()`)
+      check(
+        `${name}: 班次与默认不同 → 班次块出现描边`,
+        ringAfterShiftChange?.hasRing === true && ringAfterShiftChange.text === '休息',
+        JSON.stringify(ringAfterShiftChange)
+      )
+
+      // 换人必须先问：有记录时改本人姓名 → 弹影响清单，取消则什么都不动
+      await client.evaluate(clickByText('.rail-item', '设置'))
+      await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
+      await switchSettingsTab(client, '个人资料')
+      await waitFor(client, 'Boolean(document.querySelector(".profile-block"))', '个人信息区块')
+      await client.evaluate(setInputBySelector('.profile-form input', '张三丰'))
+      await sleep(150)
+      check(
+        `${name}: 改本人姓名触发保存`,
+        await client.evaluate(clickByText('.profile-block .btn-primary', '保存本人信息'))
+      )
+      await waitFor(client, 'Boolean(document.querySelector(".impact-list"))', '换人确认弹层')
+      const impactText = await client.evaluate('document.querySelector(".impact-list").textContent.trim()')
+      check(
+        `${name}: 确认弹层列出将清掉的条数`,
+        impactText.includes('改班记录') && impactText.includes('薪资'),
+        impactText
+      )
+      check(`${name}: 取消换人`, await client.evaluate(clickByText('.dialog-foot button', '取消')))
+      await waitFor(client, '!document.querySelector(".impact-list")', '弹层关闭')
+      await sleep(200)
+
+      const keptAfterCancel = await client.evaluate(`(() => {
+        const raw = window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})
+        const parsed = raw ? JSON.parse(raw) : null
+        const self = parsed?.members?.find(member => member.id === parsed?.profile?.memberId)
+        return { name: self?.name ?? null, overrides: parsed?.overrides?.length ?? -1 }
+      })()`)
+      check(
+        `${name}: 取消后本人与记录都没动`,
+        keptAfterCancel.name === '张三' && keptAfterCancel.overrides === 1,
+        JSON.stringify(keptAfterCancel)
+      )
+
+      // 新增成员不能与本人同名（回到人员配置页）
+      await switchSettingsTab(client, '人员配置')
+      await waitFor(client, 'Boolean(document.querySelector(".member-editor"))', '成员表')
+      check(`${name}: 成员表加一行`, await client.evaluate(clickByText('.btn-add', '添加成员')))
+      await sleep(150)
+      const lastRowIndex = await client.evaluate('document.querySelectorAll(".member-row").length - 1')
+      const lockedCount = await client.evaluate('document.querySelectorAll(".member-row .member-locked").length')
+      await client.evaluate(setInputAt('.member-row input', lastRowIndex - lockedCount, '张三'))
+      await sleep(200)
+      const sameNameError = await client.evaluate(
+        `document.querySelector('.error-list')?.textContent.trim() ?? ''`
+      )
+      check(
+        `${name}: 与本人同名被拦下`,
+        sameNameError.includes('与本人同名'),
+        sameNameError
+      )
+
+      await goOverview(client)
 
       // 恢复默认：加班一并清掉
       await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
@@ -483,10 +918,178 @@ async function runScenario(name, url, downloadDir) {
         restoreParsed?.overrides?.length === 0,
         JSON.stringify(restoreParsed?.overrides ?? null)
       )
+
+      const statsAfterRestore = await client.evaluate(`(() => {
+        const cards = Array.from(document.querySelectorAll('.stat-card'))
+        const card = label => cards.find(item => item.querySelector('.stat-title')?.textContent.trim() === label)
+        return {
+          otFoot: card('加班分布')?.querySelector('.stat-foot')?.textContent.replace(/\\s+/g, '') ?? '',
+          detailRows: card('每日明细')?.querySelectorAll('tbody tr').length ?? -1,
+          net: card('薪资计算')?.querySelector('.money-row.is-total span:last-child')?.textContent.trim() ?? '',
+          // 卡片上的小时标记也要跟着消失（既没有加班也没有事假）
+          badges: document.querySelectorAll('.stat-card .day-count-extra').length
+        }
+      })()`)
+      check(
+        `${name}: 恢复默认后统计回到零（卡片上的小时标记也清掉）`,
+        statsAfterRestore.otFoot.includes('0h') &&
+          statsAfterRestore.detailRows === 0 &&
+          statsAfterRestore.badges === 0,
+        JSON.stringify(statsAfterRestore)
+      )
+
+      // --- 5c. 事假时长：半天要真的从工资里扣 ---
+      await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+      check(`${name}: 弹层里选事假`, await client.evaluate(clickByText('.dialog-day .option', '事假')))
+      await sleep(150)
+
+      const leaveSection = await client.evaluate(`(() => ({
+        durations: Array.from(document.querySelectorAll('.dialog-day .segmented-item'))
+          .map(node => node.textContent.trim())
+          .filter(text => text === '半天' || text === '一天'),
+        note: document.querySelector('.dialog-day .section-note:last-of-type')?.textContent.trim() ?? ''
+      }))()`)
+      check(
+        `${name}: 选事假后出现「半天 / 一天」`,
+        JSON.stringify(leaveSection.durations) === JSON.stringify(['半天', '一天']),
+        JSON.stringify(leaveSection)
+      )
+
+      check(`${name}: 选半天`, await client.evaluate(clickByText('.dialog-day .segmented-item', '半天')))
+      await sleep(120)
+      check(`${name}: 保存半天事假`, await client.evaluate(clickByText('.dialog-foot button', '保存')))
+      await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+      await sleep(300)
+
+      const leaveStored = await client.evaluate(`(() => {
+        const raw = window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})
+        const parsed = raw ? JSON.parse(raw) : null
+        const record = parsed?.overrides?.[0] ?? null
+        return { shift: record?.shift ?? null, duration: record?.leaveDuration ?? null, count: parsed?.overrides?.length ?? -1 }
+      })()`)
+      check(
+        `${name}: 半天事假落盘（只存「半天」，一天走默认值）`,
+        leaveStored.shift === '事假' && leaveStored.duration === '半天' && leaveStored.count === 1,
+        JSON.stringify(leaveStored)
+      )
+
+      const leaveUi = await client.evaluate(`(() => {
+        const cell = document.querySelectorAll('.cal-cell')[${workCell.index}]
+        const cards = Array.from(document.querySelectorAll('.stat-card'))
+        const card = label => cards.find(item => item.querySelector('.stat-title')?.textContent.trim() === label)
+        const rows = Array.from(card('薪资计算')?.querySelectorAll('.money-row') ?? [])
+          .map(row => row.textContent.replace(/\\s+/g, ' ').trim())
+        const counts = Array.from(card('本月概览')?.querySelectorAll('.day-count') ?? [])
+        const leaveCard = counts.find(node => node.querySelector('.day-count-label')?.textContent.trim() === '事假')
+        const extra = leaveCard?.querySelector('.day-count-extra')
+        return {
+          corner: cell?.querySelector('.cal-leave')?.textContent.trim() ?? null,
+          overviewFoot: card('本月概览')?.querySelector('.stat-foot')?.textContent.replace(/\\s+/g, '') ?? '',
+          leaveCardExtra: extra?.textContent.trim() ?? '',
+          leaveCardIsLeave: extra ? extra.classList.contains('is-leave') : null,
+          leaveRow: rows.find(text => text.includes('事假扣款')) ?? '',
+          net: rows.find(text => text.startsWith('实发')) ?? ''
+        }
+      })()`)
+      check(`${name}: 日历角标标出「半天」`, leaveUi.corner === '半天', JSON.stringify(leaveUi))
+      check(
+        `${name}: 事假卡片写 4h，底部不再重复小时`,
+        leaveUi.leaveCardExtra === '4h' && leaveUi.leaveCardIsLeave === true &&
+          leaveUi.overviewFoot.includes('事假1天') && !leaveUi.overviewFoot.includes('4h'),
+        JSON.stringify(leaveUi)
+      )
+      check(
+        `${name}: 事假扣款按时薪×4h 扣`,
+        // 8000 ÷ 21.75 ÷ 8 = 45.977；× 4 = 183.91；实发 8000 − 183.91
+        leaveUi.leaveRow.includes('183.91') && leaveUi.net.includes('7,816.09'),
+        JSON.stringify(leaveUi)
+      )
+
+      // 收尾：清掉这条事假，后续步骤从干净状态开始
+      await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+      check(`${name}: 清掉半天事假`, await client.evaluate(clickByText('.dialog-foot button', '恢复默认')))
+      await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+      await sleep(250)
+
+      // --- 5d. 法定独立成卡片：从原班次里扣掉，六格相加仍等于本期天数 ---
+      const readCards = `(() => {
+        const cards = Array.from(document.querySelectorAll('.stat-card .day-count'))
+        const read = label => {
+          const node = cards.find(item => item.querySelector('.day-count-label')?.textContent.trim() === label)
+          return node ? Number(node.querySelector('.day-count-num').textContent.trim()) : -1
+        }
+        const hours = label => {
+          const node = cards.find(item => item.querySelector('.day-count-label')?.textContent.trim() === label)
+          return node?.querySelector('.day-count-extra')?.textContent.trim() ?? ''
+        }
+        return {
+          labels: cards.map(item => item.querySelector('.day-count-label')?.textContent.trim()),
+          day: read('白班'),
+          night: read('夜班'),
+          special: read('特勤'),
+          legal: read('法定'),
+          dayHours: hours('白班'),
+          nightHours: hours('夜班'),
+          legalHours: hours('法定'),
+          total: cards.reduce((sum, item) => sum + Number(item.querySelector('.day-count-num').textContent.trim()), 0)
+        }
+      })()`
+
+      const beforeLegal = await client.evaluate(readCards)
+      check(
+        `${name}: 本月概览是 白/夜/休/特勤/事假/法定 六格（白特夜特已合并）`,
+        JSON.stringify(beforeLegal.labels) ===
+          JSON.stringify(['白班', '夜班', '休息', '特勤', '事假', '法定']),
+        JSON.stringify(beforeLegal.labels)
+      )
+      check(`${name}: 六格天数相加等于本期天数`, beforeLegal.total === 31, String(beforeLegal.total))
+
+      await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+      check(
+        `${name}: 把这一天标为法定`,
+        await client.evaluate(clickByText('.dialog-day .segmented-sm .segmented-item', '是'))
+      )
+      await sleep(150)
+      // 法定日切到整天特勤档 [10, 11, 11.5]，不再是 [2, 3, 3.5]
+      check(
+        `${name}: 法定日点选加班预设 10h`,
+        await client.evaluate(clickByText('.ot-presets .chip-mini', '10h'))
+      )
+      await sleep(120)
+      check(`${name}: 保存法定标记`, await client.evaluate(clickByText('.dialog-foot button', '保存')))
+      await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+      await sleep(300)
+
+      const afterLegal = await client.evaluate(readCards)
+      const workKey = workCell.shift === '白班' ? 'day' : 'night'
+      const workHoursKey = workCell.shift === '白班' ? 'dayHours' : 'nightHours'
+      check(
+        `${name}: 法定从原班次剥离（白/夜 −1、法定 +1、总数不变）`,
+        afterLegal.legal === 1 &&
+          afterLegal[workKey] === beforeLegal[workKey] - 1 &&
+          afterLegal.total === beforeLegal.total,
+        JSON.stringify({ before: beforeLegal, after: afterLegal, cell: workCell.shift })
+      )
+      check(
+        `${name}: 法定日的加班归到「法定」格，原班次格不带小时`,
+        afterLegal.legalHours === '10h' && afterLegal[workHoursKey] === '',
+        JSON.stringify({ legalHours: afterLegal.legalHours, workHours: afterLegal[workHoursKey] })
+      )
+
+      // 收尾：清掉法定标记，后续步骤从干净状态开始
+      await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)
+      await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+      check(`${name}: 清掉法定标记`, await client.evaluate(clickByText('.dialog-foot button', '恢复默认')))
+      await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+      await sleep(250)
+
     }
 
-    await client.evaluate(clickByText('.segmented-item', '全员矩阵'))
-    await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '切回矩阵')
+    await goMatrix(client)
+    await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '切开矩阵')
 
     // --- 6. 设置页 ---
     await client.evaluate(clickByText('.rail-item', '设置'))
@@ -603,13 +1206,16 @@ async function runScenario(name, url, downloadDir) {
     await sleep(350)
 
     // --- 9. 排班页用上了新班序 ---
-    await client.evaluate(clickByText('.rail-item', '排班'))
+    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
     await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '回到排班页')
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '矩阵 3 行')
-    const rowLabel = await client.evaluate('document.querySelector(".matrix-row .matrix-pattern").textContent.trim()')
-    check(`${name}: 矩阵里显示自建班序名`, rowLabel === '甲班', rowLabel)
+    // 第一行现在是本人（4F），所以要看整列而不是只看第一行
+    const rowLabels = await client.evaluate(
+      `Array.from(document.querySelectorAll('.matrix-row .matrix-pattern')).map(node => node.textContent.trim())`
+    )
+    check(`${name}: 矩阵里显示自建班序名`, rowLabels.includes('甲班'), rowLabels.join(','))
 
-    // --- 10. 导出备份：v3 且带上自建班序 ---
+    // --- 10. 导出备份：v4 且带上自建班序 ---
     await client.evaluate(clickByText('.topbar-right button', '导出备份'))
 
     let backupFile = null
@@ -626,8 +1232,8 @@ async function runScenario(name, url, downloadDir) {
     if (backupFile) {
       const backup = JSON.parse(fs.readFileSync(path.join(downloadDir, backupFile), 'utf8'))
       check(
-        `${name}: 导出备份是 v3`,
-        backup?.version === 3,
+        `${name}: 导出备份是 v4`,
+        backup?.version === 4,
         `version=${backup?.version}`
       )
       check(
@@ -640,7 +1246,7 @@ async function runScenario(name, url, downloadDir) {
       )
       check(`${name}: 备份带上 3 位成员`, backup?.roster?.members?.length === 3, String(backup?.roster?.members?.length))
     } else {
-      check(`${name}: 导出备份是 v3`, false, '没有等到下载文件')
+      check(`${name}: 导出备份是 v4`, false, '没有等到下载文件')
     }
 
     // --- 11. 删除自建班序：必须输入名字 ---
@@ -681,7 +1287,7 @@ async function runScenario(name, url, downloadDir) {
     )
 
     // --- 12. 翻月不崩 ---
-    await client.evaluate(clickByText('.rail-item', '排班'))
+    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 2', '矩阵剩 2 行')
     check(`${name}: 删除后矩阵同步更新`, true)
 
@@ -700,6 +1306,8 @@ async function runScenario(name, url, downloadDir) {
 
     // --- 13. 导入 fixtures/班组13人.json（真实班组数据的导入链路） ---
     await client.evaluate(clickByText('.rail-item', '设置'))
+    await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
+    await switchSettingsTab(client, '个人资料')
     await waitFor(client, 'Boolean(document.querySelector(".btn-file input[type=file]"))', '导入入口')
     await client.send('DOM.enable')
     const { root } = await client.send('DOM.getDocument', { depth: -1 })
@@ -711,22 +1319,30 @@ async function runScenario(name, url, downloadDir) {
 
     await client.send('DOM.setFileInputFiles', { files: [fixturePath], nodeId })
     await sleep(400)
+    // 导入后仍停在个人资料页，成员表在另一页
+    await switchSettingsTab(client, '人员配置')
+    await waitFor(client, 'document.querySelectorAll(".member-row").length === 13', '成员表 13 行')
     const imported = await client.evaluate(`(() => {
       const rows = Array.from(document.querySelectorAll('.member-row'))
-      const first = rows[0]?.querySelector('select')
+      const first = rows[0]
       return {
         count: rows.length,
-        firstName: rows[0]?.querySelector('input')?.value ?? '',
-        firstPattern: first ? first.options[first.selectedIndex].textContent.trim() : ''
+        // 本人那一行是只读的（没有 input / select），姓名与班序读锁定的那两个 span
+        firstName: first?.querySelector('.member-locked-name')?.textContent.trim() ?? '',
+        firstPattern: first?.querySelector('.member-locked-pattern')?.textContent.trim() ?? '',
+        selfBadges: document.querySelectorAll('.member-row .badge-self').length
       }
     })()`)
     check(
-      `${name}: 导入 13 人样例备份`,
-      imported.count === 13 && imported.firstName === '华文达' && imported.firstPattern === '4F',
+      `${name}: 导入 13 人样例备份（本人行只读且带徽章）`,
+      imported.count === 13 &&
+        imported.firstName === '华文达' &&
+        imported.firstPattern === '4F' &&
+        imported.selfBadges === 1,
       JSON.stringify(imported)
     )
 
-    await client.evaluate(clickByText('.rail-item', '排班'))
+    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 13', '矩阵 13 行')
     check(`${name}: 导入后矩阵 13 行`, true)
 
@@ -745,9 +1361,14 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 成员行可以下移`, moved)
     await sleep(150)
 
-    const orderAfterMove = await client.evaluate(
-      `Array.from(document.querySelectorAll('.member-row input')).slice(0, 3).map(node => node.value)`
-    )
+    // 本人那一行没有 input，所以统一按「有 input 读 value，没 input 读锁定文本」取名字
+    const orderAfterMove = await client.evaluate(`(() => {
+      return Array.from(document.querySelectorAll('.member-row')).slice(0, 3).map(row => {
+        const input = row.querySelector('input')
+        if (input) return input.value
+        return (row.querySelector('.member-locked-name')?.textContent ?? '').trim()
+      })
+    })()`)
     check(
       `${name}: 下移一位后表内顺序变化`,
       JSON.stringify(orderAfterMove) === JSON.stringify(['张舒棋', '华文达', '陈泳智']),
@@ -757,7 +1378,7 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 保存排序`, await client.evaluate(clickByText('.settings-actions button', '保存成员设置')))
     await sleep(300)
 
-    await client.evaluate(clickByText('.rail-item', '排班'))
+    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 13', '矩阵 13 行')
     const matrixOrder = await client.evaluate(
       `Array.from(document.querySelectorAll('.matrix-name')).slice(0, 3).map(node => node.textContent.trim())`

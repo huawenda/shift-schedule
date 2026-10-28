@@ -1,5 +1,6 @@
 import { isShiftType, type ShiftType } from './shifts'
 import { canRecordOvertime, sanitizeOvertime } from './overtime'
+import { sanitizeLeave, type LeaveDuration } from './leave'
 import {
   BUILTIN_PATTERN_IDS,
   isBuiltinPatternId,
@@ -9,6 +10,13 @@ import {
   type PatternLookup
 } from './patterns'
 import { readRaw, removeRaw, STORAGE_KEYS, writeRaw } from './storage'
+import {
+  emptySalary,
+  normalizeSalary,
+  salaryFilledCount,
+  type SalaryInput,
+  type SelfIdentity
+} from './profile'
 
 /**
  * 花名册：自定义班序 + 成员 + 改班记录。
@@ -34,8 +42,13 @@ export interface DayOverride {
   shift: ShiftType
   /** 当天加班小时数（0.5 步长）；undefined = 没有加班 */
   overtimeHours?: number
-  /** 是否法定节假日上班（影响加班费倍率，统计页用） */
+  /** 是否法定节假日上班（影响加班费倍率，统计用） */
   isLegal?: boolean
+  /**
+   * 事假时长。**只在「半天」时才写进记录** —— 一天是默认值，
+   * 存下来只会让每条事假记录都多一个字段，且要额外判断它算不算「与默认不同」。
+   */
+  leaveDuration?: LeaveDuration
 }
 
 /** 弹层一次要写的整天内容 */
@@ -43,6 +56,18 @@ export interface DayRecordInput {
   shift: ShiftType
   overtimeHours?: number
   isLegal?: boolean
+  leaveDuration?: LeaveDuration
+}
+
+/**
+ * 本人：指向 `members` 里的一条，不另存副本。
+ *
+ * 为什么用指针而不是独立的一份数据：本人也要出现在全员矩阵里，
+ * 存两份就会出现「改了个人信息、矩阵还是旧名字」这种两个真相来源。
+ */
+export interface Profile {
+  memberId: string
+  salary: SalaryInput
 }
 
 export interface Roster {
@@ -50,10 +75,18 @@ export interface Roster {
   overrides: DayOverride[]
   /** 用户自建的班序，上限 MAX_CUSTOM_PATTERNS */
   patterns: CustomPattern[]
+  /** null = 还没设置本人（跳过向导、或导入了没有 profile 的备份） */
+  profile: Profile | null
   updatedAt: number
 }
 
-export const emptyRoster: Roster = { members: [], overrides: [], patterns: [], updatedAt: 0 }
+export const emptyRoster: Roster = {
+  members: [],
+  overrides: [],
+  patterns: [],
+  profile: null,
+  updatedAt: 0
+}
 
 export const MAX_MEMBERS = 200
 
@@ -89,14 +122,27 @@ function lookupOf(roster: Roster): PatternLookup {
 /* ---------------------------------------------------------------- 校验 */
 
 export interface MemberDraft {
+  id?: string
   name: string
   patternId: string
 }
 
+export interface ValidateOptions {
+  /** 本人 id：这一行不参与「与本人同名」的检查（它本来就是本人） */
+  selfId?: string
+  /** 本人姓名：其他任何成员都不能重名 */
+  selfName?: string
+}
+
 /** 返回中文错误文案；空数组表示通过。`customs` 用于认出自定义班序 */
-export function validateMembers(members: MemberDraft[], customs: CustomPattern[] = []): string[] {
+export function validateMembers(
+  members: MemberDraft[],
+  customs: CustomPattern[] = [],
+  options: ValidateOptions = {}
+): string[] {
   const errors: string[] = []
   const lookup = resolvePatterns(customs)
+  const selfName = options.selfName?.trim() ?? ''
 
   if (members.length === 0) errors.push('至少需要一位成员')
   if (members.length > MAX_MEMBERS) errors.push(`成员不能超过 ${MAX_MEMBERS} 人`)
@@ -111,9 +157,19 @@ export function validateMembers(members: MemberDraft[], customs: CustomPattern[]
     if (name.length > 12) errors.push(`「${name}」太长了，姓名请控制在 12 个字以内`)
     if (!lookup.has(member.patternId)) errors.push(`「${name}」还没有选班序`)
 
+    const isSelfRow = Boolean(options.selfId && member.id === options.selfId)
+    if (!isSelfRow && selfName && name === selfName) {
+      errors.push(`「${name}」与本人同名，请换一个 —— 否则矩阵里分不清哪一行是你`)
+    }
+
     const previous = seen.get(name)
-    if (previous !== undefined) errors.push(`「${name}」出现了两次（第 ${previous + 1} 行和第 ${index + 1} 行）`)
-    else seen.set(name, index)
+    // 与本人同名时只报那条（语义更准），不再叠一条「出现了两次」——
+    // 本人那一行本来就在表里，两条一起弹会让人以为表里有三行重名。
+    if (previous !== undefined && !(selfName && name === selfName)) {
+      errors.push(`「${name}」出现了两次（第 ${previous + 1} 行和第 ${index + 1} 行）`)
+    } else if (previous === undefined) {
+      seen.set(name, index)
+    }
   })
 
   return errors
@@ -146,14 +202,22 @@ function normalizeOverride(value: unknown, memberIds: Set<string>): DayOverride 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
   if (!isShiftType(shift)) return null
 
-  // 加班与法定是可选字段：旧数据里没有，手改 JSON 也可能填错，一律收敛
+  // 加班、法定、事假时长都是可选字段：旧数据里没有，手改 JSON 也可能填错，一律收敛
   const extra = sanitizeOvertime(
     shift,
     typeof record.overtimeHours === 'number' ? record.overtimeHours : undefined,
     record.isLegal === true ? true : undefined
   )
+  const leave = sanitizeLeave(shift, record.leaveDuration)
 
-  return { memberId, date, shift, ...extra }
+  return {
+    memberId,
+    date,
+    shift,
+    ...extra,
+    // 一天是默认值，不必落库；只有半天需要显式记住
+    ...(leave === '半天' ? { leaveDuration: leave } : {})
+  }
 }
 
 export interface NormalizeResult {
@@ -212,6 +276,18 @@ export function normalizeRosterDetailed(value: unknown): NormalizeResult {
     byKey.set(overrideKey(override.memberId, override.date), override)
   })
 
+  // ⚠️ profile 必须在 members 建好、ids 齐了之后才能认 ——
+  // 它是指向成员的指针，提前解析会把合法本人判成「不存在」而丢掉。
+  const rawProfile = record.profile
+  let profile: Profile | null = null
+  if (typeof rawProfile === 'object' && rawProfile !== null) {
+    const source = rawProfile as Record<string, unknown>
+    const memberId = typeof source.memberId === 'string' ? source.memberId.trim() : ''
+    if (memberId && ids.has(memberId)) {
+      profile = { memberId, salary: normalizeSalary(source.salary) }
+    }
+  }
+
   return {
     roster: {
       members,
@@ -219,6 +295,7 @@ export function normalizeRosterDetailed(value: unknown): NormalizeResult {
       overrides: [...byKey.values()].sort((left, right) =>
         overrideKey(left.memberId, left.date).localeCompare(overrideKey(right.memberId, right.date))
       ),
+      profile,
       updatedAt:
         typeof record.updatedAt === 'number' && Number.isFinite(record.updatedAt) ? record.updatedAt : 0
     },
@@ -265,6 +342,16 @@ export function isRosterEmpty(roster: Roster): boolean {
 
 export function findMember(roster: Roster, memberId: string): Member | undefined {
   return roster.members.find(member => member.id === memberId)
+}
+
+/** 本人；未设置（或指向的人已被删）返回 null */
+export function getSelf(roster: Roster): Member | null {
+  if (!roster.profile) return null
+  return findMember(roster, roster.profile.memberId) ?? null
+}
+
+export function isSelf(roster: Roster, memberId: string): boolean {
+  return roster.profile?.memberId === memberId
 }
 
 export function getOverrideMap(roster: Roster): Map<string, ShiftType> {
@@ -329,9 +416,11 @@ export function applyDayRecord(
   const rest = roster.overrides.filter(override => overrideKey(override.memberId, override.date) !== key)
   const templateShift = getTemplateShift(roster, member, date)
   const extra = sanitizeOvertime(input.shift, input.overtimeHours, input.isLegal)
+  const leave = sanitizeLeave(input.shift, input.leaveDuration)
 
   const sameAsTemplate = input.shift === templateShift
-  const hasExtra = (extra.overtimeHours ?? 0) > 0 || extra.isLegal === true
+  // 半天事假也算「和默认不一样」——否则「模板本就事假、今天改成半天」会被当场删掉
+  const hasExtra = (extra.overtimeHours ?? 0) > 0 || extra.isLegal === true || leave === '半天'
 
   if (sameAsTemplate && !hasExtra) {
     return { ...roster, overrides: rest, updatedAt: Date.now() }
@@ -339,7 +428,16 @@ export function applyDayRecord(
 
   return {
     ...roster,
-    overrides: [...rest, { memberId, date, shift: input.shift, ...extra }],
+    overrides: [
+      ...rest,
+      {
+        memberId,
+        date,
+        shift: input.shift,
+        ...extra,
+        ...(leave === '半天' ? { leaveDuration: leave } : {})
+      }
+    ],
     updatedAt: Date.now()
   }
 }
@@ -374,12 +472,138 @@ export function applyShiftEdit(
   const existing = getDayRecord(roster, memberId, date)
   const keepOvertime = canRecordOvertime(shift) ? existing?.overtimeHours : undefined
   const keepLegal = canRecordOvertime(shift) ? existing?.isLegal : undefined
+  // 矩阵弹层不能改事假时长，但也不该把它抹掉：改成事假时沿用原值，改成别的班次就丢掉
+  const keepLeave = shift === '事假' ? existing?.leaveDuration : undefined
 
   return applyDayRecord(roster, memberId, date, {
     shift,
     overtimeHours: keepOvertime,
-    isLegal: keepLegal
+    isLegal: keepLegal,
+    leaveDuration: keepLeave
   })
+}
+
+/* ------------------------------------------------------- 本人与薪资 */
+
+/**
+ * 改动本人身份会连带清空什么 —— 界面在动手前先拿这个算给用户看。
+ *
+ * 「改姓名或改班序」＝换了一个人，所以这个人名下的考勤数据与薪资一起作废。
+ * 只改薪资不在此列（钱是配置，不是考勤）。
+ */
+export interface SelfImpact {
+  /** 姓名或班序是否真的变了 */
+  changed: boolean
+  /** 将被清空的改班记录条数 */
+  overrides: number
+  /** 其中含加班的条数 */
+  overtime: number
+  /** 其中标了法定的条数 */
+  legal: number
+  /** 已填的薪资项数量（0–4） */
+  salaryFilled: number
+}
+
+export function selfImpact(roster: Roster, input: SelfIdentity): SelfImpact {
+  const self = getSelf(roster)
+  if (!self) {
+    return { changed: false, overrides: 0, overtime: 0, legal: 0, salaryFilled: 0 }
+  }
+
+  const changed = self.name !== input.name.trim() || self.patternId !== input.patternId
+  const own = roster.overrides.filter(override => override.memberId === self.id)
+
+  return {
+    changed,
+    overrides: own.length,
+    overtime: own.filter(override => (override.overtimeHours ?? 0) > 0).length,
+    legal: own.filter(override => override.isLegal === true).length,
+    salaryFilled: roster.profile ? salaryFilledCount(roster.profile.salary) : 0
+  }
+}
+
+/** 本人身份的校验：空、超长、与同事重名、班序不存在 */
+export function validateSelf(roster: Roster, input: SelfIdentity): string[] {
+  const errors: string[] = []
+  const name = input.name.trim()
+  const self = getSelf(roster)
+
+  if (!name) errors.push('请填本人姓名')
+  else if (name.length > 12) errors.push('姓名请控制在 12 个字以内')
+
+  if (!resolvePatterns(roster.patterns).has(input.patternId)) errors.push('请选择本人的班序')
+
+  if (name) {
+    const clash = roster.members.some(member => member.name === name && member.id !== self?.id)
+    if (clash) errors.push(`「${name}」已经是一位同事了，本人姓名不能和同事重名`)
+  }
+
+  return errors
+}
+
+export interface ApplySelfResult {
+  roster: Roster
+  /** 是新建的本人（之前为 null） */
+  created: boolean
+  /** 因为换人而被清掉的条数 */
+  clearedOverrides: number
+}
+
+/**
+ * 设置 / 修改本人身份。
+ *
+ * 没设过 → 直接往 members 里加一条并挂上 profile；
+ * 改过 → 更新那一条，并把**该人名下的改班记录与薪资一起清空**（视为换了个人）。
+ * 姓名与班序都没变时原样返回，不动任何数据。
+ */
+export function applySelf(roster: Roster, input: SelfIdentity): ApplySelfResult {
+  const name = input.name.trim()
+  const patternId = input.patternId
+  const self = getSelf(roster)
+
+  if (!self) {
+    const member: Member = { id: createMemberId(), name, patternId }
+    return {
+      roster: {
+        ...roster,
+        members: [...roster.members, member],
+        profile: { memberId: member.id, salary: { ...emptySalary } },
+        updatedAt: Date.now()
+      },
+      created: true,
+      clearedOverrides: 0
+    }
+  }
+
+  if (self.name === name && self.patternId === patternId) {
+    return { roster, created: false, clearedOverrides: 0 }
+  }
+
+  const keptOverrides = roster.overrides.filter(override => override.memberId !== self.id)
+  return {
+    roster: {
+      ...roster,
+      members: roster.members.map(member =>
+        member.id === self.id ? { ...member, name, patternId } : member
+      ),
+      overrides: keptOverrides,
+      // 换人 → 薪资也回到空白，不把上一个人的钱带过来
+      profile: { memberId: self.id, salary: { ...emptySalary } },
+      updatedAt: Date.now()
+    },
+    created: false,
+    clearedOverrides: roster.overrides.length - keptOverrides.length
+  }
+}
+
+/** 只改薪资（不动身份，因此不会触发任何清空） */
+export function saveSalary(roster: Roster, salary: SalaryInput): Roster {
+  if (!roster.profile) return roster
+  return {
+    ...roster,
+    profile: { ...roster.profile, salary: normalizeSalary(salary) },
+    updatedAt: Date.now()
+  }
 }
 
 /* ------------------------------------------------------------ 成员维护 */
@@ -437,17 +661,26 @@ export interface RemovePatternResult {
   /** 同时被删掉的成员姓名 */
   removedMembers: string[]
   removedOverrides: number
-  /** 内置班序不允许删，此时为 true 且 roster 原样返回 */
-  refused: boolean
+  /**
+   * 拒绝删除的原因，null 表示删成功：
+   * - `builtin`：内置 13 条只读
+   * - `self`：本人正挂在这条班序上（删班序会连人一起删，不能顺手把本人删了）
+   */
+  blocked: 'builtin' | 'self' | null
 }
 
 /**
  * 删除一条自定义班序，**连带删除挂在上面的成员与其改班记录**。
- * 内置 13 条拒绝删除（返回 refused: true）。
+ *
+ * 两种情况拒绝：内置 13 条（只读）、本人所在的班序（要删先把本人换到别的班序）。
  */
 export function removePattern(roster: Roster, patternId: string): RemovePatternResult {
   if (isBuiltinPatternId(patternId)) {
-    return { roster, removedMembers: [], removedOverrides: 0, refused: true }
+    return { roster, removedMembers: [], removedOverrides: 0, blocked: 'builtin' }
+  }
+
+  if (getSelf(roster)?.patternId === patternId) {
+    return { roster, removedMembers: [], removedOverrides: 0, blocked: 'self' }
   }
 
   const victims = roster.members.filter(member => member.patternId === patternId)
@@ -464,7 +697,7 @@ export function removePattern(roster: Roster, patternId: string): RemovePatternR
     },
     removedMembers: victims.map(member => member.name),
     removedOverrides: roster.overrides.length - keptOverrides.length,
-    refused: false
+    blocked: null
   }
 }
 

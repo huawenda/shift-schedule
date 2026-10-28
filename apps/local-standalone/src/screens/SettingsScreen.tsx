@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fromRows, MemberRowsEditor, toRows, type MemberRow, type PatternOption } from '../components/MemberRowsEditor'
 import { PatternList } from '../components/PatternList'
+import { ProfileSection } from '../components/ProfileSection'
 import {
   MAX_CUSTOM_PATTERNS,
   PATTERN_ANCHOR_DATE,
@@ -8,12 +9,25 @@ import {
   resolvePatterns,
   type CustomPattern
 } from '../data/patterns'
-import { countOverrides, validateMembers, type Member, type Roster } from '../data/roster'
+import type { SalaryInput, SelfIdentity } from '../data/profile'
+import { countOverrides, getSelf, validateMembers, type Member, type Roster } from '../data/roster'
+
+/** 设置分两页：班序与成员占满屏，个人信息/备份/清空放另一页，各自不再互相挤压 */
+export type SettingsTab = 'roster' | 'profile'
+
+const TAB_SUB: Record<SettingsTab, string> = {
+  roster: `成员名单与矩阵行顺序`,
+  profile: '本人与薪资、备份、清空数据'
+}
 
 interface SettingsScreenProps {
   roster: Roster
   persisted: boolean
+  /** 进入时落在哪个 tab（由调用方决定；不传就是人员配置） */
+  initialTab?: SettingsTab
   onSaveMembers: (members: Member[]) => void
+  onSaveSelf: (input: SelfIdentity) => void
+  onSaveSalary: (salary: SalaryInput) => void
   onSavePattern: (pattern: CustomPattern) => void
   onRemovePattern: (patternId: string) => void
   onBackup: () => void
@@ -22,10 +36,19 @@ interface SettingsScreenProps {
   onStartWizard: () => void
 }
 
+/**
+ * 设置页：页内两个 tab。
+ *
+ * 成员表的草稿（`rows` / `dirty`）留在这一层，**切 tab 不会丢** ——
+ * 换页只是换渲染分支，受控组件的状态在父组件里，所以不需要「有未保存改动」的拦截。
+ */
 export function SettingsScreen({
   roster,
   persisted,
+  initialTab = 'roster',
   onSaveMembers,
+  onSaveSelf,
+  onSaveSalary,
   onSavePattern,
   onRemovePattern,
   onBackup,
@@ -33,6 +56,7 @@ export function SettingsScreen({
   onClearAll,
   onStartWizard
 }: SettingsScreenProps) {
+  const [tab, setTab] = useState<SettingsTab>(initialTab)
   const [rows, setRows] = useState<MemberRow[]>(() => toRows(roster.members))
   const [dirty, setDirty] = useState(false)
   const [confirmText, setConfirmText] = useState('')
@@ -43,10 +67,11 @@ export function SettingsScreen({
     setDirty(false)
   }, [roster.members])
 
+  const self = getSelf(roster)
   const drafts = useMemo(() => fromRows(rows), [rows])
   const errors = useMemo(
-    () => (rows.length === 0 ? [] : validateMembers(drafts, roster.patterns)),
-    [drafts, rows.length, roster.patterns]
+    () => (rows.length === 0 ? [] : validateMembers(drafts, roster.patterns, { selfId: self?.id, selfName: self?.name })),
+    [drafts, rows.length, roster.patterns, self?.id, self?.name]
   )
 
   const lookup = useMemo(() => resolvePatterns(roster.patterns), [roster.patterns])
@@ -86,7 +111,28 @@ export function SettingsScreen({
       <div className="canvas-head">
         <div>
           <h1 className="canvas-title">设置</h1>
-          <p className="canvas-sub">班序与成员、备份、清空数据</p>
+          <p className="canvas-sub">{TAB_SUB[tab]}</p>
+        </div>
+
+        <div className="canvas-tools">
+          <div className="segmented" role="group" aria-label="设置分页">
+            <button
+              aria-pressed={tab === 'roster'}
+              className={`segmented-item${tab === 'roster' ? ' is-on' : ''}`}
+              type="button"
+              onClick={() => setTab('roster')}
+            >
+              人员配置
+            </button>
+            <button
+              aria-pressed={tab === 'profile'}
+              className={`segmented-item${tab === 'profile' ? ' is-on' : ''}`}
+              type="button"
+              onClick={() => setTab('profile')}
+            >
+              个人资料
+            </button>
+          </div>
         </div>
       </div>
 
@@ -103,110 +149,131 @@ export function SettingsScreen({
         </p>
       ) : null}
 
-      <section className="settings-section">
-        <div className="settings-label">
-          <h2>班序</h2>
-          <p>班序是 {PATTERN_CYCLE_LENGTH} 天一轮的循环，所有班序共用起算日 {PATTERN_ANCHOR_DATE}。</p>
-          <p>内置 {lookup.builtin.length} 条只读；自建的最多 {MAX_CUSTOM_PATTERNS} 条，可改可删。</p>
-          <p className="settings-meta">每格从固定 6 种班次里选：白班 / 夜班 / 休息 / 白特 / 夜特 / 事假</p>
-        </div>
+      {tab === 'roster' ? (
+        <>
+          <section className="settings-section">
+            <div className="settings-label">
+              <h2>班序</h2>
+              <p>班序是 {PATTERN_CYCLE_LENGTH} 天一轮的循环，锚点日 {PATTERN_ANCHOR_DATE}。</p>
+              <p>内置 {lookup.builtin.length} 条只读；自建的最多 {MAX_CUSTOM_PATTERNS} 条，可改可删。</p>
+            </div>
 
-        <div className="settings-panel">
-          <PatternList
-            lookup={lookup}
+            <div className="settings-panel">
+              <PatternList
+                lookup={lookup}
+                roster={roster}
+                onNotice={setFlash}
+                onRemovePattern={onRemovePattern}
+                onSavePattern={onSavePattern}
+              />
+            </div>
+          </section>
+
+          <section className="settings-section">
+            <div className="settings-label">
+              <h2>成员</h2>
+              <p>姓名自定，人数不限。</p>
+              <p>本人那一行是只读的：要改自己的姓名或班序，请到「个人资料」页。</p>
+              <p className="settings-meta">当前 {roster.members.length} 位成员</p>
+            </div>
+
+            <div className="settings-panel">
+              <MemberRowsEditor
+                patterns={patternOptions}
+                rows={rows}
+                selfId={self?.id}
+                sortable
+                onChange={update}
+              />
+
+              {errors.length > 0 ? (
+                <ul className="error-list" role="alert">
+                  {errors.map(error => <li key={error}>{error}</li>)}
+                </ul>
+              ) : null}
+
+              <div className="settings-actions">
+                <button className="btn btn-primary" disabled={!dirty || errors.length > 0} type="button" onClick={save}>
+                  保存成员设置
+                </button>
+                {rows.length === 0 ? (
+                  <button className="btn" type="button" onClick={onStartWizard}>用向导重新配置</button>
+                ) : null}
+              </div>
+            </div>
+          </section>
+        </>
+      ) : (
+        <>
+          <ProfileSection
+            patterns={patternOptions}
             roster={roster}
             onNotice={setFlash}
-            onRemovePattern={onRemovePattern}
-            onSavePattern={onSavePattern}
+            onSaveSalary={onSaveSalary}
+            onSaveSelf={onSaveSelf}
           />
-        </div>
-      </section>
 
-      <section className="settings-section">
-        <div className="settings-label">
-          <h2>成员</h2>
-          <p>姓名自定，人数不限；同一班序可以挂多人，这些人每天的班次完全一致。</p>
-          <p>表里的顺序就是全员矩阵的行顺序：拖行首把手，或点 ↑ ↓ 调整。</p>
-          <p className="settings-meta">当前 {roster.members.length} 位成员</p>
-        </div>
+          <section className="settings-section">
+            <div className="settings-label">
+              <h2>备份</h2>
+              <p>数据只存在这台电脑的浏览器里。换电脑、清缓存前请先导出。</p>
+              <p className="settings-meta">
+                当前 {roster.members.length} 位成员 · {roster.overrides.length} 条改班记录
+              </p>
+            </div>
 
-        <div className="settings-panel">
-          <MemberRowsEditor patterns={patternOptions} rows={rows} sortable onChange={update} />
+            <div className="settings-panel">
+              <div className="settings-actions">
+                <button className="btn" type="button" onClick={onBackup}>导出备份</button>
+                <label className="btn btn-file">
+                  导入备份
+                  <input
+                    accept="application/json,.json"
+                    className="visually-hidden"
+                    type="file"
+                    onChange={event => {
+                      const file = event.target.files?.[0]
+                      if (file) onRestore(file)
+                      event.target.value = ''
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="settings-hint">导入会整体覆盖当前数据（含个人信息）；只认当前版本导出的文件。</p>
+            </div>
+          </section>
 
-          {errors.length > 0 ? (
-            <ul className="error-list" role="alert">
-              {errors.map(error => <li key={error}>{error}</li>)}
-            </ul>
-          ) : null}
+          <section className="settings-section">
+            <div className="settings-label">
+              <h2>清空数据</h2>
+              <p>删除本机保存的全部成员与改班记录，回到首次配置状态。此操作不可撤销。</p>
+            </div>
 
-          <div className="settings-actions">
-            <button className="btn btn-primary" disabled={!dirty || errors.length > 0} type="button" onClick={save}>
-              保存成员设置
-            </button>
-            {rows.length === 0 ? (
-              <button className="btn" type="button" onClick={onStartWizard}>用向导重新配置</button>
-            ) : null}
-          </div>
-        </div>
-      </section>
-
-      <section className="settings-section">
-        <div className="settings-label">
-          <h2>备份</h2>
-          <p>数据只存在这台电脑的浏览器里。换电脑、清缓存前请先导出。</p>
-          <p className="settings-meta">当前 {roster.members.length} 位成员 · {roster.overrides.length} 条改班记录</p>
-        </div>
-
-        <div className="settings-panel">
-          <div className="settings-actions">
-            <button className="btn" type="button" onClick={onBackup}>导出备份</button>
-            <label className="btn btn-file">
-              导入备份
-              <input
-                accept="application/json,.json"
-                className="visually-hidden"
-                type="file"
-                onChange={event => {
-                  const file = event.target.files?.[0]
-                  if (file) onRestore(file)
-                  event.target.value = ''
-                }}
-              />
-            </label>
-          </div>
-          <p className="settings-hint">导入会覆盖当前成员与改班记录；旧版（v1）备份会按姓名对照现有成员。</p>
-        </div>
-      </section>
-
-      <section className="settings-section">
-        <div className="settings-label">
-          <h2>清空数据</h2>
-          <p>删除本机保存的全部成员与改班记录，回到首次配置状态。此操作不可撤销。</p>
-        </div>
-
-        <div className="settings-panel">
-          <div className="danger-row">
-            <input
-              aria-label="输入清空以确认"
-              className="input"
-              placeholder="输入「清空」以确认"
-              value={confirmText}
-              onChange={event => setConfirmText(event.target.value)}
-            />
-            <button
-              className="btn btn-danger"
-              disabled={confirmText.trim() !== '清空'}
-              type="button"
-              onClick={() => {
-                onClearAll()
-                setConfirmText('')
-              }}
-            >
-              清空全部数据
-            </button>
-          </div>
-        </div>
-      </section>
+            <div className="settings-panel">
+              <div className="danger-row">
+                <input
+                  aria-label="输入清空以确认"
+                  className="input"
+                  placeholder="输入「清空」以确认"
+                  value={confirmText}
+                  onChange={event => setConfirmText(event.target.value)}
+                />
+                <button
+                  className="btn btn-danger"
+                  disabled={confirmText.trim() !== '清空'}
+                  type="button"
+                  onClick={() => {
+                    onClearAll()
+                    setConfirmText('')
+                  }}
+                >
+                  清空全部数据
+                </button>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
 
       <p className="settings-footnote">
         这是一个纯本地工具：不联网、不需要账号，副本拷到别的电脑上也是独立的。

@@ -75,7 +75,7 @@ export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEdi
           <div>
             <h2 className="dialog-title">{pattern ? '编辑班序' : '新建班序'}</h2>
             <p className="dialog-sub">
-              {PATTERN_CYCLE_LENGTH} 天一轮 · 起算日 {PATTERN_ANCHOR_DATE}
+              {PATTERN_CYCLE_LENGTH} 天一轮 · 锚点日 {PATTERN_ANCHOR_DATE}
             </p>
           </div>
           <button className="btn btn-quiet" type="button" onClick={onClose}>关闭</button>
@@ -88,7 +88,7 @@ export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEdi
               aria-label="班序名称"
               autoFocus
               className="input"
-              placeholder="比如：甲班、电仪班、检修一组"
+              placeholder="比如：4A、4B、4C"
               value={draft.name}
               onChange={event => setDraft(current => ({ ...current, name: event.target.value }))}
             />
@@ -132,19 +132,12 @@ export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEdi
             ))}
           </div>
 
-          <p className="editor-hint">
-            班序只填这三种基础班次。白特、夜特、事假属于临时安排，改班时单天设置，不写进班序。
-          </p>
-
           {showErrors && errors.length > 0 ? (
             <ul className="error-list" role="alert">
               {errors.map(error => <li key={error}>{error}</li>)}
             </ul>
           ) : null}
 
-          <p className="editor-warn">
-            保存后会立即影响所有月份，包括已经过去的月份 —— 班序是无始无终的循环，没有「从哪天起生效」。
-          </p>
         </div>
 
         <footer className="dialog-foot">

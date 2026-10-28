@@ -29,6 +29,13 @@
   --warning-bg: #fffbeb;
   --warning-border: #fde68a;
 
+  /* 加班：唯一一处主动「求注意」的亮色。用暖橙而不是灰或警示黄 ——
+   * 灰底没人会多看一眼，警示黄又和「法」角标撞色。
+   * 深棕字而非白字：白字落在橙上对比只有 2.4:1，10px 字在廉价屏上会糊。
+   * 亮度刻意收在「浅橙」一档：再深就会盖过格子里的班次色，反而抢戏。 */
+  --overtime-bg: #ffc98f;
+  --overtime-ink: #7a3f0a;
+
   --radius-card: 8px;
   --radius-control: 6px;
   --radius-sheet: 16px;
@@ -153,6 +160,21 @@ p {
 .t-leave {
   background: #e5e7eb;
   color: #475467;
+}
+
+/* 「本人」徽章：矩阵姓名列、成员表、向导确认页三处共用。
+ * 只表身份、不表状态，所以用弱强调色而不是班次六色里的任何一种。 */
+.badge-self {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  height: 15px;
+  border-radius: 3px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  white-space: nowrap;
 }
 
 /* ------------------------------------------------------------ 控件 */

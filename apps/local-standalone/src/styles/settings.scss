@@ -452,9 +452,17 @@ button.shift-cell:hover {
 }
 
 .field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   font-size: 12px;
   color: var(--muted);
-  white-space: nowrap;
+}
+
+.field-note {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--faint);
 }
 
 .editor-active {
@@ -495,4 +503,105 @@ button.shift-cell:hover {
   gap: 6px;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* ── 个人信息 ─────────────────────────────────────────── */
+
+.profile-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 15px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.profile-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.profile-tag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.profile-form,
+.salary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* 金额输入：数字右对齐 + 单位后缀，扫一眼能对齐位数 */
+.money-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.money-input .input {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.money-unit {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+/* 换人确认弹层里的影响清单 */
+.impact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 16px 18px;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.impact-list strong {
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 成员表里的本人行（只读） ─────────────────────────── */
+
+.member-locked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: var(--control-height);
+  padding: 0 8px;
+  border-radius: var(--radius-control);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.member-locked-name {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-locked-pattern {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }

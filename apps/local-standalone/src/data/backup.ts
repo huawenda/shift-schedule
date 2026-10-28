@@ -9,7 +9,7 @@ import { normalizeRosterDetailed, type Roster } from './roster'
  */
 
 export const BACKUP_APP_ID = 'shift-schedule-local'
-export const BACKUP_VERSION = 3
+export const BACKUP_VERSION = 4
 
 export interface BackupFile {
   app: string
@@ -19,6 +19,7 @@ export interface BackupFile {
     members: Roster['members']
     overrides: Roster['overrides']
     patterns: Roster['patterns']
+    profile: Roster['profile']
   }
 }
 
@@ -38,7 +39,8 @@ export function createBackup(roster: Roster): BackupFile {
     roster: {
       members: roster.members,
       overrides: roster.overrides,
-      patterns: roster.patterns
+      patterns: roster.patterns,
+      profile: roster.profile
     }
   }
 }
@@ -63,8 +65,8 @@ export function downloadBackup(roster: Roster): string {
 /**
  * 解析备份文本。格式不对时抛出可直接展示给用户的中文错误。
  *
- * 只认一种形状：`{ app, version, roster: { members, overrides, patterns } }`。
- * 开发期不做旧格式迁移 —— 见到 `dayRecords` 或顶层数组这类老结构，直接报「旧格式」。
+ * 只认一种形状：`{ app, version: 4, roster: { members, overrides, patterns, profile } }`。
+ * 开发期不做旧格式迁移 —— 见到别的版本号、`dayRecords` 或顶层数组，直接报错。
  */
 export function parseBackup(text: string): ImportResult {
   let parsed: unknown
@@ -89,6 +91,11 @@ export function parseBackup(text: string): ImportResult {
 
   if (record.dayRecords !== undefined) {
     throw new Error('这是旧版本的备份文件，当前版本不再支持导入，请用当前版本重新导出')
+  }
+
+  if (record.version !== BACKUP_VERSION) {
+    const found = typeof record.version === 'number' ? `v${record.version}` : '（没有版本号）'
+    throw new Error(`备份文件是 ${found}，当前版本只认 v${BACKUP_VERSION}，请用当前版本重新导出`)
   }
 
   if (record.roster === undefined) {

@@ -1,18 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   applyDayRecord,
+  applySelf,
   applyShiftEdit,
+  findMember,
   isRosterEmpty,
   loadRoster,
   removePattern,
   restoreDay,
   saveRoster,
+  saveSalary as applySalary,
   upsertPattern,
   type DayRecordInput,
   type Member,
   type Roster
 } from '../data/roster'
 import type { CustomPattern } from '../data/patterns'
+import type { SalaryInput, SelfIdentity } from '../data/profile'
 import { isPersistenceAvailable } from '../data/storage'
 import type { ShiftType } from '../data/shifts'
 
@@ -36,6 +40,10 @@ export interface RosterApi {
   replaceMembers: (members: Member[]) => void
   savePattern: (pattern: CustomPattern) => void
   removePatternById: (patternId: string) => void
+  /** 设置 / 修改本人身份；改动时会清空该人的考勤与薪资（数据层保证） */
+  saveSelf: (input: SelfIdentity) => void
+  /** 只改薪资，不碰身份 */
+  saveSalary: (salary: SalaryInput) => void
 }
 
 export function useRoster(): RosterApi {
@@ -67,13 +75,26 @@ export function useRoster(): RosterApi {
     setRoster({ ...next, updatedAt: Date.now() })
   }, [])
 
-  /** 整表替换成员（设置页保存用）：保留仍然存在的成员的改班记录 */
+  /**
+   * 整表替换成员（设置页保存用）：保留仍然存在的成员的改班记录。
+   *
+   * **本人那一行的姓名与班序强制沿用当前值** —— 成员表里它是只读的，
+   * 这里再兜一层，保证「改本人 = 换人 + 清空」只能走 `saveSelf` 那条路，
+   * 不会因为将来某个界面漏了只读而静默改名、把清空逻辑绕过去。
+   */
   const replaceMembers = useCallback((members: Member[]) => {
     setRoster(current => {
-      const ids = new Set(members.map(member => member.id))
+      const self = current.profile ? findMember(current, current.profile.memberId) : undefined
+      const guarded = self
+        ? members.map(member =>
+          member.id === self.id ? { ...member, name: self.name, patternId: self.patternId } : member
+        )
+        : members
+
+      const ids = new Set(guarded.map(member => member.id))
       return {
         ...current,
-        members,
+        members: guarded,
         overrides: current.overrides.filter(override => ids.has(override.memberId)),
         updatedAt: Date.now()
       }
@@ -90,6 +111,14 @@ export function useRoster(): RosterApi {
     setRoster(current => removePattern(current, patternId).roster)
   }, [])
 
+  const saveSelf = useCallback((input: SelfIdentity) => {
+    setRoster(current => applySelf(current, input).roster)
+  }, [])
+
+  const saveSalary = useCallback((salary: SalaryInput) => {
+    setRoster(current => applySalary(current, salary))
+  }, [])
+
   return {
     roster,
     persisted,
@@ -100,6 +129,8 @@ export function useRoster(): RosterApi {
     replaceRoster,
     replaceMembers,
     savePattern,
-    removePatternById
+    removePatternById,
+    saveSelf,
+    saveSalary
   }
 }

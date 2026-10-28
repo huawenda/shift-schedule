@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { fromRows, MemberRowsEditor, createRow, type MemberRow, type PatternOption } from '../components/MemberRowsEditor'
 import { BUILTIN_PATTERNS, PATTERN_ANCHOR_DATE } from '../data/patterns'
 import { validateMembers, type Member } from '../data/roster'
+import type { SelfIdentity } from '../data/profile'
 
 /** 首开时还没有自定义班序，下拉里只有内置 13 条 */
 const BUILTIN_OPTIONS: PatternOption[] = BUILTIN_PATTERNS.map(pattern => ({
@@ -11,25 +12,42 @@ const BUILTIN_OPTIONS: PatternOption[] = BUILTIN_PATTERNS.map(pattern => ({
 }))
 
 interface WizardProps {
-  onFinish: (members: Member[]) => void
+  onFinish: (self: SelfIdentity, members: Member[]) => void
   onSkip: () => void
 }
 
 /**
- * 首次配置：三步向导。
- * 只在成员数为 0 时出现，可以跳过（跳到空状态，不阻塞使用）。
+ * 首次配置：三步 —— 先填你自己，再（可选）加同事，最后确认。
+ *
+ * 先问本人是因为日历要锁定本人：没有本人就没有「我的月历」，
+ * 让用户先填同事再补本人，等于让他进门就撞一堵空墙。
+ *
+ * 同事这一步可以整步跳过 —— 一个人也能用，班表只反映自己的节奏。
  */
 export function Wizard({ onFinish, onSkip }: WizardProps) {
   const [step, setStep] = useState(1)
-  const [rows, setRows] = useState<MemberRow[]>(() => [createRow('4F'), createRow('4G'), createRow('4H')])
+  const [selfName, setSelfName] = useState('')
+  const [selfPattern, setSelfPattern] = useState(BUILTIN_OPTIONS[0]?.id ?? '4F')
+  const [rows, setRows] = useState<MemberRow[]>(() => [createRow('4F')])
 
-  const members = useMemo(() => fromRows(rows), [rows])
-  const errors = useMemo(() => validateMembers(members), [members])
+  const colleagues = useMemo(() => fromRows(rows), [rows])
+  const selfErrors = useMemo(() => {
+    const errors: string[] = []
+    const name = selfName.trim()
+    if (!name) errors.push('请填上你的姓名')
+    else if (name.length > 12) errors.push('姓名请控制在 12 个字以内')
+    return errors
+  }, [selfName])
 
-  function next() {
-    if (step === 2 && errors.length > 0) return
-    setStep(current => Math.min(3, current + 1))
-  }
+  const colleagueErrors = useMemo(
+    () =>
+      colleagues.length === 0
+        ? []
+        : validateMembers(colleagues, [], { selfName: selfName.trim() }),
+    [colleagues, selfName]
+  )
+
+  const canNext = step === 1 ? selfErrors.length === 0 : step === 2 ? colleagueErrors.length === 0 : true
 
   return (
     <div className="wizard">
@@ -37,32 +55,70 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
         <header className="wizard-head">
           <span className="wizard-step">第 {step} / 3 步</span>
           <h1 className="wizard-title">
-            {step === 1 ? '先认识一下这个工具' : step === 2 ? '把成员加到班序上' : '确认一下'}
+            {step === 1 ? '先填你自己' : step === 2 ? '加上同班组的同事（可选）' : '确认一下'}
           </h1>
         </header>
 
         {step === 1 ? (
           <div className="wizard-body">
             <p className="wizard-lead">
-              倒班表按一套 24 天一轮的班序循环排班。13 条常用班序（4F–4X）已经内置好，规律不用你填。
+              这是一个个人记录工具：排班、加班、薪资都记在你自己名下。
+              13 条常用班序（4F–4X）已经内置好，规律不用你填。
             </p>
+
+            <div className="wizard-self">
+              <label className="field">
+                <span className="field-label">你的姓名</span>
+                <input
+                  aria-label="本人姓名"
+                  autoFocus
+                  className="input"
+                  maxLength={12}
+                  placeholder="比如：华文达"
+                  value={selfName}
+                  onChange={event => setSelfName(event.target.value)}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field-label">你的班序</span>
+                <select
+                  aria-label="本人的班序"
+                  className="input"
+                  value={selfPattern}
+                  onChange={event => setSelfPattern(event.target.value)}
+                >
+                  {BUILTIN_OPTIONS.map(option => (
+                    <option key={option.id} value={option.id}>{option.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
             <ul className="wizard-list">
-              <li><strong>班序不用自己编</strong>：内置 4F–4X 只选不改；不够用时可以在设置里照 24 格再加一条。</li>
-              <li><strong>人是自由的</strong>：姓名自己填，人数不限，同一个班序可以挂多人。</li>
-              <li><strong>改班随时可做</strong>：点某天的格子换成别的班次，改回原样就等于撤销。</li>
+              <li><strong>日历只显示你自己</strong>：换别人的日历改班，改的也不是你的数据。</li>
+              <li><strong>矩阵保留全组</strong>：看谁今天和你一起上夜班，顺手也能改全组班次。</li>
+              <li><strong>改自己 = 换人</strong>：以后改姓名或班序，会清空你名下的记录（会先问你）。</li>
               <li><strong>数据只在这台电脑</strong>：不联网、不需要账号，记得定期导出备份。</li>
             </ul>
-            <p className="wizard-note">班序从 {PATTERN_ANCHOR_DATE} 起算，前后任意月份都能排。</p>
+
+            {selfErrors.length > 0 ? (
+              <ul className="error-list" role="alert">
+                {selfErrors.map(error => <li key={error}>{error}</li>)}
+              </ul>
+            ) : null}
           </div>
         ) : null}
 
         {step === 2 ? (
           <div className="wizard-body">
-            <p className="wizard-lead">填姓名，选他/她对应的班序。同一班序可以挂多个人。</p>
+            <p className="wizard-lead">
+              把同班组的同事加进来，矩阵里就能看到整组的班。这一步可以跳过，以后在设置里也能加。
+            </p>
             <MemberRowsEditor patterns={BUILTIN_OPTIONS} rows={rows} onChange={setRows} />
-            {errors.length > 0 ? (
+            {colleagueErrors.length > 0 ? (
               <ul className="error-list" role="alert">
-                {errors.map(error => <li key={error}>{error}</li>)}
+                {colleagueErrors.map(error => <li key={error}>{error}</li>)}
               </ul>
             ) : null}
           </div>
@@ -71,17 +127,26 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
         {step === 3 ? (
           <div className="wizard-body">
             <p className="wizard-lead">
-              共 <strong>{members.length}</strong> 位成员，班序从 {PATTERN_ANCHOR_DATE} 起算。
+              班序从 {PATTERN_ANCHOR_DATE} 起算，前后任意月份都能排。
             </p>
             <div className="wizard-summary">
-              {members.map(member => (
+              <div className="wizard-summary-row is-self">
+                <span>{selfName.trim()}</span>
+                <span className="muted">{selfPattern} · 本人</span>
+              </div>
+              {colleagues.map(member => (
                 <div className="wizard-summary-row" key={member.id}>
                   <span>{member.name}</span>
                   <span className="muted">{member.patternId}</span>
                 </div>
               ))}
             </div>
-            <p className="wizard-note">后面想改人、加人、换班序或新建班序，都可以在「设置」里做。</p>
+            <p className="wizard-note">
+              {colleagues.length === 0
+                ? '只有你一个人，矩阵里目前只会有你自己这一行。'
+                : `另有 ${colleagues.length} 位同事。`}
+              想改人、加人、换班序或新建班序，都可以在「设置」里做。
+            </p>
           </div>
         ) : null}
 
@@ -94,11 +159,15 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
             )}
           </div>
           {step < 3 ? (
-            <button className="btn btn-primary" disabled={step === 2 && errors.length > 0} type="button" onClick={next}>
-              下一步
+            <button className="btn btn-primary" disabled={!canNext} type="button" onClick={() => setStep(step + 1)}>
+              {step === 2 && colleagues.length === 0 ? '跳过，下一步' : '下一步'}
             </button>
           ) : (
-            <button className="btn btn-primary" type="button" onClick={() => onFinish(members)}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => onFinish({ name: selfName.trim(), patternId: selfPattern }, colleagues)}
+            >
               进入排班表
             </button>
           )}

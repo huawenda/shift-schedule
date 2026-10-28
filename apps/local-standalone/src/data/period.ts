@@ -1,4 +1,4 @@
-import { addDays, formatDateKey, parseDateKey } from './dateUtils'
+import { addDays, formatDateKey, parseDateKey, weekdayIndex } from './dateUtils'
 
 /**
  * 结算月：**上月 20 日 ~ 本月 19 日**（固定，不提供配置）。
@@ -100,4 +100,44 @@ export function formatPeriodRange(period: Period): string {
   const start = parseDateKey(period.startDate)
   const end = parseDateKey(period.endDate)
   return `${start.getMonth() + 1}月${start.getDate()}日 — ${end.getMonth() + 1}月${end.getDate()}日`
+}
+
+export interface CalendarCell {
+  /** 周期内直接用日期当 key；周期外用 lead-N / tail-N，避免与真实日期撞车 */
+  key: string
+  date: string
+  /** false = 周期外的补齐格：只显示日号，不可点，也不参与本期统计 */
+  inPeriod: boolean
+}
+
+/**
+ * 把一期铺成整 7 列的月历网格。
+ *
+ * 首行前导与末行补尾用**相邻月份的真实日期**填满（不是留白格）：
+ * 空白的方块看着像渲染失败，而且第一行从 20 日开始、最后一行到 19 日就断，
+ * 读者要靠数格子才知道那两天是上一期/下一期。填上日号之后网格才是完整的。
+ *
+ * 但这些格子 `inPeriod: false`：它们属于相邻两期，班次与加班都不在本期口径里，
+ * 所以只给日号、不给班次、不可点 —— 否则用户会以为能在这里改班。
+ */
+export function buildCalendarGrid(period: Period): CalendarCell[] {
+  const cells: CalendarCell[] = []
+
+  const leading = weekdayIndex(period.startDate)
+  for (let back = leading; back > 0; back -= 1) {
+    const date = formatDateKey(addDays(parseDateKey(period.startDate), -back))
+    cells.push({ key: `lead-${back}`, date, inPeriod: false })
+  }
+
+  period.dates.forEach(date => cells.push({ key: date, date, inPeriod: true }))
+
+  // 补到 7 的整数倍；从 endDate 往后数真实日期
+  let ahead = 1
+  while (cells.length % 7 !== 0) {
+    const date = formatDateKey(addDays(parseDateKey(period.endDate), ahead))
+    cells.push({ key: `tail-${ahead}`, date, inPeriod: false })
+    ahead += 1
+  }
+
+  return cells
 }

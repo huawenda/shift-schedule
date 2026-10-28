@@ -2,32 +2,46 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Shell, type Route } from './components/Shell'
 import { DayEditor } from './components/DayEditor'
 import { ShiftEditor } from './components/ShiftEditor'
-import { ScheduleScreen, type EditSource, type ScheduleView } from './screens/ScheduleScreen'
-import { SettingsScreen } from './screens/SettingsScreen'
+import { MatrixScreen } from './screens/MatrixScreen'
+import { OverviewScreen } from './screens/OverviewScreen'
+import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
 import { Wizard } from './screens/Wizard'
 import { downloadBackup, parseBackup } from './data/backup'
 import { currentMonthKey, formatMonthTitle, getPeriod, shiftMonth, type MonthKey } from './data/period'
 import {
+  createMemberId,
   emptyRoster,
   getDayRecord,
   getTemplateShift,
   type DayRecordInput,
   type Member
 } from './data/roster'
+import { emptySalary, type SelfIdentity } from './data/profile'
 import { formatOvertimeHours } from './data/overtime'
 import { SHIFT_META, type ShiftType } from './data/shifts'
 import { useRoster } from './hooks/useRoster'
 
+/** 从哪儿点开的格子：矩阵只能改班次，概览页的日历能记加班 */
+type EditSource = 'matrix' | 'calendar'
+
 function readRoute(): Route {
-  return window.location.hash.startsWith('#/settings') ? 'settings' : 'schedule'
+  if (window.location.hash.startsWith('#/settings')) return 'settings'
+  if (window.location.hash.startsWith('#/matrix')) return 'matrix'
+  return 'overview'
+}
+
+function routeHash(route: Route): string {
+  if (route === 'settings') return '#/settings'
+  if (route === 'matrix') return '#/matrix'
+  return '#/overview'
 }
 
 export function App() {
   const api = useRoster()
   const [route, setRoute] = useState<Route>(readRoute)
   const [monthKey, setMonthKey] = useState<MonthKey>(() => currentMonthKey())
-  const [view, setView] = useState<ScheduleView>('matrix')
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
+  /** 进设置页时落在哪个 tab：从「月度概览」的薪资空态点进去时直接到个人资料 */
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('roster')
   const [wizardSkipped, setWizardSkipped] = useState(false)
   const [editor, setEditor] = useState<{ memberId: string; date: string; source: EditSource } | null>(null)
   const [statusText, setStatusText] = useState('数据已就绪')
@@ -43,17 +57,17 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  // 选中的成员被删掉时，自动回落到第一个
-  useEffect(() => {
-    const exists = api.roster.members.some(member => member.id === selectedMemberId)
-    if (!exists) setSelectedMemberId(api.roster.members[0]?.id ?? null)
-  }, [api.roster.members, selectedMemberId])
-
   const navigate = useCallback((next: Route) => {
     setRoute(next)
-    const target = next === 'settings' ? '#/settings' : '#/schedule'
+    const target = routeHash(next)
     if (window.location.hash !== target) window.location.hash = target
   }, [])
+
+  /** 直达「个人资料」页（侧栏点「设置」时用默认 tab，这里是显式指定） */
+  const openProfileTab = useCallback(() => {
+    setSettingsTab('profile')
+    navigate('settings')
+  }, [navigate])
 
   const goMonth = useCallback((delta: number) => {
     setMonthKey(current => shiftMonth(current, delta))
@@ -73,7 +87,6 @@ export function App() {
     try {
       const result = parseBackup(await file.text())
       api.replaceRoster(result.roster)
-      setSelectedMemberId(result.roster.members[0]?.id ?? null)
       setStatusText('导入完成')
 
       const base = `已导入 ${result.memberCount} 位成员、${result.overrideCount} 条记录`
@@ -89,19 +102,31 @@ export function App() {
 
   function clearAll() {
     api.replaceRoster({ ...emptyRoster })
-    setSelectedMemberId(null)
     setWizardSkipped(false)
     setNotice('')
     setStatusText('已清空本机数据')
-    navigate('schedule')
+    navigate('overview')
   }
 
-  function finishWizard(members: Member[]) {
-    api.replaceRoster({ members, overrides: [], patterns: [], updatedAt: Date.now() })
-    setSelectedMemberId(members[0]?.id ?? null)
+  function finishWizard(self: SelfIdentity, members: Member[]) {
+    // 本人也是 members 里的一条，排在最前（矩阵与成员表都按数组顺序）
+    const selfMember: Member = {
+      id: createMemberId(),
+      name: self.name,
+      patternId: self.patternId
+    }
+
+    api.replaceRoster({
+      members: [selfMember, ...members],
+      overrides: [],
+      patterns: [],
+      profile: { memberId: selfMember.id, salary: { ...emptySalary } },
+      updatedAt: Date.now()
+    })
+
     setWizardSkipped(true)
-    setStatusText(`配置完成：${members.length} 位成员`)
-    navigate('schedule')
+    setStatusText(`配置完成：本人 ${self.name} · 另有 ${members.length} 位同事`)
+    navigate('overview')
   }
 
   function openEditor(member: Member, date: string, source: EditSource) {
@@ -158,35 +183,44 @@ export function App() {
         statusText={statusText}
         warning={api.persisted ? undefined : '不能写入本机存储'}
         onBackup={backup}
-        onNavigate={navigate}
+        onNavigate={next => {
+          if (next === 'settings') setSettingsTab('roster')
+          navigate(next)
+        }}
         onRestore={file => void restore(file)}
         onShiftMonth={goMonth}
         onToday={() => setMonthKey(currentMonthKey())}
       >
         {route === 'settings' ? (
           <SettingsScreen
+            initialTab={settingsTab}
             persisted={api.persisted}
             roster={api.roster}
             onBackup={backup}
             onClearAll={clearAll}
             onRemovePattern={api.removePatternById}
             onRestore={file => void restore(file)}
+            onSaveSalary={api.saveSalary}
             onSaveMembers={api.replaceMembers}
             onSavePattern={api.savePattern}
+            onSaveSelf={api.saveSelf}
             onStartWizard={() => {
               setWizardSkipped(false)
-              navigate('schedule')
+              navigate('overview')
             }}
           />
-        ) : (
-          <ScheduleScreen
+        ) : route === 'matrix' ? (
+          <MatrixScreen
             period={period}
             roster={api.roster}
-            selectedMemberId={selectedMemberId}
-            view={view}
-            onEdit={openEditor}
-            onSelectMember={setSelectedMemberId}
-            onViewChange={setView}
+            onEdit={(member, date) => openEditor(member, date, 'matrix')}
+          />
+        ) : (
+          <OverviewScreen
+            period={period}
+            roster={api.roster}
+            onEdit={(member, date) => openEditor(member, date, 'calendar')}
+            onOpenProfile={openProfileTab}
           />
         )}
       </Shell>

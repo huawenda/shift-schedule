@@ -8,6 +8,12 @@ import {
   getOvertimePresets,
   normalizeOvertimeHours
 } from '../data/overtime'
+import {
+  DEFAULT_LEAVE_DURATION,
+  LEAVE_DURATIONS,
+  LEAVE_HOURS,
+  type LeaveDuration
+} from '../data/leave'
 import { SHIFT_META, SHIFT_TYPES, shiftToneClass, type ShiftType } from '../data/shifts'
 import { formatMonthDay, weekdayLabel } from '../data/dateUtils'
 
@@ -30,10 +36,11 @@ const LEGAL_OPTIONS: Array<{ value: boolean; label: string }> = [
 ]
 
 /**
- * 日历专用的「改班 + 加班 + 法定」弹层。
+ * 日历专用的「改班 + 加班 + 法定 + 事假时长」弹层。
  *
- * 与矩阵弹层（`ShiftEditor`）的区别：这里能记加班与法定标记。
- * 加班与法定只对有工时的班次开放，选到休息/事假时两段整体禁用并清零。
+ * 与矩阵弹层（`ShiftEditor`）的区别：这里能记加班、法定与事假时长。
+ * 加班与法定只对有工时的班次开放；事假时长只在选到「事假」时出现 ——
+ * 薪资里的扣款按「时薪 × 请假小时」算，半天和一天差一倍，所以必须记。
  */
 export function DayEditor({
   member,
@@ -51,6 +58,9 @@ export function DayEditor({
     return hours && hours > 0 ? String(hours) : ''
   })
   const [isLegal, setIsLegal] = useState(record?.isLegal === true)
+  const [leaveDuration, setLeaveDuration] = useState<LeaveDuration>(
+    record?.leaveDuration ?? DEFAULT_LEAVE_DURATION
+  )
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -68,11 +78,14 @@ export function DayEditor({
     [shift, isLegal, legalAllowed]
   )
 
+  const leaveAllowed = shift === '事假'
   const hasRecord = Boolean(record)
   const dirty =
     shift !== currentShift ||
     overtimeHours !== (record?.overtimeHours ?? 0) ||
-    (legalAllowed && isLegal) !== (record?.isLegal === true)
+    (legalAllowed && isLegal) !== (record?.isLegal === true) ||
+    (leaveAllowed ? leaveDuration : DEFAULT_LEAVE_DURATION) !==
+      (record?.leaveDuration ?? DEFAULT_LEAVE_DURATION)
 
   /** 换到不支持加班的班次时，把两段的值原地清掉（避免切回去又冒出来） */
   function pickShift(next: ShiftType) {
@@ -92,7 +105,8 @@ export function DayEditor({
     onApply({
       shift,
       overtimeHours: overtimeAllowed && overtimeHours > 0 ? overtimeHours : undefined,
-      isLegal: legalAllowed && isLegal ? true : undefined
+      isLegal: legalAllowed && isLegal ? true : undefined,
+      leaveDuration: leaveAllowed ? leaveDuration : undefined
     })
   }
 
@@ -193,6 +207,30 @@ export function DayEditor({
             ))}
           </div>
         </div>
+
+        {leaveAllowed ? (
+          <div className="dialog-section">
+            <div className="section-head">
+              <span className="section-title">事假时长</span>
+              <span className="section-note">
+                按 {LEAVE_HOURS[leaveDuration]} 小时从工资里扣
+              </span>
+            </div>
+            <div className="segmented segmented-sm" role="group" aria-label="事假时长">
+              {LEAVE_DURATIONS.map(duration => (
+                <button
+                  aria-pressed={leaveDuration === duration}
+                  className={`segmented-item${leaveDuration === duration ? ' is-on' : ''}`}
+                  key={duration}
+                  type="button"
+                  onClick={() => setLeaveDuration(duration)}
+                >
+                  {duration}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <footer className="dialog-foot">
           <button className="btn btn-quiet" disabled={!hasRecord} type="button" onClick={onRestore}>

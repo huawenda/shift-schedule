@@ -1,24 +1,85 @@
 {
   "app": "shift-schedule-local",
-  "version": 3,
-  "exportedAt": "2026-10-28T04:00:00.000Z",
+  "version": 4,
+  "exportedAt": "2026-10-28T05:49:55.661Z",
   "roster": {
     "members": [
-      { "id": "m-01", "name": "华文达", "patternId": "4F" },
-      { "id": "m-02", "name": "张舒棋", "patternId": "4G" },
-      { "id": "m-03", "name": "陈泳智", "patternId": "4H" },
-      { "id": "m-04", "name": "韩义博", "patternId": "4I" },
-      { "id": "m-05", "name": "段志彬", "patternId": "4J" },
-      { "id": "m-06", "name": "余昌耿", "patternId": "4K" },
-      { "id": "m-07", "name": "张涛", "patternId": "4R" },
-      { "id": "m-08", "name": "谢懋", "patternId": "4S" },
-      { "id": "m-09", "name": "农伟俊", "patternId": "4T" },
-      { "id": "m-10", "name": "帅长安", "patternId": "4U" },
-      { "id": "m-11", "name": "林泽勇", "patternId": "4V" },
-      { "id": "m-12", "name": "陈家辉", "patternId": "4W" },
-      { "id": "m-13", "name": "张增全", "patternId": "4X" }
+      {
+        "id": "m-01",
+        "name": "华文达",
+        "patternId": "4F"
+      },
+      {
+        "id": "m-02",
+        "name": "张舒棋",
+        "patternId": "4G"
+      },
+      {
+        "id": "m-03",
+        "name": "陈泳智",
+        "patternId": "4H"
+      },
+      {
+        "id": "m-04",
+        "name": "韩义博",
+        "patternId": "4I"
+      },
+      {
+        "id": "m-05",
+        "name": "段志彬",
+        "patternId": "4J"
+      },
+      {
+        "id": "m-06",
+        "name": "余昌耿",
+        "patternId": "4K"
+      },
+      {
+        "id": "m-07",
+        "name": "张涛",
+        "patternId": "4R"
+      },
+      {
+        "id": "m-08",
+        "name": "谢懋",
+        "patternId": "4S"
+      },
+      {
+        "id": "m-09",
+        "name": "农伟俊",
+        "patternId": "4T"
+      },
+      {
+        "id": "m-10",
+        "name": "帅长安",
+        "patternId": "4U"
+      },
+      {
+        "id": "m-11",
+        "name": "林泽勇",
+        "patternId": "4V"
+      },
+      {
+        "id": "m-12",
+        "name": "陈家辉",
+        "patternId": "4W"
+      },
+      {
+        "id": "m-13",
+        "name": "张增全",
+        "patternId": "4X"
+      }
     ],
     "overrides": [],
-    "patterns": []
+    "patterns": [],
+    "profile": {
+      "memberId": "m-01",
+      "salary": {
+        "baseSalary": "",
+        "performanceAllowance": "",
+        "positionAllowance": "",
+        "socialFund": ""
+      }
+    }
   }
 }

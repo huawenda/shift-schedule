@@ -1,6 +1,7 @@
 import { useRef, type ChangeEvent, type ReactNode } from 'react'
 
-export type Route = 'schedule' | 'settings'
+/** 三个一级页面：全员矩阵看全组、月度概览看本人、设置改配置 */
+export type Route = 'matrix' | 'overview' | 'settings'
 
 interface ShellProps {
   route: Route
@@ -54,16 +55,20 @@ export function Shell({
 
         <div className="rail-nav">
           <button
-            aria-current={route === 'schedule' ? 'page' : undefined}
-            className={`rail-item${route === 'schedule' ? ' is-active' : ''}`}
+            aria-current={route === 'matrix' ? 'page' : undefined}
+            className={`rail-item${route === 'matrix' ? ' is-active' : ''}`}
             type="button"
-            onClick={() => onNavigate('schedule')}
+            onClick={() => onNavigate('matrix')}
           >
-            排班
+            全员矩阵
           </button>
-          <button className="rail-item" type="button" disabled title="下一版提供">
-            统计
-            <span className="rail-tag">下一版</span>
+          <button
+            aria-current={route === 'overview' ? 'page' : undefined}
+            className={`rail-item${route === 'overview' ? ' is-active' : ''}`}
+            type="button"
+            onClick={() => onNavigate('overview')}
+          >
+            月度概览
           </button>
         </div>
 
