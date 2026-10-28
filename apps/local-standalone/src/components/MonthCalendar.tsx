@@ -14,7 +14,7 @@ interface MonthCalendarProps {
   period: Period
   /** 整天记录（班次 + 加班 + 法定） */
   recordMap: Map<string, DayOverride>
-  /** 有待办的日期 → 待办条数（画格子上的小圆点） */
+  /** 有待办的日期 → 待办条数（日期数字下压一道短横） */
   todoCounts: Map<string, number>
   onEdit: (member: Member, date: string) => void
 }
@@ -22,7 +22,7 @@ interface MonthCalendarProps {
 /**
  * 个人日历：7 列，格子里放班次块 + 农历/节日角标。
  * 加班小时与「法」角标都挂在格子右上角；班次块的 1px 描边表示「与默认班次不同」。
- * 有待办的日子在日期数字右侧画一个小圆点。
+ * 有待办的日子，日期数字下面压一道 2px 橙短横（不是旁边飘个小圆点）。
  *
  * 日历自己**没有标题**：本人姓名与班序已经写在页面副标题（月度概览 · 10月20日 - 11月19日 ·
  * 华文达 · 4F）里了，再在网格上方重复一遍是同一句话说两次。
@@ -100,17 +100,10 @@ export function MonthCalendar({
 
           const body = (
             <>
-              {/* 日期 + 待办圆点同一行：圆点紧挨日期数字（左上角），不占右下角 */}
-              <span className="cal-dayline">
-                <span className="cal-day">{formatDayNumber(date)}</span>
-                {todoCount > 0 ? (
-                  <span
-                    aria-hidden="true"
-                    className={`cal-todo${cell.inPeriod ? '' : ' is-outside'}`}
-                    title={`${todoCount} 项待办`}
-                  />
-                ) : null}
-              </span>
+              {/* 有待办的日子，日期数字下面压一道 2px 橙短横（见 .cal-day.is-todo）。
+               * 不再在数字右边画小圆点 —— 6px 圆点 + 1px 描边贴在 12px 数字旁，
+               * 像笔画溢出来的一个脏点，还跟右上角的加班角标抢注意力。 */}
+              <span className={`cal-day${todoCount > 0 ? ' is-todo' : ''}`}>{formatDayNumber(date)}</span>
               <span className={`cal-meta${meta?.isFestival ? ' is-festival' : ''}`}>{meta?.label ?? ''}</span>
 
               {/* 加班、法定、事假时长挂在右上角，不挤班次那一行 */}
@@ -157,9 +150,9 @@ export function MonthCalendar({
 
       <p className="calendar-legend">
         <span className="cal-ot">+2h</span>
-        <span className="legend-text">加班小时</span>
+        <span className="legend-text">加班数</span>
         <span className="cal-legal" aria-hidden="true">法</span>
-        <span className="legend-text">法定节假日上班</span>
+        <span className="legend-text">法定节假日</span>
       </p>
     </section>
   )

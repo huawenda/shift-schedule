@@ -54,11 +54,17 @@
   padding: 15px 16px;
 }
 
+/*
+ * 待办卡的抬头与统计卡同一套：发丝线 + 左侧 3px 强调色竖条。
+ * 这张卡和四张统计卡并排出现在同一页，抬头样式不一致会显得是两拨人做的。
+ */
 .todo-card-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--rule);
 }
 
 .todo-card-title {
@@ -66,16 +72,33 @@
   font-weight: 500;
 }
 
+.todo-card-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 12px;
+  margin-right: 7px;
+  border-radius: 2px;
+  background: var(--accent);
+  vertical-align: -1px;
+}
+
 .todo-card-stat {
   font-size: 11px;
-  color: var(--faint);
+  color: var(--muted);
   white-space: nowrap;
 }
 
+/* 空态：虚线框 —— 一片灰字贴在卡片左上角，看起来像没写完；
+ * 框起来之后一眼就知道「这里是空的，不是坏了」。 */
 .todo-empty {
+  padding: 18px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+  color: var(--faint);
   font-size: 12px;
   line-height: 1.7;
-  color: var(--faint);
+  text-align: center;
 }
 
 /* 滚动区：吃掉卡片的剩余高度 */
@@ -94,38 +117,64 @@
 
 /* 一个日期下的若干条待办 */
 .todo-group + .todo-group {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
+/* 日期行：日期深、星期淡，两级信息分开（原来一串同色小字，扫起来分不出重点） */
 .todo-group-date {
-  margin: 0 0 5px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 6px;
   font-size: 11px;
-  color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+.todo-group-day {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.todo-group-week {
+  color: var(--faint);
 }
 
 .todo-items {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/*
+ * 每条待办做成一行「可点区域」：左右内边距 + 负外边距往两侧撑开，
+ * 这样悬停底色能盖满整行，文字起点却不动。
+ */
 .todo-item {
   display: flex;
   align-items: flex-start;
   gap: 7px;
+  margin: 0 -6px;
+  padding: 3px 6px;
+  border-radius: 5px;
   font-size: 12px;
   line-height: 1.5;
 }
 
-/* 勾选框：用一个空心方块，已完成时打勾 */
+.todo-item:hover {
+  background: var(--raised);
+}
+
+/* 勾选框：用一个空心方块，已完成时打勾。
+ * margin-top 必须等于 (行盒高 − 勾选框高) / 2 —— 12px 字 × 1.5 行高 = 18px，
+ * (18 − 14) / 2 = 2px。之前写 1px，勾选框整体偏高 1px，肉眼就是「没对齐」。
+ * 用 align-items: center 不行：多行待办时勾选框会跑到整段文字的正中间。 */
 .todo-check {
   flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   margin-top: 2px;
   padding: 0;
   border: 1px solid var(--control);
@@ -138,15 +187,16 @@
   border-color: var(--accent);
 }
 
-.todo-item.is-done .todo-check {
+.todo-item.is-done .todo-check,
+.todo-list-item.is-done .todo-check {
   border-color: var(--accent);
   background: var(--accent);
-  /* 用两条线拼一个勾 */
+  /* 用两条线拼一个勾（勾的落点按 14×14 的框调过） */
   background-image:
     linear-gradient(45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%),
     linear-gradient(-45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%);
   background-size: 7px 7px, 7px 7px;
-  background-position: 2px 5px, 2px 2px;
+  background-position: 3px 6px, 3px 3px;
   background-repeat: no-repeat;
 }
 
@@ -155,8 +205,9 @@
   word-break: break-word;
 }
 
-/* 已完成：划线 + 置灰 */
-.todo-item.is-done .todo-text {
+/* 已完成：划线 + 置灰（卡片与弹层共用同一套，弹层里以前漏了这条） */
+.todo-item.is-done .todo-text,
+.todo-list-item.is-done .todo-text {
   color: var(--faint);
   text-decoration: line-through;
 }
@@ -197,6 +248,27 @@
   font-weight: 500;
 }
 
+/* 标签上的条数：一枚小胶囊，比跟在文字后面的一串数字清楚 */
+.dialog-tab-count {
+  display: inline-block;
+  min-width: 16px;
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 15px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.dialog-tab.is-on .dialog-tab-count {
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+
 /* 标签页的内容区 */
 .dialog-page {
   display: flex;
@@ -205,10 +277,14 @@
   padding: 16px 18px 4px;
 }
 
-/* 新增待办：输入框 + 添加按钮 */
+/* 新增待办：输入框 + 添加按钮，整块垫一层浅底 ——
+ * 让它成为弹层里一个明确的「操作区」，而不是两个控件浮在白纸上。 */
 .todo-add {
   display: flex;
   gap: 8px;
+  padding: 8px;
+  border-radius: var(--radius-card);
+  background: var(--raised);
 }
 
 .todo-add .input {
@@ -216,22 +292,38 @@
   min-width: 0;
 }
 
+/* 弹层里的空态也用虚线框，与卡片空态同一套语言（不影响统计卡里的 .stat-empty） */
+.dialog-page > .stat-empty {
+  padding: 16px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
 /* 待办清单 */
 .todo-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* 清单行：左右内边距 + 负外边距撑开，悬停底色能盖满一行而文字起点不动 */
 .todo-list-item {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  margin: 0 -6px;
+  padding: 5px 6px;
+  border-radius: 5px;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.todo-list-item:hover {
+  background: var(--raised);
 }
 
 .todo-list-item .todo-text {

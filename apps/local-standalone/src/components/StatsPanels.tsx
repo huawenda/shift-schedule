@@ -108,7 +108,7 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
 
         <div className="day-counts">
           {cards.map(card => (
-            <div className="day-count" key={card.key}>
+            <div className={`day-count is-${card.key}`} key={card.key}>
               <span className="day-count-num">{card.days}</span>
               <span className="day-count-label">{card.label}</span>
               {card.hours > 0 ? (

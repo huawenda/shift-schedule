@@ -12,30 +12,39 @@
 
 /* ------------------------------------------------------------ 侧栏 */
 
+/*
+ * 侧栏 = 品牌区 / 导航区 / 底部设置，三段式。
+ *
+ * 它以前只是三行没有图标的文字：视觉重量全靠右边画布撑着，自己像个占位。
+ * 现在靠三件事把它立起来：
+ * 1. 每项带 16px 线性图标（内联 SVG，零依赖、file:// 可用）；
+ * 2. 选中态是**整块浅青底 + 强调色文字**，而不是一根 2px 左边线 —— 一眼能看出「我在哪」；
+ * 3. 用一条分组小标题 + 一条分隔线把三段分开，看起来才是「设计过的侧栏」。
+ */
 .rail {
   grid-column: 1;
   grid-row: 1 / 3;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 14px 12px 12px;
+  padding: 10px 10px 10px;
   min-height: 0;
 }
 
 .rail-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 8px;
-  height: 24px;
+  gap: 9px;
+  height: 44px;
+  padding: 0 6px;
+  margin-bottom: 14px;
 }
 
 /* 字标：一块小排班格（两条横线），不用黑方块加字母 */
 .rail-mark {
   position: relative;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   background: var(--accent);
   flex: 0 0 auto;
 }
@@ -44,19 +53,19 @@
 .rail-mark::after {
   content: "";
   position: absolute;
-  left: 3px;
-  right: 3px;
+  left: 4px;
+  right: 4px;
   height: 2px;
   border-radius: 1px;
   background: rgba(255, 255, 255, 0.92);
 }
 
 .rail-mark::before {
-  top: 5px;
+  top: 6px;
 }
 
 .rail-mark::after {
-  top: 9px;
+  top: 11px;
 }
 
 .rail-name {
@@ -66,11 +75,11 @@
 }
 
 .rail-version {
-  font-size: 11px;
-  color: var(--muted);
+  padding: 0 4px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0 4px;
+  color: var(--faint);
+  font-size: 10px;
   line-height: 16px;
 }
 
@@ -81,24 +90,45 @@
   gap: 2px;
 }
 
+/* 分组小标题：11px、稀疏字距，只做「这里开始是导航」的提示，不抢内容 */
+.rail-group-label {
+  margin: 0 0 5px;
+  padding: 0 8px;
+  color: var(--faint);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+/* 底部设置单独成段：一条 1px 分隔线把它和工作区隔开 */
 .rail-foot {
   margin-top: auto;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
 }
 
 .rail-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 10px;
+  gap: 10px;
+  height: 34px;
+  padding: 0 9px;
   border: 0;
-  border-left: 2px solid transparent;
-  border-radius: 6px;
+  border-radius: 7px;
   background: transparent;
   color: var(--muted);
   font-size: 13px;
   font-weight: 500;
   text-align: left;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+/* 图标默认比文字更淡一档，悬停 / 选中时才提到文字颜色 —— 否则两行图标会抢视线 */
+.rail-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--faint);
+  transition: color 120ms ease;
 }
 
 .rail-item:hover:not(:disabled) {
@@ -106,31 +136,26 @@
   color: var(--text);
 }
 
+.rail-item:hover:not(:disabled) .rail-icon {
+  color: var(--muted);
+}
+
 .rail-item.is-active {
-  background: var(--surface);
-  color: var(--text);
-  border-left-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+
+.rail-item.is-active .rail-icon {
+  color: var(--accent);
+}
+
+.rail-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .rail-item:disabled {
   color: #a8afb4;
-}
-
-.rail-tag {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--faint);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0 4px;
-  line-height: 15px;
-}
-
-.rail-note {
-  padding: 6px 10px 0;
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--faint);
 }
 
 /* ------------------------------------------------------------ 顶栏 */
@@ -149,32 +174,110 @@
 .month-track {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
 }
 
-.month-step {
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1;
+/*
+ * 月份切换做成一个「分段控件」：外面一层 1px 边框 + 白底胶囊，
+ * 里面左右两枚步进按钮、中间夹月份文本，文本两侧用 1px 细线隔开。
+ *
+ * 原来两枚箭头是透明按钮、中间一串裸文字，三样东西平铺在顶栏上，
+ * 静止时没有任何边界 —— 看着就是一行字，没有「这里能点」的信号。
+ * 收进同一个框里之后，它是一个控件，而不是三个文本块。
+ */
+.month-switch {
+  display: flex;
+  align-items: stretch;
+  height: var(--control-height);
+  overflow: hidden;
+  border: 1px solid var(--control);
+  border-radius: var(--radius-control);
+  background: var(--surface);
 }
 
-.month-step:hover {
-  background: var(--active);
+.month-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.month-step:hover:not(:disabled) {
+  background: var(--raised);
   color: var(--text);
 }
 
+/* 按下时再压一档，给出真实的「按到了」反馈 */
+.month-step:active:not(:disabled) {
+  background: var(--active);
+}
+
+/* 外层 overflow: hidden 会把 outline 裁掉，于是往里收一档 */
+.month-step:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.month-icon {
+  width: 14px;
+  height: 14px;
+}
+
 .month-title {
-  min-width: 104px;
-  font-size: 14px;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 116px;
+  padding: 0 10px;
+  border-right: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+  font-size: 13px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  text-align: center;
+  white-space: nowrap;
+}
+
+/*
+ * 「回到本期」是胶囊的最右一段，与切月箭头之间一条 1px 线。
+ *
+ * 它不再单独做成一个描边按钮：那个版本要么像「刷新」（回转箭头），
+ * 要么和右边的「导出 / 导入备份」撞成三个一模一样的白按钮。
+ * 并进月份胶囊后，整条顶栏只剩一个「月份导航」控件，主次清楚。
+ *
+ * 文字取强调色 → 它是导航动作；悬停铺一层 accent-weak → 仍明确可点。
+ * 已经是本月时置灰禁用：那时它确实没有可做的事，留着高亮反而是骗点击。
+ */
+.month-today {
+  padding: 0 12px;
+  border: 0;
+  border-left: 1px solid var(--rule);
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.month-today:hover:not(:disabled) {
+  background: var(--accent-weak);
+}
+
+.month-today:active:not(:disabled) {
+  background: #dbeaee;
+}
+
+.month-today:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.month-today:disabled {
+  color: var(--faint);
 }
 
 .year-track-pad {
@@ -256,6 +359,36 @@
   overflow: auto;
 }
 
+/*
+ * 页头固定模式（设置 → 人员配置）。
+ *
+ * 画布自己不滚，页头留在原位；页头之下的内容收进 `.canvas-flow` 单独滚 ——
+ * 于是翻成员表时「设置 / 人员配置 / 分页切换」这条抬头不会跟着走。
+ * 分隔线画在 `.canvas-flow` 的上边框上：它是滚动区的边界，
+ * 滚动内容会被裁在这条线下面，视觉上就是「线以上冻结、线以下滚动」。
+ *
+ * 为什么画布用 overflow: hidden 而不是留 auto 兜底：
+ * 兜底一旦触发，整页会跟着滚，页头就不再固定了 —— 那正是要避免的。
+ * 窗口再矮也不会丢内容：`.canvas-flow` 自己有 overflow-y: auto。
+ */
+.canvas.is-pinned {
+  overflow: hidden;
+}
+
+.canvas-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+}
+
+.canvas.is-pinned > .canvas-flow {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+
 /* ------------------------------------------------------------ 覆盖式滚动条
  *
  * 原生滚动条在 Windows 上又粗又有箭头，静止时杵在画布右边很碍眼。
@@ -270,34 +403,19 @@
  * 内容宽度恒定，也就不需要 scrollbar-gutter 了。
  *
  * ⚠️ 这里只用 ::-webkit-scrollbar，不写 scrollbar-width ——
- * 标准属性一旦设成 none 会把**横向**滚动条也一起干掉，
- * 矩阵页的 30 天横滚就没法用了。分轴只能靠 width / height。
+ * 标准属性一旦设成 none 会把**横向**滚动条也一起干掉，只能分轴靠 width / height。
  */
 
 /* 只压竖向（width），横向保留 */
 .canvas::-webkit-scrollbar,
+.canvas-flow::-webkit-scrollbar,
 .matrix-scroll::-webkit-scrollbar,
 .dialog::-webkit-scrollbar {
   width: 0;
 }
 
-/* 矩阵的横向滚动条留着（30 天横滚是主交互），但用细样式统一观感 */
-.matrix-scroll::-webkit-scrollbar {
-  height: 8px;
-}
-
-.matrix-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.matrix-scroll::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background: rgba(19, 20, 22, 0.2);
-}
-
-.matrix-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(19, 20, 22, 0.36);
-}
+/* 矩阵的横向滚动条已改成彻底隐藏（见 schedule.scss 的 .matrix-scroll 区块），
+ * 横滚由「鼠标在矩阵上滚滚轮」驱动 —— 这里不再给它单独配色。 */
 
 /* 自绘滑块：fixed 定位，跟随容器可视矩形。
  * root 保持零尺寸 —— 它只是滑块的挂载点，

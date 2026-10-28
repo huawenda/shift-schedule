@@ -26,8 +26,11 @@ import { useEffect } from 'react'
  * ⚠️ 每日明细的 .detail-scroll **不在**这份名单里 —— 它是卡片内部的表格区，
  * 滑块只有几行高，自绘滑块反而碍眼，要求彻底隐藏（原生滚动条已被压成 0 宽，
  * 鼠标滚轮仍可正常滚动）。
+ *
+ * `.canvas-flow` 是设置页（人员配置）的滚动区：页头固定后由它单独滚，
+ * 原生滚动条已被压成 0 宽，这里不接管就完全看不见了。
  */
-const SCROLLERS = '.canvas, .matrix-scroll, .dialog'
+const SCROLLERS = '.canvas, .canvas-flow, .matrix-scroll, .dialog'
 
 /** 停下多久后淡出 */
 const IDLE_HIDE_MS = 700

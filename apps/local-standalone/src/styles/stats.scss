@@ -15,7 +15,7 @@
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
   width: 100%;
 }
 
@@ -43,29 +43,51 @@
   gap: 10px;
   /* 固定高度下必须允许子项收缩，否则 .detail-scroll 的 overflow 不会触发 */
   min-height: 0;
-  padding: 15px 16px;
+  padding: 16px 18px;
 }
 
 .stat-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 15px 16px;
+  padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
 }
 
+/*
+ * 卡片标题行 = 每张卡的「抬头」。
+ *
+ * 加一条发丝线把它和内容分开：原来标题、数值、明细全在同一平面，
+ * 四张卡看起来都像没画完的草稿，分不清哪里是标题、哪里是数据。
+ * 标题左边那道 3px 小竖条只做视觉锚点，不承载语义。
+ */
 .stat-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--rule);
 }
 
 .stat-title {
   font-size: 13px;
   font-weight: 500;
+}
+
+/* 用 inline-block 而不是给 .stat-title 加 flex：标题行是 baseline 对齐的，
+ * 一旦标题自己变成 flex 容器，它的基线会取到伪元素的基线，整行文字就歪了。 */
+.stat-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 12px;
+  margin-right: 7px;
+  border-radius: 2px;
+  background: var(--accent);
+  vertical-align: -1px;
 }
 
 .stat-note {
@@ -114,13 +136,50 @@
   gap: 6px;
 }
 
+/*
+ * 六个格子：白底 + 1px 边 + **左侧 3px 班次色条**。
+ *
+ * 色条用的是日历班次块 / 矩阵图例里的那个**浅底色**（`--shift-*-bg`），
+ * 也就是「和日历同一个颜色」，不是 `.t-*` 的深墨色。
+ * 墨色是给色块上的文字用的，单独抽成 3px 细条会暗成墨线，
+ * 而且 夜班/事假 都是暗蓝灰、特勤/法定 都是棕橙，两两撞色。
+ */
 .day-count {
   display: flex;
   align-items: baseline;
   gap: 5px;
-  padding: 6px 9px;
+  padding: 6px 9px 6px 8px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--raised);
   border-radius: var(--radius-control);
-  background: var(--raised);
+  background: var(--surface);
+}
+
+/* 色条颜色：六格各按班次取「浅底」（特勤 = 白特 + 夜特，取白特那档暖黄） */
+.day-count.is-day {
+  border-left-color: var(--shift-day-bg);
+}
+
+.day-count.is-night {
+  border-left-color: var(--shift-night-bg);
+}
+
+.day-count.is-rest {
+  border-left-color: var(--shift-rest-bg);
+}
+
+.day-count.is-special {
+  border-left-color: var(--shift-dayx-bg);
+}
+
+.day-count.is-leave {
+  border-left-color: var(--shift-leave-bg);
+}
+
+/* 法定：法定的底色是 #fffbeb，几乎等于白，画成 3px 细条看不见 ——
+ * 用「法」角标的描边色（浅黄），仍是同一套警示色。 */
+.day-count.is-legal {
+  border-left-color: var(--warning-border);
 }
 
 .day-count-num {
@@ -148,9 +207,10 @@
   white-space: nowrap;
 }
 
-/* 事假那格写的是请假小时，不是加班 —— 用中性底，别和加班橙混在一起 */
+/* 事假那格写的是请假小时，不是加班 —— 用中性底，别和加班橙混在一起。
+ * 底色用 --raised 而不是白：格子本身已经是白底了，纯白会看不出有个小标签。 */
 .day-count-extra.is-leave {
-  background: var(--surface);
+  background: var(--raised);
   box-shadow: inset 0 0 0 1px var(--border);
   color: var(--muted);
   font-weight: 500;
@@ -181,7 +241,7 @@
   gap: 10px;
   /* 固定高度下必须允许子项收缩，否则绘图区的 flex 不会生效 */
   min-height: 0;
-  padding: 15px 16px;
+  padding: 16px 18px;
 }
 
 /* ── 加班分布（柱形图） ─────────────────────────────────── */
@@ -349,11 +409,20 @@
   list-style: none;
 }
 
+/*
+ * 薪资行。
+ *
+ * 这张卡是整页文字最密的地方：12 行、全是 12px 灰字、行距只有 4px，
+ * 读起来像一张打印出来的账单。疏朗靠三件事，都不改内容、不加新颜色：
+ * 1. 行距 4 → 5px，子行缩进 12 → 14px（缩进拉开，层级一眼能看出来）；
+ * 2. 每个分组标题上方加一条发丝线（第一组除外），把整列切成三段；
+ * 3. 组标题左侧一道 2px 中性竖条，给每段一个视觉锚点。
+ */
 .money-row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 4px 0;
+  padding: 5px 0;
   font-size: 12px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -368,47 +437,83 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 12px;
-  padding-top: 2px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
-/* 头一个组贴着列表顶部，不必再留间距 */
+/* 组标题左侧的小竖条：只做锚点，中性色不抢强调色 */
+.money-group > span:first-child::before {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 1px;
+  background: var(--control);
+  vertical-align: -1px;
+}
+
+/* 头一个组贴着列表顶部，不必再留间距，也不画分隔线 */
 .money-group:first-child {
   margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
-/* 组内明细：缩进对齐到组标题下方 */
+/* 组内明细：缩进对齐到组标题下方（缩进比组标题的字宽略深一档，层级更清楚） */
 .money-row.is-sub {
-  padding-left: 12px;
+  padding-left: 14px;
 }
 
-/* 行内的倍率标记（平日 ×1.5 等）：弱化，不抢金额 */
+/* 行内的倍率标记（平日 ×1.5 等）：改成小胶囊。
+ * 原来是一串灰色小字贴在科目名后面，和科目名黏在一起；做成标签后
+ * 一眼能分出「这是科目名 / 这是倍率」，也顺带成了这张卡的装饰点。 */
 .money-rate {
-  margin-left: 5px;
-  color: var(--faint);
-  font-size: 11px;
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 10px;
   font-style: normal;
+  line-height: 15px;
+  font-variant-numeric: tabular-nums;
 }
 
+/* 应发：三段明细到这里收口，线要比组内分隔更实一档 */
 .money-row.is-strong {
-  margin-top: 2px;
-  padding-top: 6px;
-  border-top: 1px solid var(--rule);
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
   color: var(--text);
+  font-size: 13px;
 }
 
+/*
+ * 实发：全卡的结论行。
+ *
+ * 原来只是「加粗 + 字号大一点」，和上面 20 行金额挤在同一片白底里，
+ * 扫完一列数字找不到终点。给一条浅青底把它托起来 —— 是整张卡唯一有底色的行，
+ * 视线自然落在这里。
+ */
 .money-row.is-total {
-  color: var(--text);
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 5px;
+  background: var(--accent-weak);
+  color: var(--accent);
   font-size: 13px;
   font-weight: 600;
 }
 
 .money-row.is-total span:last-child {
   font-size: 16px;
+  color: var(--accent);
 }
 
 /* ── 每日明细 ─────────────────────────────────────────── */
@@ -437,7 +542,7 @@
 }
 
 .detail-table th {
-  padding: 0 0 6px;
+  padding: 7px 0 6px;
   border-bottom: 1px solid var(--border);
   color: var(--muted);
   font-size: 11px;
@@ -446,13 +551,15 @@
 }
 
 /* 表头随滚动冻结在滚动区上沿。border-collapse 的表格里 sticky 的边框会跟着滚，
- * 所以把 border 换成 inset 阴影，视觉上仍是那根 1px 线。 */
+ * 所以把 border 换成 inset 阴影，视觉上仍是那根 1px 线。
+ * 底色用 #fbfcfd 而不是纯白：和内容同色时，滚动的数据行会「融进」表头，
+ * 加一层极淡的底才算分出「表头条」。 */
 .detail-table thead th {
   position: sticky;
   top: 0;
   z-index: 1;
   border-bottom: 0;
-  background: var(--surface);
+  background: #fbfcfd;
   box-shadow: inset 0 -1px 0 var(--border);
 }
 

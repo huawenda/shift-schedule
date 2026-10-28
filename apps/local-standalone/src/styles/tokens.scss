@@ -36,6 +36,32 @@
   --overtime-bg: #ffc98f;
   --overtime-ink: #7a3f0a;
 
+  /* 待办短横：日期数字下面那道 2px 线。
+   * 不能直接用 --overtime-bg —— 那是「色块填充」的浅橙，画成 2px 细线在白底上几乎看不见；
+   * 也不直接用 --overtime-ink（深棕），2px 细线会显得脏、像被划掉。
+   * 取两者中间一档饱和度，仍是橙色系，一眼能和「加班角标」认成一家。 */
+  --todo-ink: #c1712a;
+
+  /* 六种班次的颜色 = 「浅底 + 墨字」一对，全局唯一来源。
+   *
+   * 之所以抽到 :root：同一个班次在两个地方要用不同的部分 ——
+   * 日历 / 矩阵要整块「浅底 + 墨字」，统计卡只要那个**浅底色**当小色块。
+   * 以前把墨色单独抄了一份，结果统计卡拿墨色画细条，暗得像黑线，
+   * 和日历里的浅色块完全是两套观感。
+   */
+  --shift-day-bg: #dff3ff;
+  --shift-day-ink: #02689f;
+  --shift-night-bg: #e3eaf3;
+  --shift-night-ink: #1e3a5f;
+  --shift-rest-bg: #dcfce7;
+  --shift-rest-ink: #047857;
+  --shift-dayx-bg: #fff0c2;
+  --shift-dayx-ink: #b45309;
+  --shift-nightx-bg: #fde7c7;
+  --shift-nightx-ink: #9a3412;
+  --shift-leave-bg: #e5e7eb;
+  --shift-leave-ink: #475467;
+
   --radius-card: 8px;
   --radius-control: 6px;
   --radius-sheet: 16px;
@@ -49,6 +75,13 @@
   /* 矩阵姓名列宽：两行字（姓名 13px / 班序·岗位 11px）实测 88px 就够，
    * 原 148px 里空了 60px，白占横向空间、挤压日期列。 */
   --matrix-name-width: 120px;
+  /* 「按姓名」视图的日期列宽：格子里要放下 3–4 个汉字，22px 的弹性列塞不进，
+   * 所以这一视图改成固定列宽 + 横向滚动。 */
+  --matrix-name-cell: 56px;
+  /* 矩阵色块四边留白的**统一**宽度：四条边共用一个值，格子怎么变都等宽。
+   * 千万别再写成 `inset: 6px 2px` 那种上下/左右两套数字 —— 宽格子横向紧贴、
+   * 纵向却空出一大截，看着就是色块没居中。 */
+  --matrix-pill-gap: 4px;
 
   --fs-title: 22px;
   --fs-section: 16px;
@@ -136,43 +169,43 @@ p {
  */
 
 .t-day {
-  --tone-bg: #dff3ff;
-  --tone-ink: #02689f;
+  --tone-bg: var(--shift-day-bg);
+  --tone-ink: var(--shift-day-ink);
   background: var(--tone-bg);
   color: var(--tone-ink);
 }
 
 .t-night {
-  --tone-bg: #e3eaf3;
-  --tone-ink: #1e3a5f;
+  --tone-bg: var(--shift-night-bg);
+  --tone-ink: var(--shift-night-ink);
   background: var(--tone-bg);
   color: var(--tone-ink);
 }
 
 .t-rest {
-  --tone-bg: #dcfce7;
-  --tone-ink: #047857;
+  --tone-bg: var(--shift-rest-bg);
+  --tone-ink: var(--shift-rest-ink);
   background: var(--tone-bg);
   color: var(--tone-ink);
 }
 
 .t-dayx {
-  --tone-bg: #fff0c2;
-  --tone-ink: #b45309;
+  --tone-bg: var(--shift-dayx-bg);
+  --tone-ink: var(--shift-dayx-ink);
   background: var(--tone-bg);
   color: var(--tone-ink);
 }
 
 .t-nightx {
-  --tone-bg: #fde7c7;
-  --tone-ink: #9a3412;
+  --tone-bg: var(--shift-nightx-bg);
+  --tone-ink: var(--shift-nightx-ink);
   background: var(--tone-bg);
   color: var(--tone-ink);
 }
 
 .t-leave {
-  --tone-bg: #e5e7eb;
-  --tone-ink: #475467;
+  --tone-bg: var(--shift-leave-bg);
+  --tone-ink: var(--shift-leave-ink);
   background: var(--tone-bg);
   color: var(--tone-ink);
 }

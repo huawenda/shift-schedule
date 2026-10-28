@@ -30,17 +30,18 @@ export function TodoCard({ todos, onToggle }: TodoCardProps) {
         </header>
 
         {groups.length === 0 ? (
-          <p className="todo-empty">
+          <div className="todo-empty">
             这个月还没有待办。
             <br />
             点日历上的某一天，在弹层的「待办」页里记一条。
-          </p>
+          </div>
         ) : (
           <div className="todo-scroll">
             {groups.map(group => (
               <div className="todo-group" key={group.date}>
                 <p className="todo-group-date">
-                  {formatMonthDay(group.date)} 周{weekdayLabel(group.date)}
+                  <span className="todo-group-day">{formatMonthDay(group.date)}</span>
+                  <span className="todo-group-week">周{weekdayLabel(group.date)}</span>
                 </p>
                 <ul className="todo-items">
                   {group.todos.map(todo => (

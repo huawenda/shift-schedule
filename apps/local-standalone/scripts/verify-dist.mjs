@@ -360,6 +360,36 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(landing.rails) === JSON.stringify(['全员矩阵', '月度概览', '设置']),
       JSON.stringify(landing.rails)
     )
+
+    // 侧栏观感：每项带图标、选中是整块浅青底 + 强调色、底部设置单独成段
+    const railLook = await client.evaluate(`(() => {
+      const items = Array.from(document.querySelectorAll('.rail-item'))
+      const active = document.querySelector('.rail-item.is-active')
+      const cs = active ? getComputedStyle(active) : null
+      const icon = active?.querySelector('svg.rail-icon')
+      const foot = document.querySelector('.rail-foot')
+      return {
+        icons: items.filter(node => node.querySelector('svg.rail-icon')).length,
+        label: document.querySelector('.rail-group-label')?.textContent.trim() ?? '',
+        activeBg: cs?.backgroundColor ?? '',
+        activeColor: cs?.color ?? '',
+        activeIcon: icon ? getComputedStyle(icon).color : '',
+        itemH: active ? Math.round(active.getBoundingClientRect().height) : -1,
+        footDivider: foot ? getComputedStyle(foot).borderTopWidth : ''
+      }
+    })()`)
+    check(
+      `${name}: 侧栏每项都有图标，选中项是浅青底 + 强调色（不是白底黑字）`,
+      railLook.icons === 3 && railLook.activeBg === 'rgb(234, 242, 244)' &&
+        railLook.activeColor === 'rgb(27, 108, 128)' &&
+        railLook.activeIcon === 'rgb(27, 108, 128)' && railLook.itemH === 34,
+      JSON.stringify(railLook)
+    )
+    check(
+      `${name}: 侧栏有分组标题，底部设置用分隔线隔开`,
+      railLook.label === '视图' && parseFloat(railLook.footDivider) >= 1,
+      JSON.stringify(railLook)
+    )
     check(
       `${name}: 概览页有日历和四块统计、没有今日概览条`,
       landing.calendar === 1 && landing.cards === 4 && landing.summary === 0,
@@ -369,6 +399,37 @@ async function runScenario(name, url, downloadDir) {
       `${name}: 结算周期用「-」连接（不用长破折号）`,
       /月\d+日 - \d+月\d+日/.test(landing.sub) && !landing.sub.includes('—'),
       landing.sub
+    )
+
+    // 统计卡观感：抬头有发丝线 + 强调色小竖条；六格带班次色条；实发是浅青结论条
+    const statLook = await client.evaluate(`(() => {
+      const head = document.querySelector('.stat-card .stat-head')
+      const title = head?.querySelector('.stat-title')
+      const before = title ? getComputedStyle(title, '::before') : null
+      const cells = Array.from(document.querySelectorAll('.day-count'))
+      const first = cells[0]
+      const firstCs = first ? getComputedStyle(first) : null
+      return {
+        headBorder: head ? getComputedStyle(head).borderBottomWidth : '',
+        barW: before ? parseFloat(before.width) : -1,
+        barBg: before?.backgroundColor ?? '',
+        cells: cells.length,
+        cellBg: firstCs?.backgroundColor ?? '',
+        leftW: firstCs ? parseFloat(firstCs.borderLeftWidth) : -1,
+        leftColor: firstCs?.borderLeftColor ?? ''
+      }
+    })()`)
+    check(
+      `${name}: 统计卡有抬头分隔线与强调色小竖条`,
+      statLook.headBorder === '1px' && statLook.barW === 3 &&
+        statLook.barBg === 'rgb(27, 108, 128)',
+      JSON.stringify(statLook)
+    )
+    check(
+      `${name}: 本月概览六格用日历同款浅色色条（白班 #dff3ff，不是深墨色）`,
+      statLook.cells === 6 && statLook.cellBg === 'rgb(255, 255, 255)' &&
+        statLook.leftW === 3 && statLook.leftColor === 'rgb(223, 243, 255)',
+      JSON.stringify(statLook)
     )
 
     const layout = await client.evaluate(`(() => {
@@ -469,8 +530,10 @@ async function runScenario(name, url, downloadDir) {
         // 格子本身是直角 + 透明底，列线才是连续的
         cellRadius: cs?.borderRadius ?? '',
         cellBg: cs?.backgroundColor ?? '',
-        // 药丸画在 ::before 上：上下 6px / 左右 2px、3px 圆角、有底色
+        // 药丸画在 ::before 上：四边留白必须**同一个值**（等宽），3px 圆角、有底色
         pillTop: before ? parseFloat(before.top) : -1,
+        pillRight: before ? parseFloat(before.right) : -1,
+        pillBottom: before ? parseFloat(before.bottom) : -1,
         pillLeft: before ? parseFloat(before.left) : -1,
         pillRadius: before?.borderRadius ?? '',
         pillBg: before?.backgroundColor ?? '',
@@ -484,9 +547,11 @@ async function runScenario(name, url, downloadDir) {
       }
     })()`)
     check(
-      `${name}: 矩阵色块收成药丸块（格子直角 + ::before 画块，列线才连续）`,
+      `${name}: 矩阵色块四边留白等宽（格子直角 + ::before 画块，列线才连续）`,
       matrixLook.cellRadius === '0px' && matrixLook.cellBg === 'rgba(0, 0, 0, 0)' &&
-        matrixLook.pillTop === 6 && matrixLook.pillLeft === 2 &&
+        matrixLook.pillTop === 4 && matrixLook.pillLeft === 4 &&
+        matrixLook.pillRight === matrixLook.pillTop &&
+        matrixLook.pillBottom === matrixLook.pillTop &&
         matrixLook.pillRadius === '3px' && matrixLook.pillBg !== 'rgba(0, 0, 0, 0)',
       JSON.stringify(matrixLook)
     )
@@ -500,6 +565,114 @@ async function runScenario(name, url, downloadDir) {
       `${name}: 成员列收窄到 120（内容不被省略号截断）`,
       matrixLook.nameW >= 100 && matrixLook.nameW <= 124 && matrixLook.nameClipped === false,
       JSON.stringify(matrixLook)
+    )
+
+    // 矩阵视图切换：按班次（单字）→ 按姓名（格子里写人名，列宽固定 56）
+    const shiftView = await client.evaluate(`(() => {
+      const cell = document.querySelector('.matrix-row .matrix-cell')
+      return {
+        active: document.querySelector('.segmented-item.is-on')?.textContent.trim() ?? '',
+        text: cell?.textContent.trim() ?? '',
+        hasName: document.querySelectorAll('.matrix-name').length > 0
+      }
+    })()`)
+    check(
+      `${name}: 矩阵默认「按班次」，格子里是单字`,
+      shiftView.active === '按班次' && shiftView.text.length === 1 && shiftView.hasName,
+      JSON.stringify(shiftView)
+    )
+
+    await client.evaluate(clickByText('.segmented-item', '按姓名'))
+    await sleep(250)
+    const nameView = await client.evaluate(`(() => {
+      const row = document.querySelector('.matrix-row')
+      const cell = row?.querySelector('.matrix-cell')
+      const cellRect = cell?.getBoundingClientRect()
+      const scroll = document.querySelector('.matrix-scroll')
+      const days = row?.querySelector('.matrix-days')
+      const cells = Array.from(days?.querySelectorAll('.matrix-cell') ?? [])
+      const last = cells[cells.length - 1]
+      const headCell = row?.querySelector('.matrix-name-cell')
+      return {
+        active: document.querySelector('.segmented-item.is-on')?.textContent.trim() ?? '',
+        // 行头 title 是「姓名 · 班序·岗位」，用它反查这一行是谁
+        rowName: (headCell?.getAttribute('title') ?? '').split(' · ')[0],
+        cellText: cell?.textContent.trim() ?? '',
+        cellW: cellRect ? Math.round(cellRect.width) : -1,
+        // 姓名已经搬进格子，行头不该再有姓名
+        nameInHead: document.querySelectorAll('.matrix-name').length,
+        headLabel: document.querySelector('.matrix-head .matrix-name-cell')?.textContent.trim() ?? '',
+        scrolls: scroll ? scroll.scrollWidth > scroll.clientWidth : false,
+        // 班序与按班次视图同样左对齐
+        justify: headCell ? getComputedStyle(headCell).justifyContent : '',
+        // 换视图不换几何：色块四边留白仍是同一个值
+        pillGaps: (() => {
+          const before = cell ? getComputedStyle(cell, '::before') : null
+          if (!before) return []
+          return [before.top, before.right, before.bottom, before.left].map(v => parseFloat(v))
+        })(),
+        // 最后一列右边不该再有一条空白（列宽 1fr 拉伸后应正好铺满）
+        tailGap: last && days
+          ? Math.round(days.getBoundingClientRect().right - last.getBoundingClientRect().right)
+          : -1,
+        // 横向滚动条既然隐藏了，就不该再占高度（扣掉上下边框，别把边框当成滚动条）
+        barHidden: (() => {
+          if (!scroll) return false
+          const cs = getComputedStyle(scroll)
+          const border = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth)
+          return scroll.offsetHeight - scroll.clientHeight - border === 0
+        })()
+      }
+    })()`)
+    check(
+      `${name}: 按姓名视图格子里写人名、行头只剩班序（左对齐）`,
+      nameView.active === '按姓名' && nameView.cellText === nameView.rowName &&
+        nameView.cellText.length > 1 && nameView.nameInHead === 0 &&
+        nameView.headLabel === '班序' && nameView.justify === 'flex-start',
+      JSON.stringify(nameView)
+    )
+    check(
+      `${name}: 按姓名视图列宽至少 56、最后一列不留空白、滚动条不占位`,
+      nameView.cellW >= 56 && nameView.scrolls === true &&
+        nameView.tailGap === 0 && nameView.barHidden === true,
+      JSON.stringify(nameView)
+    )
+    check(
+      `${name}: 按姓名视图色块四边留白等宽（与按班次视图同一套数值）`,
+      nameView.pillGaps.length === 4 && nameView.pillGaps.every(gap => gap === 4),
+      JSON.stringify(nameView)
+    )
+
+    // 滚动条藏起来了，滚轮必须能横滚
+    const wheelScroll = await client.evaluate(`(() => {
+      const scroll = document.querySelector('.matrix-scroll')
+      if (!scroll) return { ok: false }
+      const before = scroll.scrollLeft
+      scroll.dispatchEvent(new WheelEvent('wheel', { deltaY: 200, bubbles: true, cancelable: true }))
+      const after = scroll.scrollLeft
+      scroll.scrollLeft = 0
+      return { ok: after > before, before, after }
+    })()`)
+    check(
+      `${name}: 鼠标在矩阵上滚滚轮即横向滚动`,
+      wheelScroll.ok === true,
+      JSON.stringify(wheelScroll)
+    )
+
+    await client.evaluate(clickByText('.segmented-item', '按班次'))
+    await sleep(250)
+    const backToShift = await client.evaluate(`(() => {
+      const cell = document.querySelector('.matrix-row .matrix-cell')
+      return {
+        active: document.querySelector('.segmented-item.is-on')?.textContent.trim() ?? '',
+        text: cell?.textContent.trim() ?? '',
+        nameInHead: document.querySelectorAll('.matrix-name').length
+      }
+    })()`)
+    check(
+      `${name}: 切回按班次恢复单字与姓名行头`,
+      backToShift.active === '按班次' && backToShift.text.length === 1 && backToShift.nameInHead > 0,
+      JSON.stringify(backToShift)
     )
 
     // 切到日历：没有人员下拉，本人只由页面副标题说明（日历上方不再重复一遍）
@@ -539,6 +712,76 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(tabState)
     )
 
+    // 人员配置页观感：区块抬头竖条、面板有边界、班序卡是「轨道 + 色块」、成员表头有分隔线
+    const settingsLook = await client.evaluate(`(() => {
+      const title = document.querySelector('.settings-label h2')
+      const bar = title ? getComputedStyle(title, '::before') : null
+      const panel = document.querySelector('.settings-panel')
+      const chip = document.querySelector('.pattern-chip')
+      const chipCs = chip ? getComputedStyle(chip) : null
+      const track = document.querySelector('.pattern-bar')
+      const head = document.querySelector('.member-editor-head')
+      const row = document.querySelector('.member-row')
+      return {
+        barW: bar ? parseFloat(bar.width) : -1,
+        barBg: bar?.backgroundColor ?? '',
+        panelBorder: panel ? parseFloat(getComputedStyle(panel).borderTopWidth) : -1,
+        chipRadius: chipCs?.borderRadius ?? '',
+        chipPad: chipCs ? [parseFloat(chipCs.paddingTop), parseFloat(chipCs.paddingLeft)] : [],
+        trackH: track ? parseFloat(getComputedStyle(track).height) : -1,
+        trackBg: track ? getComputedStyle(track).backgroundColor : '',
+        headBorder: head ? parseFloat(getComputedStyle(head).borderBottomWidth) : -1,
+        rowHoverRule: row ? getComputedStyle(row).backgroundColor : ''
+      }
+    })()`)
+    check(
+      `${name}: 设置页区块有强调色竖条、面板有 1px 边界`,
+      settingsLook.barW === 3 && settingsLook.barBg === 'rgb(27, 108, 128)' &&
+        settingsLook.panelBorder === 1,
+      JSON.stringify(settingsLook)
+    )
+    check(
+      `${name}: 班序卡更松、24 格条有浅灰轨道，成员表头有分隔线`,
+      JSON.stringify(settingsLook.chipPad) === JSON.stringify([8, 9]) &&
+        settingsLook.chipRadius === '7px' &&
+        settingsLook.trackH === 12 && settingsLook.trackBg === 'rgb(244, 246, 248)' &&
+        settingsLook.headBorder === 1,
+      JSON.stringify(settingsLook)
+    )
+
+    // 页头固定：分隔线以上不滚，只有 .canvas-flow 滚
+    const pinnedState = `(() => {
+      const canvas = document.querySelector('.canvas')
+      const flow = document.querySelector('.canvas-flow')
+      const head = document.querySelector('.canvas-head')
+      const cs = flow ? getComputedStyle(flow) : null
+      const headTop = head ? Math.round(head.getBoundingClientRect().top) : -1
+      if (flow) flow.scrollTop = 200
+      const headTopAfter = head ? Math.round(head.getBoundingClientRect().top) : -1
+      const scrolled = flow?.scrollTop ?? -1
+      if (flow) flow.scrollTop = 0
+      return {
+        canvasOverflow: canvas ? getComputedStyle(canvas).overflowY : '',
+        flowOverflow: cs?.overflowY ?? '',
+        borderTop: cs ? cs.borderTopWidth + ' ' + cs.borderTopStyle : '',
+        borderColor: cs?.borderTopColor ?? '',
+        headTop,
+        headTopAfter,
+        scrolled
+      }
+    })()`
+    const pinnedRoster = await client.evaluate(pinnedState)
+    check(
+      `${name}: 人员配置页页头钉住（分隔线下滚，页头不动）`,
+      pinnedRoster.canvasOverflow === 'hidden' &&
+        pinnedRoster.flowOverflow === 'auto' &&
+        pinnedRoster.borderTop === '1px solid' &&
+        pinnedRoster.borderColor === 'rgb(240, 241, 242)' &&
+        pinnedRoster.scrolled > 0 &&
+        pinnedRoster.headTop === pinnedRoster.headTopAfter,
+      JSON.stringify(pinnedRoster)
+    )
+
     const selfRow = await client.evaluate(`(() => ({
       selfBadges: document.querySelectorAll('.member-row .badge-self').length,
       selfInputs: document.querySelectorAll('.member-row.is-self input, .member-row.is-self select').length,
@@ -570,6 +813,18 @@ async function runScenario(name, url, downloadDir) {
     )
     check(`${name}: 个人资料页标出本人`, profileMeta.includes('张三'), profileMeta)
 
+    // 个人资料页与人员配置页同一套：页头钉住 + 分隔线
+    const pinnedProfile = await client.evaluate(pinnedState)
+    check(
+      `${name}: 个人资料页页头同样钉住（分隔线下滚，页头不动）`,
+      pinnedProfile.canvasOverflow === 'hidden' &&
+        pinnedProfile.flowOverflow === 'auto' &&
+        pinnedProfile.borderTop === '1px solid' &&
+        pinnedProfile.scrolled > 0 &&
+        pinnedProfile.headTop === pinnedProfile.headTopAfter,
+      JSON.stringify(pinnedProfile)
+    )
+
     // 本人岗位：在个人信息里填，应落到本人那条 member 上（只改岗位不触发换人清空）
     check(`${name}: 填本人岗位`, await client.evaluate(setInputBySelector('input[aria-label="本人岗位"]', '班长')))
     await sleep(150)
@@ -585,6 +840,22 @@ async function runScenario(name, url, downloadDir) {
       return self?.position ?? null
     })()`)
     check(`${name}: 本人岗位写进 member`, selfPosition === '班长', JSON.stringify(selfPosition))
+
+    // 备份说明的存储位置文案：浏览器/静态版必须说「浏览器 / 站点数据」，
+    // 不能再说「清缓存」—— 壳里的数据在 WebView2 用户目录，清浏览器缓存动不到
+    const storageCopy = await client.evaluate(`(() => {
+      const section = Array.from(document.querySelectorAll('.settings-section'))
+        .find(node => node.querySelector('h2')?.textContent.trim() === '备份')
+      const text = (section?.querySelector('.settings-label p')?.textContent ?? '')
+        .replace(/\\s+/g, ' ').trim()
+      return { text, hasOldWording: text.includes('清缓存'), saysBrowser: text.includes('浏览器') }
+    })()`)
+    check(
+      `${name}: 备份说明按环境区分存储位置（浏览器版不提「清缓存」）`,
+      storageCopy.saysBrowser === true && storageCopy.hasOldWording === false &&
+        storageCopy.text.includes('清除站点数据'),
+      JSON.stringify(storageCopy)
+    )
 
     check(`${name}: 填基本工资`, await client.evaluate(setInputBySelector('.salary-grid input', '8000')))
     await sleep(150)
@@ -740,6 +1011,35 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(gridFill)
     )
 
+    // 待办短横是画在日期数字上的（多 4px 高度），不能因此把整行格子撑高
+    const rowHeights = await client.evaluate(`(() => {
+      const cells = Array.from(document.querySelectorAll('.cal-cell'))
+      const heights = [...new Set(cells.map(node => Math.round(node.getBoundingClientRect().height)))]
+      return { rows: Math.round(cells.length / 7), heights }
+    })()`)
+    check(
+      `${name}: 日历所有格子等高（待办短横不撑高行）`,
+      rowHeights.heights.length === 1 && rowHeights.heights[0] > 0,
+      JSON.stringify(rowHeights)
+    )
+
+    // 今天：1px 强调色内描边（不是 2px 纯黑的马克笔圈）
+    const todayRing = await client.evaluate(`(() => {
+      const cell = document.querySelector('.cal-cell.is-today')
+      const cs = cell ? getComputedStyle(cell) : null
+      return {
+        shadow: cs?.boxShadow ?? '',
+        // 黑框会把今天变成全屏最重的元素，明确禁止
+        isBlack: /rgb\\(0, 0, 0\\)|rgb\\(19, 20, 22\\)/.test(cs?.boxShadow ?? '')
+      }
+    })()`)
+    check(
+      `${name}: 当日标记是 1px 强调色细框，不是黑色粗框`,
+      todayRing.shadow.includes('1px') && todayRing.shadow.includes('rgb(27, 108, 128)') &&
+        todayRing.isBlack === false,
+      JSON.stringify(todayRing)
+    )
+
     // 找一个白班/夜班的格子（休息/事假不记加班）
     const workCell = await client.evaluate(`(() => {
       const cells = Array.from(document.querySelectorAll('.cal-cell'))
@@ -855,13 +1155,19 @@ async function runScenario(name, url, downloadDir) {
         let parsed = null
         try { parsed = JSON.parse(raw || 'null') } catch { parsed = null }
         const items = Array.from(document.querySelectorAll('.dialog-page .todo-list-item'))
+        const box = items[0]?.querySelector('.todo-check')?.getBoundingClientRect()
+        const text = items[0]?.querySelector('.todo-text')?.getBoundingClientRect()
         return {
           count: parsed?.todos?.length ?? -1,
           text: parsed?.todos?.[0]?.text ?? '',
           date: parsed?.todos?.[0]?.date ?? '',
           done: parsed?.todos?.[0]?.done ?? null,
           listItems: items.length,
-          listText: items.map(node => node.textContent.replace(/\\s+/g, ' ').trim())
+          listText: items.map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
+          // 弹层里勾选框也得跟文字垂直居中
+          alignDelta: box && text
+            ? Math.round(Math.abs(box.top + box.height / 2 - (text.top + text.height / 2)) * 10) / 10
+            : -1
         }
       })()`)
       check(
@@ -870,6 +1176,11 @@ async function runScenario(name, url, downloadDir) {
           todoAdded.text === '交班记录表' &&
           todoAdded.done === false &&
           todoAdded.listItems === 1,
+        JSON.stringify(todoAdded)
+      )
+      check(
+        `${name}: 弹层里勾选框与文字也垂直居中`,
+        todoAdded.alignDelta >= 0 && todoAdded.alignDelta <= 0.5,
         JSON.stringify(todoAdded)
       )
 
@@ -888,15 +1199,27 @@ async function runScenario(name, url, downloadDir) {
         const raw = window.localStorage.getItem(${JSON.stringify(ROSTER_KEY)})
         let parsed = null
         try { parsed = JSON.parse(raw || 'null') } catch { parsed = null }
+        const item = document.querySelector('.dialog-page .todo-list-item.is-done')
+        const text = item?.querySelector('.todo-text')
+        const box = item?.querySelector('.todo-check')
+        const boxCs = box ? getComputedStyle(box) : null
         return {
           done: parsed?.todos?.[0]?.done ?? null,
-          // 界面上要划线置灰
-          struck: Boolean(document.querySelector('.dialog-page .todo-list-item.is-done'))
+          // 界面上要真的划线（不是只有 is-done 这个类名）
+          struck: Boolean(item),
+          textDecoration: text ? getComputedStyle(text).textDecorationLine : '',
+          // 勾选框要填成强调色
+          boxBg: boxCs?.backgroundColor ?? '',
+          // 标签上的条数胶囊
+          tabCount: document.querySelector('.dialog-tab-count')?.textContent.trim() ?? ''
         }
       })()`)
       check(
-        `${name}: 勾选立即生效且界面划线`,
-        todoDone.done === true && todoDone.struck === true,
+        `${name}: 勾选立即生效且界面划线（文字真的加了删除线、勾选框填实）`,
+        todoDone.done === true && todoDone.struck === true &&
+          todoDone.textDecoration.includes('line-through') &&
+          todoDone.boxBg === 'rgb(27, 108, 128)' &&
+          todoDone.tabCount === '1',
         JSON.stringify(todoDone)
       )
 
@@ -907,26 +1230,55 @@ async function runScenario(name, url, downloadDir) {
 
       const todoCard = await client.evaluate(`(() => {
         const card = document.querySelector('.todo-card')
-        const dots = document.querySelectorAll('.cal-todo')
-        const dot = dots[0]
-        const day = dot?.closest('.cal-dayline')?.querySelector('.cal-day')
-        const dotRect = dot?.getBoundingClientRect()
+        const marks = Array.from(document.querySelectorAll('.cal-day.is-todo'))
+        const day = marks[0]
+        const cs = day ? getComputedStyle(day) : null
         const dayRect = day?.getBoundingClientRect()
+        const cell = day?.closest('.cal-cell')
+        const cellRect = cell?.getBoundingClientRect()
         return {
           items: Array.from(card?.querySelectorAll('.todo-item') ?? [])
             .map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
           // 已完成的那条要划线
           doneItems: card?.querySelectorAll('.todo-item.is-done').length ?? -1,
           stat: card?.querySelector('.todo-card-stat')?.textContent.trim() ?? '',
-          dots: dots.length,
-          // 圆点必须跟日期数字同一行、紧挨它右侧（不是角标区，也不是格子左下角）
-          dotInCorner: Array.from(dots).some(d => Boolean(d.closest('.cal-corner'))),
-          dotNextToDay: Boolean(
-            dot && day && dotRect && dayRect &&
-            Math.abs(dotRect.top + dotRect.height / 2 - (dayRect.top + dayRect.height / 2)) < 4 &&
-            dotRect.left >= dayRect.right - 1 &&
-            dotRect.left - dayRect.right < 8
-          )
+          marks: marks.length,
+          // 下划线：2px、橙色系、宽度只跟数字走（不能横贯整格）
+          borderBottom: cs ? cs.borderBottomWidth + ' ' + cs.borderBottomStyle : '',
+          borderColor: cs?.borderBottomColor ?? '',
+          dayW: dayRect ? Math.round(dayRect.width) : -1,
+          cellW: cellRect ? Math.round(cellRect.width) : -1,
+          // 没有残留的小圆点
+          dots: document.querySelectorAll('.cal-todo, .cal-dayline').length,
+          // 标记必须紧贴日期数字（下划线就画在数字自己身上，left/top 应基本一致）
+          onDayNumber: Boolean(day && dayRect && cellRect &&
+            Math.abs(dayRect.left - cellRect.left) < 12 && dayRect.top - cellRect.top < 14),
+          // 抬头：与统计卡同一套（发丝线 + 3px 强调色竖条）
+          headBorder: card
+            ? getComputedStyle(card.querySelector('.todo-card-head')).borderBottomWidth
+            : '',
+          headBar: (() => {
+            const title = card?.querySelector('.todo-card-title')
+            const bar = title ? getComputedStyle(title, '::before') : null
+            return bar ? [parseFloat(bar.width), bar.backgroundColor] : []
+          })(),
+          // 日期行拆成「日期 + 星期」两级
+          groupParts: Array.from(card?.querySelectorAll('.todo-group-date > span') ?? [])
+            .map(node => node.className),
+          // 勾选框与第一行文字的垂直中心差（>1px 就会看出「没对齐」）
+          alignItems: (() => {
+            const item = card?.querySelector('.todo-item')
+            const box = item?.querySelector('.todo-check')?.getBoundingClientRect()
+            const text = item?.querySelector('.todo-text')?.getBoundingClientRect()
+            if (!box || !text) return null
+            return {
+              boxCy: Math.round((box.top + box.height / 2) * 10) / 10,
+              textCy: Math.round((text.top + text.height / 2) * 10) / 10,
+              delta: Math.round(Math.abs(box.top + box.height / 2 - (text.top + text.height / 2)) * 10) / 10,
+              textH: Math.round(text.height * 10) / 10,
+              boxH: Math.round(box.height * 10) / 10
+            }
+          })()
         }
       })()`)
       check(
@@ -937,9 +1289,30 @@ async function runScenario(name, url, downloadDir) {
         JSON.stringify(todoCard)
       )
       check(
-        `${name}: 日历格子上标出当天有待办（圆点紧挨左上角日期）`,
-        todoCard.dots === 1 && todoCard.dotInCorner === false && todoCard.dotNextToDay,
+        `${name}: 日历格子上标出当天有待办（日期数字下压一道橙短横）`,
+        todoCard.marks === 1 && todoCard.dots === 0 && todoCard.onDayNumber &&
+          todoCard.borderBottom === '2px solid' &&
+          todoCard.borderColor !== 'rgba(0, 0, 0, 0)',
         JSON.stringify(todoCard)
+      )
+      check(
+        `${name}: 待办短横只跟数字一样宽（不横贯整格）`,
+        todoCard.dayW > 0 && todoCard.dayW < 30 &&
+          todoCard.cellW - todoCard.dayW > 20,
+        JSON.stringify(todoCard)
+      )
+      check(
+        `${name}: 待办卡抬头与统计卡同款（发丝线 + 强调色竖条，日期分两级）`,
+        todoCard.headBorder === '1px' &&
+          JSON.stringify(todoCard.headBar) === JSON.stringify([3, 'rgb(27, 108, 128)']) &&
+          JSON.stringify(todoCard.groupParts) ===
+            JSON.stringify(['todo-group-day', 'todo-group-week']),
+        JSON.stringify(todoCard)
+      )
+      check(
+        `${name}: 勾选框与文字垂直居中（中心差 ≤ 0.5px）`,
+        Boolean(todoCard.alignItems) && todoCard.alignItems.delta <= 0.5,
+        JSON.stringify(todoCard.alignItems)
       )
 
       // 重新打开弹层，接着走加班流程（待办页把弹层关掉了）
@@ -1166,6 +1539,16 @@ async function runScenario(name, url, downloadDir) {
         statsWithOvertime.net === '8,326.90',
         JSON.stringify(statsWithOvertime)
       )
+      const totalRow = await client.evaluate(`(() => {
+        const row = document.querySelector('.money-row.is-total')
+        const cs = row ? getComputedStyle(row) : null
+        return { bg: cs?.backgroundColor ?? '', color: cs?.color ?? '' }
+      })()`)
+      check(
+        `${name}: 实发是浅青结论条（整卡唯一有底色的一行）`,
+        totalRow.bg === 'rgb(234, 242, 244)' && totalRow.color === 'rgb(27, 108, 128)',
+        JSON.stringify(totalRow)
+      )
       check(
         `${name}: 薪资卡分三组，组标题右侧带小计`,
         statsWithOvertime.moneyGroups.length === 3 &&
@@ -1246,6 +1629,49 @@ async function runScenario(name, url, downloadDir) {
           tallCards.scrollH > 0 &&
           tallCards.scrollH < tallCards.detailH,
         JSON.stringify(tallCards)
+      )
+
+      // P1/P2 观感：明细表头有浅底、卡片内边距与网格间距；薪资列表疏朗化
+      const polish = await client.evaluate(`(() => {
+        const th = document.querySelector('.detail-table thead th')
+        const card = document.querySelector('.stat-card')
+        const grid = document.querySelector('.stats-grid')
+        const row = document.querySelector('.money-row.is-sub')
+        const groups = Array.from(document.querySelectorAll('.money-group'))
+        const second = groups[1]
+        const rate = document.querySelector('.money-rate')
+        const strong = document.querySelector('.money-row.is-strong')
+        return {
+          thBg: th ? getComputedStyle(th).backgroundColor : '',
+          cardPad: card
+            ? [
+                parseFloat(getComputedStyle(card).paddingTop),
+                parseFloat(getComputedStyle(card).paddingLeft)
+              ]
+            : [],
+          gap: grid ? parseFloat(getComputedStyle(grid).columnGap) : -1,
+          rowPad: row ? parseFloat(getComputedStyle(row).paddingTop) : -1,
+          subIndent: row ? parseFloat(getComputedStyle(row).paddingLeft) : -1,
+          firstGroupBorder: groups[0] ? parseFloat(getComputedStyle(groups[0]).borderTopWidth) : -1,
+          secondGroupBorder: second ? parseFloat(getComputedStyle(second).borderTopWidth) : -1,
+          rateBg: rate ? getComputedStyle(rate).backgroundColor : '',
+          strongBorder: strong ? getComputedStyle(strong).borderTopColor : ''
+        }
+      })()`)
+      check(
+        `${name}: 明细表头有浅底、卡片内边距 16/18、网格间距 16`,
+        polish.thBg === 'rgb(251, 252, 253)' &&
+          JSON.stringify(polish.cardPad) === JSON.stringify([16, 18]) &&
+          polish.gap === 16,
+        JSON.stringify(polish)
+      )
+      check(
+        `${name}: 薪资列表更疏朗（行距 5、缩进 14、分组有分隔线、倍率是小胶囊）`,
+        polish.rowPad === 5 && polish.subIndent === 14 &&
+          polish.firstGroupBorder === 0 && polish.secondGroupBorder === 1 &&
+          polish.rateBg === 'rgb(244, 246, 248)' &&
+          polish.strongBorder === 'rgb(232, 234, 236)',
+        JSON.stringify(polish)
       )
 
       // 每日明细的滚动条要彻底隐藏（卡片内部就几行，滑块反而抢眼）
@@ -1827,10 +2253,64 @@ async function runScenario(name, url, downloadDir) {
 
     await client.evaluate(clickByText('.month-track button', '回到本期'))
     const titleBefore = await client.evaluate('document.querySelector(".month-title").textContent.trim()')
+
+    // 月份切换要像一个控件：分段胶囊 + 30px 步进按钮 + 文本两侧 1px 分隔；
+    // 「回到本期」是胶囊最右一段（同框、左侧 1px 分隔、文字强调色）
+    const monthLook = await client.evaluate(`(() => {
+      const box = document.querySelector('.month-switch')
+      const cs = box ? getComputedStyle(box) : null
+      const steps = Array.from(document.querySelectorAll('.month-step'))
+      const title = document.querySelector('.month-title')
+      const titleCs = title ? getComputedStyle(title) : null
+      const today = document.querySelector('.month-today')
+      const todayCs = today ? getComputedStyle(today) : null
+      return {
+        grouped: steps.length === 2 && steps.every(step => step.closest('.month-switch')),
+        boxBorder: cs ? parseFloat(cs.borderTopWidth) : -1,
+        boxRadius: cs?.borderTopLeftRadius ?? '',
+        stepW: steps[0] ? Math.round(steps[0].getBoundingClientRect().width) : -1,
+        stepIcon: document.querySelectorAll('.month-step .month-icon').length,
+        titleSep: titleCs ? [parseFloat(titleCs.borderLeftWidth), parseFloat(titleCs.borderRightWidth)] : [],
+        todayInBox: Boolean(today && today.closest('.month-switch')),
+        todaySep: todayCs ? parseFloat(todayCs.borderLeftWidth) : -1,
+        todayColor: todayCs?.color ?? '',
+        todayDisabledAtCurrent: today ? today.disabled : null,
+        // 回到本期不再是独立的白底描边按钮（那会跟右侧备份按钮撞形）
+        standaloneBtn: document.querySelectorAll('.month-track > .btn').length
+      }
+    })()`)
+    check(
+      `${name}: 月份切换与「回到本期」同在一个胶囊里`,
+      monthLook.grouped === true && monthLook.boxBorder === 1 &&
+        monthLook.boxRadius !== '0px' && monthLook.stepW === 30 && monthLook.stepIcon === 2 &&
+        JSON.stringify(monthLook.titleSep) === JSON.stringify([1, 1]) &&
+        monthLook.todayInBox === true && monthLook.todaySep === 1 &&
+        monthLook.standaloneBtn === 0,
+      JSON.stringify(monthLook)
+    )
+    check(
+      `${name}: 已在本期时「回到本期」置灰禁用（没有可做的事就别勾人点）`,
+      monthLook.todayDisabledAtCurrent === true && monthLook.todayColor === 'rgb(138, 146, 153)',
+      JSON.stringify(monthLook)
+    )
+
     await client.evaluate(`document.querySelectorAll('.month-step')[1].click(); true`)
     await sleep(200)
     const titleAfter = await client.evaluate('document.querySelector(".month-title").textContent.trim()')
     check(`${name}: 切换月份`, titleBefore !== titleAfter, `${titleBefore} → ${titleAfter}`)
+    // 切到下期后「回到本期」应当重新可用，且文字回到强调色
+    const todayAfterShift = await client.evaluate(`(() => {
+      const today = document.querySelector('.month-today')
+      return {
+        disabled: today ? today.disabled : null,
+        color: today ? getComputedStyle(today).color : ''
+      }
+    })()`)
+    check(
+      `${name}: 切走之后「回到本期」恢复可用并变强调色`,
+      todayAfterShift.disabled === false && todayAfterShift.color === 'rgb(27, 108, 128)',
+      JSON.stringify(todayAfterShift)
+    )
     check(`${name}: 切月后矩阵仍在`, await client.evaluate('document.querySelectorAll(".matrix-row").length === 2'))
 
     const scheduleOverflow = await client.evaluate(
@@ -1891,17 +2371,47 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(positionCol)
     )
 
+    // 表头文案要与下方控件左边对齐（姓名 / 班序 / 岗位 / 排序那四栏）
+    const headAlign = await client.evaluate(`(() => {
+      const head = document.querySelector('.member-editor-head')
+      const row = document.querySelector('.member-row')
+      if (!head || !row) return null
+      const labels = Array.from(head.children).map(el => ({
+        text: el.textContent.trim(),
+        left: Math.round(el.getBoundingClientRect().left),
+        // 输入框正文从 1px 边框 + 8px 内边距 = 9px 处开始，表头文字要跟着缩进
+        padLeft: Math.round(parseFloat(getComputedStyle(el).paddingLeft))
+      }))
+      const fields = Array.from(row.children).map(el => ({
+        left: Math.round(el.getBoundingClientRect().left),
+        width: Math.round(el.getBoundingClientRect().width)
+      }))
+      return { labels, fields }
+    })()`)
+    check(
+      `${name}: 成员表表头文案与输入框文字左对齐（列边界 + 9px 缩进）`,
+      // 表头没有「排序 / 删除」这一列的文字，所以逐个比 left 就够
+      Boolean(headAlign) && headAlign.labels.every((label, index) =>
+        !label.text || (
+          Math.abs(label.left - (headAlign.fields[index]?.left ?? 0)) <= 1 &&
+          label.padLeft === 9
+        )
+      ),
+      JSON.stringify(headAlign)
+    )
+
     // --- 13b. 滚动条槽位常驻：出现 / 不出现滚动条时内容宽度不得变 ---
     // .canvas 加了 scrollbar-gutter: stable，竖向滚动条的槽位永远预留。
     // 验证方式：在同一个 tab 里把视口拉高（内容不再超长 → 滚动条消失），
     // 对比拉高前后 .settings-section 的宽度 —— 不加 stable 时这里会差一个滚动条宽度。
     const widthOf = `(() => {
-      const canvas = document.querySelector('.canvas')
+      // 设置页把页头钉住了，真正在滚的是 .canvas-flow（画布自己不滚）
+      const flow = document.querySelector('.canvas-flow')
       const section = document.querySelector('.settings-section')
       return {
-        canvasClient: canvas?.clientWidth ?? 0,
+        flowClient: flow?.clientWidth ?? 0,
         sectionWidth: section?.getBoundingClientRect().width ?? 0,
-        scrolls: canvas ? canvas.scrollHeight > canvas.clientHeight + 1 : false
+        scrolls: flow ? flow.scrollHeight > flow.clientHeight + 1 : false
       }
     })()`
     const scrolledState = await client.evaluate(widthOf)
@@ -1928,7 +2438,7 @@ async function runScenario(name, url, downloadDir) {
       scrolledState.scrolls === true &&
         fittedState.scrolls === false &&
         Math.abs(scrolledState.sectionWidth - fittedState.sectionWidth) < 1 &&
-        scrolledState.canvasClient === fittedState.canvasClient,
+        scrolledState.flowClient === fittedState.flowClient,
       JSON.stringify({ scrolledState, fittedState })
     )
 
@@ -1938,7 +2448,7 @@ async function runScenario(name, url, downloadDir) {
       const thumbs = Array.from(document.querySelectorAll('.scroll-overlay-thumb'))
       const visible = thumbs.filter(t => t.classList.contains('is-visible'))
       const thumb = visible[0] ?? thumbs[0] ?? null
-      const canvas = document.querySelector('.canvas')
+      const flow = document.querySelector('.canvas-flow')
       return {
         rootExists: Boolean(root),
         exists: Boolean(root && thumb),
@@ -1947,7 +2457,7 @@ async function runScenario(name, url, downloadDir) {
         // 滑块必须在容器可视矩形内，且高度合理
         thumbTop: thumb ? Math.round(thumb.getBoundingClientRect().top) : -1,
         thumbHeight: thumb ? Math.round(thumb.getBoundingClientRect().height) : -1,
-        canvasRight: canvas ? Math.round(canvas.getBoundingClientRect().right) : -1
+        flowRight: flow ? Math.round(flow.getBoundingClientRect().right) : -1
       }
     })()`
     // 初始：完全隐藏（滑块是按需创建的，静止时可能一条都还没有）
@@ -1958,10 +2468,10 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(idleOverlay)
     )
 
-    // 滚动画布 → 滑块淡入
+    // 滚动设置页的滚动区（页头固定后，滚的是 .canvas-flow）→ 滑块淡入
     await client.evaluate(`(() => {
-      const canvas = document.querySelector('.canvas')
-      if (canvas) canvas.scrollTop = 200
+      const flow = document.querySelector('.canvas-flow')
+      if (flow) flow.scrollTop = 200
       return true
     })()`)
     await sleep(300)

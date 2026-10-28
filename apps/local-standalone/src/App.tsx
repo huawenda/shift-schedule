@@ -181,6 +181,10 @@ export function App() {
       <Shell
         memberCount={api.roster.members.length}
         monthTitle={formatMonthTitle(monthKey)}
+        atCurrentMonth={
+          // MonthKey 是 { year, month } 对象，比引用永远 false，必须逐字段比
+          monthKey.year === currentMonthKey().year && monthKey.month === currentMonthKey().month
+        }
         notice={notice ? { text: notice, onDismiss: () => setNotice('') } : undefined}
         route={route}
         statusText={statusText}

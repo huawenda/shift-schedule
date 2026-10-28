@@ -1,15 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App } from './App'
+import { isTauriShell } from './data/env'
 import './styles.scss'
-
-declare global {
-  interface Window {
-    __SHIFT_BUILD_ID__?: string
-    /** Tauri 在页面脚本执行前注入，壳内的可靠标志，见下方 SW 注册条件。 */
-    __TAURI_INTERNALS__?: unknown
-  }
-}
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
@@ -33,18 +26,13 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
  *    桌面版构建（desktop/vite.config.ts）会另外把 sw 文件本身摘掉，
  *    这里再挡一道，两处独立生效。
  *
- *    判据用 Tauri 注入的全局变量而不是域名：静态版的审计脚本
- *    （verify-dist / screenshot-dist）也是跑在 127.0.0.1 上的，
- *    按域名排除会连带把静态版的 SW 一起关掉 —— 那是回归。
- *    __TAURI_INTERNALS__ 由 Tauri 在页面脚本执行前注入，是壳内唯一的
- *    可靠标志；tauri.localhost 作为读不到注入变量时的兜底。 */
-const isTauriHost = Boolean(window.__TAURI_INTERNALS__) || window.location.hostname === 'tauri.localhost'
-
+ *    判据见 data/env.ts 的 isTauriShell()：用 Tauri 注入的全局变量而不是域名，
+ *    免得把跑在 127.0.0.1 上的静态版审计脚本一起关掉。 */
 if (
   import.meta.env.PROD &&
   'serviceWorker' in navigator &&
   window.location.protocol.startsWith('http') &&
-  !isTauriHost
+  !isTauriShell()
 ) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js').catch(error => {

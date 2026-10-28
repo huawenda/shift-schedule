@@ -64,6 +64,15 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
+  /* 滚动条彻底隐藏（横向也不留）—— 30 天横滚改由「鼠标在矩阵上滚滚轮」驱动，
+   * 见 TeamMatrix 里的 wheel 监听。原生滚动条在 Windows 上又粗又有箭头，
+   * 而且横向那条永远压在最后一行格子下面，比留着更碍事。 */
+  scrollbar-width: none;
+}
+
+.matrix-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .matrix-head,
@@ -209,7 +218,7 @@
  * 「中间直、上下两头弯」的一小段，13 行叠起来视觉上就是一条断断续续的虚线。
  *
  * 现在的做法：格子 `border-radius: 0`、背景透明，药丸由 `::before` 画在内容区里
- * （inset 6px 2px + 3px 圆角 + `var(--tone-bg)`）。列线走的是直边，从表头一笔到底。
+ * （四边统一留 `--matrix-pill-gap` + 3px 圆角 + `var(--tone-bg)`）。列线走的是直边，从表头一笔到底。
  *
  * ⚠️ `isolation: isolate` 让格子自成层叠上下文，`::before` 的 `z-index: -1`
  * 才会只沉到「格子背景之上、文字之下」—— 不然它会掉到整张表格的背景后面去。
@@ -228,10 +237,13 @@
   line-height: 1;
 }
 
-/* 药丸块：上下各留 6px、左右各留 2px，颜色取 `.t-*` 给出的 --tone-bg */
+/* 药丸块：**四边同一个留白值**（`--matrix-pill-gap`），颜色取 `.t-*` 给出的 --tone-bg。
+ *
+ * 以前写的是 `inset: 6px 2px` —— 宽格子上色块横向几乎贴边、纵向却空出一大截，
+ * 看起来像没对齐。四条边必须共用一个令牌，格子宽窄怎么变都保持等宽留白。 */
 .matrix-cell::before {
   position: absolute;
-  inset: 6px 2px;
+  inset: var(--matrix-pill-gap);
   z-index: -1;
   border-radius: 3px;
   background: var(--tone-bg, transparent);
@@ -258,6 +270,43 @@
  */
 .matrix-cell.is-today {
   box-shadow: none;
+}
+
+/* ── 「按姓名」视图 ─────────────────────────────────────
+ *
+ * 行还是人、列还是日期，只把格子里的「班次字」换成这个人的姓名，
+ * 底色仍是班次色。于是竖着读一列 = 这天谁上什么班，横着读一行 = 这个人的整月。
+ *
+ * 列宽从「弹性铺满 30 天」改成固定 56px：三个汉字在 22px 的格子里放不下，
+ * `.matrix-row / .matrix-head` 的 min-width: max-content 会让总宽撑出容器，
+ * 由 `.matrix-scroll` 横向滚动。
+ */
+.matrix.is-by-name .matrix-days {
+  /* 下限 56px（放得下 3–4 个汉字），多余宽度平分给各列。
+   * 不能写成死值 `repeat(days, 56px)`：窗口很宽时行会被拉到容器宽，
+   * 而格子仍是固定 56px → 最后一列右边空出一大条白，看着像列错位。 */
+  grid-template-columns: repeat(var(--days, 30), minmax(var(--matrix-name-cell), 1fr));
+}
+
+.matrix.is-by-name .matrix-cell {
+  font-size: 11px;
+}
+
+/* 注意：这一视图**不要**再单独覆盖 `::before` 的 inset。
+ * 以前这里写过 `inset: 6px 1px`（想让姓名多占点宽），结果两种视图的留白不一样，
+ * 切成按姓名时色块像被拉宽了一圈。四边等宽靠 `--matrix-pill-gap` 一个值统一管。 */
+
+/* 行头只剩一行「班序 · 岗位」：垂直居中，水平**左对齐**，与按班次视图同一套对齐 */
+.matrix.is-by-name .matrix-name-cell {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+}
+
+.matrix.is-by-name .matrix-pattern {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 /* 矩阵格子里只显示班次，不加「改过 / 有加班」的小点 —— 见 TeamMatrix 的注释 */
@@ -353,21 +402,47 @@
   cursor: default;
 }
 
+/*
+ * 「今天」：1px 强调色内描边。
+ *
+ * 原来是 2px 纯黑 —— 在满屏浅色格子里像被人用马克笔圈了一下，最跳的偏偏是个
+ * 「你本来就知道」的信息。改用强调色（与侧栏选中态同色系）并降到 1px：
+ * 看得见，但不会把今天变成全屏的视觉重心。
+ */
 .cal-cell.is-today {
-  box-shadow: inset 0 0 0 2px var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
+/*
+ * 日期数字。
+ *
+ * `inline-block` + 固定 line-height 是给「待办下划线」留位置：下划线用 border-bottom 画，
+ * 会占掉 2px + 2px 的 padding，行高不锁死的话有/没有待办的两格日期行会差 4px，
+ * 同一行的格子高度就不一样了。
+ *
+ * ⚠️ `align-self: flex-start` 不能删：`.cal-cell` 是 flex column，默认 `align-items: stretch`
+ * 会把这一格拉成整格宽，于是 border-bottom 就成了一条横贯格子的长线。
+ * 靠它让日期退回「按内容宽度」的 inline-block，短横才只有数字那么长。
+ */
 .cal-day {
+  display: inline-block;
+  align-self: flex-start;
   color: var(--muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  line-height: 1.15;
 }
 
-/* 日期数字 + 待办圆点同一行，圆点紧贴数字右侧 */
-.cal-dayline {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+/*
+ * 有待办：日期数字下面压一道 2px 短横，宽度跟着数字本身走。
+ *
+ * 以前是数字右边一个 6px 小圆点（还带 1px 内描边）—— 12px 的数字旁边挂一个
+ * 带环的小点，看着像笔画溢出的脏点，还和右上角的加班 / 「法」角标抢注意力。
+ * 短横贴着数字读，等于给这一天「加了个着重号」，不额外占横向空间。
+ */
+.cal-day.is-todo {
+  padding-bottom: 2px;
+  border-bottom: 2px solid var(--todo-ink);
 }
 
 .cal-cell.is-today .cal-day {
@@ -403,27 +478,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-/*
- * 待办小圆点：紧挨左上角的日期数字。
- *
- * 不放右上角 —— 那里已经有加班小时与「法」角标了，再塞一个会挤成一团。
- */
-.cal-todo {
-  flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  /* 用加班橙 —— 与「这一格有加班」的提示同一套语言，
-   * 一眼能看出「这天有事」 */
-  background: var(--overtime-bg);
-  box-shadow: inset 0 0 0 1px var(--overtime-ink);
-}
-
-/* 周期外的圆点淡一档，跟整格的淡化一致 */
-.cal-todo.is-outside {
-  opacity: 0.45;
 }
 
 .cal-ot {

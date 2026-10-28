@@ -120,10 +120,9 @@ export function MemberRowsEditor({
     <div className={`member-editor${sortable ? ' is-sortable' : ''}`}>
       <div className="member-editor-head">
         {sortable ? <span aria-hidden="true" /> : null}
-        <span>姓名</span>
-        <span>班序</span>
-        <span>岗位</span>
-        <span>{sortable ? '排序 / 删除' : ''}</span>
+        <span className="member-head-label">姓名</span>
+        <span className="member-head-label">班序</span>
+        <span className="member-head-label">岗位</span>
       </div>
 
       {rows.length === 0 ? (

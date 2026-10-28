@@ -12,10 +12,25 @@
   border-bottom: 0;
 }
 
+/*
+ * 区块标题：左侧一道 3px 强调色竖条 —— 与概览页统计卡、待办卡同一套「抬头」语言。
+ * 设置页原本只有黑字标题 + 灰说明，右半边是一整块面板，左栏像没设计过的附注。
+ */
 .settings-label h2 {
   margin-bottom: 6px;
   font-size: 15px;
   font-weight: 500;
+}
+
+.settings-label h2::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 13px;
+  margin-right: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+  vertical-align: -2px;
 }
 
 .settings-label p {
@@ -30,11 +45,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 面板：给一层 1px 边界。原来只有一层几乎与白底同色的 #fafbfc，
+ * 在廉价办公屏上等于「没有容器」，右边的表单像是直接浮在页面上。 */
 .settings-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
+  padding: 18px;
+  border: 1px solid var(--rule);
   border-radius: var(--radius-card);
   background: #fafbfc;
 }
@@ -73,14 +91,17 @@
   align-items: center;
 }
 
-/* 可排序时多一列拖动把手，末列改成能放下「↑ ↓ 删除」 */
+/*
+ * 可排序时多一列拖动把手，末列放「↑ ↓ 删除」。
+ *
+ * 末列必须写**固定宽度**，不能写 `auto`：行里是一排按钮，
+ * 表头那边没有文字（这一列不设标题），两边 `auto` 算出来的宽度不同 → fr 列被分到的空间也不同，
+ * 于是「姓名 / 班序 / 岗位」三个表头越往右偏得越多（实测偏 17px / 36px）。
+ * 表头与行是两个独立的 grid，「列宽一致」只能靠同一套固定值来保证。
+ */
 .member-editor.is-sortable .member-editor-head,
 .member-editor.is-sortable .member-row {
-  grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.8fr) auto;
-}
-
-.member-editor.is-sortable .member-editor-head span:last-child {
-  text-align: right;
+  grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.8fr) 112px;
 }
 
 .member-handle {
@@ -142,9 +163,24 @@
 }
 
 .member-editor-head {
-  padding: 0 1px;
+  /* 不要给这一行加**左右**内边距：它和下面的行是两套独立的 grid，
+   * 只要多 1px 的 padding，表头文字就会比输入框的左边框往右偏 1px。
+   * 纵向的 padding 与分隔线不影响列宽，可以加。 */
+  padding: 0 0 7px;
+  border-bottom: 1px solid var(--rule);
   color: var(--muted);
   font-size: 11px;
+}
+
+/* 行悬停：整行淡淡抬起一层，扫描一列时知道自己在哪一行 */
+.member-row:hover {
+  background: #fbfcfd;
+}
+
+/* 表头文字再右移 9px，去对齐输入框**里面**的文字：
+ * 输入框是 1px 边框 + 8px 内边距，正文从第 9px 开始；表头贴在列边界上会显得偏左。 */
+.member-head-label {
+  padding-left: 9px;
 }
 
 .member-row .input {
@@ -155,6 +191,16 @@
   padding: 8px 2px;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* 自建班序为空：做成虚线框，与待办卡的空态同一套语言。
+ * 原来只有一行 12px 小字贴在面板左上角，看不出「这里是空的」还是「这里坏了」。 */
+.pattern-group .member-editor-empty {
+  padding: 16px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-card);
+  color: var(--faint);
+  text-align: center;
 }
 
 .error-list {
@@ -236,42 +282,55 @@
 .pattern-chip {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 6px 7px;
+  gap: 6px;
+  padding: 8px 9px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  border-radius: 7px;
   background: var(--surface);
   text-align: left;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 
+/* 悬停：原来把底色换成 --raised，可面板底色本身就是 #fafbfc，两者几乎同色，
+ * 鼠标划过等于没有反馈。改成描边变深 + 极淡底。 */
 .pattern-chip:hover {
-  background: var(--raised);
+  border-color: var(--control);
+  background: #fbfcfd;
 }
 
+/* 选中：从「纯黑双描边」改成强调色 —— 黑框在这页太重，也和全站强调色脱节 */
 .pattern-chip.is-on {
-  border-color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--text);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.pattern-chip.is-on .pattern-chip-name {
+  color: var(--accent);
 }
 
 .pattern-chip-name {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-/* 24 格缩略色条：只做纹理，不代表精确宽度 */
+/* 24 格缩略色条：外面套一层浅灰轨道，看起来像一小段「胶囊」，
+ * 而不是一排直接贴在白底上的色块（只做纹理，不代表精确宽度） */
 .pattern-bar {
   display: flex;
   gap: 1px;
-  height: 10px;
+  height: 12px;
+  padding: 1px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: 3px;
+  background: var(--raised);
 }
 
 .pattern-bar-seg {
   display: block;
   flex: 1 1 0;
   min-width: 0;
+  border-radius: 1px;
 }
 
 .pattern-rows {

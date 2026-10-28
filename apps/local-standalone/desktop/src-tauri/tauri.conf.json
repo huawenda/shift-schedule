@@ -23,7 +23,8 @@
         "resizable": true,
         "center": true,
         "fullscreen": false,
-        "theme": "Light"
+        "theme": "Light",
+        "dragDropEnabled": false
       }
     ],
     "security": {

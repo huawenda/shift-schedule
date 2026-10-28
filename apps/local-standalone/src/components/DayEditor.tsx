@@ -156,7 +156,7 @@ export function DayEditor({
           <div>
             <h2 className="dialog-title">{member.name}</h2>
             <p className="dialog-sub">
-              {formatMonthDay(date)} · 周{weekdayLabel(date)} · 模板{' '}
+              {formatMonthDay(date)} · 周{weekdayLabel(date)} · 默认{' '}
               {templateShift ? SHIFT_META[templateShift].label : '—'}
             </p>
           </div>
@@ -181,7 +181,8 @@ export function DayEditor({
             type="button"
             onClick={() => setTab('todo')}
           >
-            待办{todos.length > 0 ? ` ${todos.length}` : ''}
+            待办
+            {todos.length > 0 ? <span className="dialog-tab-count">{todos.length}</span> : null}
           </button>
         </div>
 
@@ -298,8 +299,7 @@ export function DayEditor({
 
             <div className={`dialog-section${legalAllowed ? '' : ' is-disabled'}`}>
               <div className="section-head">
-                <span className="section-title">法定节假日上班</span>
-                <span className="section-note">影响统计里的加班倍率</span>
+                <span className="section-title">法定节假日</span>
               </div>
               <div className="segmented segmented-sm" role="group" aria-label="是否法定">
                 {LEGAL_OPTIONS.map(option => (
