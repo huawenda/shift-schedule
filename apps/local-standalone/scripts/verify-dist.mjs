@@ -754,6 +754,12 @@ async function runScenario(name, url, downloadDir) {
         return {
           otFoot: ot?.querySelector('.stat-foot')?.textContent.replace(/\\s+/g, '') ?? '',
           moneyRows: salaryCard?.querySelectorAll('.money-row').length ?? 0,
+          // 组标题（基本项 / 加班工资 / 扣款项）各自带一个右侧小计
+          moneyGroups: Array.from(salaryCard?.querySelectorAll('.money-group') ?? [])
+            .map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
+          // 组内明细：三个基本项 + 三类加班工资 + 社保
+          moneySubs: Array.from(salaryCard?.querySelectorAll('.money-row.is-sub') ?? [])
+            .map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
           net: salaryCard?.querySelector('.money-row.is-total span:last-child')?.textContent.trim() ?? '',
           detailRows: detail?.querySelectorAll('tbody tr').length ?? 0,
           detailPay: detail?.querySelector('tbody tr td.is-num:last-child')?.textContent.trim() ?? ''
@@ -772,8 +778,26 @@ async function runScenario(name, url, downloadDir) {
       )
       check(
         `${name}: 薪资块算到实发（8000 + 加班费）`,
-        statsWithOvertime.moneyRows === 5 && statsWithOvertime.net === '8,206.90',
+        statsWithOvertime.net === '8,206.90',
         JSON.stringify(statsWithOvertime)
+      )
+      check(
+        `${name}: 薪资卡分三组，组标题右侧带小计`,
+        statsWithOvertime.moneyGroups.length === 3 &&
+          statsWithOvertime.moneyGroups[0].startsWith('基本项') &&
+          statsWithOvertime.moneyGroups[0].includes('8,000.00') &&
+          statsWithOvertime.moneyGroups[1].startsWith('加班工资') &&
+          statsWithOvertime.moneyGroups[1].includes('206.90') &&
+          statsWithOvertime.moneyGroups[2].startsWith('扣款项'),
+        JSON.stringify(statsWithOvertime.moneyGroups)
+      )
+      check(
+        `${name}: 基本项列三个细项、三类加班工资逐项列出`,
+        statsWithOvertime.moneySubs.length === 7 &&
+          ['基本工资', '绩效津贴', '岗位津贴', '平日加班', '特勤加班', '法定加班', '社保公积金']
+            .every((label, index) => statsWithOvertime.moneySubs[index].startsWith(label)) &&
+          statsWithOvertime.moneySubs[3].includes('206.90'),
+        JSON.stringify(statsWithOvertime.moneySubs)
       )
 
       // 本月概览的六张卡片：加了班的那个班次要带上小时数（不带 + 号）
@@ -833,6 +857,23 @@ async function runScenario(name, url, downloadDir) {
           tallCards.scrollH > 0 &&
           tallCards.scrollH < tallCards.detailH,
         JSON.stringify(tallCards)
+      )
+
+      // 每日明细的滚动条要彻底隐藏（卡片内部就几行，滑块反而抢眼）
+      const detailBar = await client.evaluate(`(() => {
+        const el = document.querySelector('.detail-scroll')
+        if (!el) return null
+        return {
+          // offsetWidth - clientWidth 就是滚动条 + 边框占掉的宽度
+          barWidth: el.offsetWidth - el.clientWidth,
+          borderWidth: el.offsetWidth - el.clientWidth -
+            (parseFloat(getComputedStyle(el).borderLeftWidth) + parseFloat(getComputedStyle(el).borderRightWidth))
+        }
+      })()`)
+      check(
+        `${name}: 每日明细的滚动条彻底隐藏`,
+        detailBar !== null && detailBar.barWidth === 0,
+        JSON.stringify(detailBar)
       )
 
       // 描边只表示「班次与默认不同」。刚才只记了加班、班次没动，所以不该有描边。
@@ -1018,6 +1059,8 @@ async function runScenario(name, url, downloadDir) {
           overviewFoot: card('本月概览')?.querySelector('.stat-foot')?.textContent.replace(/\\s+/g, '') ?? '',
           leaveCardExtra: extra?.textContent.trim() ?? '',
           leaveCardIsLeave: extra ? extra.classList.contains('is-leave') : null,
+          groups: Array.from(card('薪资计算')?.querySelectorAll('.money-group') ?? [])
+            .map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
           leaveRow: rows.find(text => text.includes('事假扣款')) ?? '',
           net: rows.find(text => text.startsWith('实发')) ?? ''
         }
@@ -1034,6 +1077,16 @@ async function runScenario(name, url, downloadDir) {
         // 8000 ÷ 21.75 ÷ 8 = 45.977；× 4 = 183.91；实发 8000 − 183.91
         leaveUi.leaveRow.includes('183.91') && leaveUi.net.includes('7,816.09'),
         JSON.stringify(leaveUi)
+      )
+      check(
+        `${name}: 扣款项小计含事假扣款（183.91）`,
+        Boolean(leaveUi.groups[2]?.startsWith('扣款项')) && Boolean(leaveUi.groups[2]?.includes('183.91')),
+        JSON.stringify(leaveUi.groups)
+      )
+      check(
+        `${name}: 扣款金额不带负号`,
+        !leaveUi.leaveRow.includes('−') && !leaveUi.leaveRow.includes('-'),
+        leaveUi.leaveRow
       )
 
       // 改选 8h：8h 是默认值不落字段，但角标也要标出实际时长
@@ -1398,6 +1451,99 @@ async function runScenario(name, url, downloadDir) {
       `${name}: 成员表有岗位列且本人行只读显示岗位`,
       positionCol.hasCol && positionCol.selfPosition === '班长',
       JSON.stringify(positionCol)
+    )
+
+    // --- 13b. 滚动条槽位常驻：出现 / 不出现滚动条时内容宽度不得变 ---
+    // .canvas 加了 scrollbar-gutter: stable，竖向滚动条的槽位永远预留。
+    // 验证方式：在同一个 tab 里把视口拉高（内容不再超长 → 滚动条消失），
+    // 对比拉高前后 .settings-section 的宽度 —— 不加 stable 时这里会差一个滚动条宽度。
+    const widthOf = `(() => {
+      const canvas = document.querySelector('.canvas')
+      const section = document.querySelector('.settings-section')
+      return {
+        canvasClient: canvas?.clientWidth ?? 0,
+        sectionWidth: section?.getBoundingClientRect().width ?? 0,
+        scrolls: canvas ? canvas.scrollHeight > canvas.clientHeight + 1 : false
+      }
+    })()`
+    const scrolledState = await client.evaluate(widthOf)
+    // 把视口拉高到 2200，人员配置页不再超长 → 滚动条应当消失
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: 1440,
+      height: 2200,
+      deviceScaleFactor: 1,
+      mobile: false
+    })
+    await sleep(250)
+    const fittedState = await client.evaluate(widthOf)
+    // 复原视口
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: 1440,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false
+    })
+    await sleep(250)
+    check(
+      `${name}: 滚动条出现/消失时内容宽度不变（槽位常驻）`,
+      // 短视口下超长（滚动条在），高视口下不超长（滚动条没了）
+      scrolledState.scrolls === true &&
+        fittedState.scrolls === false &&
+        Math.abs(scrolledState.sectionWidth - fittedState.sectionWidth) < 1 &&
+        scrolledState.canvasClient === fittedState.canvasClient,
+      JSON.stringify({ scrolledState, fittedState })
+    )
+
+    // --- 13c. 覆盖式滚动条：静止隐藏，滚动淡入，停下淡出 ---
+    const overlayState = `(() => {
+      const root = document.querySelector('.scroll-overlay')
+      const thumbs = Array.from(document.querySelectorAll('.scroll-overlay-thumb'))
+      const visible = thumbs.filter(t => t.classList.contains('is-visible'))
+      const thumb = visible[0] ?? thumbs[0] ?? null
+      const canvas = document.querySelector('.canvas')
+      return {
+        rootExists: Boolean(root),
+        exists: Boolean(root && thumb),
+        visibleCount: visible.length,
+        opacity: thumb ? Number(getComputedStyle(thumb).opacity) : 0,
+        // 滑块必须在容器可视矩形内，且高度合理
+        thumbTop: thumb ? Math.round(thumb.getBoundingClientRect().top) : -1,
+        thumbHeight: thumb ? Math.round(thumb.getBoundingClientRect().height) : -1,
+        canvasRight: canvas ? Math.round(canvas.getBoundingClientRect().right) : -1
+      }
+    })()`
+    // 初始：完全隐藏（滑块是按需创建的，静止时可能一条都还没有）
+    const idleOverlay = await client.evaluate(overlayState)
+    check(
+      `${name}: 覆盖式滚动条初始隐藏`,
+      idleOverlay.rootExists && idleOverlay.visibleCount === 0 && idleOverlay.opacity === 0,
+      JSON.stringify(idleOverlay)
+    )
+
+    // 滚动画布 → 滑块淡入
+    await client.evaluate(`(() => {
+      const canvas = document.querySelector('.canvas')
+      if (canvas) canvas.scrollTop = 200
+      return true
+    })()`)
+    await sleep(300)
+    const scrolledOverlay = await client.evaluate(overlayState)
+    check(
+      `${name}: 滚动时滑块淡入`,
+      scrolledOverlay.visibleCount === 1 &&
+        scrolledOverlay.opacity > 0.9 &&
+        scrolledOverlay.thumbHeight > 10 &&
+        scrolledOverlay.thumbTop > 0,
+      JSON.stringify(scrolledOverlay)
+    )
+
+    // 停下 0.7 秒后 → 淡出
+    await sleep(1400)
+    const fadedOverlay = await client.evaluate(overlayState)
+    check(
+      `${name}: 停止滚动后滑块淡出`,
+      fadedOverlay.visibleCount === 0 && fadedOverlay.opacity === 0,
+      JSON.stringify(fadedOverlay)
     )
 
     await client.evaluate(clickByText('.rail-item', '全员矩阵'))

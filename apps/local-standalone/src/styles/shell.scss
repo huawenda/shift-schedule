@@ -256,6 +256,88 @@
   overflow: auto;
 }
 
+/* ------------------------------------------------------------ 覆盖式滚动条
+ *
+ * 原生滚动条在 Windows 上又粗又有箭头，静止时杵在画布右边很碍眼。
+ * 这里把竖向原生滚动条收成 0 宽（横向的保留 —— 矩阵页要能横滚 30 天），
+ * 改成自绘一条 8px 的细滑块：静止时完全看不见，滚动时淡入，停下 0.7 秒后淡出。
+ *
+ * 为什么不用原生滚动条做淡入淡出：`::-webkit-scrollbar` 是伪元素，
+ * Chromium 不支持给它加 transition；`scrollbar-color` 是标准属性，
+ * 但同样没有过渡效果。只能自绘（见 components/ScrollOverlay.tsx）。
+ *
+ * 顺带解决了「切 tab 时内容宽度伸缩」：原生滚动条不再占位，
+ * 内容宽度恒定，也就不需要 scrollbar-gutter 了。
+ *
+ * ⚠️ 这里只用 ::-webkit-scrollbar，不写 scrollbar-width ——
+ * 标准属性一旦设成 none 会把**横向**滚动条也一起干掉，
+ * 矩阵页的 30 天横滚就没法用了。分轴只能靠 width / height。
+ */
+
+/* 只压竖向（width），横向保留 */
+.canvas::-webkit-scrollbar,
+.matrix-scroll::-webkit-scrollbar,
+.dialog::-webkit-scrollbar {
+  width: 0;
+}
+
+/* 矩阵的横向滚动条留着（30 天横滚是主交互），但用细样式统一观感 */
+.matrix-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.matrix-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.matrix-scroll::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: rgba(19, 20, 22, 0.2);
+}
+
+.matrix-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(19, 20, 22, 0.36);
+}
+
+/* 自绘滑块：fixed 定位，跟随容器可视矩形。
+ * root 保持零尺寸 —— 它只是滑块的挂载点，
+ * 撑满全屏虽然 pointer-events: none 不吃点击，但会多一层无谓的合成层。 */
+.scroll-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.scroll-overlay-thumb {
+  position: fixed;
+  width: 8px;
+  border-radius: 4px;
+  background: rgba(19, 20, 22, 0.24);
+  pointer-events: auto;
+  cursor: default;
+  opacity: 0;
+  transition: opacity 0.18s ease-out, background-color 0.18s ease-out;
+}
+
+.scroll-overlay-thumb.is-visible {
+  opacity: 1;
+}
+
+/* 隐藏状态下滑块不能吃点击 ——
+ * 透明元素照样能接收指针事件，会在画布右缘留下一条 8px 的「死区」。 */
+.scroll-overlay-thumb:not(.is-visible) {
+  pointer-events: none;
+}
+
+.scroll-overlay-thumb:hover,
+.scroll-overlay-thumb.is-dragging {
+  background: rgba(19, 20, 22, 0.42);
+}
+
 .canvas-head {
   display: flex;
   align-items: flex-start;

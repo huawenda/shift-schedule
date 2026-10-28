@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Shell, type Route } from './components/Shell'
 import { DayEditor } from './components/DayEditor'
+import { ScrollOverlay } from './components/ScrollOverlay'
 import { ShiftEditor } from './components/ShiftEditor'
 import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
@@ -175,6 +176,7 @@ export function App() {
 
   return (
     <>
+      <ScrollOverlay />
       <Shell
         memberCount={api.roster.members.length}
         monthTitle={formatMonthTitle(monthKey)}
