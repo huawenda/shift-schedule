@@ -40,6 +40,14 @@ export const OVERTIME_PAY_FIELD: Record<OvertimeKind, 'weekdayPay' | 'specialPay
 export const MONTHLY_WORK_DAYS = 21.75
 export const HOURS_PER_DAY = 8
 
+/**
+ * 夜班津贴标准：每个夜班额外发 15 元。
+ *
+ * 固定值，不做成可配置项 —— 这是公司统一的补贴标准，不是个人参数，
+ * 放进「个人资料」反而会让人以为每人能各填各的。
+ */
+export const NIGHT_ALLOWANCE_PER_DAY = 15
+
 export interface ShiftDayCounts {
   day: number
   night: number
@@ -73,6 +81,23 @@ export interface OvertimeTotals {
 }
 
 /**
+ * 夜班津贴的核算依据。
+ *
+ * **口径 = 所有夜间出勤**：只要那天上的是夜班（含夜特、含被标了法定的夜班）
+ * 就计一天。这与「本月概览」六张卡片的互斥分类**是两套口径**：
+ * 卡片里法定夜班归到「法定」格、夜特归到「特勤」格，
+ * 但津贴照发 —— 那天确实在夜里上班。
+ *
+ * 所以这个计数必须独立于卡片分类单独累加，不能从 days.night / days.nightSpecial 里凑。
+ */
+export interface NightAllowance {
+  /** 本月夜班天数（含夜特与法定夜班） */
+  days: number
+  /** 津贴金额 = 天数 × NIGHT_ALLOWANCE_PER_DAY */
+  amount: number
+}
+
+/**
  * 加班按**卡片归类**汇总（另一个维度，与三个计价桶正交）。
  *
  * 键是「本月概览」上的那一格，不是真实班次：
@@ -102,13 +127,17 @@ export interface SalaryBreakdown {
   legalPay: number
   /** 三类加班费合计 */
   overtimePay: number
+  /** 夜班津贴 = 夜班天数 × 15 */
+  nightAllowance: number
+  /** 本月夜班天数（含夜特与法定夜班） */
+  nightDays: number
   /** 社保公积金（每月个人缴纳合计，算作扣款） */
   socialFund: number
   /** 事假小时合计 */
   leaveHours: number
   /** 事假扣款 = 时薪 × 请假小时 */
   leaveDeduction: number
-  /** 应发 = 固定应发 + 加班费 */
+  /** 应发 = 固定应发 + 加班费 + 夜班津贴 */
   gross: number
   /** 实发 = 应发 − 社保公积金 − 事假扣款 */
   net: number
@@ -134,6 +163,8 @@ export interface MonthStats {
   overtime: OvertimeTotals
   /** 按「本月概览」的格归类汇总的加班小时 —— 法定日归到「法定」格 */
   overtimeByGroup: OvertimeByGroup
+  /** 夜班津贴核算依据（口径与上面的互斥分类不同，见 NightAllowance） */
+  nightAllowance: NightAllowance
   salary: SalaryBreakdown
   /** 有加班的日子，按日期升序 —— 给「每日明细」 */
   overtimeDays: OvertimeDay[]
@@ -179,6 +210,8 @@ export function emptySalaryBreakdown(salary?: SalaryInput): SalaryBreakdown {
     specialPay: 0,
     legalPay: 0,
     overtimePay: 0,
+    nightAllowance: 0,
+    nightDays: 0,
     socialFund,
     leaveHours: 0,
     leaveDeduction: 0,
@@ -210,6 +243,8 @@ export function computeMonthStats(roster: Roster, member: Member, period: Period
   }
   const leave: LeaveSummary = { days: 0, hours: 0 }
   const overtime: OvertimeTotals = { weekday: 0, special: 0, legal: 0, total: 0 }
+  /** 夜班天数：独立于上面的互斥分类单独累加（见 NightAllowance 的口径说明） */
+  let nightDays = 0
   const overtimeByGroup: OvertimeByGroup = {
     白班: 0,
     夜班: 0,
@@ -233,6 +268,13 @@ export function computeMonthStats(roster: Roster, member: Member, period: Period
     // 法定与班次**互斥**：这一天归「法定」，就不再计入白/夜/特勤 ——
     // 否则六张卡片相加会超出本期天数（同一天被数两次）。
     const asLegal = isLegal && isWorkShift(shift)
+
+    // 夜班津贴的天数：只要那天上的是夜班就算一天（夜特也算），
+    // 与上面的互斥分类无关 —— 法定夜班在卡片里归「法定」格，津贴照发。
+    // 放在 switch 之前累加，免得被 asLegal 分支跳过。
+    if (shift === '夜班' || shift === '夜特') {
+      nightDays += 1
+    }
 
     if (asLegal) {
       days.legal += 1
@@ -288,19 +330,34 @@ export function computeMonthStats(roster: Roster, member: Member, period: Period
 
   leave.hours = roundMoney(leave.hours)
 
+  // 夜班津贴 = 夜班天数 × 15。它不依赖基本工资 ——
+  // 津贴是固定标准，跟时薪算不出来时无关，所以放在 hasBase 分支外面。
+  const nightAllowance: NightAllowance = {
+    days: nightDays,
+    amount: roundMoney(nightDays * NIGHT_ALLOWANCE_PER_DAY)
+  }
+
   const salary = emptySalaryBreakdown(salaryInput)
   salary.leaveHours = leave.hours
+  salary.nightDays = nightAllowance.days
+  salary.nightAllowance = nightAllowance.amount
+
+  // 加班费要时薪，没填基本工资就算不出来
   if (salary.hasBase) {
     // 与 core 一致：每个分项先 round，再相加后 round 一次
     salary.weekdayPay = roundMoney(hourly * overtime.weekday * OVERTIME_RATES.weekday)
     salary.specialPay = roundMoney(hourly * overtime.special * OVERTIME_RATES.special)
     salary.legalPay = roundMoney(hourly * overtime.legal * OVERTIME_RATES.legal)
     salary.overtimePay = roundMoney(salary.weekdayPay + salary.specialPay + salary.legalPay)
-    salary.gross = roundMoney(salary.fixedTotal + salary.overtimePay)
-    // 事假扣款与 core 的 leaveDeduction 同口径：时薪（未 round）× 小时，再 round
-    salary.leaveDeduction = roundMoney(hourly * leave.hours)
-    salary.net = roundMoney(salary.gross - salary.socialFund - salary.leaveDeduction)
   }
 
-  return { days, leave, overtime, overtimeByGroup, salary, overtimeDays }
+  // 事假扣款与 core 的 leaveDeduction 同口径：时薪（未 round）× 小时，再 round。
+  // 没填基本工资时 hourly 为 0，扣款自然是 0。
+  salary.leaveDeduction = roundMoney(hourly * leave.hours)
+
+  // 应发 = 固定应发 + 加班费 + 夜班津贴
+  salary.gross = roundMoney(salary.fixedTotal + salary.overtimePay + salary.nightAllowance)
+  salary.net = roundMoney(salary.gross - salary.socialFund - salary.leaveDeduction)
+
+  return { days, leave, overtime, overtimeByGroup, nightAllowance, salary, overtimeDays }
 }

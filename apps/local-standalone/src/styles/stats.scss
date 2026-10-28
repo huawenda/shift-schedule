@@ -156,44 +156,187 @@
   font-weight: 500;
 }
 
-/* ── 加班分布 ─────────────────────────────────────────── */
+/*
+ * 加班分布卡：**高度由左边的「本月概览」决定**，自己不贡献高度。
+ *
+ * 做法与「每日明细」卡相同：外壳不放任何流内内容（padding 归 0），
+ * 真正的内容绝对定位铺满它 —— 于是这一格对 grid 行高的贡献是 0，
+ * 行高完全由本月概览算；随后 grid 的 stretch 把外壳拉成同高，
+ * 绝对定位的内层跟着铺满，绘图区再 flex 分配剩余高度。
+ *
+ * 之前这里给 `.ot-chart` 加了 min-height: 174px，结果加班分布的自然高度
+ * 超过了本月概览，grid 行高取两者最大值 → 本月概览被拉伸后留出大片空白。
+ */
+.stat-card-ot {
+  position: relative;
+  display: block;
+  padding: 0;
+}
 
-.ot-list {
+.stat-card-ot-fill {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  gap: 10px;
+  /* 固定高度下必须允许子项收缩，否则绘图区的 flex 不会生效 */
+  min-height: 0;
+  padding: 15px 16px;
 }
 
-.ot-row {
+/* ── 加班分布（柱形图） ─────────────────────────────────── */
+
+/*
+ * 五根柱：白班 / 夜班 / 白特 / 夜特 / 法定。
+ * 颜色沿用班次语义色（与日历、矩阵里的色块同一套），
+ * 法定那一根没有对应班次，用警示色（与「法」角标一致）。
+ */
+.ot-chart {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 5px 0;
-  border-bottom: 1px dashed var(--rule);
-  font-size: 12px;
+  flex-direction: column;
+  /* 吃掉卡片的剩余高度：卡片被 grid 拉高时图表跟着长满，不留空白。
+   * 不设 min-height —— 那会让这张卡反过来撑高同一行的「本月概览」。 */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-.ot-row:last-child {
-  border-bottom: 0;
+/* 绘图区那一行：底部就是横轴线 */
+.ot-plot-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* 横轴线用 --border 而不是 --rule：后者在白底上几乎看不见，
+   * 柱子会显得悬空没有落点 */
+  border-bottom: 1px solid var(--border);
 }
 
-.ot-row-label {
-  color: var(--muted);
+/* 类目名那一行 */
+.ot-axis-row {
+  display: flex;
+  gap: 10px;
+  padding-top: 5px;
 }
 
-.ot-rate {
-  margin-left: 6px;
-  color: var(--faint);
+.ot-col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  height: 100%;
+}
+
+/* 绘图区：柱子从这里往上长 */
+.ot-col-plot {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* 顶部留一条给数值：最高的柱子画满时，数值正好落在这条留白里，
+   * 不会顶出绘图区 */
+  padding-top: 17px;
+}
+
+/*
+ * 柱子的容器：定位基准（数值的 bottom 按它算）。
+ * 柱子按百分比高度绘制，最高的一根正好画满容器。
+ */
+.ot-bar-wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* 柱顶的数值：绝对定位，跟着柱子顶端走（bottom 由内联样式给） */
+.ot-col-value {
+  position: absolute;
+  left: 0;
+  right: 0;
   font-size: 11px;
-  font-style: normal;
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.ot-row-value {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+/* 数值跟柱子的班次色走：白班柱上的数字是蓝的，夜班柱上是墨蓝的 */
+.ot-col-value.is-day {
+  color: #02689f;
+}
+
+.ot-col-value.is-night {
+  color: #1e3a5f;
+}
+
+.ot-col-value.is-dayx {
+  color: #b45309;
+}
+
+.ot-col-value.is-nightx {
+  color: #9a3412;
+}
+
+.ot-col-value.is-legal {
+  color: #92400e;
+}
+
+/* 柱子本体 */
+.ot-bar {
+  width: 100%;
+  /* 卡片宽度除以五列 ≈ 90px，柱子占七成左右，留出左右余量 */
+  max-width: 64px;
+  border-radius: 3px 3px 0 0;
+  /* 有值但很小时不至于看不见 */
+  min-height: 2px;
+}
+
+/*
+ * 柱子配色与**日历里的班次色块完全一致**：
+ * 浅色底（同 .t-* 的 background），不画描边。
+ * 日历上那个「白班」小块就是这个颜色，柱形图里看到柱子就能对上号。
+ */
+.ot-bar.is-day {
+  background: #dff3ff;
+}
+
+.ot-bar.is-night {
+  background: #e3eaf3;
+}
+
+.ot-bar.is-dayx {
+  background: #fff0c2;
+}
+
+.ot-bar.is-nightx {
+  background: #fde7c7;
+}
+
+/* 法定没有对应班次，用「法」角标那套警示色。
+ * 比 --warning-bg（#fffbeb）深一档 —— 那个色在白底上几乎看不见。 */
+.ot-bar.is-legal {
+  background: #fde68a;
+}
+
+/* 横轴类目名 */
+.ot-col-label {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
 }
 
 /* ── 薪资计算 ─────────────────────────────────────────── */
@@ -241,6 +384,14 @@
 /* 组内明细：缩进对齐到组标题下方 */
 .money-row.is-sub {
   padding-left: 12px;
+}
+
+/* 行内的倍率标记（平日 ×1.5 等）：弱化，不抢金额 */
+.money-rate {
+  margin-left: 5px;
+  color: var(--faint);
+  font-size: 11px;
+  font-style: normal;
 }
 
 .money-row.is-strong {

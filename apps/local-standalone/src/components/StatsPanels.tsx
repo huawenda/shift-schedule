@@ -32,6 +32,24 @@ interface DayCard {
 const OVERTIME_KINDS: OvertimeKind[] = ['weekday', 'special', 'legal']
 
 /**
+ * 加班分布柱形图的五根柱。
+ *
+ * 用的是**卡片归类**那套口径（`overtimeByGroup`）：
+ * 标了法定的那天，加班只算进「法定」柱，不再重复计入它原本的班次柱 ——
+ * 五柱相加正好等于总加班小时，能与薪资卡对账。
+ *
+ * 配色直接复用班次语义色类（`.t-day` 等，与日历、矩阵里的班次块同一套），
+ * 法定没有对应班次，用「法」角标那套警示色。
+ */
+const OVERTIME_COLUMNS = [
+  { group: '白班', label: '白班加班', tone: 'day' },
+  { group: '夜班', label: '夜班加班', tone: 'night' },
+  { group: '白特', label: '白特加班', tone: 'dayx' },
+  { group: '夜特', label: '夜特加班', tone: 'nightx' },
+  { group: '法定', label: '法定加班', tone: 'legal' }
+] as const
+
+/**
  * 月度概览的四块统计，2 × 2 铺在日历下方。
  *
  * 「每日明细」只列**有加班**的日子 —— 它的用途是让人看见「这天加的班值多少钱」，
@@ -61,6 +79,24 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
     { key: 'leave', label: '事假', days: days.leave, hours: leave.hours, muted: true },
     { key: 'legal', label: '法定', days: days.legal, hours: overtimeByGroup.法定 }
   ]
+
+  /**
+   * 加班分布的五根柱：高度按**最大值归一化**（最高的柱子画满绘图区）。
+   *
+   * 归一化而不是固定刻度，是因为加班量每月差别很大 ——
+   * 固定刻度会让淡季的柱子全贴地，看不出分布；归一化后对比的是构成比例。
+   * 零高度的柱子留一条基线（靠 CSS 的 min-height），不让人以为漏了数据。
+   */
+  const otColumns = OVERTIME_COLUMNS.map(column => ({
+    ...column,
+    hours: overtimeByGroup[column.group],
+    /** 相对绘图区高度的百分比 */
+    ratio: 0
+  }))
+  const otMax = otColumns.reduce((max, column) => Math.max(max, column.hours), 0)
+  otColumns.forEach(column => {
+    column.ratio = otMax > 0 ? (column.hours / otMax) * 100 : 0
+  })
 
   return (
     <div className="stats-grid">
@@ -92,31 +128,60 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
         </p>
       </section>
 
-      <section className="stat-card" aria-label="加班分布">
-        <header className="stat-head">
-          <h2 className="stat-title">加班分布</h2>
-          <span className="stat-note"></span>
-        </header>
+      {/*
+        高度不自己定：外壳只占一行（内容绝对定位、不参与高度计算），
+        所以它对 grid 行高的贡献是 0，行高完全由左边的「本月概览」算；
+        随后 grid 的 stretch 把外壳拉成同高，绝对定位的内层跟着铺满。
+        否则加班分布的图表一旦需要更多高度，反过来会把本月概览撑高、留出空白。
+      */}
+      <section className="stat-card stat-card-ot" aria-label="加班分布">
+        <div className="stat-card-ot-fill">
+          <header className="stat-head">
+            <h2 className="stat-title">加班分布</h2>
+            <span className="stat-note"></span>
+          </header>
 
-        {overtime.total > 0 ? (
-          <ul className="ot-list">
-            {OVERTIME_KINDS.map(kind => (
-              <li className="ot-row" key={kind}>
-                <span className="ot-row-label">
-                  {OVERTIME_KIND_LABEL[kind]}
-                  <em className="ot-rate">×{OVERTIME_RATES[kind]}</em>
-                </span>
-                <span className="ot-row-value">{formatOvertimeHours(overtime[kind])}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="stat-empty">这个月还没有加班记录。</p>
-        )}
-
-        <p className="stat-foot">
-          合计 <strong>{formatOvertimeHours(overtime.total)}</strong>
-        </p>
+          {overtime.total > 0 ? (
+            <div className="ot-chart">
+              <div className="ot-plot-row">
+                {otColumns.map(column => (
+                  <div className="ot-col" key={column.group}>
+                    <div className="ot-col-plot">
+                      {/*
+                        柱子容器：数值绝对定位挂在柱子顶端**正上方**，
+                        跟着柱子的高度走（不是排在绘图区顶部）。
+                        上面的 margin-top 给数值腾出位置，
+                        最高那根画满时数值也不会顶出卡片。
+                      */}
+                      <div className="ot-bar-wrap">
+                        <span
+                          className={`ot-col-value is-${column.tone}`}
+                          style={{ bottom: `calc(${column.ratio}% + 3px)` }}
+                        >
+                          {formatOvertimeHours(column.hours)}
+                        </span>
+                        <div
+                          className={`ot-bar is-${column.tone}`}
+                          style={{ height: `${column.ratio}%` }}
+                          aria-hidden="true"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="ot-axis-row">
+                {otColumns.map(column => (
+                  <span className="ot-col-label" key={column.group}>
+                    {column.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="stat-empty">这个月还没有加班记录。</p>
+          )}
+        </div>
       </section>
 
       <section className="stat-card" aria-label="薪资计算">
@@ -147,14 +212,21 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
 
               <li className="money-group">
                 <span>加班工资</span>
-                <span>{formatMoney(salary.overtimePay)}</span>
+                <span>{formatMoney(salary.overtimePay + salary.nightAllowance)}</span>
               </li>
               {OVERTIME_KINDS.map(kind => (
                 <li className="money-row is-sub" key={kind}>
-                  <span>{OVERTIME_KIND_LABEL[kind]}</span>
+                  <span>
+                    {OVERTIME_KIND_LABEL[kind]}
+                    <em className="money-rate">×{OVERTIME_RATES[kind]}</em>
+                  </span>
                   <span>{formatMoney(salary[OVERTIME_PAY_FIELD[kind]])}</span>
                 </li>
               ))}
+              <li className="money-row is-sub">
+                <span>夜班津贴（{salary.nightDays} 天）</span>
+                <span>{formatMoney(salary.nightAllowance)}</span>
+              </li>
 
               <li className="money-group">
                 <span>扣款项</span>

@@ -752,7 +752,8 @@ async function runScenario(name, url, downloadDir) {
         const salaryCard = card('薪资计算')
         const detail = card('每日明细')
         return {
-          otFoot: ot?.querySelector('.stat-foot')?.textContent.replace(/\\s+/g, '') ?? '',
+          otValues: Array.from(ot?.querySelectorAll('.ot-col-value') ?? [])
+            .map(node => node.textContent.trim()),
           moneyRows: salaryCard?.querySelectorAll('.money-row').length ?? 0,
           // 组标题（基本项 / 加班工资 / 扣款项）各自带一个右侧小计
           moneyGroups: Array.from(salaryCard?.querySelectorAll('.money-group') ?? [])
@@ -767,8 +768,148 @@ async function runScenario(name, url, downloadDir) {
       })()`)
       check(
         `${name}: 加班分布与每日明细立刻跟上`,
-        statsWithOvertime.otFoot.includes('3h') && statsWithOvertime.detailRows === 1,
+        statsWithOvertime.otValues.includes('3h') && statsWithOvertime.detailRows === 1,
         JSON.stringify(statsWithOvertime)
+      )
+
+      // 加班分布改成柱形图：五根柱（白班/夜班/白特/夜特/法定），横轴分类 + 柱顶数值
+      const otChart = await client.evaluate(`(() => {
+        const cards = Array.from(document.querySelectorAll('.stat-card'))
+        const card = label => cards.find(item => item.querySelector('.stat-title')?.textContent.trim() === label)
+        const ot = card('加班分布')
+        const cols = Array.from(ot?.querySelectorAll('.ot-col') ?? [])
+        const labels = Array.from(ot?.querySelectorAll('.ot-axis-row .ot-col-label') ?? [])
+        const plot = ot?.querySelector('.ot-plot-row')
+        const axis = ot?.querySelector('.ot-axis-row')
+        return {
+          colCount: cols.length,
+          labels: labels.map(node => node.textContent.trim()),
+          values: cols.map(col => col.querySelector('.ot-col-value')?.textContent.trim() ?? ''),
+          barHeights: cols.map(col => Math.round(col.querySelector('.ot-bar')?.getBoundingClientRect().height ?? 0)),
+          barWidths: cols.map(col => Math.round(col.querySelector('.ot-bar')?.getBoundingClientRect().width ?? 0)),
+          // 柱顶到自己数值的底边间距（数值应紧贴柱顶）
+          valueGaps: cols.map(col => {
+            const bar = col.querySelector('.ot-bar')
+            const val = col.querySelector('.ot-col-value')
+            if (!bar || !val) return -1
+            return Math.round(bar.getBoundingClientRect().top - val.getBoundingClientRect().bottom)
+          }),
+          tones: cols.map(col => col.querySelector('.ot-bar')?.className ?? ''),
+          // 柱子的底色必须与日历里同名班次色块一致
+          barBg: cols.map(col => {
+            const bar = col.querySelector('.ot-bar')
+            return bar ? getComputedStyle(bar).backgroundColor : ''
+          }),
+          // 柱子不画描边
+          barShadow: cols.map(col => {
+            const bar = col.querySelector('.ot-bar')
+            return bar ? getComputedStyle(bar).boxShadow : ''
+          }),
+          // 横轴线在类目名上方；柱底贴着横轴线
+          plotBottom: plot ? Math.round(plot.getBoundingClientRect().bottom) : -1,
+          axisTop: axis ? Math.round(axis.getBoundingClientRect().top) : -1,
+          barBottom: cols[0]?.querySelector('.ot-bar')
+            ? Math.round(cols[0].querySelector('.ot-bar').getBoundingClientRect().bottom)
+            : -1,
+          // 不再有「合计」行
+          hasFoot: Boolean(ot?.querySelector('.stat-foot'))
+        }
+      })()`)
+      check(
+        `${name}: 加班分布是五根柱的柱形图`,
+        otChart.colCount === 5 &&
+          JSON.stringify(otChart.labels) ===
+            JSON.stringify(['白班加班', '夜班加班', '白特加班', '夜特加班', '法定加班']),
+        JSON.stringify(otChart)
+      )
+      check(
+        `${name}: 柱顶标出加班小时数`,
+        // 本场景只记了一天 3h 加班（白班或夜班），那根柱是唯一非零的
+        otChart.values.filter(text => text === '3h').length === 1 &&
+          otChart.values.filter(text => text === '0h').length === 4,
+        JSON.stringify(otChart.values)
+      )
+      check(
+        `${name}: 柱高按数值排布（非零那根最高，其余贴地）`,
+        // 有值那根的高度显著大于零值那几根（零值只留 2px 基线）
+        Math.max(...otChart.barHeights) > 40 &&
+          otChart.barHeights.filter(h => h <= 3).length === 4,
+        JSON.stringify(otChart.barHeights)
+      )
+      check(
+        `${name}: 每根柱按班次取语义色`,
+        otChart.tones.every(cls => /is-(day|night|dayx|nightx|legal)\b/.test(cls)),
+        JSON.stringify(otChart.tones)
+      )
+      check(
+        `${name}: 柱色与日历班次色块一致`,
+        // 白班 #dff3ff / 夜班 #e3eaf3 / 白特 #fff0c2 / 夜特 #fde7c7 / 法定 #fde68a
+        JSON.stringify(otChart.barBg) ===
+          JSON.stringify([
+            'rgb(223, 243, 255)',
+            'rgb(227, 234, 243)',
+            'rgb(255, 240, 194)',
+            'rgb(253, 231, 199)',
+            'rgb(253, 230, 138)'
+          ]),
+        JSON.stringify(otChart.barBg)
+      )
+      check(
+        `${name}: 柱子不画描边`,
+        otChart.barShadow.every(shadow => shadow === 'none'),
+        JSON.stringify(otChart.barShadow)
+      )
+      check(
+        `${name}: 横轴线在类目名上方、柱底贴着轴线`,
+        otChart.plotBottom === otChart.axisTop && Math.abs(otChart.barBottom - otChart.plotBottom) <= 2,
+        JSON.stringify({
+          plotBottom: otChart.plotBottom,
+          axisTop: otChart.axisTop,
+          barBottom: otChart.barBottom
+        })
+      )
+      check(
+        `${name}: 加班分布不再显示合计行`,
+        otChart.hasFoot === false,
+        JSON.stringify({ hasFoot: otChart.hasFoot })
+      )
+      check(
+        `${name}: 数值紧贴各自柱顶（不是水平排成一行）`,
+        // 每根柱顶到自己数值的底边间距都在 1~3px；
+        // 若数值被改成排在绘图区顶部，各柱间距会各不相同且远大于 3
+        otChart.valueGaps.length === 5 &&
+          otChart.valueGaps.every(gap => gap >= 1 && gap <= 3),
+        JSON.stringify(otChart.valueGaps)
+      )
+
+      // 加班分布卡的高度必须由「本月概览」决定，不能反过来把它撑高
+      const cardHeights = await client.evaluate(`(() => {
+        const cards = Array.from(document.querySelectorAll('.stat-card'))
+        const card = label => cards.find(item => item.querySelector('.stat-title')?.textContent.trim() === label)
+        const overview = card('本月概览')
+        const ot = card('加班分布')
+        const h = el => (el ? Math.round(el.getBoundingClientRect().height) : -1)
+        // 本月概览里最后一个元素（脚注）的底边 → 卡片内实际用到的高度
+        const foot = overview?.querySelector('.stat-foot')
+        return {
+          overviewH: h(overview),
+          otH: h(ot),
+          // 概览内容底边离卡片底边还剩多少：被拉伸时会出现一大段空白
+          overviewSlack: foot && overview
+            ? Math.round(overview.getBoundingClientRect().bottom - foot.getBoundingClientRect().bottom)
+            : -1
+        }
+      })()`)
+      check(
+        `${name}: 加班分布与本月概览等高`,
+        cardHeights.overviewH > 0 && Math.abs(cardHeights.overviewH - cardHeights.otH) <= 2,
+        JSON.stringify(cardHeights)
+      )
+      check(
+        `${name}: 本月概览没被撑高（底部不留大片空白）`,
+        // 脚注有 margin-top:auto 会贴着卡片底，所以留白应只有 padding 量级
+        cardHeights.overviewSlack >= 0 && cardHeights.overviewSlack <= 24,
+        JSON.stringify(cardHeights)
       )
       check(
         `${name}: 每日明细算出了当天加班费`,
@@ -777,8 +918,9 @@ async function runScenario(name, url, downloadDir) {
         JSON.stringify(statsWithOvertime)
       )
       check(
-        `${name}: 薪资块算到实发（8000 + 加班费）`,
-        statsWithOvertime.net === '8,206.90',
+        `${name}: 薪资块算到实发（8000 + 加班费 + 夜班津贴）`,
+        // 8000 + 平日加班 206.90 + 夜班津贴 8 天 × 15 = 120 → 8326.90
+        statsWithOvertime.net === '8,326.90',
         JSON.stringify(statsWithOvertime)
       )
       check(
@@ -787,16 +929,20 @@ async function runScenario(name, url, downloadDir) {
           statsWithOvertime.moneyGroups[0].startsWith('基本项') &&
           statsWithOvertime.moneyGroups[0].includes('8,000.00') &&
           statsWithOvertime.moneyGroups[1].startsWith('加班工资') &&
-          statsWithOvertime.moneyGroups[1].includes('206.90') &&
+          // 加班工资小计含夜班津贴：206.90 + 120 = 326.90
+          statsWithOvertime.moneyGroups[1].includes('326.90') &&
           statsWithOvertime.moneyGroups[2].startsWith('扣款项'),
         JSON.stringify(statsWithOvertime.moneyGroups)
       )
       check(
-        `${name}: 基本项列三个细项、三类加班工资逐项列出`,
-        statsWithOvertime.moneySubs.length === 7 &&
-          ['基本工资', '绩效津贴', '岗位津贴', '平日加班', '特勤加班', '法定加班', '社保公积金']
+        `${name}: 基本项列三个细项、三类加班工资逐项列出、夜班津贴挂在其下`,
+        statsWithOvertime.moneySubs.length === 8 &&
+          ['基本工资', '绩效津贴', '岗位津贴', '平日加班', '特勤加班', '法定加班', '夜班津贴', '社保公积金']
             .every((label, index) => statsWithOvertime.moneySubs[index].startsWith(label)) &&
-          statsWithOvertime.moneySubs[3].includes('206.90'),
+          statsWithOvertime.moneySubs[3].includes('206.90') &&
+          // 夜班津贴行带天数与金额
+          statsWithOvertime.moneySubs[6].includes('8 天') &&
+          statsWithOvertime.moneySubs[6].includes('120.00'),
         JSON.stringify(statsWithOvertime.moneySubs)
       )
 
@@ -994,7 +1140,9 @@ async function runScenario(name, url, downloadDir) {
         const cards = Array.from(document.querySelectorAll('.stat-card'))
         const card = label => cards.find(item => item.querySelector('.stat-title')?.textContent.trim() === label)
         return {
-          otFoot: card('加班分布')?.querySelector('.stat-foot')?.textContent.replace(/\\s+/g, '') ?? '',
+          otValues: Array.from(card('加班分布')?.querySelectorAll('.ot-col-value') ?? [])
+            .map(node => node.textContent.trim()),
+          otEmpty: Boolean(card('加班分布')?.querySelector('.stat-empty')),
           detailRows: card('每日明细')?.querySelectorAll('tbody tr').length ?? -1,
           net: card('薪资计算')?.querySelector('.money-row.is-total span:last-child')?.textContent.trim() ?? '',
           // 卡片上的小时标记也要跟着消失（既没有加班也没有事假）
@@ -1003,7 +1151,8 @@ async function runScenario(name, url, downloadDir) {
       })()`)
       check(
         `${name}: 恢复默认后统计回到零（卡片上的小时标记也清掉）`,
-        statsAfterRestore.otFoot.includes('0h') &&
+        // 加班分布没有加班了 → 回到空态（柱形图整体收起）
+        statsAfterRestore.otEmpty === true &&
           statsAfterRestore.detailRows === 0 &&
           statsAfterRestore.badges === 0,
         JSON.stringify(statsAfterRestore)
@@ -1074,8 +1223,9 @@ async function runScenario(name, url, downloadDir) {
       )
       check(
         `${name}: 事假扣款按时薪×4h 扣`,
-        // 8000 ÷ 21.75 ÷ 8 = 45.977；× 4 = 183.91；实发 8000 − 183.91
-        leaveUi.leaveRow.includes('183.91') && leaveUi.net.includes('7,816.09'),
+        // 8000 ÷ 21.75 ÷ 8 = 45.977；× 4 = 183.91
+        // 实发 = 8000 + 夜班津贴 120 − 183.91 = 7936.09
+        leaveUi.leaveRow.includes('183.91') && leaveUi.net.includes('7,936.09'),
         JSON.stringify(leaveUi)
       )
       check(
@@ -1174,6 +1324,51 @@ async function runScenario(name, url, downloadDir) {
         afterLegal.legalHours === '10h' && afterLegal[workHoursKey] === '',
         JSON.stringify({ legalHours: afterLegal.legalHours, workHours: afterLegal[workHoursKey] })
       )
+
+      // 夜班津贴的口径是「所有夜间出勤」：法定夜班在卡片上归「法定」格，津贴照发。
+      // 只有当被标法定的那天原本是夜班时，天数才会 +1。
+      const nightAllowanceUi = await client.evaluate(`(() => {
+        const cards = Array.from(document.querySelectorAll('.stat-card'))
+        const card = label => cards.find(item => item.querySelector('.stat-title')?.textContent.trim() === label)
+        const rows = Array.from(card('薪资计算')?.querySelectorAll('.money-row.is-sub') ?? [])
+        const num = text => Number(String(text).replace(/[^0-9.]/g, ''))
+        const allowanceRow = rows.find(row => row.textContent.trim().startsWith('夜班津贴'))
+        // 三类加班费之和（平日/特勤/法定）
+        const overtimeSum = rows
+          .filter(row => /加班/.test(row.children[0].textContent) && !row.textContent.includes('夜班津贴'))
+          .reduce((sum, row) => sum + num(row.children[1].textContent), 0)
+        return {
+          allowanceText: allowanceRow ? allowanceRow.textContent.replace(/\\s+/g, ' ').trim() : '',
+          allowanceDays: allowanceRow ? num(allowanceRow.children[0].textContent) : -1,
+          allowanceAmount: allowanceRow ? num(allowanceRow.children[1].textContent) : -1,
+          overtimeSum,
+          groups: Array.from(card('薪资计算')?.querySelectorAll('.money-group') ?? [])
+            .map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
+          groupAmounts: Array.from(card('薪资计算')?.querySelectorAll('.money-group') ?? [])
+            .map(node => num(node.children[1].textContent))
+        }
+      })()`)
+      check(
+        `${name}: 夜班津贴挂在加班工资下并进小计`,
+        // 津贴行带天数与金额（15 元/天），天数 × 15 必须等于金额
+        nightAllowanceUi.allowanceDays >= 0 &&
+          nightAllowanceUi.allowanceDays * 15 === nightAllowanceUi.allowanceAmount &&
+          // 加班工资组的小计 = 三类加班费之和 + 夜班津贴
+          Boolean(nightAllowanceUi.groups[1]?.startsWith('加班工资')) &&
+          Math.abs(
+            nightAllowanceUi.groupAmounts[1] -
+              (nightAllowanceUi.overtimeSum + nightAllowanceUi.allowanceAmount)
+          ) < 0.01,
+        JSON.stringify(nightAllowanceUi)
+      )
+      if (workCell.shift === '夜班') {
+        check(
+          `${name}: 法定夜班仍计夜班津贴（口径是所有夜间出勤）`,
+          // 标法定前夜班 8 天，标了法定后夜班卡片减 1，但津贴天数不变
+          nightAllowanceUi.allowanceDays === 8,
+          `津贴 ${nightAllowanceUi.allowanceDays} 天`
+        )
+      }
 
       // 收尾：清掉法定标记，后续步骤从干净状态开始
       await client.evaluate(`document.querySelectorAll('.cal-cell')[${workCell.index}].click(); true`)

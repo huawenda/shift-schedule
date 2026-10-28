@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   computeMonthStats,
   emptySalaryBreakdown,
+  NIGHT_ALLOWANCE_PER_DAY,
   overtimeKindOf,
   rawHourlyWage,
   roundMoney
@@ -130,7 +131,7 @@ describe('加班费与薪资', () => {
     )
   })
 
-  it('应发 = 基本 + 绩效 + 岗位 + 加班费；实发再减社保公积金', () => {
+  it('应发 = 基本 + 绩效 + 岗位 + 加班费 + 夜班津贴；实发再减社保公积金', () => {
     const roster = makeRoster(
       [{ memberId: 'm1', date: period.dates[0], shift: '白班', overtimeHours: 2 }],
       filledSalary
@@ -138,14 +139,19 @@ describe('加班费与薪资', () => {
     const stats = computeMonthStats(roster, member, period)
 
     expect(stats.salary.fixedTotal).toBe(9800)
-    expect(stats.salary.gross).toBe(roundMoney(9800 + stats.salary.overtimePay))
+    expect(stats.salary.gross).toBe(
+      roundMoney(9800 + stats.salary.overtimePay + stats.salary.nightAllowance)
+    )
     expect(stats.salary.net).toBe(roundMoney(stats.salary.gross - 1500))
   })
 
   it('没有加班时加班费为 0，实发仍然算得出来', () => {
     const stats = computeMonthStats(makeRoster([], filledSalary), member, period)
     expect(stats.salary.overtimePay).toBe(0)
-    expect(stats.salary.net).toBe(8300)
+    // 实发 = 9800 + 津贴 - 1500
+    expect(stats.salary.net).toBe(
+      roundMoney(9800 + stats.salary.nightAllowance - 1500)
+    )
   })
 
   it('没填基本工资：所有钱的数字都是 0，hasBase 为 false', () => {
@@ -197,6 +203,96 @@ describe('空薪资', () => {
   })
 })
 
+describe('夜班津贴', () => {
+  it('津贴 = 15 × 夜班天数', () => {
+    expect(NIGHT_ALLOWANCE_PER_DAY).toBe(15)
+
+    const roster = makeRoster(
+      [
+        { memberId: 'm1', date: period.dates[0], shift: '夜班' },
+        { memberId: 'm1', date: period.dates[1], shift: '夜班' },
+        { memberId: 'm1', date: period.dates[2], shift: '夜班' }
+      ],
+      filledSalary
+    )
+    const stats = computeMonthStats(roster, member, period)
+    // 模板 4F 本身还有 8 个夜班，这里又覆盖了 3 天 → 11 天
+    expect(stats.salary.nightDays).toBe(11)
+    expect(stats.salary.nightAllowance).toBe(11 * 15)
+  })
+
+  it('口径是「所有夜间出勤」：夜特也算，法定夜班也算', () => {
+    const roster = makeRoster(
+      [
+        { memberId: 'm1', date: period.dates[0], shift: '夜特' },
+        // 标了法定：卡片上归「法定」格，但那天确实在夜里上班，津贴照发
+        { memberId: 'm1', date: period.dates[1], shift: '夜班', isLegal: true }
+      ],
+      filledSalary
+    )
+    const stats = computeMonthStats(roster, member, period)
+
+    expect(stats.salary.nightDays).toBe(10) // 模板 8 + 夜特 1 + 法定夜班 1
+    expect(stats.salary.nightAllowance).toBe(150)
+    // 但天数的互斥分类不受影响：法定那天仍归「法定」格
+    expect(stats.days.legal).toBe(1)
+  })
+
+  it('白班、休息、事假都不计入夜班天数', () => {
+    const roster = makeRoster(
+      [
+        { memberId: 'm1', date: period.dates[0], shift: '白班' },
+        { memberId: 'm1', date: period.dates[1], shift: '休息' },
+        { memberId: 'm1', date: period.dates[2], shift: '事假' }
+      ],
+      filledSalary
+    )
+    const stats = computeMonthStats(roster, member, period)
+    // 这三天的模板本来就不是夜班，换成非夜班不改变夜班天数 → 仍是模板的 8 天
+    expect(stats.salary.nightDays).toBe(8)
+  })
+
+  it('津贴并入应发与实发', () => {
+    const roster = makeRoster(
+      [{ memberId: 'm1', date: period.dates[0], shift: '夜班', overtimeHours: 2 }],
+      filledSalary
+    )
+    const stats = computeMonthStats(roster, member, period)
+
+    expect(stats.salary.gross).toBe(
+      roundMoney(9800 + stats.salary.overtimePay + stats.salary.nightAllowance)
+    )
+    expect(stats.salary.net).toBe(
+      roundMoney(stats.salary.gross - 1500 - stats.salary.leaveDeduction)
+    )
+  })
+
+  it('没填基本工资：津贴照算（不依赖时薪），但固定应发仍为 0', () => {
+    const roster = makeRoster([{ memberId: 'm1', date: period.dates[0], shift: '夜班' }])
+    const stats = computeMonthStats(roster, member, period)
+
+    expect(stats.salary.hasBase).toBe(false)
+    expect(stats.salary.nightDays).toBe(9) // 模板 8 + 覆盖成夜班 1
+    expect(stats.salary.nightAllowance).toBe(135)
+    // 没有基本工资就没有固定应发，应发 = 0 + 0 + 津贴
+    expect(stats.salary.gross).toBe(135)
+  })
+
+  it('没有夜班时津贴为 0', () => {
+    const roster = makeRoster(
+      Array.from({ length: period.dates.length }, (_, index) => ({
+        memberId: 'm1',
+        date: period.dates[index],
+        shift: '白班' as const
+      })),
+      filledSalary
+    )
+    const stats = computeMonthStats(roster, member, period)
+    expect(stats.salary.nightDays).toBe(0)
+    expect(stats.salary.nightAllowance).toBe(0)
+  })
+})
+
 
 describe('事假扣款', () => {
   it('4h 事假计 4 小时，按 时薪 × 4 扣款', () => {
@@ -210,7 +306,9 @@ describe('事假扣款', () => {
     expect(stats.leave.days).toBe(1)
     expect(stats.leave.hours).toBe(4)
     expect(stats.salary.leaveDeduction).toBe(roundMoney(hourly * 4))
-    expect(stats.salary.net).toBe(roundMoney(9800 - 1500 - stats.salary.leaveDeduction))
+    expect(stats.salary.net).toBe(
+      roundMoney(9800 + stats.salary.nightAllowance - 1500 - stats.salary.leaveDeduction)
+    )
   })
 
   it('没记时长的事假按 8h（一天）算', () => {
@@ -241,7 +339,9 @@ describe('事假扣款', () => {
     )
     const stats = computeMonthStats(roster, member, period)
     expect(stats.salary.net).toBe(
-      roundMoney(9800 + stats.salary.overtimePay - 1500 - stats.salary.leaveDeduction)
+      roundMoney(
+        9800 + stats.salary.overtimePay + stats.salary.nightAllowance - 1500 - stats.salary.leaveDeduction
+      )
     )
   })
 
