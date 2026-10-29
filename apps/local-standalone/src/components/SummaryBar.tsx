@@ -1,7 +1,7 @@
 import { getEffectiveShift, getOverrideMap, type Roster } from '../data/roster'
 import { isWorkShift, type ShiftType } from '../data/shifts'
 import type { Period } from '../data/period'
-import { todayKey } from '../data/dateUtils'
+import { formatChineseDate, todayKey } from '../data/dateUtils'
 
 interface SummaryBarProps {
   roster: Roster
@@ -54,7 +54,13 @@ export function SummaryBar({ roster, period }: SummaryBarProps) {
           </span>
         </div>
       ))}
-      {inPeriod ? null : <p className="summary-note">今天不在本期（{period.startDate} — {period.endDate}）范围内</p>}
+      {inPeriod
+        ? null
+        : (
+          <p className="summary-note">
+            今天不在本月（{formatChineseDate(period.startDate)} - {formatChineseDate(period.endDate)}）范围内
+          </p>
+        )}
     </section>
   )
 }

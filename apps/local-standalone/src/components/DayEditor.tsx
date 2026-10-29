@@ -236,7 +236,6 @@ export function DayEditor({
               </ul>
             )}
 
-            <p className="dialog-tip">待办的改动立即生效，与班次记录互不影响。</p>
           </div>
         ) : (
           <>
@@ -257,9 +256,9 @@ export function DayEditor({
             <div className={`dialog-section${overtimeAllowed ? '' : ' is-disabled'}`}>
               <div className="section-head">
                 <span className="section-title">加班</span>
-                <span className="section-note">
-                  {overtimeAllowed ? `${OVERTIME_STEP}h 步长，最多 ${MAX_OVERTIME_HOURS}h` : '休息与事假不记加班'}
-                </span>
+                {/* 可录加班时不写「0.5h 步长，最多 24h」：预设胶囊 + 输入框自己说明问题，
+                    这行小字只是在标题右边添一段噪音；只有灰掉时才需要解释为什么不能填 */}
+                {overtimeAllowed ? null : <span className="section-note">休息与事假不记加班</span>}
               </div>
 
               <div className="ot-row">

@@ -7,7 +7,8 @@ import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
 import { Wizard } from './screens/Wizard'
-import { downloadBackup, parseBackup } from './data/backup'
+import { backupText, buildBackupFileName, downloadBackup, parseBackup } from './data/backup'
+import { canChooseBackupDir, getBackupDir, writeBackupFile } from './data/backupDir'
 import { currentMonthKey, formatMonthTitle, getPeriod, shiftMonth, type MonthKey } from './data/period'
 import {
   createMemberId,
@@ -74,10 +75,26 @@ export function App() {
     setMonthKey(current => shiftMonth(current, delta))
   }, [])
 
-  function backup() {
+  async function backup() {
+    const fileName = buildBackupFileName(new Date())
+    const dir = getBackupDir()
+
+    // 壳里且设过目录 → 直接写进去。用户挑的地方才是真·「默认存放位置」，
+    // 这时再退回下载夹会让人以为文件跑到别处去了。
+    if (dir && canChooseBackupDir()) {
+      try {
+        const saved = await writeBackupFile(dir, fileName, backupText(api.roster))
+        setStatusText(`已导出到 ${saved}`)
+        return
+      } catch (error) {
+        setStatusText(`导出失败：${error instanceof Error ? error.message : String(error)}`)
+        return
+      }
+    }
+
     try {
-      const fileName = downloadBackup(api.roster)
-      setStatusText(`已导出 ${fileName}`)
+      const downloaded = downloadBackup(api.roster)
+      setStatusText(`已导出 ${downloaded}`)
     } catch {
       setStatusText('导出失败')
     }

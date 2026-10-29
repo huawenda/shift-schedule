@@ -618,8 +618,11 @@
   filter: brightness(0.97);
 }
 
+/* 选中态用**已有的那 1px 边框**改色，不再叠 2px 内阴影：
+ * .option 本来就留了 1px 透明边框占位，直接把颜色点上去正好是 1px、且贴着色块外沿；
+ * 原来那圈 inset 2px 是从边框**里侧**开始画的，边看着厚一倍，还多出一圈缝。 */
 .option.is-on {
-  box-shadow: inset 0 0 0 2px var(--text);
+  border-color: var(--text);
 }
 
 .dialog-foot {

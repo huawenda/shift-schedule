@@ -1,78 +1,246 @@
 {
   "app": "shift-schedule-local",
   "version": 5,
-  "exportedAt": "2026-10-28T05:49:55.661Z",
+  "exportedAt": "2026-10-29T02:46:37.879Z",
   "roster": {
     "members": [
       {
         "id": "m-01",
         "name": "华文达",
         "patternId": "4F",
-        "position": "班长"
+        "position": "PNP"
       },
       {
         "id": "m-02",
         "name": "张舒棋",
         "patternId": "4G",
-        "position": "组长"
+        "position": "PNP"
       },
       {
         "id": "m-03",
         "name": "陈泳智",
-        "patternId": "4H"
+        "patternId": "4H",
+        "position": "PNP"
       },
       {
         "id": "m-04",
         "name": "韩义博",
-        "patternId": "4I"
+        "patternId": "4I",
+        "position": "PNP"
       },
       {
         "id": "m-05",
         "name": "段志彬",
-        "patternId": "4J"
+        "patternId": "4J",
+        "position": "PNP"
       },
       {
         "id": "m-06",
         "name": "余昌耿",
-        "patternId": "4K"
+        "patternId": "4K",
+        "position": "PNP"
       },
       {
         "id": "m-07",
         "name": "张涛",
-        "patternId": "4R"
+        "patternId": "4R",
+        "position": "PNP"
       },
       {
         "id": "m-08",
         "name": "谢懋",
-        "patternId": "4S"
+        "patternId": "4S",
+        "position": "PNP"
       },
       {
         "id": "m-09",
         "name": "农伟俊",
-        "patternId": "4T"
+        "patternId": "4T",
+        "position": "PNP"
       },
       {
         "id": "m-10",
         "name": "帅长安",
-        "patternId": "4U"
+        "patternId": "4U",
+        "position": "PNP"
       },
       {
         "id": "m-11",
         "name": "林泽勇",
-        "patternId": "4V"
+        "patternId": "4V",
+        "position": "PNP"
       },
       {
         "id": "m-12",
         "name": "陈家辉",
-        "patternId": "4W"
+        "patternId": "4W",
+        "position": "PNP"
       },
       {
         "id": "m-13",
         "name": "张增全",
-        "patternId": "4X"
+        "patternId": "4X",
+        "position": "PNP"
       }
     ],
-    "overrides": [],
+    "overrides": [
+      {
+        "memberId": "m-01",
+        "date": "2026-10-20",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-10-21",
+        "shift": "白特",
+        "overtimeHours": 10
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-10-23",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-10-24",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-10-25",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-10-26",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-10-27",
+        "shift": "白特",
+        "overtimeHours": 10
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-10-29",
+        "shift": "夜班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-10-30",
+        "shift": "夜班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-10-31",
+        "shift": "夜班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-01",
+        "shift": "夜班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-02",
+        "shift": "夜特",
+        "overtimeHours": 10
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-04",
+        "shift": "夜班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-05",
+        "shift": "夜班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-06",
+        "shift": "夜班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-07",
+        "shift": "夜班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-08",
+        "shift": "夜特",
+        "overtimeHours": 10
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-10",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-11",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-12",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-13",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-14",
+        "shift": "白特",
+        "overtimeHours": 10
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-16",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-17",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-18",
+        "shift": "白班",
+        "overtimeHours": 2
+      },
+      {
+        "memberId": "m-01",
+        "date": "2026-11-19",
+        "shift": "白班",
+        "overtimeHours": 2
+      }
+    ],
     "patterns": [],
     "todos": [
       {
@@ -100,10 +268,10 @@
     "profile": {
       "memberId": "m-01",
       "salary": {
-        "baseSalary": "",
-        "performanceAllowance": "",
-        "positionAllowance": "",
-        "socialFund": ""
+        "baseSalary": "3982",
+        "performanceAllowance": "1300",
+        "positionAllowance": "1000",
+        "socialFund": "1600"
       }
     }
   }

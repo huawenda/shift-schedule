@@ -49,9 +49,14 @@ export function createBackup(roster: Roster): BackupFile {
   }
 }
 
+/** 备份文件的文本内容。壳里写盘与浏览器里下载共用同一份，避免两处格式漂移 */
+export function backupText(roster: Roster): string {
+  return JSON.stringify(createBackup(roster), null, 2)
+}
+
 export function downloadBackup(roster: Roster): string {
   const fileName = buildBackupFileName(new Date())
-  const blob = new Blob([JSON.stringify(createBackup(roster), null, 2)], { type: 'application/json' })
+  const blob = new Blob([backupText(roster)], { type: 'application/json' })
   const objectUrl = URL.createObjectURL(blob)
 
   const link = document.createElement('a')
@@ -118,7 +123,7 @@ export function parseBackup(text: string): ImportResult {
   }
 }
 
-function buildBackupFileName(date: Date): string {
+export function buildBackupFileName(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, '0')
   const stamp = [
     date.getFullYear(),

@@ -16,7 +16,14 @@ export const STORAGE_KEYS = {
    * 键名里的 `v2` 是历史遗留（当时从「按姓名索引的日记录」换成「按 memberId 的整套花名册」），
    * 与备份文件的 `version` 不是同一个编号体系，别按它推断备份格式版本。
    */
-  roster: 'shift-schedule:local:roster:v2'
+  roster: 'shift-schedule:local:roster:v2',
+  /**
+   * 备份的默认存放目录（绝对路径）。
+   *
+   * **刻意不放进 roster**：路径是「这台电脑」的属性，跟着备份文件换机器只会指到
+   * 一个不存在的目录。所以它单独一个键，也不进导出的 JSON。
+   */
+  backupDir: 'shift-schedule:local:backup-dir:v1'
 } as const
 
 function getBrowserStorage(): Storage | null {

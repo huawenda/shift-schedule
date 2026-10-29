@@ -20,5 +20,7 @@ declare global {
  * 所以文案里不能一律说「存在浏览器里」。
  */
 export function isTauriShell(): boolean {
+  // 单测跑在 node 环境（没有 window），这里必须容错，否则所有依赖它的纯函数都测不了
+  if (typeof window === 'undefined') return false
   return Boolean(window.__TAURI_INTERNALS__) || window.location.hostname === 'tauri.localhost'
 }

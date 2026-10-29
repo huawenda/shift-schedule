@@ -32,8 +32,6 @@ export function TodoCard({ todos, onToggle }: TodoCardProps) {
         {groups.length === 0 ? (
           <div className="todo-empty">
             这个月还没有待办。
-            <br />
-            点日历上的某一天，在弹层的「待办」页里记一条。
           </div>
         ) : (
           <div className="todo-scroll">

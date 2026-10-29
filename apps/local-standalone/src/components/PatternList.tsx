@@ -148,7 +148,7 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
         </p>
 
         {roster.patterns.length === 0 ? (
-          <p className="member-editor-empty">还没有自建班序。自建班序第一天对应锚点日 2026-06-07 的班次</p>
+          <p className="member-editor-empty">还没有自建班序</p>
         ) : (
           <div className="pattern-rows">
             {roster.patterns.map(pattern => {

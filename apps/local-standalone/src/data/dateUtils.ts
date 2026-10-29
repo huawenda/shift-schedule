@@ -41,6 +41,17 @@ export function formatDayNumber(key: string): string {
   return key.slice(8, 10)
 }
 
+/**
+ * '2026-11-20' → '2026年11月20日'
+ *
+ * 月与日不补零（`11月20日` 而不是 `11月20`）：这句话是给人读的
+ * 「今天不在本期（2026年11月20日 - 2026年12月19日）范围内」，带「日」才念得通。
+ */
+export function formatChineseDate(key: string): string {
+  const [year, month, day] = key.split('-').map(Number)
+  return `${year}年${month}月${day}日`
+}
+
 export function weekdayIndex(key: string): number {
   return parseDateKey(key).getDay()
 }

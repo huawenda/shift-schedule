@@ -2483,6 +2483,30 @@ async function runScenario(name, url, downloadDir) {
     await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
     await switchSettingsTab(client, '个人资料')
     await waitFor(client, 'Boolean(document.querySelector(".btn-file input[type=file]"))', '导入入口')
+
+    // 备份的默认存放目录：静态版没有 __TAURI__，「选择…」必须是禁用态
+    const backupDirRow = await client.evaluate(`(() => {
+      const row = document.querySelector('.backup-dir')
+      const path = row?.querySelector('.backup-dir-path')
+      const pick = Array.from(row?.querySelectorAll('button') ?? [])
+        .find(node => node.textContent.trim() === '选择…')
+      return {
+        exists: Boolean(row),
+        label: row?.querySelector('.backup-dir-label')?.textContent.trim() ?? '',
+        path: path?.textContent.trim() ?? '',
+        isDefault: Boolean(path?.classList.contains('is-default')),
+        disabled: pick ? pick.disabled : null
+      }
+    })()`)
+    check(
+      `${name}: 备份默认存放目录存在且静态版不可选`,
+      backupDirRow.exists &&
+        backupDirRow.label === '默认存放目录' &&
+        backupDirRow.path === '系统「下载」文件夹' &&
+        backupDirRow.isDefault === true &&
+        backupDirRow.disabled === true,
+      JSON.stringify(backupDirRow)
+    )
     await client.send('DOM.enable')
     const { root } = await client.send('DOM.getDocument', { depth: -1 })
     const { nodeId } = await client.send('DOM.querySelector', {
@@ -2516,7 +2540,7 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(imported)
     )
 
-    // 成员表新增「岗位」列；本人行岗位只读显示（fixture 里华文达 = 班长）
+    // 成员表新增「岗位」列；本人行岗位只读显示（fixture 里 13 人岗位统一为 PNP）
     const positionCol = await client.evaluate(`(() => {
       const head = document.querySelector('.member-editor-head')
       const first = document.querySelector('.member-row')
@@ -2527,7 +2551,7 @@ async function runScenario(name, url, downloadDir) {
     })()`)
     check(
       `${name}: 成员表有岗位列且本人行只读显示岗位`,
-      positionCol.hasCol && positionCol.selfPosition === '班长',
+      positionCol.hasCol && positionCol.selfPosition === 'PNP',
       JSON.stringify(positionCol)
     )
 
@@ -2660,7 +2684,7 @@ async function runScenario(name, url, downloadDir) {
     const firstPattern = await client.evaluate(
       `document.querySelector('.matrix-row .matrix-pattern')?.textContent.trim() ?? ''`
     )
-    check(`${name}: 矩阵班序旁拼岗位（4F · 班长）`, firstPattern === '4F · 班长', firstPattern)
+    check(`${name}: 矩阵班序旁拼岗位（4F · PNP）`, firstPattern === '4F · PNP', firstPattern)
 
     // --- 14. 人员排序：设置里的行顺序必须映射成矩阵的行顺序 ---
     await client.evaluate(clickByText('.rail-item', '设置'))

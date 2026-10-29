@@ -68,6 +68,43 @@
   color: var(--muted);
 }
 
+/* 备份的默认存放目录：一行「标签 + 路径 + 两个按钮」。
+ * 路径可能很长（D:\备份\2026\倒班表），所以给它 flex: 1 的伸缩位并省略中间，
+ * 按钮永远固定宽度不被挤扁；hover 时用 title 看全路径。 */
+.backup-dir {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.backup-dir-label {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.backup-dir-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 8px;
+  height: var(--control-height);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--raised);
+  color: var(--text);
+  font-size: 12px;
+  line-height: calc(var(--control-height) - 2px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 没设过的时候显示的是「系统「下载」文件夹」这种说明文字，压淡一档免得像真路径 */
+.backup-dir-path.is-default {
+  color: var(--faint);
+}
+
 .settings-footnote {
   padding-top: 4px;
   font-size: 12px;
@@ -445,8 +482,11 @@ button.shift-cell:hover {
   filter: brightness(0.97);
 }
 
+/* 24 格的选中框与改班弹层统一成 1px（那边是把已有的 1px 透明边框改黑）。
+ * 这里不能同样改边框色 —— 格子是 `border: 0` 的纯色块，所以用 1px 内阴影，
+ * 贴着色块外沿画，不占位、不挪字。 */
 .shift-cell.is-on {
-  box-shadow: inset 0 0 0 2px var(--text);
+  box-shadow: inset 0 0 0 1px var(--text);
 }
 
 .shift-cell.is-readonly {

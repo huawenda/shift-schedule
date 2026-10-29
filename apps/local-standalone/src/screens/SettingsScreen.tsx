@@ -4,6 +4,12 @@ import { PatternList } from '../components/PatternList'
 import { ProfileSection } from '../components/ProfileSection'
 import { isTauriShell } from '../data/env'
 import {
+  canChooseBackupDir,
+  getBackupDir,
+  pickBackupDir,
+  setBackupDir as saveBackupDir
+} from '../data/backupDir'
+import {
   MAX_CUSTOM_PATTERNS,
   PATTERN_ANCHOR_DATE,
   PATTERN_CYCLE_LENGTH,
@@ -62,6 +68,9 @@ export function SettingsScreen({
   const [dirty, setDirty] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [flash, setFlash] = useState('')
+  const [backupDir, setBackupDirState] = useState<string | null>(() => getBackupDir())
+  /** 浏览器里没法让用户挑目录（<a download> 只能进下载夹），所以这一行要置灰 */
+  const dirSelectable = canChooseBackupDir()
 
   /**
    * 页头固定后，内容滚在 `.canvas-flow` 里。
@@ -96,6 +105,24 @@ export function SettingsScreen({
     ],
     [lookup]
   )
+
+  async function chooseBackupDir() {
+    try {
+      const picked = await pickBackupDir(backupDir)
+      if (!picked) return
+      saveBackupDir(picked)
+      setBackupDirState(picked)
+      setFlash(`备份将保存到 ${picked}`)
+    } catch (error) {
+      setFlash(error instanceof Error ? error.message : '选择目录失败')
+    }
+  }
+
+  function resetBackupDir() {
+    saveBackupDir(null)
+    setBackupDirState(null)
+    setFlash('已恢复默认：导出会存到系统「下载」文件夹。')
+  }
 
   function update(next: MemberRow[]) {
     setRows(next)
@@ -269,6 +296,37 @@ export function SettingsScreen({
                   </label>
                 </div>
                 <p className="settings-hint">导入会整体覆盖当前数据（含个人信息）；只认当前版本导出的文件。</p>
+
+                {/* 默认存放目录：只对本机有效，所以不进备份文件，也不跟着换机器走 */}
+                <div className="backup-dir">
+                  <span className="backup-dir-label">默认存放目录</span>
+                  <span
+                    className={`backup-dir-path${backupDir ? '' : ' is-default'}`}
+                    title={backupDir ?? '系统「下载」文件夹'}
+                  >
+                    {backupDir ?? '系统「下载」文件夹'}
+                  </span>
+                  <button
+                    className="btn"
+                    disabled={!dirSelectable}
+                    type="button"
+                    onClick={chooseBackupDir}
+                  >
+                    选择…
+                  </button>
+                  {backupDir ? (
+                    <button className="btn btn-quiet" type="button" onClick={resetBackupDir}>
+                      恢复默认
+                    </button>
+                  ) : null}
+                </div>
+                <p className="settings-hint">
+                  {dirSelectable
+                    ? backupDir
+                      ? '点「导出备份」会直接写进这个目录，不再走浏览器的下载流程。'
+                      : '不选的话，导出会落在系统「下载」文件夹。'
+                    : '浏览器版做不到选目录：导出固定落在系统「下载」文件夹。'}
+                </p>
               </div>
             </section>
 
