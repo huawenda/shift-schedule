@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getEffectiveShift, getOverrideMap, isSelf, patternLabelOf, type Member, type Roster } from '../data/roster'
 import type { Period } from '../data/period'
 import { SHIFT_META, SHIFT_TYPES, shiftToneClass, type ShiftType } from '../data/shifts'
@@ -22,8 +22,9 @@ interface TeamMatrixProps {
  * 矩阵是扫一眼看谁上什么班的视图，多一个小点就会让人以为那格有别的含义。
  * 想看某天有没有加班，去个人日历或者点开格子。
  *
- * 本人那一行带「本人」标记、姓名不可点：日历已经锁定本人，
- * 点别人的名字再跳日历这条路已经不存在了。格子本身仍可改（全组总览要能维护）。
+ * 本人那一行带「本人」标记。点成员列的姓名**只聚焦整行**（再点取消），
+ * 不跳个人日历 —— 日历已经锁定本人，点名字跳日历那条路已经不存在了。
+ * 格子本身仍可改（全组总览要能维护）。
  *
  * 列宽在 22px 以下是读不了的，所以窄屏交给横向滚动，不压缩字号。
  *
@@ -42,6 +43,8 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
   const dayCount = period.dates.length
   const byName = mode === 'name'
   const scrollRef = useRef<HTMLDivElement>(null)
+  /** 聚焦行：同一时间只高亮一行，再点同一个人取消 */
+  const [focusedId, setFocusedId] = useState<string | null>(null)
 
   // 滚动条藏了，就得让滚轮能横滚：有横向溢出时把 deltaY 转成 scrollLeft。
   // 滚到两端就放行（不 preventDefault），页面继续纵向滚，不把人困在矩阵里。
@@ -113,13 +116,19 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
             )
 
             return (
-            <div className={`matrix-row${selfRow ? ' is-self' : ''}`} key={member.id}>
-              <div
+            <div
+              className={`matrix-row${selfRow ? ' is-self' : ''}${focusedId === member.id ? ' is-focused' : ''}`}
+              key={member.id}
+            >
+              <button
+                aria-pressed={focusedId === member.id}
                 className={`matrix-name-cell${selfRow ? ' is-self' : ''}`}
-                title={`${member.name} · ${patternText}`}
+                title={`${member.name} · ${patternText}（${focusedId === member.id ? '点击取消聚焦' : '点击聚焦整行'}）`}
+                type="button"
+                onClick={() => setFocusedId(current => (current === member.id ? null : member.id))}
               >
                 {nameContent}
-              </div>
+              </button>
 
               <div className="matrix-days">
                 {period.dates.map(date => {

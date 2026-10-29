@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { canChooseBackupDir, getBackupDir, pickBackupDir, setBackupDir } from './backupDir'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  canChooseBackupDir,
+  getBackupDir,
+  pickBackupDir,
+  resolveDefaultDownloadDir,
+  setBackupDir
+} from './backupDir'
 
 /**
  * 单测跑在 node 环境（没有 localStorage），storage 会自动落到内存兜底 ——
@@ -32,5 +38,41 @@ describe('备份默认存放目录', () => {
 
   it('没有原生对话框时选目录要报错，而不是静默返回 null', async () => {
     await expect(pickBackupDir(null)).rejects.toThrow('当前环境不支持选择目录')
+  })
+
+  it('浏览器里拿不到系统下载夹的真实路径', async () => {
+    await expect(resolveDefaultDownloadDir()).resolves.toBeNull()
+  })
+
+  it('壳里解析真实路径，并去掉结尾的分隔符', async () => {
+    vi.stubGlobal('window', {
+      __TAURI_INTERNALS__: {},
+      __TAURI__: { path: { downloadDir: async () => 'D:\\下载\\' } }
+    })
+
+    try {
+      await expect(resolveDefaultDownloadDir()).resolves.toBe('D:\\下载')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('路径解析失败时返回 null，不让设置页崩掉', async () => {
+    vi.stubGlobal('window', {
+      __TAURI_INTERNALS__: {},
+      __TAURI__: {
+        path: {
+          downloadDir: async () => {
+            throw new Error('解析失败')
+          }
+        }
+      }
+    })
+
+    try {
+      await expect(resolveDefaultDownloadDir()).resolves.toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

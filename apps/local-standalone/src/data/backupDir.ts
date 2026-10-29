@@ -25,9 +25,15 @@ interface TauriCoreApi {
   invoke?: <T = unknown>(command: string, args?: Record<string, unknown>) => Promise<T>
 }
 
+interface TauriPathApi {
+  /** 系统的「下载」目录；壳里由 Tauri 的 path API 解析 */
+  downloadDir?: () => Promise<string>
+}
+
 interface TauriGlobal {
   core?: TauriCoreApi
   dialog?: TauriDialogApi
+  path?: TauriPathApi
 }
 
 declare global {
@@ -51,6 +57,29 @@ export function getBackupDir(): string | null {
   const raw = readRaw(STORAGE_KEYS.backupDir)
   const trimmed = raw?.trim()
   return trimmed ? trimmed : null
+}
+
+/**
+ * 系统「下载」文件夹的**真实路径**（没设默认目录时导出会落在这里）。
+ *
+ * 只有壳里拿得到：Tauri 的 path API 读的是这台机器的实际配置
+ * （用户可能已经把下载夹挪到了 D 盘）。浏览器里 `<a download>` 的落点
+ * 由浏览器决定，网页无权读取，所以返回 null，界面退回说明文字。
+ */
+export async function resolveDefaultDownloadDir(): Promise<string | null> {
+  if (!isTauriShell()) return null
+
+  const downloadDir = tauri()?.path?.downloadDir
+  if (!downloadDir) return null
+
+  try {
+    const dir = await downloadDir()
+    // 去掉结尾的分隔符，免得界面上出现「D:\下载\」这种多余的反斜杠
+    const trimmed = dir.trim().replace(/[\\/]+$/, '')
+    return trimmed || null
+  } catch {
+    return null
+  }
 }
 
 export function setBackupDir(dir: string | null): void {

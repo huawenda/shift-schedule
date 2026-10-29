@@ -7,6 +7,7 @@ import {
   canChooseBackupDir,
   getBackupDir,
   pickBackupDir,
+  resolveDefaultDownloadDir,
   setBackupDir as saveBackupDir
 } from '../data/backupDir'
 import {
@@ -69,8 +70,21 @@ export function SettingsScreen({
   const [confirmText, setConfirmText] = useState('')
   const [flash, setFlash] = useState('')
   const [backupDir, setBackupDirState] = useState<string | null>(() => getBackupDir())
+  /** 系统「下载」夹的真实路径（只有壳里拿得到），没设默认目录时用它当占位 */
+  const [downloadDir, setDownloadDir] = useState<string | null>(null)
   /** 浏览器里没法让用户挑目录（<a download> 只能进下载夹），所以这一行要置灰 */
   const dirSelectable = canChooseBackupDir()
+
+  useEffect(() => {
+    if (!dirSelectable) return
+    let cancelled = false
+    void resolveDefaultDownloadDir().then(dir => {
+      if (!cancelled && dir) setDownloadDir(dir)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [dirSelectable])
 
   /**
    * 页头固定后，内容滚在 `.canvas-flow` 里。
@@ -97,6 +111,9 @@ export function SettingsScreen({
 
   const lookup = useMemo(() => resolvePatterns(roster.patterns), [roster.patterns])
 
+  /** 界面上展示的目录：用户挑的优先，否则用系统下载夹的真实路径 */
+  const shownBackupDir = backupDir ?? downloadDir
+
   /** 下拉里能选的班序：内置在前、自定义在后 */
   const patternOptions = useMemo<PatternOption[]>(
     () => [
@@ -121,7 +138,7 @@ export function SettingsScreen({
   function resetBackupDir() {
     saveBackupDir(null)
     setBackupDirState(null)
-    setFlash('已恢复默认：导出会存到系统「下载」文件夹。')
+    setFlash(`已恢复默认：导出会存到 ${downloadDir ?? '系统「下载」文件夹'}。`)
   }
 
   function update(next: MemberRow[]) {
@@ -295,16 +312,14 @@ export function SettingsScreen({
                     />
                   </label>
                 </div>
-                <p className="settings-hint">导入会整体覆盖当前数据（含个人信息）；只认当前版本导出的文件。</p>
-
                 {/* 默认存放目录：只对本机有效，所以不进备份文件，也不跟着换机器走 */}
                 <div className="backup-dir">
                   <span className="backup-dir-label">默认存放目录</span>
                   <span
-                    className={`backup-dir-path${backupDir ? '' : ' is-default'}`}
-                    title={backupDir ?? '系统「下载」文件夹'}
+                    className={`backup-dir-path${shownBackupDir ? '' : ' is-default'}`}
+                    title={shownBackupDir ?? '系统「下载」文件夹'}
                   >
-                    {backupDir ?? '系统「下载」文件夹'}
+                    {shownBackupDir ?? '系统「下载」文件夹'}
                   </span>
                   <button
                     className="btn"
@@ -320,13 +335,8 @@ export function SettingsScreen({
                     </button>
                   ) : null}
                 </div>
-                <p className="settings-hint">
-                  {dirSelectable
-                    ? backupDir
-                      ? '点「导出备份」会直接写进这个目录，不再走浏览器的下载流程。'
-                      : '不选的话，导出会落在系统「下载」文件夹。'
-                    : '浏览器版做不到选目录：导出固定落在系统「下载」文件夹。'}
-                </p>
+                <p className="settings-hint">导入会整体覆盖当前数据（含个人信息）；只认当前版本导出的文件。</p>
+
               </div>
             </section>
 

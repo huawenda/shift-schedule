@@ -332,7 +332,7 @@ async function phaseOne(userDataDir, downloadDir) {
     check('排班页出现', board.hasApp)
     check('只写 roster:v2，无 v1 旧键', board.keys.includes('shift-schedule:local:roster:v2') && !board.keys.some(key => key.includes(':v1')))
     check('成员落库 3 人', board.memberCount === 3, String(board.memberCount))
-    check('概览条 4 格齐全', board.summaryCells === 4, String(board.summaryCells))
+    check('概览条 3 格齐全', board.summaryCells === 3, String(board.summaryCells))
     check('矩阵格子已渲染', board.cells > 0, `${board.cells} 个`)
     check('六色图例齐全', board.legend === 6, String(board.legend))
 

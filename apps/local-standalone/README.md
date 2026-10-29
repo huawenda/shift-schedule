@@ -83,7 +83,7 @@ pnpm dev -- --strict-port                 # 端口被占用时直接报错，不
 
 ```ts
 interface Profile { memberId: string; salary: SalaryInput }
-interface Roster  { members; overrides; patterns; profile: Profile | null; updatedAt }
+interface Roster  { members; overrides; patterns; todos; profile: Profile | null; updatedAt }
 ```
 
 - **本人 = `profile.memberId` 指向 `members` 里的一条**。不存第二份数据，
@@ -172,12 +172,16 @@ interface Roster  { members; overrides; patterns; profile: Profile | null; updat
 | 侧栏 | 228px | 品牌「倒班表 · 本地版」／**全员矩阵**／**月度概览**／**设置**，底部一行「N 位成员 · 数据只存在这台电脑」 |
 | 顶栏 | 48px | `‹` 月份标题 `›`「回到本期」，右侧：存储状态 · 导出备份 · 导入备份 |
 | 画布头部 | — | 页面标题 + 副标题（日期区间 · 天数 · 人数/本人） |
-| 概览条 | 4 格 | **只在全员矩阵页**：今日白班 / 夜班 / 休息 / 出勤（含白特夜特） |
+| 概览条 | 3 格 | **只在全员矩阵页**：今日白班（含白特）/ 夜班（含夜特）/ 休息 |
 | 主体 | 剩余高度 | 全员矩阵 ／ 月度概览（日历 + 4 块统计） |
 
-- **概览条**只数人不算工时，今天不在本期范围内时显示 `—` 并注明原因。
+- **概览条**只数人不算工时：**白特并入白班、夜特并入夜班**，名单里特勤人员带「特」标记；
+  每格显示人数 + 一行姓名摘要（最多三人，超出用「等」），
+  点「查看名单」会在卡片下方弹出浮层，按成员表顺序列出完整人名与岗位（不列班序）；
+  今天不在本期范围内时显示 `—` 并注明原因。
   它**只在矩阵页**：统计的是全员出勤，和矩阵同源；日历页只讲本人，放上去就是两个口径并排。
 - **全员矩阵**：一行一人、一列一天，今天那列加深，下方固定显示六色图例。
+  点成员列的姓名可给整行加聚焦底色，再点一次取消；只聚焦一行，点别人会换行。
   格子**只显示班次单字**，不加任何「改过 / 有加班」的标记 —— 扫一眼看谁上什么班就够了，
   多一个小点反而让人以为格子有别的含义。
 - **月度概览页**（默认落地）：整页内容限宽 1180 居中 —— 日历本身只需要 900，
@@ -241,7 +245,7 @@ interface Roster  { members; overrides; patterns; profile: Profile | null; updat
 - **概览页的页头不再有视图切换**：入口上移到侧栏，`#/matrix`、`#/overview`、`#/settings` 三个 hash 各对应一页。
 
 矩阵与日历**不能并排**：340（日历）+ 148（姓名列）+ 30×24（天列）+ 228（侧栏）+ 48 ≈ 1484px，
-超过 1440 基准屏宽，并排必然把列压到 20px 以下，而那样「特」字放不下。所以做成视图切换。
+超过 1466 基准屏宽，并排必然把列压到 20px 以下，而那样「特」字放不下。所以做成视图切换。
 
 ---
 
@@ -323,11 +327,16 @@ src/
 │   ├── storage.ts           localStorage 封装 + 内存兜底
 │   ├── backup.ts            导出 / 导入（只认当前格式）
 │   ├── dateUtils.ts         日期键、加减天、模运算
-│   └── calendarMeta.ts      农历与节日角标（lunar-javascript）
-├── hooks/useRoster.ts       花名册状态 + 自动落盘
+│   ├── calendarMeta.ts      农历与节日角标（lunar-javascript）
+│   ├── todos.ts             待办：归一化、排序、按日期分组
+│   ├── backupDir.ts         备份默认目录（仅桌面壳）+ 写盘
+│   └── env.ts               运行环境判断（Tauri 壳 / 浏览器）
+├── hooks/
+│   ├── useRoster.ts         花名册状态 + 自动落盘
+│   └── useDialogFocus.ts    弹层打开时移入焦点，避免背景残留焦点环
 ├── components/
 │   ├── Shell.tsx            228 侧栏 + 48 顶栏 + 白色画布
-│   ├── SummaryBar.tsx       4 格概览条
+│   ├── SummaryBar.tsx       3 格概览条（白特/夜特并入白班/夜班）
 │   ├── TeamMatrix.tsx       全员矩阵（表头 + 逐行 grid）
 │   ├── MonthCalendar.tsx    个人月历（班次 + 加班 + 法定角标）
 │   ├── ShiftEditor.tsx      矩阵改班弹层（只改班次）
@@ -336,10 +345,13 @@ src/
 │   ├── ProfileSection.tsx   设置页「个人信息」：本人身份 + 薪资 + 换人确认
 │   ├── PatternList.tsx      设置页的班序区块（内置预览 / 自建列表 / 删除确认）
 │   ├── PatternEditor.tsx    24 格班序编辑器
-│   └── StatsPanels.tsx      月度概览的四块统计（2 × 2）
+│   ├── StatsPanels.tsx      月度概览的四块统计（2 × 2）
+│   ├── TodoCard.tsx         待办卡片（本月待办，可在卡片里勾选）
+│   ├── Select.tsx           自绘下拉（替掉原生 select 的弹层）
+│   └── ScrollOverlay.tsx    自绘覆盖式滚动条（静止隐藏、滚动淡入）
 ├── screens/
 │   ├── Wizard.tsx           三步首次配置（本人 → 同事 → 确认）
-│   ├── MatrixScreen.tsx     全员矩阵页（含今日 4 格概览条）
+│   ├── MatrixScreen.tsx     全员矩阵页（含今日 3 格概览条）
 │   ├── OverviewScreen.tsx   月度概览页（日历 + 统计，日历锁本人）
 │   └── SettingsScreen.tsx   设置：人员配置 / 个人资料 两个 tab
 ├── styles/                  tokens → shell → schedule → stats → settings → wizard
@@ -347,7 +359,7 @@ src/
 └── main.tsx
 
 fixtures/
-└── 班组13人.json            样例备份（v4）：13 人挂在内置 4F–4X，本人设为华文达
+└── 班组13人.json            样例备份（v5）：13 人挂在内置 4F–4X，本人设为华文达
 ```
 
 分层原则：**`data/` 不知道 React 的存在**，`screens/` 不直接碰 localStorage，
@@ -437,8 +449,8 @@ pnpm dev:lan         # 同上 + 绑 0.0.0.0
 pnpm build           # tsc --noEmit + vite build → dist/
 pnpm preview         # 预览产物 6181
 pnpm typecheck       # tsc --noEmit
-pnpm test            # vitest run（172 个用例）
-pnpm verify:dist     # 无头浏览器真跑一遍产物（**218 项**）：向导（本人→同事）→默认落月度概览→四块统计空态→矩阵/日历锁本人→薪资落盘→改班→加班（统计与加班费同步）→半天事假（扣款）→换人确认→建班序→导出 v4→删班序→翻月→导入 13 人→排序
+pnpm test            # vitest run（221 个用例）
+pnpm verify:dist     # 无头浏览器真跑一遍产物（**218 项**）：向导（本人→同事）→默认落月度概览→四块统计空态→矩阵/日历锁本人→薪资落盘→改班→加班（统计与加班费同步）→半天事假（扣款）→换人确认→建班序→导出 v5→删班序→翻月→导入 13 人→排序
 pnpm verify:tauri    # 壳内验收（release exe + WebView2 调试口）：建人→改班→导出→重启读回→导入
 ```
 
@@ -450,8 +462,8 @@ pnpm verify:tauri    # 壳内验收（release exe + WebView2 调试口）：建�
 
 仓库根还有 `pnpm dev:local`，等价于本目录的 `pnpm dev`。
 
-`pnpm test` 覆盖 9 个数据层文件共 **172 个用例**
-（period 13 / patterns 8 / customPatterns 23 / overtime 15 / roster 44 / backup 15 / self 26 / stats 21 / leave 7），
+`pnpm test` 覆盖 11 个数据层文件共 **221 个用例**
+（period 13 / patterns 8 / customPatterns 23 / overtime 15 / roster 45 / backup 19 / self 30 / stats 37 / leave 7 / todos 16 / backupDir 8），
 断言的都是一旦改坏就会静默出错的规则：结算月天数与跨年、班序 24 天一循环、
 同一班序多人同班次、**「班次与模板相同但记了加班」的记录不能被删**、
 休息/事假上的加班要被拒绝、旧格式备份必须被明确拒绝、
@@ -482,8 +494,6 @@ v1 时代这里曾拷贝一份 `packages/core` 到 `src/core/`，用 `@local/cor
 ## 11. 已知限制
 
 - **只做大屏 PC**：没有 `@media` 断点，窗口窄了不会崩但会拥挤；手机端不在范围内。
-- **有加班数据，但没有统计**：加班小时与法定标记已经在录、也进了备份，
-  但**还没有任何汇总视图**，也**不算加班费**（倍率 ×1.5 / ×2 / ×3 与薪资都留给统计页）。
 - **只有事假能记时长**：半天 4h / 一天 8h（不记时长按一天），扣款 = 时薪 × 请假小时。
   年假、调休、病假这些假种没有 —— 六种班次是固定的，加假种要动整套配色与统计口径。
 - **薪资是一组固定值**：不做按月存档（一年才变一次的长期数据），统计任何月份都用这一组。

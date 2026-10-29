@@ -3,14 +3,18 @@
 /* ── 概览条 ───────────────────────────────────────────── */
 
 .summary {
+  position: relative;
+  /* 高于矩阵表头的 sticky（z-index 3/4），浮层才不会被日期行盖住 */
+  z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: #fcfdfd;
 }
 
 .summary-cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -40,6 +44,158 @@
   font-size: 12px;
   font-weight: 400;
   color: var(--faint);
+}
+
+/* 一行姓名摘要：绝不让它换行撑高卡片，完整名单在浮层里 */
+.summary-names {
+  margin: 4px 0 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-more {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.summary-more:hover {
+  text-decoration: underline;
+}
+
+/* 「特」标记：白特并入白班、夜特并入夜班后，名单里靠它认人。
+ * 颜色沿用班次语义色，白特暖黄、夜特橙。 */
+.summary-special {
+  display: inline-block;
+  margin-left: 3px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--shift-dayx-bg);
+  color: var(--shift-dayx-ink);
+  font-size: 10px;
+  line-height: 14px;
+  vertical-align: 1px;
+}
+
+.summary-special.is-night {
+  background: var(--shift-nightx-bg);
+  color: var(--shift-nightx-ink);
+}
+
+/* 「查看名单」浮层：与格子同宽、同左边界。
+ *
+ * 最小窗口 1466 下：版心 1228 − 画布留白 48 = 1180，3 等分再扣掉 2px 外框，
+ * 每格约 392.7px。这里不写死宽度，而是 100% 跟随格子 ——
+ * 窗口再宽也不会出现「卡片比格子窄一截」。 */
+.summary-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  width: 100%;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: 0 10px 24px rgba(19, 20, 22, 0.09), 0 2px 6px rgba(19, 20, 22, 0.05);
+}
+
+.summary-popover:focus {
+  outline: none;
+}
+
+.summary-popover-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.summary-popover-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.summary-popover-count {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.summary-popover-close {
+  margin-left: auto;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.summary-popover-close:hover {
+  color: var(--text);
+}
+
+.summary-popover-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 300px;
+  margin: 4px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.summary-popover-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px;
+}
+
+.summary-popover-name {
+  min-width: 0;
+}
+
+.summary-popover-item:last-child {
+  border-bottom: 0;
+}
+
+.summary-popover-position {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+/* 浮层内部滚动条：与自绘下拉同一档，避免原生深灰条在小面板里抢眼 */
+.summary-popover-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.summary-popover-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.summary-popover-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(19, 20, 22, 0.14);
+  background-clip: content-box;
+}
+
+.summary-popover-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(19, 20, 22, 0.24);
+  background-clip: content-box;
 }
 
 .summary-note {
@@ -106,6 +262,18 @@
   background: #fbfcfd;
 }
 
+/* 聚焦行：整行浅青底。姓名列是 sticky 且自带底色，必须一起改；
+ * 写在 hover 之后，鼠标停在聚焦行上也不会把聚焦色盖掉。 */
+.matrix-row.is-focused {
+  background: var(--accent-weak);
+}
+
+.matrix-row.is-focused .matrix-name-cell {
+  background: var(--accent-weak);
+  /* 左侧 2px 竖线跟着聚焦走：本人身份已经由徽章表达，不再重复占用这道线 */
+  border-left-color: var(--accent);
+}
+
 .matrix-name-cell {
   position: sticky;
   left: 0;
@@ -122,8 +290,8 @@
   border-left: 2px solid transparent;
   background: var(--surface);
   text-align: left;
-  /* 姓名不再可点（日历已锁本人），别让光标暗示可以点 */
-  cursor: default;
+  /* 姓名单元格用于聚焦整行（不跳日历），所以给可点光标 */
+  cursor: pointer;
 }
 
 .matrix-head .matrix-name-cell {
@@ -141,12 +309,6 @@
   align-items: center;
   gap: 4px;
   min-width: 0;
-}
-
-/* 本人那一行：姓名后挂徽章，左侧那道 2px 竖线换成强调色（本来就预留了 2px，
- * 只改颜色不动布局，否则整行文字会比其他行右移）。 */
-.matrix-row.is-self .matrix-name-cell {
-  border-left-color: var(--accent);
 }
 
 .matrix-name {
