@@ -804,6 +804,51 @@
 
 .dialog-day {
   width: 480px;
+  /* 班次页内容高度：选项区 128（18 + 44×2 + 8 + 14）+ 两张卡 190（83 + 12，×2）。
+   * 待办页固定成同一高度，两个 tab 的弹层总高才会严格相等。 */
+  --day-content-height: 318px;
+}
+
+/* 待办页与班次页同高：必须是 height 而不是 min-height，
+ * 否则待办条目一多弹层又会长高、切换 tab 时重新位移。 */
+.dialog-day .dialog-page {
+  height: var(--day-content-height);
+  min-height: 0;
+  /* 与班次页最后一张卡到 footer 的 12px 间距对齐 */
+  padding-bottom: 12px;
+}
+
+/* 空态盒拉伸填满剩余区域：把“被迫留白”变成有意的待办画布 */
+.dialog-day .dialog-page > .stat-empty {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+/* 待办列表占满输入框以下的剩余高度，条目多了只在列表内部滚动 */
+.dialog-day .todo-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 6px;
+}
+
+/* 列表滚动条：与自绘下拉同一档，避免原生深灰条在小面板里抢眼 */
+.dialog-day .todo-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dialog-day .todo-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dialog-day .todo-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(19, 20, 22, 0.14);
+  background-clip: content-box;
 }
 
 .dialog-day .dialog-options {
@@ -811,6 +856,9 @@
 }
 
 .dialog-section {
+  /* 高度写死而不是靠内容撑：标题行带不带说明小字，卡片都必须一样高。
+   * 83 = 上下 padding 24 + 边框 2 + 标题行 27 + 内容区 30。 */
+  height: 83px;
   margin: 0 18px 12px;
   padding: 12px 14px;
   border: 1px solid var(--border);
@@ -822,11 +870,37 @@
   opacity: 0.55;
 }
 
-.section-head {
+/* 四张卡等高：卡片本身的 padding / 边框 / 标题行都相同，差异只在内容区 ——
+ * 加班输入框 30、法定与事假 segmented 28、说明文字单行 16.5。
+ * 把内容区统一到 30px，四张卡就都是 444 × 83（宽度由 margin 18 决定，本来就一致）。 */
+.dialog-section > :last-child {
+  min-height: 30px;
+}
+
+/* segmented 的内容只有 26px，多出的高度用来垂直居中，避免控件贴顶。
+ * 改成块级 flex + fit-content：保留原来的胶囊宽度，同时消掉 inline-flex 的行盒基线间隙 */
+.dialog-section > .segmented {
   display: flex;
-  align-items: baseline;
+  width: fit-content;
+  align-items: center;
+}
+
+/* 说明卡只有一行字，用 flex 居中，和另外三张卡的内容区对齐 */
+.dialog-section > p.section-note {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.section-head {
+  /* 固定 18px：标题 12px 与说明 11px 混排时，baseline 对齐会算出 18.x，
+   * 导致「有说明小字的卡片」高出不到 1px，弹层随之亚像素位移、文字重栅格化。
+   * 改成居中 + 固定高度，有没有小字都恒为 18px。 */
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
+  height: 18px;
   margin-bottom: 9px;
 }
 

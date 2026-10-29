@@ -253,92 +253,105 @@ export function DayEditor({
               ))}
             </div>
 
-            <div className={`dialog-section${overtimeAllowed ? '' : ' is-disabled'}`}>
-              <div className="section-head">
-                <span className="section-title">加班</span>
-                {/* 可录加班时不写「0.5h 步长，最多 24h」：预设胶囊 + 输入框自己说明问题，
-                    这行小字只是在标题右边添一段噪音；只有灰掉时才需要解释为什么不能填 */}
-                {overtimeAllowed ? null : <span className="section-note">休息与事假不记加班</span>}
-              </div>
-
-              <div className="ot-row">
-                <div className="ot-presets" role="group" aria-label="加班预设">
-                  {presets.map(hours => (
-                    <button
-                      aria-pressed={overtimeHours === hours}
-                      className={`chip-mini${overtimeHours === hours ? ' is-on' : ''}`}
-                      disabled={!overtimeAllowed}
-                      key={hours}
-                      type="button"
-                      onClick={() => pickPreset(hours)}
-                    >
-                      {formatOvertimeHours(hours)}
-                    </button>
-                  ))}
-                  {presets.length === 0 ? <span className="ot-empty">—</span> : null}
-                </div>
-
-                <label className="ot-input">
-                  <input
-                    aria-label="加班小时数"
-                    className="input input-compact"
-                    disabled={!overtimeAllowed}
-                    inputMode="decimal"
-                    min={0}
-                    max={MAX_OVERTIME_HOURS}
-                    step={OVERTIME_STEP}
-                    type="number"
-                    value={overtimeText}
-                    onChange={event => setOvertimeText(event.target.value)}
-                  />
-                  <span className="ot-unit">小时</span>
-                </label>
-              </div>
-            </div>
-
-            <div className={`dialog-section${legalAllowed ? '' : ' is-disabled'}`}>
-              <div className="section-head">
-                <span className="section-title">法定节假日</span>
-              </div>
-              <div className="segmented segmented-sm" role="group" aria-label="是否法定">
-                {LEGAL_OPTIONS.map(option => (
-                  <button
-                    aria-pressed={isLegal === option.value}
-                    className={`segmented-item${(legalAllowed && isLegal) === option.value ? ' is-on' : ''}`}
-                    disabled={!legalAllowed}
-                    key={option.label}
-                    type="button"
-                    onClick={() => setIsLegal(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {leaveAllowed ? (
-              <div className="dialog-section">
-                <div className="section-head">
-                  <span className="section-title">事假时长</span>
-                  <span className="section-note">
-                    按 {LEAVE_HOURS[leaveDuration]} 小时从工资里扣
-                  </span>
+              <>
+                <div className="dialog-section">
+                  <div className="section-head">
+                    <span className="section-title">事假时长</span>
+                    <span className="section-note">
+                      按 {LEAVE_HOURS[leaveDuration]} 小时从工资里扣
+                    </span>
+                  </div>
+                  <div className="segmented segmented-sm" role="group" aria-label="事假时长">
+                    {LEAVE_DURATIONS.map(duration => (
+                      <button
+                        aria-pressed={leaveDuration === duration}
+                        className={`segmented-item${leaveDuration === duration ? ' is-on' : ''}`}
+                        key={duration}
+                        type="button"
+                        onClick={() => setLeaveDuration(duration)}
+                      >
+                        {duration}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="segmented segmented-sm" role="group" aria-label="事假时长">
-                  {LEAVE_DURATIONS.map(duration => (
-                    <button
-                      aria-pressed={leaveDuration === duration}
-                      className={`segmented-item${leaveDuration === duration ? ' is-on' : ''}`}
-                      key={duration}
-                      type="button"
-                      onClick={() => setLeaveDuration(duration)}
-                    >
-                      {duration}
-                    </button>
-                  ))}
+
+                {/* 事假不记加班与法定：用一张说明卡替代那两格，
+                    既解释了原因，也让班次页所有选中态保持同高 */}
+                <div className="dialog-section">
+                  <div className="section-head">
+                    <span className="section-title">加班与法定</span>
+                  </div>
+                  <p className="section-note">事假不记加班，也不参与法定节假日加班费计算。</p>
                 </div>
-              </div>
-            ) : null}
+              </>
+            ) : (
+              <>
+                <div className={`dialog-section${overtimeAllowed ? '' : ' is-disabled'}`}>
+                  <div className="section-head">
+                    <span className="section-title">加班</span>
+                    {/* 可录加班时不写「0.5h 步长，最多 24h」：预设胶囊 + 输入框自己说明问题，
+                        这行小字只是在标题右边添一段噪音；只有灰掉时才需要解释为什么不能填 */}
+                    {overtimeAllowed ? null : <span className="section-note">休息与事假不记加班</span>}
+                  </div>
+
+                  <div className="ot-row">
+                    <div className="ot-presets" role="group" aria-label="加班预设">
+                      {presets.map(hours => (
+                        <button
+                          aria-pressed={overtimeHours === hours}
+                          className={`chip-mini${overtimeHours === hours ? ' is-on' : ''}`}
+                          disabled={!overtimeAllowed}
+                          key={hours}
+                          type="button"
+                          onClick={() => pickPreset(hours)}
+                        >
+                          {formatOvertimeHours(hours)}
+                        </button>
+                      ))}
+                      {presets.length === 0 ? <span className="ot-empty">—</span> : null}
+                    </div>
+
+                    <label className="ot-input">
+                      <input
+                        aria-label="加班小时数"
+                        className="input input-compact"
+                        disabled={!overtimeAllowed}
+                        inputMode="decimal"
+                        min={0}
+                        max={MAX_OVERTIME_HOURS}
+                        step={OVERTIME_STEP}
+                        type="number"
+                        value={overtimeText}
+                        onChange={event => setOvertimeText(event.target.value)}
+                      />
+                      <span className="ot-unit">小时</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className={`dialog-section${legalAllowed ? '' : ' is-disabled'}`}>
+                  <div className="section-head">
+                    <span className="section-title">法定节假日</span>
+                  </div>
+                  <div className="segmented segmented-sm" role="group" aria-label="是否法定">
+                    {LEGAL_OPTIONS.map(option => (
+                      <button
+                        aria-pressed={isLegal === option.value}
+                        className={`segmented-item${(legalAllowed && isLegal) === option.value ? ' is-on' : ''}`}
+                        disabled={!legalAllowed}
+                        key={option.label}
+                        type="button"
+                        onClick={() => setIsLegal(option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
 
