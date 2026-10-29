@@ -23,6 +23,23 @@
   --accent: #1b6c80;
   --accent-weak: #eaf2f4;
 
+  /* 应用标识「昼夜分割」：深青盘当夜，暖沙当昼，夜里留一点星。
+   * 只服务侧栏字标与文档示意图，不参与界面语义配色。
+   * 与 design/logo/logo.svg 用同一组值 —— 改一处就要同时改那头。 */
+  --brand-ink: #143f4b;
+  --brand-night: #0b2c36;
+  --brand-day: #ffd9a0;
+  --brand-star: #eaf6f8;
+
+  /* 品牌名字体：衬线。与正文黑体拉开形态差别，让「昼夜」读起来是品牌，而不是一行界面文字。
+   * 回退链按「越像越好」排，且每一档都还是衬线 —— 缺字体只会换一款宋/衬线，不会跳回黑体：
+   *   Noto Serif SC（可变字重，400/500/600/700 四档各不相同，实测墨迹 636/712/796/872）
+   *   → 华文中宋 STZhongsong（Windows 自带，有旧式印刷味）
+   *   → Songti SC（macOS 自带）
+   *   → SimSun 宋体（Windows 保底，一定有）
+   * 全部为系统已装字体，不加载网络字体（file:// 离线可用的硬约束）。 */
+  --font-brand: "Noto Serif SC", "STZhongsong", "Songti SC", "SimSun", serif;
+
   --danger: #b42318;
   --danger-weak: #fdecea;
   --warning-ink: #92400e;

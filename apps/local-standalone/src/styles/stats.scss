@@ -542,6 +542,10 @@
  * auto 布局下列宽跟着内容跑，日期那列字最多就最宽，右边永远留着一段空白，
  * 整张表看着是「靠左堆着」而不是铺满。固定布局之后日期压最左、加班费压最右，
  * 两列都贴住卡片的左右边界。
+ *
+ * 两侧列刻意收窄（22% / 28%，而不是各 30%）：内容居中会停在列的几何中心，
+ * 列越窄，居中的内容才越靠近卡片边界；列宽不动就想「靠边」，只能靠改对齐方式，那就偏离居中了。
+ * 腾出的宽度给中间的班次列，它的胶囊本来就有余量。
  */
 .detail-table {
   width: 100%;
@@ -551,19 +555,19 @@
 }
 
 .detail-table th:nth-child(1) {
-  width: 30%;
-}
-
-.detail-table th:nth-child(2) {
   width: 22%;
 }
 
+.detail-table th:nth-child(2) {
+  width: 30%;
+}
+
 .detail-table th:nth-child(3) {
-  width: 18%;
+  width: 20%;
 }
 
 .detail-table th:nth-child(4) {
-  width: 30%;
+  width: 28%;
 }
 
 .detail-table th {
@@ -646,11 +650,12 @@
  * 三档是**三个色相**（见 tokens 里的 --pay-*），不是同一支色的深浅；
  * 单纯调明度在廉价屏上会糊成一片，扫一眼分不出哪天更值钱。
  *
- * min-width 让短的金额也撑出同样的胶囊宽度，整列居中时右边界仍是一条线。
+ * min-width 只用来把短金额撑齐，不是装饰：实测 12px 下最长的「999.99」自然宽 54.22px，
+ * 55px 正好既能兜住它，又让「68.66」对齐到同一条边。早先写 68px，比实际需要宽出 13px。
  */
 .pay-pill {
   display: inline-block;
-  min-width: 68px;
+  min-width: 55px;
   padding: 2px 9px;
   border-radius: 999px;
   background: var(--pay-1-bg);

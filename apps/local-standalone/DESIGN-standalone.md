@@ -56,6 +56,27 @@
 - 今天用 **2px 内阴影**（`inset 0 0 0 2px var(--ink)`）圈住，不用 `outline`：
   outline 画在盒外，落到小数坐标就会出毛边。
 
+### 应用标识
+
+一个圆，上半昼、下半夜，夜里留一点星。深青盘是为了让它在浅色桌面、任务栏和 16px 托盘上都立得住。
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `--brand-ink` | `#143f4b` | 圆角盘 |
+| `--brand-night` | `#0b2c36` | 夜半 |
+| `--brand-day` | `#ffd9a0` | 昼半 |
+| `--brand-star` | `#eaf6f8` | 星 |
+
+规则：
+
+- **母版唯一**：`design/logo/logo.svg`（192 基准网格，23% 圆角）。桌面图标、PWA 图标、侧栏 20px 字标全从它派生，不做第二套画法；
+- 改母版后必须重跑 `pnpm exec tauri icon design/logo/logo.svg -o desktop/src-tauri/icons`，
+  否则 `icon.ico` / `icon.icns` 会停在旧图；`public/icons/` 的 192 / 512 由 `icon.png` 等比缩放补出；
+- 换完图标文件后 **Rust 必须重编译一次**：窗口与任务栏图标是编译期由 `tauri-build` 嵌进二进制的，
+  运行时只认 binary 里那份。只动 `icons/` 不动源码，cargo 会判定无变更直接跳过，`tauri dev` 仍显示旧图。
+  先 touch `src/lib.rs` 再 `cargo build`，或直接 `cargo clean -p shift-schedule-desktop`；
+- **字标不简化**：20px 下那颗星缩成一个亮点，它正是「夜」的识别锚点；省掉就只剩一个两边明暗不同的点。
+
 ---
 
 ## 3. 排版

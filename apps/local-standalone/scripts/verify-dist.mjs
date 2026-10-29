@@ -1726,7 +1726,8 @@ async function runScenario(name, url, downloadDir) {
           detailLook.cellAlign.length === 4 &&
           detailLook.cellAlign.every(align => align === 'center') &&
           detailLook.pill && detailLook.pillAlign === 'center' &&
-          detailLook.pillW >= 68 && detailLook.pillCenterDelta <= 1 &&
+          detailLook.pillW >= 55 && detailLook.pillW <= 60 &&
+          detailLook.pillCenterDelta <= 1 &&
           detailLook.tableLayout === 'fixed' &&
           detailLook.leftGap === 0 && detailLook.rightGap === 0 &&
           detailLook.distinctTierBgs === 3,

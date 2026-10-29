@@ -30,56 +30,76 @@
   min-height: 0;
 }
 
+/* 品牌区：书脊。
+ * 不做块底，左侧一根 3px 深青竖条把品牌区「装订」起来，底部一根暖沙短线当记号 ——
+ * 靠记号而不是色块建立品牌感，侧栏保持通体浅色，不与白画布抢对比度。 */
 .rail-brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  height: 44px;
-  padding: 0 6px;
+  gap: 12px;
+  padding: 8px 6px 8px 12px;
   margin-bottom: 14px;
+  border-left: 3px solid var(--brand-ink);
 }
 
-/* 字标：一块小排班格（两条横线），不用黑方块加字母 */
+.rail-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* 暖沙短线：与日历里的加班橙、待办便签色同源，是反复出现的品牌记号。
+ * 宽度不写死，跟随文字块 —— 正好与「个人倒班记录本」等长，成为副标的下划线。 */
+.rail-brand-tick {
+  align-self: stretch;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--brand-day);
+}
+
+/* 字标：应用标识的缩版 —— 一个圆，上半昼、下半夜。
+ * 与桌面图标同源（design/logo/logo.svg），只缩不放，不做另一套画法；
+ * 那颗星是「夜」的识别锚点，缩到再小也要留着。 */
 .rail-mark {
-  position: relative;
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-  background: var(--accent);
+  display: block;
+  width: 45px;
+  height: 45px;
   flex: 0 0 auto;
 }
 
-.rail-mark::before,
-.rail-mark::after {
-  content: "";
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  height: 2px;
-  border-radius: 1px;
-  background: rgba(255, 255, 255, 0.92);
+.rail-mark-plate {
+  fill: var(--brand-ink);
 }
 
-.rail-mark::before {
-  top: 6px;
+.rail-mark-night {
+  fill: var(--brand-night);
 }
 
-.rail-mark::after {
-  top: 11px;
+.rail-mark-day {
+  fill: var(--brand-day);
 }
 
+.rail-mark-star {
+  fill: var(--brand-star);
+}
+
+/* 品牌名用衬线体 + 真 700。
+ * 字距 0.1em：中文衬线的字面本来就比黑体松，两字品牌再收紧会显得缩成一团；
+ * 拉开后「昼」「夜」各自成形，才像印章而不是两个挤在一起的方块。
+ * （正文字重 600 在雅黑下会被路由到 Bold；这里首选的是可变字重字体，写 700 才是真的 700） */
 .rail-name {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-brand);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: 0.1em;
 }
 
+/* 副标是说明，不是标签：去掉边框与底，用中性灰字退到第二层 */
 .rail-version {
-  padding: 0 4px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--faint);
-  font-size: 10px;
+  color: var(--muted);
+  font-size: 12px;
   line-height: 16px;
 }
 

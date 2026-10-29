@@ -124,9 +124,20 @@ export function Shell({
     <div className="app">
       <nav className="rail" aria-label="主导航">
         <div className="rail-brand">
-          <span className="rail-mark" aria-hidden="true" />
-          <span className="rail-name">昼夜</span>
-          <span className="rail-version">个人倒班记录本</span>
+          <svg className="rail-mark" viewBox="0 0 192 192" aria-hidden="true" focusable="false">
+            <rect className="rail-mark-plate" width="192" height="192" rx="44" />
+            <circle className="rail-mark-night" cx="96" cy="96" r="58" />
+            <path className="rail-mark-day" d="M38 96a58 58 0 0 1 116 0Z" />
+            <path
+              className="rail-mark-star"
+              d="M96 106Q96 124 114 124Q96 124 96 142Q96 124 78 124Q96 124 96 106Z"
+            />
+          </svg>
+          <div className="rail-brand-text">
+            <span className="rail-name">昼夜</span>
+            <span className="rail-version">个人倒班记录本</span>
+            <span className="rail-brand-tick" aria-hidden="true" />
+          </div>
         </div>
 
         <div className="rail-nav">
