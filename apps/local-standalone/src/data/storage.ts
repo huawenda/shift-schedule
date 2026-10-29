@@ -23,7 +23,13 @@ export const STORAGE_KEYS = {
    * **刻意不放进 roster**：路径是「这台电脑」的属性，跟着备份文件换机器只会指到
    * 一个不存在的目录。所以它单独一个键，也不进导出的 JSON。
    */
-  backupDir: 'shift-schedule:local:backup-dir:v1'
+  backupDir: 'shift-schedule:local:backup-dir:v1',
+  /**
+   * 关闭主窗口的行为（`exit` / `tray`）。
+   *
+   * 和备份目录一样属于「这台电脑」的偏好，不进备份文件，也不跟着换机器走。
+   */
+  closeBehavior: 'shift-schedule:local:close-behavior:v1'
 } as const
 
 function getBrowserStorage(): Storage | null {

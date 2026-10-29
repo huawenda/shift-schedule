@@ -30,10 +30,20 @@ interface TauriPathApi {
   downloadDir?: () => Promise<string>
 }
 
+interface TauriWindowHandle {
+  /** 改原生窗口标题（任务栏显示的就是它） */
+  setTitle?: (title: string) => Promise<void>
+}
+
+interface TauriWindowApi {
+  getCurrentWindow?: () => TauriWindowHandle
+}
+
 interface TauriGlobal {
   core?: TauriCoreApi
   dialog?: TauriDialogApi
   path?: TauriPathApi
+  window?: TauriWindowApi
 }
 
 declare global {

@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  TODO_TONES,
   groupTodosByDate,
   normalizeTodo,
   normalizeTodos,
   summarizeTodos,
+  todoToneFromId,
   todosOfDate,
-  type Todo
+  type Todo,
+  type TodoTone
 } from './todos'
 import { addTodo, removeTodo, toggleTodo, type Roster } from './roster'
 
@@ -23,6 +26,7 @@ function todo(over: Partial<Todo> = {}): Todo {
     id: 't-1',
     date: '2026-10-22',
     text: '交班记录表',
+    tone: 1,
     done: false,
     createdAt: 1000,
     ...over
@@ -58,6 +62,17 @@ describe('待办归一化', () => {
   it('done 只认 true，其它值都当未完成', () => {
     expect(normalizeTodo({ ...todo(), done: true })?.done).toBe(true)
     expect(normalizeTodo({ ...todo(), done: 'yes' as unknown as boolean })?.done).toBe(false)
+  })
+
+  it('缺 tone 或 tone 非法时按 id 稳定分配颜色', () => {
+    const missing = normalizeTodo({ ...todo(), tone: undefined } as unknown)
+    expect(missing?.tone).toBe(todoToneFromId('t-1'))
+
+    const invalid = normalizeTodo({ ...todo(), tone: 99 as unknown as TodoTone })
+    expect(invalid?.tone).toBe(todoToneFromId('t-1'))
+
+    // 同一份数据两次归一化必须同色，不能每次加载都变
+    expect(normalizeTodo({ ...todo(), tone: undefined } as unknown)?.tone).toBe(missing?.tone)
   })
 
   it('数组归一化：丢掉脏数据、按 id 去重、按日期排序', () => {
@@ -112,6 +127,16 @@ describe('待办的增删改', () => {
     expect(next.todos[0].text).toBe('交班记录表')
     expect(next.todos[0].done).toBe(false)
     expect(next.todos[0].date).toBe('2026-10-22')
+    expect(TODO_TONES).toContain(next.todos[0].tone)
+  })
+
+  it('新增待办取色会避开上一条的颜色', () => {
+    const withOne = { ...base, todos: [todo({ id: 't-old', tone: 3 })] }
+    const next = addTodo(withOne, '2026-10-23', '新待办')
+    const added = next.todos.find(item => item.id !== 't-old')
+    expect(added).toBeTruthy()
+    expect(TODO_TONES).toContain(added!.tone)
+    expect(added!.tone).not.toBe(3)
   })
 
   it('正文为空则什么都不做', () => {

@@ -17,7 +17,7 @@ import {
   type SalaryInput,
   type SelfIdentity
 } from './profile'
-import { createTodoId, normalizeTodos, sortTodos, type Todo } from './todos'
+import { createTodoId, normalizeTodos, pickTodoTone, sortTodos, type Todo } from './todos'
 
 /**
  * 花名册：自定义班序 + 成员 + 改班记录。
@@ -648,10 +648,14 @@ export function saveSalary(roster: Roster, salary: SalaryInput): Roster {
 export function addTodo(roster: Roster, date: string, text: string): Roster {
   const body = text.trim()
   if (!body) return roster
+
+  // 便笺色随机，但避开列表里上一条的颜色，避免相邻两条撞色
+  const previousTone = roster.todos.length > 0 ? roster.todos[roster.todos.length - 1].tone : undefined
   const todo: Todo = {
     id: createTodoId(),
     date,
     text: body,
+    tone: pickTodoTone(previousTone),
     done: false,
     createdAt: Date.now()
   }

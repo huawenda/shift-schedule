@@ -1,4 +1,4 @@
-# 倒班表 · 本地版（standalone）
+# 昼夜 · 个人倒班记录本（standalone）
 
 一个**可分发**的离线排班工具：不联网、不登录、没有账号和后端，把整包拷到任何
 Windows 电脑上就能用。数据只留在那台机器上 —— 浏览器打开时存在那个浏览器的
@@ -169,7 +169,7 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 
 | 区域 | 尺寸 | 内容 |
 |---|---|---|
-| 侧栏 | 228px | 品牌「倒班表 · 本地版」／**全员矩阵**／**月度概览**／**设置**，底部一行「N 位成员 · 数据只存在这台电脑」 |
+| 侧栏 | 228px | 品牌「昼夜 · 个人倒班记录本」／**全员矩阵**／**月度概览**／**设置**，底部一行「N 位成员 · 数据只存在这台电脑」 |
 | 顶栏 | 48px | `‹` 月份标题 `›`「回到本期」，右侧：存储状态 · 导出备份 · 导入备份 |
 | 画布头部 | — | 页面标题 + 副标题（日期区间 · 天数 · 人数/本人） |
 | 概览条 | 3 格 | **只在全员矩阵页**：今日白班（含白特）/ 夜班（含夜特）/ 休息 |
@@ -197,7 +197,8 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
   不与右上角的角标挤在一起。
 - **待办卡片**（日历右侧，宽约 240）：
   列出**本月全部**待办，按日期分组；每条前面一个勾选框，**在卡片里就能直接勾选完成**。
-  高度与日历等高，右边界与下方统计块对齐。
+  每条待办新增时随机分配一个浅色便笺底（6 色，避开上一条），颜色随记录持久化；
+  完成后保留底色，文字划线并压淡。高度与日历等高，右边界与下方统计块对齐。
   待办只给本人用（挂在 `Roster` 顶层，不带 memberId），与考勤记录**互不影响**：
   记一条待办不动班次，换本人也不清待办。
 - **四块统计**（日历下方，2 × 2）：
@@ -233,7 +234,7 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
     列表超出时只在列表内部滚动，切换两个页签弹层高度不变。
     `Esc`、点遮罩、点取消都能关。
 - **设置页分两页**（页内 tab，默认「人员配置」）：
-  **人员配置** = 班序 + 成员；**个人资料** = 个人信息 + 备份 + 清空。
+  **人员配置** = 班序 + 成员；**个人资料** = 个人信息 + 窗口（仅桌面壳）+ 备份 + 清空。
   分页只切渲染分支，成员表的草稿留在父组件里，所以切页不会丢未保存的改动。
 - **「班序」**（人员配置页）：13 条内置平铺成 4 列的色条卡片（点开看 24 格，只读）；
   下面是自建班序列表（名称 + 24 格色条 + 用了几个人的 + 查看/编辑/删除），底部「新建班序」。
@@ -280,7 +281,7 @@ localStorage 不可用时（隐私模式、`file://` 的某些配置）自动退
     ],
     "patterns": [{ "id": "cp-abc123", "name": "甲班", "shifts": ["夜班", "…共 24 项"] }],
     "todos": [
-      { "id": "t-1", "date": "2026-10-25", "text": "交班记录表", "done": false, "createdAt": 1765000000000 }
+      { "id": "t-1", "date": "2026-10-25", "text": "交班记录表", "tone": 1, "done": false, "createdAt": 1765000000000 }
     ],
     "profile": {
       "memberId": "m1",
@@ -295,7 +296,8 @@ localStorage 不可用时（隐私模式、`file://` 的某些配置）自动退
   `memberId` 指向的成员不存在时整个 profile 归零，而不是让导入失败
 - **`todos` 也带上**：待办清单。缺失时恢复成空清单，不影响其它数据
 - **版本号必须等于 5**：别的版本一律明确报「备份文件是 vN，当前版本只认 v5」
-- `overtimeHours` / `isLegal` / `position` 是**可选字段**，所以这些功能没有升版本号
+- `overtimeHours` / `isLegal` / `position` / `tone` 是**可选字段**，所以这些功能没有升版本号；
+  旧待办没有 `tone` 时按 id 稳定散列分配便笺色，同一份备份每次导入颜色一致
 - **不兼容旧格式**（开发阶段的明确决定）：见到顶层数组或 `dayRecords` 这类老结构，
   一律报「这是旧版本的备份文件」，不猜、不迁移。升级结构时直接改 `version` 即可，
   不需要为旧文件写适配层 —— 现在没有真实用户，也就没有值得保留的数据。
@@ -330,7 +332,7 @@ src/
 │   ├── backup.ts            导出 / 导入（只认当前格式）
 │   ├── dateUtils.ts         日期键、加减天、模运算
 │   ├── calendarMeta.ts      农历与节日角标（lunar-javascript）
-│   ├── todos.ts             待办：归一化、排序、按日期分组
+│   ├── todos.ts             待办：归一化、排序、按日期分组、便笺色分配
 │   ├── backupDir.ts         备份默认目录（仅桌面壳）+ 写盘
 │   └── env.ts               运行环境判断（Tauri 壳 / 浏览器）
 ├── hooks/
@@ -440,6 +442,9 @@ pnpm --filter shift-schedule-local desktop:build   # NSIS 安装包（需代理�
 数据在两侧不互通（浏览器 localStorage vs 壳内 WebView2 用户目录）。
 窗口主题、最小尺寸、备份在壳内的待办等细节见 [`desktop/README.md`](./desktop/README.md)。
 
+桌面壳常驻托盘：左键单击显示并聚焦窗口，右键菜单可「显示 / 隐藏主窗口」与「退出」。
+关闭按钮默认直接退出；可在 设置 → 个人资料 → 窗口 改成「隐藏到托盘」，程序继续在后台运行。
+
 ---
 
 ## 9. 命令
@@ -451,7 +456,7 @@ pnpm dev:lan         # 同上 + 绑 0.0.0.0
 pnpm build           # tsc --noEmit + vite build → dist/
 pnpm preview         # 预览产物 6181
 pnpm typecheck       # tsc --noEmit
-pnpm test            # vitest run（221 个用例）
+pnpm test            # vitest run（223 个用例）
 pnpm verify:dist     # 无头浏览器真跑一遍产物（**412 项**）：向导（本人→同事）→默认落月度概览→四块统计空态→矩阵/日历锁本人→薪资落盘→改班→加班（统计与加班费同步）→半天事假（扣款）→换人确认→建班序→导出 v5→删班序→翻月→导入 13 人→排序
 pnpm verify:tauri    # 壳内验收（release exe + WebView2 调试口）：建人→改班→导出→重启读回→导入
 ```
@@ -464,8 +469,8 @@ pnpm verify:tauri    # 壳内验收（release exe + WebView2 调试口）：建�
 
 仓库根还有 `pnpm dev:local`，等价于本目录的 `pnpm dev`。
 
-`pnpm test` 覆盖 11 个数据层文件共 **221 个用例**
-（period 13 / patterns 8 / customPatterns 23 / overtime 15 / roster 45 / backup 19 / self 30 / stats 37 / leave 7 / todos 16 / backupDir 8），
+`pnpm test` 覆盖 11 个数据层文件共 **223 个用例**
+（period 13 / patterns 8 / customPatterns 23 / overtime 15 / roster 45 / backup 19 / self 30 / stats 37 / leave 7 / todos 18 / backupDir 8），
 断言的都是一旦改坏就会静默出错的规则：结算月天数与跨年、班序 24 天一循环、
 同一班序多人同班次、**「班次与模板相同但记了加班」的记录不能被删**、
 休息/事假上的加班要被拒绝、旧格式备份必须被明确拒绝、

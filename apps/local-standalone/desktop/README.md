@@ -58,6 +58,15 @@ vite 的热更不覆盖这些文件。
 | 最小尺寸 | 1466 × 720 | 再窄侧栏与版心会互相挤压；高度取 720 是为了 1366×768 的办公屏也放得下 |
 | `theme` | **Light** | 页面本身是浅色。设成 Dark 会让标题栏和系统控件走暗色，在廉价办公屏上和内容打架——这条与全站浅色硬约束冲突，别改回去 |
 
+## 托盘与关闭行为
+
+- **托盘图标**：常驻任务栏通知区域，悬停提示「昼夜 · 个人倒班记录本」
+- **左键单击**：显示主窗口、取消最小化并聚焦
+- **右键菜单**：`显示 / 隐藏主窗口`、`退出`
+- **关闭按钮**：默认直接退出；设置 → 个人资料 → 窗口 可改为「隐藏到托盘」，
+  前端通过自定义命令 `set_close_to_tray` 把偏好同步给 Rust，关闭时由 `on_window_event` 拦截
+- 托盘依赖 `tauri` 的 `tray-icon` feature；改完 Rust 或能力配置后要重启 `desktop:dev` / 重新打包
+
 ## `devUrl` 为什么必须带 `/index.html`
 
 `base: './'`，裸路径 `/` 会 404，`tauri dev` 就会一直打印
@@ -124,8 +133,8 @@ pnpm verify:tauri    # = node scripts/verify-tauri-shell.mjs
 ## 产物
 
 - 可执行文件：`src-tauri/target/release/` 下，文件名取 `tauri.conf.json` 的
-  `mainBinaryName`（当前是 `倒班表.exe`）
-- 安装包：`src-tauri/target/release/bundle/nsis/倒班表_1.0.0_x64-setup.exe`
+  `mainBinaryName`（当前是 `昼夜.exe`）
+- 安装包：`src-tauri/target/release/bundle/nsis/昼夜_1.0.0_x64-setup.exe`
 
 （包名由 `productName` + `version` 拼出，以实际产物为准。）
 

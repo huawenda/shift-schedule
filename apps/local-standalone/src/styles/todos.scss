@@ -142,29 +142,46 @@
 .todo-items {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* 便笺底色：与数据层 TODO_TONES 一一对应；卡片与弹层共用同一套色 */
+.todo-tone-1 { --todo-bg: var(--todo-tone-1-bg); --todo-ink: var(--todo-tone-1-ink); }
+.todo-tone-2 { --todo-bg: var(--todo-tone-2-bg); --todo-ink: var(--todo-tone-2-ink); }
+.todo-tone-3 { --todo-bg: var(--todo-tone-3-bg); --todo-ink: var(--todo-tone-3-ink); }
+.todo-tone-4 { --todo-bg: var(--todo-tone-4-bg); --todo-ink: var(--todo-tone-4-ink); }
+.todo-tone-5 { --todo-bg: var(--todo-tone-5-bg); --todo-ink: var(--todo-tone-5-ink); }
+.todo-tone-6 { --todo-bg: var(--todo-tone-6-bg); --todo-ink: var(--todo-tone-6-ink); }
+
+.todo-item,
+.todo-list-item {
+  background: var(--todo-bg, transparent);
+  color: var(--todo-ink, var(--text));
+}
+
 /*
- * 每条待办做成一行「可点区域」：左右内边距 + 负外边距往两侧撑开，
- * 这样悬停底色能盖满整行，文字起点却不动。
+ * 卡片里的待办是一张内缩的便笺，而不是贴着卡片边缘的色条：
+ * - 不再用负外边距向外撑，底色从内容区左边界开始；
+ * - 左内边距 8px，让勾选框离便笺左框线有明确距离，圆角不会和它挤在一起。
  */
 .todo-item {
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  margin: 0 -6px;
-  padding: 3px 6px;
-  border-radius: 5px;
+  margin: 0;
+  padding: 5px 8px;
+  border-radius: 6px;
   font-size: 12px;
   line-height: 1.5;
 }
 
-.todo-item:hover {
-  background: var(--raised);
+/* 悬停：在便笺底色上叠一层极淡的暗色，而不是把底色替换成灰 */
+.todo-item:hover,
+.todo-list-item:hover {
+  background-image: linear-gradient(rgba(19, 20, 22, 0.035), rgba(19, 20, 22, 0.035));
 }
 
 /* 勾选框：用一个空心方块，已完成时打勾。
@@ -205,10 +222,11 @@
   word-break: break-word;
 }
 
-/* 已完成：划线 + 置灰（卡片与弹层共用同一套，弹层里以前漏了这条） */
+/* 已完成：保留便笺底色，文字划线并压淡（卡片与弹层共用同一套） */
 .todo-item.is-done .todo-text,
 .todo-list-item.is-done .todo-text {
-  color: var(--faint);
+  color: var(--todo-ink, var(--faint));
+  opacity: 0.55;
   text-decoration: line-through;
 }
 
@@ -304,7 +322,7 @@
 .todo-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -322,10 +340,6 @@
   line-height: 1.5;
 }
 
-.todo-list-item:hover {
-  background: var(--raised);
-}
-
 .todo-list-item .todo-text {
   /* flex-basis 0 → 文字撑满剩余宽度，删除按钮永远在最右 */
   flex: 1 1 0;
@@ -340,15 +354,17 @@
   border: 0;
   border-radius: 3px;
   background: transparent;
-  color: var(--faint);
+  color: var(--todo-ink, var(--faint));
   font-size: 14px;
   line-height: 18px;
+  opacity: 0.55;
   cursor: pointer;
 }
 
-.todo-remove:hover {
-  background: var(--raised);
+.todo-list-item .todo-remove:hover {
+  background: rgba(255, 255, 255, 0.6);
   color: var(--danger);
+  opacity: 1;
 }
 
 /* 弹层底部的说明文字 */

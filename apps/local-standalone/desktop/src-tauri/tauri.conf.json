@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "倒班表",
-  "mainBinaryName": "倒班表",
+  "productName": "昼夜",
+  "mainBinaryName": "昼夜",
   "version": "1.0.0",
   "identifier": "com.huawenda.shiftschedule",
 
@@ -15,7 +15,7 @@
   "app": {
     "windows": [
       {
-        "title": "倒班表 · 本地版",
+        "title": "月度概览",
         "width": 1466,
         "height": 900,
         "minWidth": 1466,
@@ -46,10 +46,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "copyright": "倒班表 · 本地版",
+    "copyright": "昼夜 · 个人倒班记录本",
     "category": "Productivity",
-    "shortDescription": "离线排班工具：班序固定，成员自定义",
-    "longDescription": "纯本地运行的倒班排班工具：13 条固定班序模板，成员姓名与人数由使用者自定义。数据只存在本机，不做任何网络请求。",
+    "shortDescription": "个人倒班记录工具：班序固定，成员自定义",
+    "longDescription": "个人倒班记录工具：13 条固定班序模板，成员姓名与人数由使用者自定义，数据保存在本机。",
     "windows": {
       "nsis": {
         "installMode": "currentUser",

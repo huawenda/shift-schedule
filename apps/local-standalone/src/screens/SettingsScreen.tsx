@@ -19,6 +19,12 @@ import {
 } from '../data/patterns'
 import type { SalaryInput, SelfIdentity } from '../data/profile'
 import { countOverrides, getSelf, validateMembers, type Member, type Roster } from '../data/roster'
+import {
+  getCloseBehavior,
+  setCloseBehavior as saveCloseBehavior,
+  syncCloseBehaviorToShell,
+  type CloseBehavior
+} from '../data/windowPrefs'
 
 /** 设置分两页：班序与成员占满屏，个人信息/备份/清空放另一页，各自不再互相挤压 */
 export type SettingsTab = 'roster' | 'profile'
@@ -70,6 +76,7 @@ export function SettingsScreen({
   const [confirmText, setConfirmText] = useState('')
   const [flash, setFlash] = useState('')
   const [backupDir, setBackupDirState] = useState<string | null>(() => getBackupDir())
+  const [closeBehavior, setCloseBehaviorState] = useState<CloseBehavior>(() => getCloseBehavior())
   /** 系统「下载」夹的真实路径（只有壳里拿得到），没设默认目录时用它当占位 */
   const [downloadDir, setDownloadDir] = useState<string | null>(null)
   /** 浏览器里没法让用户挑目录（<a download> 只能进下载夹），所以这一行要置灰 */
@@ -139,6 +146,12 @@ export function SettingsScreen({
     saveBackupDir(null)
     setBackupDirState(null)
     setFlash(`已恢复默认：导出会存到 ${downloadDir ?? '系统「下载」文件夹'}。`)
+  }
+
+  function changeCloseBehavior(next: CloseBehavior) {
+    setCloseBehaviorState(next)
+    saveCloseBehavior(next)
+    syncCloseBehaviorToShell(next)
   }
 
   function update(next: MemberRow[]) {
@@ -275,6 +288,43 @@ export function SettingsScreen({
               onSaveSelf={onSaveSelf}
             />
 
+            {isTauriShell() ? (
+              <section className="settings-section">
+                <div className="settings-label">
+                  <h2>窗口</h2>
+                  <p>关闭主窗口时怎么处理。</p>
+                </div>
+
+                <div className="settings-panel">
+                  <div className="settings-actions">
+                    <div className="segmented" role="group" aria-label="关闭主窗口时">
+                      <button
+                        aria-pressed={closeBehavior === 'exit'}
+                        className={`segmented-item${closeBehavior === 'exit' ? ' is-on' : ''}`}
+                        type="button"
+                        onClick={() => changeCloseBehavior('exit')}
+                      >
+                        直接退出
+                      </button>
+                      <button
+                        aria-pressed={closeBehavior === 'tray'}
+                        className={`segmented-item${closeBehavior === 'tray' ? ' is-on' : ''}`}
+                        type="button"
+                        onClick={() => changeCloseBehavior('tray')}
+                      >
+                        隐藏到托盘
+                      </button>
+                    </div>
+                  </div>
+                  <p className="settings-hint">
+                    {closeBehavior === 'tray'
+                      ? '关闭窗口后程序继续在托盘运行；点任务栏托盘图标可重新打开，退出请用托盘菜单。'
+                      : '关闭窗口即退出程序。'}
+                  </p>
+                </div>
+              </section>
+            ) : null}
+
             <section className="settings-section">
               <div className="settings-label">
                 <h2>备份</h2>
@@ -287,7 +337,13 @@ export function SettingsScreen({
                 */}
                 <p>
                   {isTauriShell()
-                    ? '数据只保存在这台电脑的应用数据里（不联网、不上传）。换电脑、重装或清理应用数据前，请先导出。'
+                    ? (
+                      <>
+                        数据只保存在电脑本地，不联网、不上传。
+                        <br />
+                        卸载、重装或清理应用数据前，请先导出备份。
+                      </>
+                    )
                     : '数据只保存在这台电脑的这个浏览器里（按站点分开）。换电脑、换浏览器或清除站点数据前，请先导出。'}
                 </p>
                 <p className="settings-meta">

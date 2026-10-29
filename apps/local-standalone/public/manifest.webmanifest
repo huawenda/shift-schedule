@@ -1,7 +1,7 @@
 {
-  "name": "倒班表 · 本地版",
-  "short_name": "倒班表",
-  "description": "倒班排班 · 纯本地版：班序固定，成员自定义",
+  "name": "昼夜 · 个人倒班记录本",
+  "short_name": "昼夜",
+  "description": "个人倒班记录工具：班序固定，成员自定义",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

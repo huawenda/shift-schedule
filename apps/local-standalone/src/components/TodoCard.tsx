@@ -43,7 +43,7 @@ export function TodoCard({ todos, onToggle }: TodoCardProps) {
                 </p>
                 <ul className="todo-items">
                   {group.todos.map(todo => (
-                    <li className={`todo-item${todo.done ? ' is-done' : ''}`} key={todo.id}>
+                    <li className={`todo-item todo-tone-${todo.tone}${todo.done ? ' is-done' : ''}`} key={todo.id}>
                       <button
                         aria-label={`${todo.done ? '取消完成' : '标记完成'}：${todo.text}`}
                         aria-pressed={todo.done}

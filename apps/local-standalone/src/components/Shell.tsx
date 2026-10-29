@@ -125,8 +125,8 @@ export function Shell({
       <nav className="rail" aria-label="主导航">
         <div className="rail-brand">
           <span className="rail-mark" aria-hidden="true" />
-          <span className="rail-name">倒班表</span>
-          <span className="rail-version">本地版</span>
+          <span className="rail-name">昼夜</span>
+          <span className="rail-version">个人倒班记录本</span>
         </div>
 
         <div className="rail-nav">

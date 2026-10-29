@@ -95,7 +95,7 @@ export function parseBackup(text: string): ImportResult {
 
   const record = parsed as Record<string, unknown>
   if (typeof record.app === 'string' && record.app !== BACKUP_APP_ID) {
-    throw new Error('这个备份文件不是「倒班表 · 本地版」导出的')
+    throw new Error('这个备份文件不是「昼夜」导出的')
   }
 
   if (record.dayRecords !== undefined) {
@@ -131,5 +131,5 @@ export function buildBackupFileName(date: Date): string {
     pad(date.getDate())
   ].join('') + '-' + [pad(date.getHours()), pad(date.getMinutes())].join('')
 
-  return `倒班表-备份-${stamp}.json`
+  return `昼夜-备份-${stamp}.json`
 }

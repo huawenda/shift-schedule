@@ -26,7 +26,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 const PORT = 9333
-const DEFAULT_EXE = path.resolve('desktop/src-tauri/target/release/倒班表.exe')
+const DEFAULT_EXE = path.resolve('desktop/src-tauri/target/release/昼夜.exe')
 
 const args = process.argv.slice(2)
 const exePath = (() => {

@@ -74,7 +74,7 @@ describe('backup 当前格式', () => {
 
   it('拒收别的应用导出的文件', () => {
     const text = JSON.stringify({ app: 'someone-else', version: 5, roster: { members: [], overrides: [] } })
-    expect(() => parseBackup(text)).toThrow('不是「倒班表 · 本地版」导出的')
+    expect(() => parseBackup(text)).toThrow('不是「昼夜」导出的')
   })
 
   it('非法 JSON 给出中文错误', () => {
@@ -127,9 +127,9 @@ describe('待办的备份往返', () => {
   const withTodos: Roster = {
     ...roster,
     todos: [
-      { id: 't-1', date: '2026-10-21', text: '交班记录表', done: false, createdAt: 1765000000000 },
-      { id: 't-2', date: '2026-10-21', text: '买台灯', done: true, createdAt: 1765000001000 },
-      { id: 't-3', date: '2026-10-25', text: '年休申请', done: false, createdAt: 1765000002000 }
+      { id: 't-1', date: '2026-10-21', text: '交班记录表', tone: 1, done: false, createdAt: 1765000000000 },
+      { id: 't-2', date: '2026-10-21', text: '买台灯', tone: 2, done: true, createdAt: 1765000001000 },
+      { id: 't-3', date: '2026-10-25', text: '年休申请', tone: 3, done: false, createdAt: 1765000002000 }
     ]
   }
 

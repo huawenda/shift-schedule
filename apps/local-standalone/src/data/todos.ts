@@ -11,6 +11,36 @@
  * - 待办与班次记录**互不影响**：记一条待办不会动班次，也不会清掉加班/法定
  */
 
+/**
+ * 便笺底色：1–6 号浅色。
+ * 颜色只是视觉装饰（便于在列表里区分条目），不承载任何语义。
+ */
+export type TodoTone = 1 | 2 | 3 | 4 | 5 | 6
+
+export const TODO_TONES: readonly TodoTone[] = [1, 2, 3, 4, 5, 6]
+
+export function isTodoTone(value: unknown): value is TodoTone {
+  return typeof value === 'number' && (TODO_TONES as readonly number[]).includes(value)
+}
+
+/**
+ * 旧数据没有 tone 时按 id 稳定散列取色。
+ * 不能用随机：否则每次加载 / 导入同一份备份，颜色都会变。
+ */
+export function todoToneFromId(id: string): TodoTone {
+  let hash = 0
+  for (let index = 0; index < id.length; index += 1) {
+    hash = (hash * 31 + id.charCodeAt(index)) >>> 0
+  }
+  return TODO_TONES[hash % TODO_TONES.length]
+}
+
+/** 新增待办时随机取色；避开上一条的颜色，避免相邻两条撞色 */
+export function pickTodoTone(previous?: TodoTone): TodoTone {
+  const candidates = previous ? TODO_TONES.filter(tone => tone !== previous) : TODO_TONES
+  return candidates[Math.floor(Math.random() * candidates.length)]
+}
+
 /** 一条待办 */
 export interface Todo {
   id: string
@@ -18,6 +48,8 @@ export interface Todo {
   date: string
   /** 事项正文，trim 后不能为空 */
   text: string
+  /** 便笺底色，新增时随机分配，之后固定不变 */
+  tone: TodoTone
   /** 是否已完成 */
   done: boolean
   /** 记录时的毫秒时间戳（同一排序时用 id 兜底） */
@@ -68,6 +100,8 @@ export function normalizeTodo(value: unknown): Todo | null {
     id,
     date,
     text: text.slice(0, MAX_TODO_TEXT),
+    // 旧备份没有 tone：按 id 稳定分配，保证同一份数据每次颜色一致
+    tone: isTodoTone(record.tone) ? record.tone : todoToneFromId(id),
     done: record.done === true,
     createdAt:
       typeof record.createdAt === 'number' && Number.isFinite(record.createdAt)

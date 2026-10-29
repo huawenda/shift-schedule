@@ -1,4 +1,4 @@
-// 倒班表 · 本地版 —— Tauri 壳。
+// 昼夜 · 个人倒班记录本 —— Tauri 壳。
 //
 // 壳本身不碰任何业务逻辑：班序展开、成员与改班记录全在前端 src/data/ 里
 // （纯 TS，有单测覆盖），这个 crate 只负责开一个窗口、把前端资源挂上去。
@@ -17,8 +17,33 @@
 // release 版不弹命令行窗口，属性在 main.rs 上（那是应用二进制的入口）；
 // debug 构建（tauri dev）保留控制台，便于看启动日志与报错。
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Manager, State, WindowEvent};
 use tauri_plugin_dialog::init as init_dialog;
 use tauri_plugin_fs::init as init_fs;
+
+/// 关闭按钮行为。
+///
+/// 默认 `false` = 直接退出，保持加托盘之前的行为；
+/// 用户可在设置页改成 `true` = 隐藏到托盘，由前端通过 `set_close_to_tray` 同步。
+struct ClosePrefs(AtomicBool);
+
+#[tauri::command]
+fn set_close_to_tray(state: State<'_, ClosePrefs>, enabled: bool) {
+    state.0.store(enabled, Ordering::Relaxed);
+}
+
+/// 从托盘 / 菜单唤回主窗口：先显示、再取消最小化、最后聚焦。
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
 
 /// 把备份写进用户指定的目录，返回完整路径。
 ///
@@ -52,10 +77,64 @@ fn save_backup_to(dir: String, file_name: String, contents: String) -> Result<St
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(ClosePrefs(AtomicBool::new(false)))
         // 备份导出/导入的原生对话框与文件读写。
         .plugin(init_dialog())
         .plugin(init_fs())
-        .invoke_handler(tauri::generate_handler![save_backup_to])
+        .setup(|app| {
+            let toggle = MenuItem::with_id(app, "toggle", "显示 / 隐藏主窗口", true, None::<&str>)?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&toggle, &separator, &quit])?;
+
+            let mut tray = TrayIconBuilder::new()
+                .menu(&menu)
+                // 左键留给「显示并聚焦」，右键才弹菜单
+                .show_menu_on_left_click(false)
+                .tooltip("昼夜 · 个人倒班记录本")
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "toggle" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let visible = window.is_visible().unwrap_or(true);
+                            if visible {
+                                let _ = window.hide();
+                            } else {
+                                show_main_window(app);
+                            }
+                        }
+                    }
+                    "quit" => app.exit(0),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_main_window(tray.app_handle());
+                    }
+                });
+
+            if let Some(icon) = app.default_window_icon() {
+                tray = tray.icon(icon.clone());
+            }
+            tray.build(app)?;
+            Ok(())
+        })
+        // 关闭按钮：设置为「隐藏到托盘」时拦截关闭，只隐藏窗口；
+        // 其它情况保持默认行为 —— 关掉最后一个窗口即退出进程。
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                let prefs = window.state::<ClosePrefs>();
+                if prefs.0.load(Ordering::Relaxed) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
+        .invoke_handler(tauri::generate_handler![save_backup_to, set_close_to_tray])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 窗口失败");
 }

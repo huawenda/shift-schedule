@@ -19,8 +19,8 @@ describe('备份默认存放目录', () => {
   })
 
   it('存进去能读回来，首尾空白会被去掉', () => {
-    setBackupDir('  D:\\备份\\倒班表  ')
-    expect(getBackupDir()).toBe('D:\\备份\\倒班表')
+    setBackupDir('  D:\\备份\\昼夜  ')
+    expect(getBackupDir()).toBe('D:\\备份\\昼夜')
   })
 
   it('恢复默认 = 清掉，而不是写空串', () => {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 一键拉起「倒班表 · 本地版」开发服务器。
+ * 一键拉起「昼夜 · 个人倒班记录本」开发服务器。
  *
  * 为什么不直接 `vite`：
  *   1. 端口锁在 6180。vite 默认 5173，而 apps/web 的 dev 在 6173，混起来容易开错窗口。
@@ -70,7 +70,7 @@ const cyan = text => paint('36', text)
 
 function printHelp() {
   console.log(`
-${bold('倒班表 · 本地版')} 开发服务器
+${bold('昼夜 · 个人倒班记录本')} 开发服务器
 
 ${bold('用法')}
   pnpm dev [选项]
@@ -123,7 +123,7 @@ async function main() {
   }
 
   console.log('')
-  console.log(`  ${bold('倒班表 · 本地版')}`)
+  console.log(`  ${bold('昼夜 · 个人倒班记录本')}`)
   console.log('')
 
   // 端口被占用时先讲清楚原因，再交给 vite 顺延

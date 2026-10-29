@@ -21,6 +21,7 @@ import {
 import { emptySalary, type SelfIdentity } from './data/profile'
 import { formatOvertimeHours } from './data/overtime'
 import { SHIFT_META, type ShiftType } from './data/shifts'
+import { getCloseBehavior, syncCloseBehaviorToShell } from './data/windowPrefs'
 import { useRoster } from './hooks/useRoster'
 
 /** 从哪儿点开的格子：矩阵只能改班次，概览页的日历能记加班 */
@@ -36,6 +37,13 @@ function routeHash(route: Route): string {
   if (route === 'settings') return '#/settings'
   if (route === 'matrix') return '#/matrix'
   return '#/overview'
+}
+
+/** 任务栏 / 浏览器标签页直接显示当前视图名，不再带应用名前缀 */
+const ROUTE_TITLE: Record<Route, string> = {
+  overview: '月度概览',
+  matrix: '全员矩阵',
+  settings: '设置'
 }
 
 export function App() {
@@ -57,6 +65,20 @@ export function App() {
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  // 标题跟随当前视图：浏览器标签页用 document.title，
+  // 桌面壳用 Tauri 的窗口 API（任务栏显示的是原生标题，不会自动跟随 document.title）。
+  useEffect(() => {
+    const title = ROUTE_TITLE[route]
+    document.title = title
+    const appWindow = window.__TAURI__?.window?.getCurrentWindow?.()
+    if (appWindow?.setTitle) void appWindow.setTitle(title).catch(() => {})
+  }, [route])
+
+  // 启动时把「关闭按钮」偏好同步给 Rust 侧，之后由设置页按需再同步。
+  useEffect(() => {
+    syncCloseBehaviorToShell(getCloseBehavior())
   }, [])
 
   const navigate = useCallback((next: Route) => {

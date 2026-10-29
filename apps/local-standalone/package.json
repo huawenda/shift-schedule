@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "倒班表 · 纯本地静态页：无登录、无鉴权、无任何网络请求，数据只存在本机浏览器",
+  "description": "昼夜 · 个人倒班记录本：无登录、无鉴权、无任何网络请求，数据只存在本机浏览器",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:open": "node scripts/dev.mjs --open",

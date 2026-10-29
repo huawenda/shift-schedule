@@ -90,17 +90,14 @@
   color: var(--shift-nightx-ink);
 }
 
-/* 「查看名单」浮层：与格子同宽、同左边界。
- *
- * 最小窗口 1466 下：版心 1228 − 画布留白 48 = 1180，3 等分再扣掉 2px 外框，
- * 每格约 392.7px。这里不写死宽度，而是 100% 跟随格子 ——
- * 窗口再宽也不会出现「卡片比格子窄一截」。 */
+/* 「查看名单」浮层：与格子左对齐，宽度取格子的一半。
+ * 最小窗口下格子约 392.7px，浮层约 196px；内容过长时在浮层内换行/滚动。 */
 .summary-popover {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
   z-index: 5;
-  width: 100%;
+  width: 50%;
   padding: 10px 12px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);

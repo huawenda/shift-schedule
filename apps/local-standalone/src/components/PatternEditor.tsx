@@ -115,7 +115,7 @@ export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEdi
           </div>
 
           <p className="editor-active">
-            第 {active + 1} 天 · 现在是「{SHIFT_META[activeShift].label}」，点下面的班次填入，并自动跳下一格
+            第 {active + 1} 天 · 现在是「{SHIFT_META[activeShift].label}」，点下面的班次填入，自动跳下一格
           </p>
 
           <div className="shift-palette" role="group" aria-label="选择班次">
