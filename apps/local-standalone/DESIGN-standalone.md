@@ -69,13 +69,32 @@
 
 规则：
 
-- **母版唯一**：`design/logo/logo.svg`（192 基准网格，23% 圆角）。桌面图标、PWA 图标、侧栏 20px 字标全从它派生，不做第二套画法；
+- **母版唯一**：`design/logo/logo.svg`（192 基准网格，23% 圆角）。桌面图标、PWA 图标、侧栏字标全从它派生，不做第二套画法；
 - 改母版后必须重跑 `pnpm exec tauri icon design/logo/logo.svg -o desktop/src-tauri/icons`，
   否则 `icon.ico` / `icon.icns` 会停在旧图；`public/icons/` 的 192 / 512 由 `icon.png` 等比缩放补出；
 - 换完图标文件后 **Rust 必须重编译一次**：窗口与任务栏图标是编译期由 `tauri-build` 嵌进二进制的，
   运行时只认 binary 里那份。只动 `icons/` 不动源码，cargo 会判定无变更直接跳过，`tauri dev` 仍显示旧图。
   先 touch `src/lib.rs` 再 `cargo build`，或直接 `cargo clean -p shift-schedule-desktop`；
-- **字标不简化**：20px 下那颗星缩成一个亮点，它正是「夜」的识别锚点；省掉就只剩一个两边明暗不同的点。
+- **字标不简化**：侧栏用 45px 版，正好等于右侧那一列的整高（22 名称 + 2 + 16 副标 + 2 + 3 暖沙短线），
+  上下沿与文字分毫不差；那颗星是「夜」的识别锚点，缩到再小也要留着。
+
+### 品牌区
+
+侧栏顶部不是一块色块，也不是一枚角标，是「书脊」：左侧一根 3px `--brand-ink` 竖条把品牌区装订起来，
+右侧从上到下是「昼夜」/「个人倒班记录本」/ 一根与副标等宽的暖沙短线。
+
+- 不做块底：侧栏通体浅色，多一块色板反而像没做完的占位，且和全浅的画布抢对比度；
+- 暖沙短线取 `--brand-day`，与日历里的加班橙、待办便笺色同源，是反复出现的品牌记号；
+- 字号阶梯仍守 16px 上限，品牌感靠图标尺寸、衬线和字距建立，不靠把字放大。
+
+#### 品牌名字体
+
+「昼夜」两字用衬线体，与全站的黑体拉开形态差别 —— 它是品牌，不是一行界面文字。
+
+- 字体栈：`--font-brand: "Noto Serif SC", "STZhongsong", "Songti SC", "SimSun", serif`；
+- 回退链每一档**都还是衬线**：缺 Noto 会落到华文中宋或宋体，不会跳回黑体；
+- 字重 700。Noto Serif SC 是可变字重，400/500/600/700 实测墨迹 636/712/796/872，四档分明；
+- 字距 0.1em：中文衬线的字面本来就比黑体松，两字品牌再收紧会缩成一团。
 
 ---
 
@@ -84,7 +103,10 @@
 - 字体栈只用系统字体，**不加载任何网络字体**（`file://` 下离线可用是硬要求）；
 - 字号阶梯：11 / 12 / 13 / 14 / 16 / 22 / 25 / 44px，全部整数；
 - 行高统一 `calc(1em + 6px)`，保证在任何字号下都是整数像素；
-- 字重只用 **400 / 700**（雅黑没有 600，写 600 会被合成假粗体、边缘发虚）；
+- 字重：雅黑只有 **400 / 700** 两档，中间档会被浏览器悄悄改写 ——
+  实测同一段文字的墨迹量，`400=884`、`500=884`、`600=1333`、`700=1333`。
+  也就是说 **500 会被降级成 400（强调完全失效）**，**600 直接命中 Bold（是真字形，不是合成假粗体）**。
+  想要加粗就写 700；确实需要中间字重时换可变字重字体（品牌名用的 Noto Serif SC 就是）；
 - 不使用 `text-rendering: optimizeLegibility`（对中文是负优化）。
 
 ---
@@ -143,12 +165,15 @@
 
 ```bash
 pnpm --filter shift-schedule-local run typecheck
-pnpm --filter shift-schedule-local run test        # 62 个用例
+pnpm --filter shift-schedule-local run test        # 223 个用例
 pnpm --filter shift-schedule-local run build
-node scripts/verify-dist.mjs                       # 36 项端到端（http + file://）
-node scripts/screenshot-dist.mjs                   # 8 档分辨率布局断言 + 截图
+node scripts/verify-dist.mjs                       # 412 项端到端（http + file://）
+node scripts/shoot-showcase.mjs                    # 4 张产品展示图
 ```
 
-`screenshot-dist.mjs` 的硬性检查：
-表头与数据行列对齐、班次标签不溢出单元格、日历内容不被裁、
+`verify-dist.mjs` 覆盖的布局类断言：表头与数据行列对齐、班次标签不溢出单元格、日历内容不被裁、
 ≥1440 整月无横向滚动、大屏宽度利用率 ≥70%、PC 可选中 / 移动端不可选。
+
+`screenshot-dist.mjs` 已失效（选择器停在 v1 的 DOM 上），要恢复得先按新结构重写。
+产品展示图改由 `shoot-showcase.mjs` 产出：注入 `fixtures/展示样例6人.json`，
+逐视图截 2 倍密度原图，再合成圆角窗口 + 阴影的浅色画板，输出到 `design/screenshots/`。

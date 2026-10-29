@@ -159,3 +159,4 @@ $env:HTTPS_PROXY='http://127.0.0.1:7897'
 | `verify-tauri-storage.mjs` | ❌ 已被上面那个取代，校验的是 v1 的 `day-records:v1`/`settings:v1`，选择器含已删除的 `.stats`，可以删 |
 | `verify-tauri-scrollbar.mjs`、`shot-tauri-overview.mjs` | ❌ 抓旧界面类名，失效 |
 | `verify-dist.mjs` | ✅ 静态版（浏览器）验收，不跑壳 |
+| `shoot-showcase.mjs` | ✅ 产品展示图生成（`pnpm shoot:showcase`）：注入虚构样例 → 逐视图截 2 倍图 → 合成宣传板，输出到 `design/screenshots/` |

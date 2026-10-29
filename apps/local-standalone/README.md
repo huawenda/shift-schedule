@@ -169,7 +169,7 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 
 | 区域 | 尺寸 | 内容 |
 |---|---|---|
-| 侧栏 | 228px | 品牌「昼夜 · 个人倒班记录本」／**全员矩阵**／**月度概览**／**设置**，底部一行「N 位成员 · 数据只存在这台电脑」 |
+| 侧栏 | 228px | 顶部书脊式品牌区（3px 竖条 + 45px 标识 + 衬线「昼夜」+ 副标 + 等宽暖沙短线）／**全员矩阵**／**月度概览**／**设置**，底部一行「N 位成员 · 数据只存在这台电脑」 |
 | 顶栏 | 48px | `‹` 月份标题 `›`「回到本期」，右侧：存储状态 · 导出备份 · 导入备份 |
 | 画布头部 | — | 页面标题 + 副标题（日期区间 · 天数 · 人数/本人） |
 | 概览条 | 3 格 | **只在全员矩阵页**：今日白班（含白特）/ 夜班（含夜特）/ 休息 |
@@ -363,7 +363,9 @@ src/
 └── main.tsx
 
 fixtures/
-└── 班组13人.json            样例备份（v5）：13 人挂在内置 4F–4X，本人设为华文达
+├── 班组13人.json           回归用样例备份（v5）：13 人挂在内置 4F–4X，本人设为华文达
+└── 展示样例6人.json         产品展示图专用（v5）：6 人全部虚构，岗位统一 PNP，
+                            数据刻意落在当前结算周期内，含法定加班、事假与三条待办
 ```
 
 分层原则：**`data/` 不知道 React 的存在**，`screens/` 不直接碰 localStorage，
@@ -466,6 +468,10 @@ pnpm verify:tauri    # 壳内验收（release exe + WebView2 调试口）：建�
 
 > ⚠️ `pnpm screenshot:dist` 已失效：它的选择器（`.app-shell` / `.stats-*` / `.matrix-title`）
 > 全部停在 v1 的 DOM 上，通用化重写后找不到元素。要恢复得先按新结构重写它。
+>
+> 产品展示图改用 `pnpm shoot:showcase`（= `node scripts/shoot-showcase.mjs`）：
+> 注入 `fixtures/展示样例6人.json`，逐视图截 2 倍密度原图再合成宣传板，
+> 输出到 `design/screenshots/`。数据全部虚构，与回归用的 13 人 fixture 无关。
 
 仓库根还有 `pnpm dev:local`，等价于本目录的 `pnpm dev`。
 

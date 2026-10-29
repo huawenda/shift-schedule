@@ -1,6 +1,7 @@
-# 审计/回归用的截图产物，不入库
-screenshots/
-shots-daily/
+# 审计/回归用的截图产物，不入库。
+# 限定在项目根：design/screenshots/ 是产品展示图，要跟着源码一起进仓库。
+/screenshots/
+/shots-daily/
 
 # 打包产物，不入库
 shift-schedule-local-static.zip
