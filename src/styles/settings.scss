@@ -253,27 +253,6 @@
   line-height: 1.6;
 }
 
-/* ── 提示条 ───────────────────────────────────────────── */
-
-.banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: #fbfcfd;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.banner-warn {
-  border-color: var(--warning-border);
-  background: var(--warning-bg);
-  color: var(--warning-ink);
-}
-
 /* ── 危险区 ───────────────────────────────────────────── */
 
 .danger-row {

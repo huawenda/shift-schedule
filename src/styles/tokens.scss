@@ -109,6 +109,9 @@
   --radius-control: 6px;
   --radius-sheet: 16px;
 
+  /* 全站几乎不用阴影，只有底部提示需要从画布上「浮起来」一档 */
+  --shadow-toast: 0 10px 30px rgba(19, 20, 22, 0.12);
+
   --sidebar-width: 228px;
   --topbar-height: 48px;
   --gap: 24px;

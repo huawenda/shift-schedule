@@ -82,9 +82,6 @@ interface ShellProps {
   /** 当前看的结算月就是本月 —— 「回到本期」这时没有可做的事，置灰 */
   atCurrentMonth: boolean
   memberCount: number
-  statusText: string
-  warning?: string
-  notice?: { text: string; onDismiss: () => void }
   onNavigate: (route: Route) => void
   onShiftMonth: (delta: number) => void
   onToday: () => void
@@ -102,9 +99,6 @@ export function Shell({
   monthTitle,
   atCurrentMonth,
   memberCount,
-  statusText,
-  warning,
-  notice,
   onNavigate,
   onShiftMonth,
   onToday,
@@ -201,8 +195,6 @@ export function Shell({
         </div>
 
         <div className="topbar-right">
-          {warning ? <span className="topbar-warning" role="status">{warning}</span> : null}
-          <span className="topbar-status" role="status">{statusText}</span>
           <button className="btn" type="button" onClick={onBackup}>导出备份</button>
           <button className="btn" type="button" onClick={() => fileRef.current?.click()}>导入备份</button>
           <input
@@ -216,12 +208,6 @@ export function Shell({
       </header>
 
       <main className="sheet">
-        {notice ? (
-          <div className="sheet-notice" role="status">
-            <span>{notice.text}</span>
-            <button className="banner-close" type="button" onClick={notice.onDismiss}>知道了</button>
-          </div>
-        ) : null}
         {children}
       </main>
     </div>

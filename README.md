@@ -169,7 +169,8 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 | 区域 | 尺寸 | 内容 |
 |---|---|---|
 | 侧栏 | 228px | 顶部书脊式品牌区（3px 竖条 + 45px 标识 + 衬线「昼夜」+ 副标 + 等宽暖沙短线）／**全员矩阵**／**月度概览**／**设置**，底部一行「N 位成员 · 数据只存在这台电脑」 |
-| 顶栏 | 48px | `‹` 月份标题 `›`「回到本期」，右侧：存储状态 · 导出备份 · 导入备份 |
+| 顶栏 | 48px | `‹` 月份标题 `›`「回到本期」，右侧：导出备份 · 导入备份 |
+| 底部提示 | — | 操作反馈统一弹在窗口底部居中，2.6–8s 后自动消失；悬停暂停，常驻提示可手动关闭 |
 | 画布头部 | — | 页面标题 + 副标题（日期区间 · 天数 · 人数/本人） |
 | 概览条 | 3 格 | **只在全员矩阵页**：今日白班（含白特）/ 夜班（含夜特）/ 休息 |
 | 主体 | 剩余高度 | 全员矩阵 ／ 月度概览（日历 + 4 块统计） |
@@ -263,7 +264,7 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 **与备份文件的 `version` 不是同一套编号**，别按它推断备份格式版本。
 
 localStorage 不可用时（隐私模式、`file://` 的某些配置）自动退化为内存存储，
-页面仍能跑但刷新即丢，顶栏显示「不能写入本机存储」并催你导出备份。
+页面仍能跑但刷新即丢，底部会出一条常驻提示催你导出备份。
 
 ### 5.2 备份格式 v5
 
@@ -348,6 +349,7 @@ src/
 │   ├── useRoster.ts         花名册状态 + 自动落盘
 │   ├── useBackupFlow.ts     导出 / 导入流程
 │   ├── useMonthNavigation.ts 结算月导航（翻月 / 回本月 / 周期）
+│   ├── useToasts.ts         底部提示队列（合并、堆叠、倒计时、悬停暂停）
 │   └── useDialogFocus.ts    弹层打开时移入焦点，避免背景残留焦点环
 ├── components/
 │   ├── Shell.tsx            228 侧栏 + 48 顶栏 + 白色画布
@@ -363,13 +365,14 @@ src/
 │   ├── StatsPanels.tsx      月度概览的四块统计（2 × 2）
 │   ├── TodoCard.tsx         待办卡片（本月待办，可在卡片里勾选）
 │   ├── Select.tsx           自绘下拉（替掉原生 select 的弹层）
-│   └── ScrollOverlay.tsx    自绘覆盖式滚动条（静止隐藏、滚动淡入）
+│   ├── ScrollOverlay.tsx    自绘覆盖式滚动条（静止隐藏、滚动淡入）
+│   └── ToastHost.tsx        底部提示层（白卡 + 语义色竖条，向上堆叠）
 ├── screens/
 │   ├── Wizard.tsx           三步首次配置（本人 → 同事 → 确认）
 │   ├── MatrixScreen.tsx     全员矩阵页（含今日 3 格概览条）
 │   ├── OverviewScreen.tsx   月度概览页（日历 + 统计，日历锁本人）
 │   └── SettingsScreen.tsx   设置：人员配置 / 个人资料 两个 tab
-├── styles/                  tokens → shell → schedule → stats → todos → settings → wizard
+├── styles/                  tokens → shell → schedule → stats → todos → settings → wizard → toasts
 ├── App.tsx                  三个 hash 路由、弹层与提示（备份与月份已抽成 hook）
 └── main.tsx
 

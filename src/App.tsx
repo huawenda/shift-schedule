@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Shell, type Route } from './components/Shell'
 import { DayEditor } from './components/DayEditor'
 import { ScrollOverlay } from './components/ScrollOverlay'
 import { ShiftEditor } from './components/ShiftEditor'
+import { ToastHost } from './components/ToastHost'
 import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
@@ -23,6 +24,7 @@ import { getCloseBehavior, syncCloseBehaviorToShell } from './platform/windowPre
 import { useBackupFlow } from './hooks/useBackupFlow'
 import { useMonthNavigation } from './hooks/useMonthNavigation'
 import { useRoster } from './hooks/useRoster'
+import { useToasts } from './hooks/useToasts'
 
 /** 从哪儿点开的格子：矩阵只能改班次，概览页的日历能记加班 */
 type EditSource = 'matrix' | 'calendar'
@@ -53,11 +55,12 @@ export function App() {
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('roster')
   const [wizardSkipped, setWizardSkipped] = useState(false)
   const [editor, setEditor] = useState<{ memberId: string; date: string; source: EditSource } | null>(null)
-  const [statusText, setStatusText] = useState('数据已就绪')
-  const [notice, setNotice] = useState('')
 
   const { monthKey, period, goMonth, goToday, atCurrentMonth } = useMonthNavigation()
-  const { backup, restore } = useBackupFlow(api, { setStatusText, setNotice })
+  const toast = useToasts()
+  const { backup, restore } = useBackupFlow(api, toast)
+  /** 存储不可写时那条常驻提示的 id，可写后撤掉 */
+  const persistenceToast = useRef<number | null>(null)
 
   useEffect(() => {
     function onHashChange() {
@@ -81,6 +84,20 @@ export function App() {
     syncCloseBehaviorToShell(getCloseBehavior())
   }, [])
 
+  // 存储不可写是持续状态：用一条常驻提示，恢复可写后自动撤掉。
+  useEffect(() => {
+    if (api.persisted) {
+      if (persistenceToast.current !== null) {
+        toast.dismiss(persistenceToast.current)
+        persistenceToast.current = null
+      }
+      return
+    }
+    if (persistenceToast.current === null) {
+      persistenceToast.current = toast.sticky('当前环境不能写入本机存储，改动刷新后会丢，请及时导出备份。', { tone: 'warning' })
+    }
+  }, [api.persisted, toast])
+
   const navigate = useCallback((next: Route) => {
     setRoute(next)
     const target = routeHash(next)
@@ -96,8 +113,7 @@ export function App() {
   function clearAll() {
     api.replaceRoster({ ...emptyRoster })
     setWizardSkipped(false)
-    setNotice('')
-    setStatusText('已清空本机数据')
+    toast.info('已清空本机数据')
     navigate('overview')
   }
 
@@ -119,7 +135,7 @@ export function App() {
     })
 
     setWizardSkipped(true)
-    setStatusText(`配置完成：本人 ${self.name} · 另有 ${members.length} 位同事`)
+    toast.info(`配置完成：本人 ${self.name} · 另有 ${members.length} 位同事`, { duration: 4000 })
     navigate('overview')
   }
 
@@ -131,7 +147,7 @@ export function App() {
   function applyShift(shift: ShiftType | null) {
     if (!editor) return
     api.editShift(editor.memberId, editor.date, shift)
-    setStatusText(shift ? `已保存：${SHIFT_META[shift].label}` : '已恢复为模板班次')
+    toast.info(shift ? `已保存：${SHIFT_META[shift].label}` : '已恢复为模板班次')
     setEditor(null)
   }
 
@@ -143,7 +159,7 @@ export function App() {
       input.overtimeHours ? `加班 ${formatOvertimeHours(input.overtimeHours)}` : '',
       input.isLegal ? '法定' : ''
     ].filter(Boolean)
-    setStatusText(
+    toast.info(
       extra.length > 0
         ? `已保存：${SHIFT_META[input.shift].label} · ${extra.join(' · ')}`
         : `已保存：${SHIFT_META[input.shift].label}`
@@ -154,7 +170,7 @@ export function App() {
   function restoreDay() {
     if (!editor) return
     api.resetDay(editor.memberId, editor.date)
-    setStatusText('已恢复默认（班次、加班、法定一并清空）')
+    toast.info('已恢复默认（班次、加班、法定一并清空）', { duration: 3200 })
     setEditor(null)
   }
 
@@ -174,10 +190,7 @@ export function App() {
         memberCount={api.roster.members.length}
         monthTitle={formatMonthTitle(monthKey)}
         atCurrentMonth={atCurrentMonth}
-        notice={notice ? { text: notice, onDismiss: () => setNotice('') } : undefined}
         route={route}
-        statusText={statusText}
-        warning={api.persisted ? undefined : '不能写入本机存储'}
         onBackup={backup}
         onNavigate={next => {
           if (next === 'settings') setSettingsTab('roster')
@@ -190,8 +203,8 @@ export function App() {
         {route === 'settings' ? (
           <SettingsScreen
             initialTab={settingsTab}
-            persisted={api.persisted}
             roster={api.roster}
+            onNotify={toast.info}
             onBackup={backup}
             onClearAll={clearAll}
             onRemovePattern={api.removePatternById}
@@ -250,6 +263,13 @@ export function App() {
           />
         )
       ) : null}
+
+      <ToastHost
+        toasts={toast.toasts}
+        onDismiss={toast.dismiss}
+        onPause={toast.pause}
+        onResume={toast.resume}
+      />
     </>
   )
 }

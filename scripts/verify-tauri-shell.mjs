@@ -396,7 +396,7 @@ async function phaseTwo(userDataDir, importFile) {
     const imported = await client.evaluate(`(() => {
       const raw = localStorage.getItem('shift-schedule:local:roster:v2')
       const roster = raw ? JSON.parse(raw) : null
-      const notice = document.querySelector('.sheet-notice')
+      const notice = document.querySelector('.toast')
       return {
         members: roster?.members?.map(m => m.name) ?? [],
         overrides: roster?.overrides?.length ?? 0,

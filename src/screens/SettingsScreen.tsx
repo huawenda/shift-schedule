@@ -36,7 +36,8 @@ const TAB_SUB: Record<SettingsTab, string> = {
 
 interface SettingsScreenProps {
   roster: Roster
-  persisted: boolean
+  /** 页内操作反馈统一走全局底部提示 */
+  onNotify: (text: string) => void
   /** 进入时落在哪个 tab（由调用方决定；不传就是人员配置） */
   initialTab?: SettingsTab
   onSaveMembers: (members: Member[]) => void
@@ -58,7 +59,7 @@ interface SettingsScreenProps {
  */
 export function SettingsScreen({
   roster,
-  persisted,
+  onNotify,
   initialTab = 'roster',
   onSaveMembers,
   onSaveSelf,
@@ -74,7 +75,6 @@ export function SettingsScreen({
   const [rows, setRows] = useState<MemberRow[]>(() => toRows(roster.members))
   const [dirty, setDirty] = useState(false)
   const [confirmText, setConfirmText] = useState('')
-  const [flash, setFlash] = useState('')
   const [backupDir, setBackupDirState] = useState<string | null>(() => getBackupDir())
   const [closeBehavior, setCloseBehaviorState] = useState<CloseBehavior>(() => getCloseBehavior())
   /** 系统「下载」夹的真实路径（只有壳里拿得到），没设默认目录时用它当占位 */
@@ -136,16 +136,16 @@ export function SettingsScreen({
       if (!picked) return
       saveBackupDir(picked)
       setBackupDirState(picked)
-      setFlash(`备份将保存到 ${picked}`)
+      onNotify(`备份将保存到 ${picked}`)
     } catch (error) {
-      setFlash(error instanceof Error ? error.message : '选择目录失败')
+      onNotify(error instanceof Error ? error.message : '选择目录失败')
     }
   }
 
   function resetBackupDir() {
     saveBackupDir(null)
     setBackupDirState(null)
-    setFlash(`已恢复默认：导出会存到 ${downloadDir ?? '系统「下载」文件夹'}。`)
+    onNotify(`已恢复默认：导出会存到 ${downloadDir ?? '系统「下载」文件夹'}。`)
   }
 
   function changeCloseBehavior(next: CloseBehavior) {
@@ -168,7 +168,7 @@ export function SettingsScreen({
 
     onSaveMembers(drafts)
     setDirty(false)
-    setFlash(
+    onNotify(
       removed.length > 0
         ? `已保存：删除 ${removed.length} 位成员，连带清理 ${removedOverrides} 条改班记录。`
         : `已保存：${drafts.length} 位成员。`
@@ -211,19 +211,6 @@ export function SettingsScreen({
       </div>
 
       <div className="canvas-flow" ref={flowRef}>
-        {!persisted ? (
-          <p className="banner banner-warn" role="status">
-            当前环境不允许本机存储，改动只保留在内存里，刷新就会丢。请用顶栏的「导出备份」及时保存。
-          </p>
-        ) : null}
-
-        {flash ? (
-          <p className="banner" role="status">
-            {flash}
-            <button className="banner-close" type="button" onClick={() => setFlash('')}>知道了</button>
-          </p>
-        ) : null}
-
         {tab === 'roster' ? (
           <>
             <section className="settings-section">
@@ -237,7 +224,7 @@ export function SettingsScreen({
                 <PatternList
                   lookup={lookup}
                   roster={roster}
-                  onNotice={setFlash}
+                  onNotice={onNotify}
                   onRemovePattern={onRemovePattern}
                   onSavePattern={onSavePattern}
                 />
@@ -283,7 +270,7 @@ export function SettingsScreen({
             <ProfileSection
               patterns={patternOptions}
               roster={roster}
-              onNotice={setFlash}
+              onNotice={onNotify}
               onSaveSalary={onSaveSalary}
               onSaveSelf={onSaveSelf}
             />
