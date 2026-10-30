@@ -73,10 +73,6 @@ export function compareMonth(a: MonthKey, b: MonthKey): number {
   return a.year * 12 + a.month - (b.year * 12 + b.month)
 }
 
-export function sameMonth(a: MonthKey, b: MonthKey): boolean {
-  return a.year === b.year && a.month === b.month
-}
-
 /**
  * 今天属于哪个结算月：20 日及以后算下个月，否则算本月。
  * 例：2026-10-19 → 10 月；2026-10-20 → 11 月。

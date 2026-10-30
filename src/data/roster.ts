@@ -9,7 +9,7 @@ import {
   type CustomPattern,
   type PatternLookup
 } from './patterns'
-import { readRaw, removeRaw, STORAGE_KEYS, writeRaw } from './storage'
+import { readRaw, STORAGE_KEYS, writeRaw } from './storage'
 import {
   emptySalary,
   normalizeSalary,
@@ -323,10 +323,6 @@ export function normalizeRoster(value: unknown): Roster {
 
 /* -------------------------------------------------------------- 读取 */
 
-export function transformRoster(roster: Roster, produce: (draft: Roster) => Roster): Roster {
-  return { ...produce(roster), updatedAt: Date.now() }
-}
-
 export function loadRoster(): Roster {
   const raw = readRaw(STORAGE_KEYS.roster)
   if (!raw) return { ...emptyRoster }
@@ -341,10 +337,6 @@ export function loadRoster(): Roster {
 /** 返回 false 表示只写进了内存，刷新会丢 */
 export function saveRoster(roster: Roster): boolean {
   return writeRaw(STORAGE_KEYS.roster, JSON.stringify({ ...roster, updatedAt: Date.now() }))
-}
-
-export function clearRoster(): void {
-  removeRaw(STORAGE_KEYS.roster)
 }
 
 export function isRosterEmpty(roster: Roster): boolean {
@@ -403,10 +395,6 @@ export function getEffectiveShift(
 
 export function getTemplateShift(roster: Roster, member: Member, date: string): ShiftType | null {
   return lookupOf(roster).getShift(member.patternId, date)
-}
-
-export function isEdited(memberId: string, date: string, overrideMap: Map<string, ShiftType>): boolean {
-  return overrideMap.has(overrideKey(memberId, date))
 }
 
 /**
@@ -784,16 +772,6 @@ export function removePattern(roster: Roster, patternId: string): RemovePatternR
 }
 
 /* ------------------------------------------------------------ 展示 */
-
-/** 每个班序当前挂了谁（内置 + 自定义都列出来）—— 设置页与向导里做提示用 */
-export function groupByPattern(roster: Roster): Record<string, string[]> {
-  const grouped: Record<string, string[]> = {}
-  lookupOf(roster).all.forEach(pattern => { grouped[pattern.id] = [] })
-  roster.members.forEach(member => {
-    grouped[member.patternId] = [...(grouped[member.patternId] ?? []), member.name]
-  })
-  return grouped
-}
 
 /** 班序的显示名：内置是代号（4F），自定义是用户起的名字（甲班） */
 export function patternLabelOf(roster: Roster, member: Member): string {

@@ -84,10 +84,6 @@ export function parseMoney(value: string): number {
   return Math.round(parsed * 100) / 100
 }
 
-export function isSalaryEmpty(salary: SalaryInput): boolean {
-  return SALARY_FIELDS.every(field => !salary[field.key].trim())
-}
-
 /** 已填了几项 —— 清空前提示「已填的 N 项薪资」用 */
 export function salaryFilledCount(salary: SalaryInput): number {
   return SALARY_FIELDS.filter(field => salary[field.key].trim()).length
