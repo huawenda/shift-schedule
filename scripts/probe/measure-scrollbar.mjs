@@ -14,97 +14,17 @@
  *   3. ::-webkit-scrollbar 规则是否真的被应用
  */
 
-import { spawn } from 'node:child_process'
+
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { launchHeadlessChrome } from '../lib/browser.mjs'
+import { createCdpClient, waitForJsonEndpoint, waitFor, sleep } from '../lib/cdp.mjs'
+import { readArg } from '../lib/cli.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectDir = path.resolve(__dirname, '..', '..')
-
-function readArg(name, fallback) {
-  const prefix = `--${name}=`
-  const found = process.argv.find(arg => arg.startsWith(prefix))
-  return found ? found.slice(prefix.length) : fallback
-}
-
-const useDev = process.argv.includes('--dev')
-const url = readArg('url', useDev
-  ? 'http://127.0.0.1:6180/index.html'
-  : pathToFileURL(path.join(projectDir, 'dist', 'index.html')).href)
-const sizes = readArg('sizes', '1440x930,1440x900,1024x768,2560x1440')
-  .split(',').map(s => s.trim()).filter(Boolean)
-
-function findBrowser() {
-  const c = [
-    process.env.CHROME_PATH,
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
-  ].filter(Boolean)
-  return c.find(x => fs.existsSync(x)) ?? null
-}
-
-const sleep = ms => new Promise(r => setTimeout(r, ms))
-
-async function waitForJsonEndpoint(port, timeoutMs = 20000) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/json/list`)
-      if (res.ok) {
-        const t = await res.json()
-        const page = t.find(x => x.type === 'page' && x.webSocketDebuggerUrl)
-        if (page) return page
-      }
-    } catch { /* 等 */ }
-    await sleep(200)
-  }
-  throw new Error('连接无头浏览器超时')
-}
-
-function createCdpClient(ws) {
-  const socket = new WebSocket(ws)
-  const pending = new Map()
-  let nextId = 1
-  const ready = new Promise((res, rej) => {
-    socket.addEventListener('open', () => res())
-    socket.addEventListener('error', () => rej(new Error('CDP 连接失败')))
-  })
-  socket.addEventListener('message', e => {
-    let m
-    try { m = JSON.parse(e.data) } catch { return }
-    if (!m.id || !pending.has(m.id)) return
-    const { resolve, reject } = pending.get(m.id)
-    pending.delete(m.id)
-    if (m.error) reject(new Error(m.error.message || 'CDP 调用失败'))
-    else resolve(m.result)
-  })
-  function send(method, params = {}) {
-    const id = nextId++
-    return new Promise((resolve, reject) => {
-      pending.set(id, { resolve, reject })
-      socket.send(JSON.stringify({ id, method, params }))
-    })
-  }
-  async function evaluate(expression) {
-    const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.text || '求值失败')
-    return r.result.value
-  }
-  return { ready, send, evaluate, close: () => { try { socket.close() } catch { /* 忽略 */ } } }
-}
-
-async function waitFor(client, expr, label, timeoutMs = 20000) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    if (await client.evaluate(expr).catch(() => false)) return
-    await sleep(120)
-  }
-  throw new Error(`等待超时：${label}`)
-}
 
 const PROBE = `(() => {
   const de = document.documentElement
@@ -126,16 +46,8 @@ const PROBE = `(() => {
 })()`
 
 async function main() {
-  const browser = findBrowser()
-  if (!browser) { console.error('没有找到 Chrome / Edge'); process.exit(1) }
-
   const udd = path.join(os.tmpdir(), `dsh-sb-${Date.now()}`)
-  const port = 9600 + Math.floor(Math.random() * 90)
-  const chrome = spawn(browser, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-    '--disable-extensions', `--user-data-dir=${udd}`,
-    `--remote-debugging-port=${port}`, url
-  ], { stdio: 'ignore' })
+  const { child: chrome, debugPort: port } = launchHeadlessChrome({ userDataDir: udd, target: url })
 
   let client = null
   try {

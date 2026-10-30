@@ -444,6 +444,9 @@ dist/
 另外 service-worker 的缓存名原本写死 `v1`，导致「清理旧缓存」的逻辑永远不触发、
 旧 hash 资源无限堆积；现在构建时注入 `Date.now()` 指纹，一改版旧缓存整体清掉。
 
+`使用说明.txt` 与绿色版的 `绿色版使用说明.txt` 同源：都从 `docs/使用说明模板.txt`
+生成（`pnpm guides`，`pnpm build` 也会先跑一遍），只替换各自专属段落。
+
 桌面版（Tauri）在 `desktop/`，前端产物目录 `dist-tauri/`：
 
 ```bash

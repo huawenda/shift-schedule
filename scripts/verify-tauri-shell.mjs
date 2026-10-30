@@ -24,6 +24,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { createCdpClient, sleep } from './lib/cdp.mjs'
 
 const PORT = 9333
 const DEFAULT_EXE = path.resolve('desktop/src-tauri/target/release/昼夜.exe')
@@ -34,8 +35,6 @@ const exePath = (() => {
   return found ? path.resolve(found.slice('--exe='.length)) : DEFAULT_EXE
 })()
 const keepTemp = args.includes('--keep')
-
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 const results = []
 function check(name, ok, detail = '') {
@@ -61,55 +60,6 @@ async function waitForPage(timeoutMs = 40000) {
     await sleep(300)
   }
   throw new Error('连接 WebView2 调试端口超时（壳没起来，或端口被占）')
-}
-
-function createCdpClient(webSocketUrl) {
-  const socket = new WebSocket(webSocketUrl)
-  const pending = new Map()
-  let nextId = 1
-
-  const ready = new Promise((resolve, reject) => {
-    socket.addEventListener('open', () => resolve())
-    socket.addEventListener('error', () => reject(new Error('CDP 连接失败')))
-  })
-
-  socket.addEventListener('message', event => {
-    let message
-    try {
-      message = JSON.parse(event.data)
-    } catch {
-      return
-    }
-    if (!message.id || !pending.has(message.id)) return
-    const { resolve, reject } = pending.get(message.id)
-    pending.delete(message.id)
-    if (message.error) reject(new Error(message.error.message || 'CDP 调用失败'))
-    else resolve(message.result)
-  })
-
-  function send(method, params = {}) {
-    const id = nextId++
-    return new Promise((resolve, reject) => {
-      pending.set(id, { resolve, reject })
-      socket.send(JSON.stringify({ id, method, params }))
-    })
-  }
-
-  async function evaluate(expression) {
-    const result = await send('Runtime.evaluate', {
-      expression,
-      awaitPromise: true,
-      returnByValue: true
-    })
-    if (result.exceptionDetails) {
-      throw new Error(
-        result.exceptionDetails.exception?.description || result.exceptionDetails.text || '求值失败'
-      )
-    }
-    return result.result.value
-  }
-
-  return { ready, send, evaluate, close: () => { try { socket.close() } catch { /* 忽略 */ } } }
 }
 
 /* ------------------------------ 启动 / 停止 ------------------------------ */

@@ -11,119 +11,18 @@
  * 密度比低 = 格子空旷 = 用户说的「太松垮」。
  */
 
-import { spawn } from 'node:child_process'
+
 import fs from 'node:fs'
-import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { launchHeadlessChrome } from '../lib/browser.mjs'
+import { createCdpClient, waitForJsonEndpoint, waitFor, sleep } from '../lib/cdp.mjs'
+import { startStaticServer } from '../lib/server.mjs'
+import { readArg } from '../lib/cli.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectDir = path.resolve(__dirname, '..', '..')
-
-function readArg(name, fallback) {
-  const prefix = `--${name}=`
-  const found = process.argv.find(arg => arg.startsWith(prefix))
-  return found ? found.slice(prefix.length) : fallback
-}
-
-const sizes = readArg('sizes', '2560x1440,1920x1080,1440x900,1280x800,1024x768,768x1024')
-  .split(',').map(item => item.trim()).filter(Boolean)
-const useDev = process.argv.includes('--dev')
-const url = readArg('url', useDev
-  ? 'http://127.0.0.1:6180/index.html'
-  : pathToFileURL(path.join(projectDir, 'dist', 'index.html')).href)
-
-function findBrowser() {
-  const candidates = [
-    process.env.CHROME_PATH,
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
-  ].filter(Boolean)
-  return candidates.find(candidate => fs.existsSync(candidate)) ?? null
-}
-
-function startStaticServer(rootDir) {
-  const mime = {
-    '.html': 'text/html; charset=utf-8',
-    '.js': 'text/javascript; charset=utf-8',
-    '.css': 'text/css; charset=utf-8',
-    '.json': 'application/json; charset=utf-8',
-    '.png': 'image/png'
-  }
-  const server = http.createServer((request, response) => {
-    const rel = decodeURIComponent((request.url || '/').split('?')[0])
-    const filePath = path.join(rootDir, rel === '/' ? 'index.html' : rel.replace(/^\/+/, ''))
-    fs.readFile(filePath, (error, data) => {
-      if (error) return response.writeHead(404).end('not found')
-      response.writeHead(200, { 'Content-Type': mime[path.extname(filePath)] || 'application/octet-stream' })
-      response.end(data)
-    })
-  })
-  return new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve({ server, port: server.address().port })))
-}
-
-async function waitForJsonEndpoint(port, timeoutMs = 20000) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/json/list`)
-      if (response.ok) {
-        const targets = await response.json()
-        const page = targets.find(t => t.type === 'page' && t.webSocketDebuggerUrl)
-        if (page) return page
-      }
-    } catch { /* 还没起来 */ }
-    await new Promise(resolve => setTimeout(resolve, 200))
-  }
-  throw new Error('连接无头浏览器超时')
-}
-
-function createCdpClient(webSocketUrl) {
-  const socket = new WebSocket(webSocketUrl)
-  const pending = new Map()
-  let nextId = 1
-  const ready = new Promise((resolve, reject) => {
-    socket.addEventListener('open', () => resolve())
-    socket.addEventListener('error', () => reject(new Error('CDP 连接失败')))
-  })
-  ready.catch(() => {})
-  socket.addEventListener('message', event => {
-    let message
-    try { message = JSON.parse(event.data) } catch { return }
-    if (!message.id || !pending.has(message.id)) return
-    const { resolve, reject } = pending.get(message.id)
-    pending.delete(message.id)
-    if (message.error) reject(new Error(message.error.message || 'CDP 调用失败'))
-    else resolve(message.result)
-  })
-  function send(method, params = {}) {
-    const id = nextId++
-    return new Promise((resolve, reject) => {
-      pending.set(id, { resolve, reject })
-      socket.send(JSON.stringify({ id, method, params }))
-    })
-  }
-  async function evaluate(expression) {
-    const result = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })
-    if (result.exceptionDetails) throw new Error(result.exceptionDetails.text || '求值失败')
-    return result.result.value
-  }
-  return { ready, send, evaluate, close: () => { try { socket.close() } catch { /* 忽略 */ } } }
-}
-
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
-
-async function waitFor(client, expression, label, timeoutMs = 20000) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    if (await client.evaluate(expression)) return
-    await sleep(120)
-  }
-  throw new Error(`等待超时：${label}`)
-}
 
 /* 页面内测量：取一个「有加班」的格子（内容最满的那种），
    量它的高度构成：padding / 日期行 / 班次色牌 / 数值行 / 三段间隙。 */
@@ -293,12 +192,6 @@ function buildSeed() {
 const SEED_KEY = 'shift-schedule:local:day-records:v1'
 
 async function main() {
-  const browser = findBrowser()
-  if (!browser) {
-    console.error('没有找到 Chrome / Edge')
-    process.exit(1)
-  }
-
   let server = null
   let startUrl = url
   /* url 默认已经是 file:// 绝对地址；只有当它既不是 http 也不是 file
@@ -312,8 +205,11 @@ async function main() {
   }
 
   const userDataDir = path.join(os.tmpdir(), `dsh-daily-${Date.now()}`)
-  const debugPort = 9900 + Math.floor(Math.random() * 90)
-  const chrome = spawnBrowser(browser, userDataDir, debugPort, startUrl)
+  const { child: chrome, debugPort } = launchHeadlessChrome({
+    userDataDir,
+    target: startUrl,
+    extraArgs: ['--hide-scrollbars=false']
+  })
 
   let client = null
   try {
@@ -393,14 +289,6 @@ async function main() {
     server?.close()
     try { fs.rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }) } catch { /* 忽略 */ }
   }
-}
-
-function spawnBrowser(browser, userDataDir, debugPort, startUrl) {
-  return spawn(browser, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-    '--disable-extensions', '--hide-scrollbars=false',
-    `--user-data-dir=${userDataDir}`, `--remote-debugging-port=${debugPort}`, startUrl
-  ], { stdio: 'ignore' })
 }
 
 main().catch(error => {

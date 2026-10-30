@@ -23,12 +23,13 @@
  * 依赖：本机 Chrome/Edge，Node 18+（用全局 fetch / WebSocket）。没有第三方依赖。
  */
 
-import { spawn } from 'node:child_process'
+import { findBrowser, launchHeadlessChrome } from './lib/browser.mjs'
 import fs from 'node:fs'
-import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { createCdpClient, waitForJsonEndpoint, waitFor, sleep, clickByText } from './lib/cdp.mjs'
+import { startStaticServer } from './lib/server.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectDir = path.resolve(__dirname, '..')
@@ -50,153 +51,6 @@ const results = []
 function check(name, ok, detail = '') {
   results.push({ name, ok, detail })
   console.log(`${ok ? '  PASS' : '  FAIL'}  ${name}${detail ? `  ${detail}` : ''}`)
-}
-
-function findBrowser() {
-  const candidates = [
-    process.env.CHROME_PATH,
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium',
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-  ].filter(Boolean)
-
-  return candidates.find(candidate => fs.existsSync(candidate)) ?? null
-}
-
-function startStaticServer(rootDir) {
-  const mimeTypes = {
-    '.html': 'text/html; charset=utf-8',
-    '.js': 'text/javascript; charset=utf-8',
-    '.css': 'text/css; charset=utf-8',
-    '.png': 'image/png',
-    '.json': 'application/json; charset=utf-8',
-    '.webmanifest': 'application/manifest+json',
-    '.txt': 'text/plain; charset=utf-8'
-  }
-
-  const server = http.createServer((request, response) => {
-    const urlPath = decodeURIComponent((request.url || '/').split('?')[0])
-    const relative = urlPath === '/' ? 'index.html' : urlPath.replace(/^\/+/, '')
-    const filePath = path.join(rootDir, relative)
-
-    if (!filePath.startsWith(rootDir)) {
-      response.writeHead(403).end('forbidden')
-      return
-    }
-
-    fs.readFile(filePath, (error, data) => {
-      if (error) {
-        response.writeHead(404).end('not found')
-        return
-      }
-      response.writeHead(200, { 'Content-Type': mimeTypes[path.extname(filePath)] || 'application/octet-stream' })
-      response.end(data)
-    })
-  })
-
-  return new Promise(resolve => {
-    server.listen(0, '127.0.0.1', () => resolve({ server, port: server.address().port }))
-  })
-}
-
-async function waitForJsonEndpoint(port, timeoutMs = 20000) {
-  const deadline = Date.now() + timeoutMs
-
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/json/list`)
-      if (response.ok) {
-        const targets = await response.json()
-        const page = targets.find(target => target.type === 'page' && target.webSocketDebuggerUrl)
-        if (page) return page
-      }
-    } catch {
-      // 浏览器还没起来
-    }
-    await new Promise(resolve => setTimeout(resolve, 200))
-  }
-
-  throw new Error('连接无头浏览器超时')
-}
-
-function createCdpClient(webSocketUrl) {
-  const socket = new WebSocket(webSocketUrl)
-  const pending = new Map()
-  let nextId = 1
-
-  const ready = new Promise((resolve, reject) => {
-    socket.addEventListener('open', () => resolve())
-    socket.addEventListener('error', () => reject(new Error('CDP WebSocket 连接失败')))
-  })
-  ready.catch(() => {})
-
-  socket.addEventListener('message', event => {
-    let message
-    try {
-      message = JSON.parse(event.data)
-    } catch {
-      return
-    }
-    if (!message.id || !pending.has(message.id)) return
-
-    const { resolve, reject } = pending.get(message.id)
-    pending.delete(message.id)
-    if (message.error) reject(new Error(`${message.error.message || 'CDP 调用失败'}`))
-    else resolve(message.result)
-  })
-
-  function send(method, params = {}) {
-    const id = nextId++
-    return new Promise((resolve, reject) => {
-      pending.set(id, { resolve, reject })
-      socket.send(JSON.stringify({ id, method, params }))
-    })
-  }
-
-  async function evaluate(expression) {
-    const result = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })
-    if (result.exceptionDetails) {
-      const description = result.exceptionDetails.exception?.description
-      throw new Error(description || result.exceptionDetails.text || '页面内求值失败')
-    }
-    return result.result.value
-  }
-
-  function close() {
-    try {
-      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) socket.close()
-    } catch {
-      // 忽略
-    }
-  }
-
-  return { ready, send, evaluate, close }
-}
-
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
-
-async function waitFor(client, expression, label, timeoutMs = 15000) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    if (await client.evaluate(expression)) return true
-    await sleep(120)
-  }
-  throw new Error(`等待超时：${label}`)
-}
-
-/** 点文字匹配的按钮（button 或 label） */
-function clickByText(selector, text) {
-  return `(() => {
-    const target = Array.from(document.querySelectorAll(${JSON.stringify(selector)}))
-      .find(item => item.textContent.trim() === ${JSON.stringify(text)})
-    if (!target) return false
-    target.click()
-    return true
-  })()`
 }
 
 /** 给受控 input 赋值（React 需要原生 setter + input 事件）；用索引取第 n 个 */
@@ -247,20 +101,7 @@ async function runScenario(name, url, downloadDir) {
   fs.mkdirSync(downloadDir, { recursive: true })
 
   const userDataDir = path.join(os.tmpdir(), `shift-verify-${name}-${Date.now()}`)
-  const debugPort = 9333 + Math.floor(Math.random() * 400)
-  const browser = findBrowser()
-
-  const chrome = spawn(browser, [
-    '--headless=new',
-    '--disable-gpu',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-extensions',
-    '--disable-background-networking',
-    `--user-data-dir=${userDataDir}`,
-    `--remote-debugging-port=${debugPort}`,
-    url
-  ], { stdio: 'ignore' })
+  const { child: chrome, debugPort } = launchHeadlessChrome({ userDataDir, target: url })
 
   let client = null
 
