@@ -2585,10 +2585,12 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(headAlign)
     )
 
-    // --- 13b. 滚动条槽位常驻：出现 / 不出现滚动条时内容宽度不得变 ---
-    // .canvas 加了 scrollbar-gutter: stable，竖向滚动条的槽位永远预留。
-    // 验证方式：在同一个 tab 里把视口拉高（内容不再超长 → 滚动条消失），
-    // 对比拉高前后 .settings-section 的宽度 —— 不加 stable 时这里会差一个滚动条宽度。
+    // --- 13b. 滚动条出现 / 消失时内容宽度不得变 ---
+    // 这里**不靠** scrollbar-gutter: stable：原生竖条宽度被收成 0
+    // （`.canvas-flow::-webkit-scrollbar { width: 0 }`），滑块由 ScrollOverlay 覆盖式自绘，
+    // 原生滚动条根本不占位，所以它在与不在都不影响内容宽度。
+    // 验证方式：在同一个 tab 里把视口拉高（内容不再超长 → 原生滚动条消失），
+    // 对比拉高前后 .settings-section 的宽度与 .canvas-flow 的 clientWidth —— 二者都不得变。
     const widthOf = `(() => {
       // 设置页把页头钉住了，真正在滚的是 .canvas-flow（画布自己不滚）
       const flow = document.querySelector('.canvas-flow')
@@ -2618,7 +2620,7 @@ async function runScenario(name, url, downloadDir) {
     })
     await sleep(250)
     check(
-      `${name}: 滚动条出现/消失时内容宽度不变（槽位常驻）`,
+      `${name}: 滚动条出现/消失时内容宽度不变（原生竖条宽度为 0）`,
       // 短视口下超长（滚动条在），高视口下不超长（滚动条没了）
       scrolledState.scrolls === true &&
         fittedState.scrolls === false &&

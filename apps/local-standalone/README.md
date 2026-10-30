@@ -514,8 +514,8 @@ v1 时代这里曾拷贝一份 `packages/core` 到 `src/core/`，用 `@local/cor
 - **周期长度不可改**：所有班序（内置与自建）都是 24 天一轮、共用锚点；
   要引入 21 天三班两倒这类循环，得改 `PATTERN_CYCLE_LENGTH` 与锚点，属于代码改动。
 - **班次种类不可增删**：白/夜/休/白特/夜特/事假 六种固定，配色与单字都绑在这六种上。
-- **`DESIGN-standalone.md` 已过期**：它描述的是 v1 的值班牌 + 统计页 + 与 Web 共用视觉，
-  与当前实现不符。看视觉请直接读 `src/styles/tokens.scss` 或本文 §7。
+- **`DESIGN-standalone.md` 已于 2026-10-30 按当前实现重写**：它讲视觉体系与「为什么这么定」，
+  数值以 `src/styles/tokens.scss` 为准，本文 §7 是速查表。三者冲突时按 tokens → 本文 → DESIGN 排优先级。
 
 ## 12. 常见问题
 

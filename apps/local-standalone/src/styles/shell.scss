@@ -436,8 +436,10 @@
  * Chromium 不支持给它加 transition；`scrollbar-color` 是标准属性，
  * 但同样没有过渡效果。只能自绘（见 components/ScrollOverlay.tsx）。
  *
- * 顺带解决了「切 tab 时内容宽度伸缩」：原生滚动条不再占位，
- * 内容宽度恒定，也就不需要 scrollbar-gutter 了。
+ * 顺带解决了「切 tab 时内容宽度伸缩」：原生竖条宽 0、滑块覆盖式自绘，内容宽度恒定。
+ * 所以这里**不写** `scrollbar-gutter: stable` —— 宽度恒定不是靠 UA 预留槽位得来的
+ * （原生条宽已经是 0，gutter 无从预留），写上只会让人误以为恒定是它保证的。
+ * 对应验收见 scripts/verify-dist.mjs 的 13b「滚动条出现/消失时内容宽度不变」。
  *
  * ⚠️ 这里只用 ::-webkit-scrollbar，不写 scrollbar-width ——
  * 标准属性一旦设成 none 会把**横向**滚动条也一起干掉，只能分轴靠 width / height。
