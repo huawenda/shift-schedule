@@ -77,6 +77,11 @@ fn save_backup_to(dir: String, file_name: String, contents: String) -> Result<St
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // 单实例必须第一个注册：第二次双击 exe 时，新进程把参数交给这里后立即退出，
+        // 已有实例则把窗口从托盘 / 最小化状态唤回前台。
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main_window(app);
+        }))
         .manage(ClosePrefs(AtomicBool::new(false)))
         // 备份导出/导入的原生对话框与文件读写。
         .plugin(init_dialog())

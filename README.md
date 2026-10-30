@@ -456,6 +456,9 @@ pnpm desktop:build   # NSIS 安装包（需代理）
 
 `desktop:dev` **不需要**先起 6180，它自己起 6182；两条线可以同时开着对比。
 数据在两侧不互通（浏览器 localStorage vs 壳内 WebView2 用户目录）。
+
+桌面壳是**单实例**：重复双击 exe 不会开第二个进程，已有窗口会从最小化或托盘隐藏状态
+唤回前台（`tauri-plugin-single-instance`）。
 窗口主题、最小尺寸、备份在壳内的待办等细节见 [`desktop/README.md`](./desktop/README.md)。
 
 桌面壳常驻托盘：左键单击显示并聚焦窗口，右键菜单可「显示 / 隐藏主窗口」与「退出」。
