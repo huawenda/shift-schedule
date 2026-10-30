@@ -7,8 +7,8 @@
  * 超出视口就滚。这个脚本量出「到底超了多少」，
  * 以及是哪几块把高度撑破的。
  *
- *   node scripts/measure-overview.mjs --dev
- *   node scripts/measure-overview.mjs --sizes=1440x900,1440x930
+ *   node scripts/probe/measure-overview.mjs --dev
+ *   node scripts/probe/measure-overview.mjs --sizes=1440x900,1440x930
  */
 
 import { spawn } from 'node:child_process'
@@ -18,7 +18,7 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const projectDir = path.resolve(__dirname, '..')
+const projectDir = path.resolve(__dirname, '..', '..')
 
 function readArg(name, fallback) {
   const prefix = `--${name}=`

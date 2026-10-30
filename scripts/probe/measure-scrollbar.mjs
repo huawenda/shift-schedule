@@ -21,7 +21,7 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const projectDir = path.resolve(__dirname, '..')
+const projectDir = path.resolve(__dirname, '..', '..')
 
 function readArg(name, fallback) {
   const prefix = `--${name}=`

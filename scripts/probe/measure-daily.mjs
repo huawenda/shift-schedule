@@ -2,9 +2,9 @@
 /**
  * 每日明细「月历网格」的内容密度测量。
  *
- *   node scripts/measure-daily.mjs
- *   node scripts/measure-daily.mjs --sizes=1440x900,1920x1080
- *   node scripts/measure-daily.mjs --url=http://127.0.0.1:6180/index.html
+ *   node scripts/probe/measure-daily.mjs
+ *   node scripts/probe/measure-daily.mjs --sizes=1440x900,1920x1080
+ *   node scripts/probe/measure-daily.mjs --url=http://127.0.0.1:6180/index.html
  *
  * 对每个尺寸报出：格子尺寸、格子内三行内容（日期/班次/数值）各自的高度与
  * 上下留白，以及「内容高度 / 格子高度」这个密度比。
@@ -19,7 +19,7 @@ import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const projectDir = path.resolve(__dirname, '..')
+const projectDir = path.resolve(__dirname, '..', '..')
 
 function readArg(name, fallback) {
   const prefix = `--${name}=`

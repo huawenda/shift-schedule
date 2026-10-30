@@ -465,14 +465,12 @@ pnpm verify:tauri    # 壳内验收（release exe + WebView2 调试口）：建�
 `verify:tauri` 用临时用户目录起壳，不碰真实的 `%LOCALAPPDATA%` 数据；
 需要先 `pnpm exec tauri build --no-bundle --config desktop/src-tauri/tauri.conf.json`。
 
-> ⚠️ `pnpm screenshot:dist` 已失效：它的选择器（`.app-shell` / `.stats-*` / `.matrix-title`）
-> 全部停在 v1 的 DOM 上，通用化重写后找不到元素。要恢复得先按新结构重写它。
->
-> 产品展示图改用 `pnpm shoot:showcase`（= `node scripts/shoot-showcase.mjs`）：
+> 产品展示图用 `pnpm shoot:showcase`（= `node scripts/shoot-showcase.mjs`）：
 > 注入 `fixtures/展示样例6人.json`，逐视图截 2 倍密度原图再合成宣传板，
 > 输出到 `design/screenshots/`。数据全部虚构，与回归用的 13 人 fixture 无关。
-
-仓库根还有 `pnpm dev:local`，等价于本目录的 `pnpm dev`。
+>
+> 一次性界面测量探针在 `scripts/probe/`（内容密度、纵向溢出、滚动条），
+> 只用于偶发排查，不挂 `package.json` 命令，也不参与验收链路。
 
 `pnpm test` 覆盖 11 个数据层文件共 **223 个用例**
 （period 13 / patterns 8 / customPatterns 23 / overtime 15 / roster 45 / backup 19 / self 30 / stats 37 / leave 7 / todos 18 / backupDir 8），
