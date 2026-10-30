@@ -19,6 +19,117 @@
   width: 100%;
 }
 
+/* ── 今日条 ─────────────────────────────────────────────
+ *
+ * 概览页的第一问是「我今天什么班、还有几件事、这个月能拿多少」。
+ * 日历里今天只有一小圈描边，所以要有一条把这三件事直接摆出来的横条。
+ * 只讲本人，不混入全员出勤（全员口径留在矩阵页的概览条里）。
+ */
+.today-strip {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1.35fr) minmax(0, 0.85fr) minmax(0, 1.1fr);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-tint);
+}
+
+.today-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 16px;
+  border-right: 1px solid var(--border);
+}
+
+.today-cell:last-child {
+  border-right: 0;
+}
+
+.today-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.today-date {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-week {
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.today-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+}
+
+/* 班次块本身就是按钮：点一下直接改今天的班 */
+.today-shift {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 26px;
+}
+
+.today-shift:hover {
+  filter: brightness(0.96);
+}
+
+.today-shift.is-blank {
+  background: var(--raised);
+  color: var(--faint);
+  cursor: default;
+}
+
+.today-shift.is-blank:hover {
+  filter: none;
+}
+
+.today-value {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-value.is-money {
+  color: var(--accent);
+}
+
+.today-unit {
+  margin-left: 3px;
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.today-sub {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.today-sub.is-empty {
+  color: var(--faint);
+}
+
 /*
  * 每日明细卡：**高度由左边的薪资卡决定**，自己不贡献高度。
  *
@@ -74,13 +185,14 @@
 
 .stat-title {
   text-wrap: balance;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-/* 用 inline-block 而不是给 .stat-title 加 flex：标题行是 baseline 对齐的，
+/* 强调竖条只留给首卡：四张卡都画一根，等于四张卡都说了同一句「我是卡片」。
+ * 用 inline-block 而不是给 .stat-title 加 flex：标题行是 baseline 对齐的，
  * 一旦标题自己变成 flex 容器，它的基线会取到伪元素的基线，整行文字就歪了。 */
-.stat-title::before {
+.stat-card:first-child .stat-title::before {
   content: "";
   display: inline-block;
   width: 3px;
@@ -101,7 +213,7 @@
   margin-top: auto;
   padding-top: 8px;
   border-top: 1px solid var(--rule);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -184,13 +296,13 @@
 }
 
 .day-count-num {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .day-count-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -373,7 +485,7 @@
 }
 
 .ot-bar.is-night {
-  background: #e3eaf3;
+  background: var(--shift-night-bg);
 }
 
 .ot-bar.is-dayx {
@@ -424,7 +536,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 5px 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -441,7 +553,7 @@
   margin-top: 14px;
   padding-top: 10px;
   border-top: 1px solid var(--rule);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -480,9 +592,9 @@
   border-radius: 3px;
   background: var(--raised);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
-  line-height: 15px;
+  line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -492,7 +604,7 @@
   padding-top: 9px;
   border-top: 1px solid var(--border);
   color: var(--text);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /*
@@ -508,12 +620,12 @@
   border-radius: 5px;
   background: var(--accent-weak);
   color: var(--accent);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .money-row.is-total span:last-child {
-  font-size: 16px;
+  font-size: 18px;
   color: var(--accent);
 }
 
@@ -552,7 +664,7 @@
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .detail-table th:nth-child(1) {
@@ -575,21 +687,20 @@
   padding: 7px 0 6px;
   border-bottom: 1px solid var(--border);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   text-align: center;
 }
 
 /* 表头随滚动冻结在滚动区上沿。border-collapse 的表格里 sticky 的边框会跟着滚，
  * 所以把 border 换成 inset 阴影，视觉上仍是那根 1px 线。
- * 底色用 #fbfcfd 而不是纯白：和内容同色时，滚动的数据行会「融进」表头，
- * 加一层极淡的底才算分出「表头条」。 */
+ * 底色用 --surface-tint 而不是纯白：和内容同色时，滚动的数据行会「融进」表头。 */
 .detail-table thead th {
   position: sticky;
   top: 0;
   z-index: 1;
   border-bottom: 0;
-  background: #fbfcfd;
+  background: var(--surface-tint);
   box-shadow: inset 0 -1px 0 var(--border);
 }
 

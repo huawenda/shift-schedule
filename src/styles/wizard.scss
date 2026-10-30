@@ -31,8 +31,9 @@
   text-wrap: balance;
   margin-top: 4px;
   font-size: var(--fs-title);
-  font-weight: 500;
-  letter-spacing: -0.015em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .wizard-body {
@@ -53,7 +54,7 @@
   padding-left: 18px;
   font-size: 13px;
   line-height: 1.7;
-  color: #3c4145;
+  color: var(--muted);
 }
 
 .wizard-list strong {
@@ -68,7 +69,7 @@
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  background: #fafbfc;
+  background: var(--surface-sunken);
 }
 
 .wizard-summary-row.is-self {

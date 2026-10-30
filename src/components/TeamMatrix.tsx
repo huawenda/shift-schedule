@@ -51,6 +51,8 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
    * col = -1 表示行首「姓名 / 班序」单元格。
    */
   const [cursor, setCursor] = useState({ row: 0, col: 0 })
+  /** 右侧是否还有没滚出来的日期列：决定边缘渐隐显不显示 */
+  const [edgeVisible, setEdgeVisible] = useState(false)
 
   // 滚动条藏了，就得让滚轮能横滚：有横向溢出时把 deltaY 转成 scrollLeft。
   // 滚到两端就放行（不 preventDefault），页面继续纵向滚，不把人困在矩阵里。
@@ -72,6 +74,27 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
     scroll.addEventListener('wheel', onWheel, { passive: false })
     return () => scroll.removeEventListener('wheel', onWheel)
   }, [])
+
+  // 横向滚动条藏了，右边还有没有内容就完全没有提示 ——
+  // 溢出时在右缘压一层渐隐，滚到头自动消失（见 .matrix-edge）。
+  useEffect(() => {
+    const scroll = scrollRef.current
+    if (!scroll) return
+
+    function update() {
+      const max = scroll!.scrollWidth - scroll!.clientWidth
+      setEdgeVisible(max > 0 && scroll!.scrollLeft < max - 1)
+    }
+
+    update()
+    scroll.addEventListener('scroll', update)
+    const observer = new ResizeObserver(update)
+    observer.observe(scroll)
+    return () => {
+      scroll.removeEventListener('scroll', update)
+      observer.disconnect()
+    }
+  }, [mode])
 
   if (roster.members.length === 0) {
     return (
@@ -126,7 +149,8 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
 
   return (
     <section className={`matrix${byName ? ' is-by-name' : ''}`} aria-label="全员排班矩阵">
-      <div className="matrix-scroll" ref={scrollRef} style={{ ['--days' as string]: dayCount }}>
+      <div className="matrix-frame">
+        <div className="matrix-scroll" ref={scrollRef} style={{ ['--days' as string]: dayCount }}>
         <div className="matrix-head">
           {/* 按姓名视图的行头只剩班序，所以表头文案也跟着换 */}
           <div className="matrix-name-cell">{byName ? '班序' : '成员'}</div>
@@ -213,6 +237,8 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
             )
           })}
         </div>
+        </div>
+        <div className={`matrix-edge${edgeVisible ? '' : ' is-hidden'}`} aria-hidden="true" />
       </div>
 
       <div className="matrix-legend">
@@ -222,6 +248,7 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
             {SHIFT_META[shift].label}
           </span>
         ))}
+        {byName ? <span className="legend-hint">横向滚动查看整月</span> : null}
       </div>
     </section>
   )

@@ -4,7 +4,7 @@
 - 日期：2026-10-27
 - 范围：本仓库根（需求提出时位于 `apps/local-standalone`，2026-10-30 已提升到根；技术栈不变）
 - 状态：需求、视觉方向、5 项待确认事项均已定；**只做排班页**，统计/薪资/加班一律不在第一版
-- v1.0 变更：视觉基调定为**强制浅色**（§5.0）；确定夜班配色、弹层班次、班序别名、备份兼容、删成员五件事（§9）
+- v1.0 变更：视觉基调定为**默认浅色**（§5.0，深色可用于外壳与夜班反相块）；确定夜班配色、弹层班次、班序别名、备份兼容、删成员五件事（§9）
 - **v1.1 变更（2026-10-28）**：**备份与存储不再兼容旧格式**（§15）。本文中所有「兼容 v1/v2 备份」的条目 ——
   §7 验收清单、§9 第 4 项、§12 第 5 行、§13.3 第 2 条、§14.4 —— **均已废止**，以 §15 为准。
 
@@ -196,15 +196,18 @@ interface DayOverride {
 
 ## 5. 视觉规范（framed-sheet · seed 1324561339）
 
-### 5.0 视觉基调：强制浅色（硬约束，不可协商）
+### 5.0 视觉基调：默认浅色（不再是硬约束）
 
-运行环境是**公司办公 PC**，显示器色彩与对比表现有限，深色系观感差。因此：
+运行环境是**公司办公 PC**，显示器色彩与对比表现有限，所以**默认**仍是浅色纸面；
+但配色按对比、可读与观感择优，不再禁止深色：
 
-- **只做浅色，不做暗色主题**，也不做"跟随系统"。
-- 根节点强制 `color-scheme: light`，避免系统处于暗色模式时把原生控件（滚动条、输入框、下拉面板）染黑。
-- **不写** `@media (prefers-color-scheme: dark)` 分支，任何组件都不得自带暗色变体。
-- 画布 `#f9fbfc` + 白色画布 + 墨色文字 `#131416`，正文对比度全部 ≥ 4.5:1。
-- 抽签方向 `framed-sheet` 本身即浅色方向，与本约束一致，无需重抽。
+- **本版只做浅色主题**，不做暗色主题、也不做"跟随系统"；完整暗色主题留待后续。
+- 根节点仍声明 `color-scheme: light`，避免系统处于暗色模式时把原生控件
+  （滚动条、输入框、下拉面板）染黑。
+- 深色只用于**外壳**（侧栏 + 顶栏 `#0e2228`）与**夜班反相块**（`#1e3a5f` 底 + 近白字），
+  画布仍是白色。
+- 画布纯白 `#ffffff` + 墨色文字 `#131416`，正文对比度全部 ≥ 4.5:1；
+  控件描边 `#8f969b`（3:1）。
 
 ### 5.1 令牌
 
@@ -213,13 +216,14 @@ interface DayOverride {
   color-scheme: light;
   --ground: #f9fbfc;   --surface: #ffffff;  --raised: #f4f6f8;
   --active: #ebedee;   --border: #e8eaec;   --rule: #f0f1f2;
-  --control: #cdced1;  --text: #131416;     --muted: #5d5f60;
+  --control: #8f969b;  --text: #131416;     --muted: #5d5f60;  --faint: #6b747a;
+  --chrome: #0e2228;   --chrome-text: #e9f2f4; --chrome-accent: #7fd2e2;
   --accent: #1b6c80;
   --chart-1: #1b6c80;  --chart-2: #2f70bb;  --chart-3: #a86f0c;
   --radius-card: 8px;  --radius-control: 6px; --radius-sheet: 16px;
   --sheet-inset: 8px;  --sidebar-width: 228px; --topbar-height: 48px;
   --gap: 24px;  --pad: 24px;  --row-height: 48px; --control-height: 32px;
-  --fs-title: 22px; --fs-section: 16px; --fs-kpi: 28px; --fs-body: 14px; --fs-small: 12px;
+  --fs-title: 26px; --fs-section: 17px; --fs-kpi: 28px; --fs-body: 14px; --fs-small: 12px;
 }
 ```
 

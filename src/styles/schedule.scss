@@ -10,7 +10,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  background: #fcfdfd;
+  background: var(--surface-tint);
 }
 
 .summary-cell {
@@ -33,10 +33,10 @@
 }
 
 .summary-value {
-  font-size: 24px;
-  font-weight: 400;
+  font-size: var(--fs-kpi);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .summary-unit {
@@ -50,7 +50,7 @@
 .summary-names {
   margin: 4px 0 0;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
   text-overflow: ellipsis;
@@ -212,7 +212,33 @@
   min-height: 0;
 }
 
+/* 矩阵外框：给横向溢出补一层右缘渐隐，滚到头就消失
+ * （滚动条被藏起来了，没有这个提示就看不出右边还有半个月） */
+.matrix-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.matrix-edge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 32px;
+  background: linear-gradient(to left, var(--surface), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.matrix-edge.is-hidden {
+  opacity: 0;
+}
+
 .matrix-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
@@ -240,7 +266,7 @@
   top: 0;
   z-index: 3;
   border-bottom: 1px solid var(--border);
-  background: #fbfcfd;
+  background: var(--surface-tint);
 }
 
 .matrix-body {
@@ -256,7 +282,7 @@
 }
 
 .matrix-row:hover .matrix-name-cell {
-  background: #fbfcfd;
+  background: var(--surface-tint);
 }
 
 /* 聚焦行：整行浅青底。姓名列是 sticky 且自带底色，必须一起改；
@@ -293,7 +319,7 @@
 
 .matrix-head .matrix-name-cell {
   z-index: 4;
-  background: #fbfcfd;
+  background: var(--surface-tint);
   border-bottom: 0;
   color: var(--muted);
   font-size: 12px;
@@ -310,7 +336,7 @@
 
 .matrix-name {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -318,7 +344,7 @@
 
 .matrix-pattern {
   overflow: hidden;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
@@ -348,7 +374,7 @@
 }
 
 .matrix-day.is-weekend {
-  background: #fafbfc;
+  background: var(--surface-tint);
 }
 
 /* 今天**只标在表头**：底色微染 + 数字加重 + 底部 2px 色带。
@@ -557,7 +583,7 @@
 }
 
 .cal-cell:hover:not(.is-outside) {
-  background: #fbfcfd;
+  background: var(--surface-tint);
 }
 
 /* 周期外的日期：内容和周期内完全一样（农历 + 班次 + 角标），
@@ -565,7 +591,7 @@
  * 底色比目标色深一档，是因为 opacity 会把它一起提亮。 */
 .cal-cell.is-outside {
   background: #f1f3f5;
-  opacity: 0.72;
+  opacity: 0.78;
   cursor: default;
 }
 
@@ -577,6 +603,7 @@
  * 看得见，但不会把今天变成全屏的视觉重心。
  */
 .cal-cell.is-today {
+  background: var(--accent-weak);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
@@ -595,7 +622,7 @@
   display: inline-block;
   align-self: flex-start;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
 }
@@ -618,7 +645,7 @@
 }
 
 .cal-meta {
-  color: #9aa2a8;
+  color: var(--faint);
   font-size: 11px;
   line-height: 1.2;
 }
@@ -631,7 +658,7 @@
   margin-top: auto;
   padding: 3px 0;
   border-radius: 3px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   text-align: center;
   white-space: nowrap;
@@ -714,6 +741,11 @@
   box-shadow: inset 0 0 0 1px rgba(19, 20, 22, 0.45);
 }
 
+/* 夜班反相块上，深色内描边看不见 —— 换成浅色 */
+.cal-shift.t-night.is-changed {
+  box-shadow: inset 0 0 0 1px rgba(238, 244, 251, 0.55);
+}
+
 /* ── 改班弹层 ─────────────────────────────────────────── */
 
 .sheet-backdrop {
@@ -725,6 +757,7 @@
   justify-content: center;
   padding: 24px;
   background: rgba(15, 20, 24, 0.26);
+  animation: backdrop-in var(--dur-base) ease-out;
 }
 
 .dialog {
@@ -735,7 +768,8 @@
   overflow-y: auto;
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 18px 48px rgba(6, 14, 18, 0.28);
+  animation: dialog-in var(--dur-base) var(--ease-out);
 }
 
 /* 弹层容器靠脚本 focus 接管焦点（见 useDialogFocus），
@@ -756,7 +790,7 @@
 
 .dialog-title {
   font-size: var(--fs-section);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .dialog-sub {
@@ -774,11 +808,23 @@
 }
 
 .option {
+  position: relative;
   height: 44px;
   border: 1px solid transparent;
   border-radius: var(--radius-control);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
+}
+
+/* 选中态：边框 + 右上角对勾。
+ * 夜班现在是深色块，黑色边框在它上面看不见，所以必须有一个不依赖边框色的标记。 */
+.option.is-on::after {
+  position: absolute;
+  top: 4px;
+  right: 7px;
+  font-size: 11px;
+  line-height: 1;
+  content: "✓";
 }
 
 .option:hover {
@@ -1028,11 +1074,40 @@
 
 .empty-title {
   margin-bottom: 6px;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .empty-text {
   font-size: 13px;
   color: var(--muted);
+}
+
+/* 进入动效：遮罩淡入、弹层从下方 6px 抬起。
+ * 只做进入，关闭不做退场动画（退场会把「已经关掉」拖慢半拍）。 */
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-backdrop,
+  .dialog {
+    animation: none;
+  }
 }

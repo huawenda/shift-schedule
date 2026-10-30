@@ -68,23 +68,14 @@
 }
 
 .todo-card-title {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.todo-card-title::before {
-  content: "";
-  display: inline-block;
-  width: 3px;
-  height: 12px;
-  margin-right: 7px;
-  border-radius: 2px;
-  background: var(--accent);
-  vertical-align: -1px;
-}
-
+/* 抬头不再画强调竖条：概览页已经有一张主卡带了竖条，
+ * 这一根再加上去，两个装置就互相抵消了。 */
 .todo-card-stat {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -174,7 +165,7 @@
   margin: 0;
   padding: 5px 8px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -185,14 +176,14 @@
 }
 
 /* 勾选框：用一个空心方块，已完成时打勾。
- * margin-top 必须等于 (行盒高 − 勾选框高) / 2 —— 12px 字 × 1.5 行高 = 18px，
- * (18 − 14) / 2 = 2px。之前写 1px，勾选框整体偏高 1px，肉眼就是「没对齐」。
+ * margin-top 必须等于 (行盒高 − 勾选框高) / 2 —— 正文 13px × 1.5 行高 = 19.5px，
+ * (19.5 − 14) / 2 = 2.75px。字号一变就要跟着重算，否则勾选框会整体偏上/偏下。
  * 用 align-items: center 不行：多行待办时勾选框会跑到整段文字的正中间。 */
 .todo-check {
   flex: 0 0 auto;
   width: 14px;
   height: 14px;
-  margin-top: 2px;
+  margin-top: 2.75px;
   padding: 0;
   border: 1px solid var(--control);
   border-radius: 3px;
@@ -252,7 +243,7 @@
   margin-bottom: -1px;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 
@@ -269,15 +260,15 @@
 /* 标签上的条数：一枚小胶囊，比跟在文字后面的一串数字清楚 */
 .dialog-tab-count {
   display: inline-block;
-  min-width: 16px;
+  min-width: 17px;
   margin-left: 5px;
   padding: 0 4px;
   border-radius: 8px;
   background: var(--raised);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
-  line-height: 15px;
+  line-height: 16px;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -336,7 +327,7 @@
   margin: 0 -6px;
   padding: 5px 6px;
   border-radius: 5px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 

@@ -2,8 +2,21 @@ import { useMemo } from 'react'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { StatsPanels } from '../components/StatsPanels'
 import { TodoCard } from '../components/TodoCard'
+import { formatMonthDay, todayKey, weekdayLabel } from '../data/dateUtils'
+import { formatLeaveDuration } from '../data/leave'
+import { formatOvertimeHours } from '../data/overtime'
 import { formatPeriodRange, type Period } from '../data/period'
-import { getRecordMap, getSelf, patternNameOf, type Member, type Roster } from '../data/roster'
+import { formatMoney } from '../data/profile'
+import {
+  getRecordMap,
+  getSelf,
+  getTemplateShift,
+  overrideKey,
+  patternNameOf,
+  type Member,
+  type Roster
+} from '../data/roster'
+import { SHIFT_META, shiftToneClass } from '../data/shifts'
 import { computeMonthStats } from '../data/stats'
 
 interface OverviewScreenProps {
@@ -50,6 +63,16 @@ export function OverviewScreen({
     return counts
   }, [periodTodos])
 
+  /** 今日条只在本期包含今天时出现；翻到别的月份就没有「今天」可言 */
+  const today = todayKey()
+  const todayInPeriod = period.dates.includes(today)
+  const todayRecord = self ? recordMap.get(overrideKey(self.id, today)) : undefined
+  const todayShift = self ? todayRecord?.shift ?? getTemplateShift(roster, self, today) : null
+  const todayOvertime = todayRecord?.overtimeHours ?? 0
+  const todayLeave = todayShift === '事假' ? formatLeaveDuration(todayRecord?.leaveDuration) : ''
+  const todayTodos = roster.todos.filter(todo => todo.date === today)
+  const todayOpen = todayTodos.filter(todo => !todo.done).length
+
   return (
     <div className="canvas is-overview">
       <div className="canvas-head">
@@ -61,6 +84,76 @@ export function OverviewScreen({
           </p>
         </div>
       </div>
+
+      {/*
+        今日条：概览页的第一问是「我今天什么班、还有几件事、这个月能拿多少」。
+        只讲本人，全员出勤口径仍留在矩阵页的概览条里。
+      */}
+      {todayInPeriod && self ? (
+        <section className="today-strip" aria-label="今日概览">
+          <div className="today-cell">
+            <span className="today-label">今天</span>
+            <span className="today-date">
+              {formatMonthDay(today)}
+              <span className="today-week">周{weekdayLabel(today)}</span>
+            </span>
+          </div>
+
+          <div className="today-cell">
+            <span className="today-label">今日班次</span>
+            <div className="today-row">
+              {todayShift ? (
+                <button
+                  aria-label={`改今天（${today}）的班次`}
+                  className={`today-shift ${shiftToneClass(todayShift)}`}
+                  type="button"
+                  onClick={() => onEdit(self, today)}
+                >
+                  {SHIFT_META[todayShift].label}
+                </button>
+              ) : (
+                <span className="today-shift is-blank">未排班</span>
+              )}
+              {todayOvertime > 0 ? (
+                <span className="cal-ot" title={`今日加班 ${formatOvertimeHours(todayOvertime)}`}>
+                  +{formatOvertimeHours(todayOvertime)}
+                </span>
+              ) : null}
+              {todayRecord?.isLegal ? (
+                <span className="cal-legal" aria-hidden="true" title="法定节假日">法</span>
+              ) : null}
+              {todayLeave ? (
+                <span className="cal-leave" title={`事假 ${todayLeave}`}>{todayLeave}</span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="today-cell">
+            <span className="today-label">今日待办</span>
+            <span className="today-value">
+              {todayTodos.length}
+              <span className="today-unit">项</span>
+            </span>
+            <span className={`today-sub${todayTodos.length === 0 ? ' is-empty' : ''}`}>
+              {todayTodos.length === 0
+                ? '今天没有待办'
+                : todayOpen > 0
+                  ? `未完成 ${todayOpen} 项`
+                  : '已经全部完成'}
+            </span>
+          </div>
+
+          <div className="today-cell">
+            <span className="today-label">本月实发</span>
+            <span className="today-value is-money">
+              {stats?.salary.hasBase ? `¥${formatMoney(stats.salary.net)}` : '—'}
+            </span>
+            <span className={`today-sub${stats?.salary.hasBase ? '' : ' is-empty'}`}>
+              {stats?.salary.hasBase ? '含加班费与夜班津贴' : '未填基本工资'}
+            </span>
+          </div>
+        </section>
+      ) : null}
 
       {/*
         日历 + 待办并排：日历固定 900，待办吃掉右边剩下的宽度。

@@ -184,7 +184,7 @@ async function runScenario(name, url, downloadDir) {
     )
     check(`${name}: 向导进入第 3 步`, await client.evaluate(clickByText('.wizard-foot button', '进入排班表')))
 
-    // 默认落地是「月度概览」：日历 + 四块统计，且不再有今日概览条
+    // 默认落地是「月度概览」：日历 + 四块统计，且没有全员概览条
     await waitFor(client, 'Boolean(document.querySelector(".stats-grid"))', '月度概览页')
     const landing = await client.evaluate(`(() => ({
       active: document.querySelector('.rail-item.is-active')?.textContent.trim() ?? '',
@@ -202,7 +202,7 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(landing.rails)
     )
 
-    // 侧栏观感：每项带图标、选中是整块浅青底 + 强调色、底部设置单独成段
+    // 侧栏观感：深色框上每项带图标、选中是半透明青底 + 亮青字、底部设置单独成段
     const railLook = await client.evaluate(`(() => {
       const items = Array.from(document.querySelectorAll('.rail-item'))
       const active = document.querySelector('.rail-item.is-active')
@@ -220,10 +220,10 @@ async function runScenario(name, url, downloadDir) {
       }
     })()`)
     check(
-      `${name}: 侧栏每项都有图标，选中项是浅青底 + 强调色（不是白底黑字）`,
-      railLook.icons === 3 && railLook.activeBg === 'rgb(234, 242, 244)' &&
-        railLook.activeColor === 'rgb(27, 108, 128)' &&
-        railLook.activeIcon === 'rgb(27, 108, 128)' && railLook.itemH === 34,
+      `${name}: 侧栏每项都有图标，选中项是半透明青底 + 亮青字（深框上可读）`,
+      railLook.icons === 3 && railLook.activeBg === 'rgba(127, 210, 226, 0.14)' &&
+        railLook.activeColor === 'rgb(127, 210, 226)' &&
+        railLook.activeIcon === 'rgb(127, 210, 226)' && railLook.itemH === 34,
       JSON.stringify(railLook)
     )
     check(
@@ -232,7 +232,7 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(railLook)
     )
     check(
-      `${name}: 概览页有日历和四块统计、没有今日概览条`,
+      `${name}: 概览页有日历和四块统计、没有全员概览条`,
       landing.calendar === 1 && landing.cards === 4 && landing.summary === 0,
       JSON.stringify(landing)
     )
@@ -1122,14 +1122,17 @@ async function runScenario(name, url, downloadDir) {
           // 标记必须紧贴日期数字（下划线就画在数字自己身上，left/top 应基本一致）
           onDayNumber: Boolean(day && dayRect && cellRect &&
             Math.abs(dayRect.left - cellRect.left) < 12 && dayRect.top - cellRect.top < 14),
-          // 抬头：与统计卡同一套（发丝线 + 3px 强调色竖条）
+          // 抬头：只有发丝线（强调竖条只留在首卡）
           headBorder: card
             ? getComputedStyle(card.querySelector('.todo-card-head')).borderBottomWidth
             : '',
           headBar: (() => {
             const title = card?.querySelector('.todo-card-title')
-            const bar = title ? getComputedStyle(title, '::before') : null
-            return bar ? [parseFloat(bar.width), bar.backgroundColor] : []
+            if (!title) return []
+            const bar = getComputedStyle(title, '::before')
+            return bar.content && bar.content !== 'none' && bar.content !== 'normal'
+              ? [parseFloat(bar.width), bar.backgroundColor]
+              : []
           })(),
           // 日期行拆成「日期 + 星期」两级
           groupParts: Array.from(card?.querySelectorAll('.todo-group-date > span') ?? [])
@@ -1171,9 +1174,9 @@ async function runScenario(name, url, downloadDir) {
         JSON.stringify(todoCard)
       )
       check(
-        `${name}: 待办卡抬头与统计卡同款（发丝线 + 强调色竖条，日期分两级）`,
+        `${name}: 待办卡抬头只有发丝线（强调竖条只留在首卡），日期分两级`,
         todoCard.headBorder === '1px' &&
-          JSON.stringify(todoCard.headBar) === JSON.stringify([3, 'rgb(27, 108, 128)']) &&
+          JSON.stringify(todoCard.headBar) === JSON.stringify([]) &&
           JSON.stringify(todoCard.groupParts) ===
             JSON.stringify(['todo-group-day', 'todo-group-week']),
         JSON.stringify(todoCard)
@@ -1328,11 +1331,11 @@ async function runScenario(name, url, downloadDir) {
       )
       check(
         `${name}: 柱色与日历班次色块一致`,
-        // 白班 #dff3ff / 夜班 #e3eaf3 / 白特 #fff0c2 / 夜特 #fde7c7 / 法定 #fde68a
+        // 白班 #dff3ff / 夜班 #1e3a5f（反相深蓝）/ 白特 #fff0c2 / 夜特 #fde7c7 / 法定 #fde68a
         JSON.stringify(otChart.barBg) ===
           JSON.stringify([
             'rgb(223, 243, 255)',
-            'rgb(227, 234, 243)',
+            'rgb(30, 58, 95)',
             'rgb(255, 240, 194)',
             'rgb(253, 231, 199)',
             'rgb(253, 230, 138)'
@@ -2273,7 +2276,7 @@ async function runScenario(name, url, downloadDir) {
     )
     check(
       `${name}: 已在本期时「回到本期」置灰禁用（没有可做的事就别勾人点）`,
-      monthLook.todayDisabledAtCurrent === true && monthLook.todayColor === 'rgb(138, 146, 153)',
+      monthLook.todayDisabledAtCurrent === true && monthLook.todayColor === 'rgb(127, 151, 157)',
       JSON.stringify(monthLook)
     )
 
@@ -2310,7 +2313,7 @@ async function runScenario(name, url, downloadDir) {
     })()`)
     check(
       `${name}: 切走之后「回到本期」恢复可用并变强调色`,
-      todayAfterShift.disabled === false && todayAfterShift.color === 'rgb(27, 108, 128)',
+      todayAfterShift.disabled === false && todayAfterShift.color === 'rgb(127, 210, 226)',
       JSON.stringify(todayAfterShift)
     )
     check(`${name}: 切月后矩阵仍在`, await client.evaluate('document.querySelectorAll(".matrix-row").length === 2'))

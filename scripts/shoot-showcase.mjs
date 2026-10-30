@@ -33,11 +33,11 @@ const ROSTER_KEY = 'shift-schedule:local:roster:v2'
 const VIEW_W = 1466
 /**
  * 比应用最小高度（720）高出不少，原因是展示图要在一屏里看到整页：
- * 日历 + 本月概览 + 薪资计算（含应发/实发）+ 每日明细（含合计脚注）。
- * 这个高度是逐档试出来的：900 切掉半个薪资卡，1160 差实发，1320 还差底部边线与合计。
+ * 今日条 + 日历 + 本月概览 + 薪资计算（含应发/实发）+ 每日明细（含合计脚注）。
+ * 这个高度是逐档试出来的：1400 在加入今日条与放大字号后切掉半个薪资卡，1540 才收得住。
  */
-const VIEW_H = 1400
-/** 2 倍像素密度，输出 2932×2800，贴进文档或宣传页都够清晰 */
+const VIEW_H = 1540
+/** 2 倍像素密度，概览图输出 2932×3080，贴进文档或宣传页都够清晰 */
 const SCALE = 2
 
 const outArg = process.argv.find(arg => arg.startsWith('--out='))
@@ -61,7 +61,7 @@ const boardHeight = logicalH => logicalH * SCALE + PAD * 2
  * 弹层页取一个真实窗口的身高就够 —— 统一高度只会在矩阵页留下一大片死白。
  */
 const SHOT_HEIGHT = {
-  overview: 1400,
+  overview: 1540,
   matrix: 700,
   dialog: 900
 }

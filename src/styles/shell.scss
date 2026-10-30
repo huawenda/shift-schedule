@@ -1,5 +1,5 @@
-/* 外壳：228px 侧栏 + 48px 顶栏共用一块 tinted 底（L 形），
- * 画布是缩进 8px 的白色卡片 —— 层次只靠一个色调台阶和 1px 边，没有阴影。
+/* 外壳：228px 侧栏 + 48px 顶栏共用一块深青框（L 形），
+ * 画布是缩进 8px 的白色卡片 —— 靠明度台阶分层，深框把纸面托起来。
  */
 
 .app {
@@ -7,7 +7,8 @@
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   grid-template-rows: var(--topbar-height) minmax(0, 1fr);
   height: 100vh;
-  background: var(--ground);
+  background: var(--chrome);
+  color: var(--chrome-muted);
 }
 
 /* ------------------------------------------------------------ 侧栏 */
@@ -31,15 +32,15 @@
 }
 
 /* 品牌区：书脊。
- * 不做块底，左侧一根 3px 深青竖条把品牌区「装订」起来，底部一根暖沙短线当记号 ——
- * 靠记号而不是色块建立品牌感，侧栏保持通体浅色，不与白画布抢对比度。 */
+ * 深色框上，左侧一根 3px 浅青竖条把品牌区「装订」起来，底部一根暖沙短线当记号 ——
+ * 两根线各管一件事：青线说「这里开始」，沙线说「这是昼夜」。 */
 .rail-brand {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 8px 6px 8px 12px;
   margin-bottom: 14px;
-  border-left: 3px solid var(--brand-ink);
+  border-left: 3px solid var(--chrome-accent);
 }
 
 .rail-brand-text {
@@ -66,6 +67,9 @@
   width: 45px;
   height: 45px;
   flex: 0 0 auto;
+  /* 深框上给标识留一圈极淡的石光线，深青盘才不至于和背景糊成一块 */
+  border-radius: 11px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
 .rail-mark-plate {
@@ -90,15 +94,16 @@
  * （正文字重 600 在雅黑下会被路由到 Bold；这里首选的是可变字重字体，写 700 才是真的 700） */
 .rail-name {
   font-family: var(--font-brand);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
-  line-height: 22px;
+  line-height: 23px;
   letter-spacing: 0.1em;
+  color: var(--chrome-text);
 }
 
-/* 副标是说明，不是标签：去掉边框与底，用中性灰字退到第二层 */
+/* 副标是说明，不是标签：用外壳的第二级灰退到后面 */
 .rail-version {
-  color: var(--muted);
+  color: var(--chrome-muted);
   font-size: 12px;
   line-height: 16px;
 }
@@ -114,7 +119,7 @@
 .rail-group-label {
   margin: 0 0 5px;
   padding: 0 8px;
-  color: var(--faint);
+  color: var(--chrome-faint);
   font-size: 11px;
   letter-spacing: 0.08em;
 }
@@ -123,7 +128,7 @@
 .rail-foot {
   margin-top: auto;
   padding-top: 9px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--chrome-line);
 }
 
 .rail-item {
@@ -135,12 +140,12 @@
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--chrome-muted);
+  font-size: 14px;
   font-weight: 500;
   text-align: left;
   text-decoration: none;
-  transition: background 120ms ease, color 120ms ease;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
 
 /* 键盘用户绕过侧栏与顶栏，直达画布 */
@@ -168,35 +173,35 @@
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
-  color: var(--faint);
-  transition: color 120ms ease;
+  color: var(--chrome-faint);
+  transition: color var(--dur-fast) ease;
 }
 
 .rail-item:hover:not(:disabled) {
-  background: var(--active);
-  color: var(--text);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
 }
 
 .rail-item:hover:not(:disabled) .rail-icon {
-  color: var(--muted);
+  color: var(--chrome-muted);
 }
 
 .rail-item.is-active {
-  background: var(--accent-weak);
-  color: var(--accent);
+  background: rgba(127, 210, 226, 0.14);
+  color: var(--chrome-accent);
 }
 
 .rail-item.is-active .rail-icon {
-  color: var(--accent);
+  color: var(--chrome-accent);
 }
 
 .rail-item:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--chrome-accent);
   outline-offset: 1px;
 }
 
 .rail-item:disabled {
-  color: #a8afb4;
+  color: var(--chrome-faint);
 }
 
 /* ------------------------------------------------------------ 顶栏 */
@@ -246,9 +251,9 @@
   align-items: stretch;
   height: var(--control-height);
   overflow: hidden;
-  border: 1px solid var(--control);
+  border: 1px solid var(--chrome-line);
   border-radius: var(--radius-control);
-  background: var(--surface);
+  background: var(--chrome-raised);
 }
 
 .month-step {
@@ -259,22 +264,22 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--chrome-muted);
 }
 
 .month-step:hover:not(:disabled) {
-  background: var(--raised);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--chrome-text);
 }
 
 /* 按下时再压一档，给出真实的「按到了」反馈 */
 .month-step:active:not(:disabled) {
-  background: var(--active);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 /* 外层 overflow: hidden 会把 outline 裁掉，于是往里收一档 */
 .month-step:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--chrome-accent);
   outline-offset: -2px;
 }
 
@@ -289,8 +294,9 @@
   justify-content: center;
   min-width: 116px;
   padding: 0 10px;
-  border-right: 1px solid var(--rule);
-  border-left: 1px solid var(--rule);
+  border-right: 1px solid var(--chrome-line);
+  border-left: 1px solid var(--chrome-line);
+  color: var(--chrome-text);
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -310,29 +316,29 @@
 .month-today {
   padding: 0 12px;
   border: 0;
-  border-left: 1px solid var(--rule);
+  border-left: 1px solid var(--chrome-line);
   background: transparent;
-  color: var(--accent);
+  color: var(--chrome-accent);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
 }
 
 .month-today:hover:not(:disabled) {
-  background: var(--accent-weak);
+  background: rgba(127, 210, 226, 0.12);
 }
 
 .month-today:active:not(:disabled) {
-  background: #dbeaee;
+  background: rgba(127, 210, 226, 0.2);
 }
 
 .month-today:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--chrome-accent);
   outline-offset: -2px;
 }
 
 .month-today:disabled {
-  color: var(--faint);
+  color: var(--chrome-faint);
 }
 
 .year-track-pad {
@@ -349,6 +355,21 @@
   min-width: 0;
 }
 
+/* 顶栏按钮在深框上改成「半透明浅底 + 亮字」，白底按钮会像两张贴纸 */
+.topbar .btn {
+  border-color: var(--chrome-line);
+  background: var(--chrome-raised);
+  color: var(--chrome-text);
+}
+
+.topbar .btn:hover:not(:disabled) {
+  background: #1d3d46;
+}
+
+.topbar .btn:focus-visible {
+  outline-color: var(--chrome-accent);
+}
+
 /* ------------------------------------------------------------ 画布 */
 
 .sheet {
@@ -359,9 +380,11 @@
   min-width: 0;
   min-height: 0;
   margin: 0 8px 8px 0;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(0, 0, 0, 0.35);
   border-radius: var(--radius-sheet);
   background: var(--surface);
+  /* 深框上，白纸靠一层低位投影脱离背景；画布内部仍然不用投影 */
+  box-shadow: 0 10px 34px rgba(2, 10, 13, 0.26);
   overflow: hidden;
 }
 
@@ -375,6 +398,7 @@
   min-height: 0;
   padding: var(--pad);
   overflow: auto;
+  animation: canvas-in var(--dur-fast) var(--ease-out);
 }
 
 /*
@@ -483,11 +507,13 @@
   gap: 16px;
 }
 
+/* 标题 600：微软雅黑没有 500，500 会落到 Regular，标题和正文就只能靠字号区分了 */
 .canvas-title {
   text-wrap: balance;
   font-size: var(--fs-title);
-  font-weight: 500;
-  letter-spacing: -0.015em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 /*
@@ -545,4 +571,22 @@
 .segmented-item.is-on {
   background: var(--text);
   color: #fff;
+}
+
+/* 切页：只淡入 + 抬 2px，不缩放。停留态不再有动效。 */
+@keyframes canvas-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas {
+    animation: none;
+  }
 }

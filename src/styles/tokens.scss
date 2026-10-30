@@ -1,24 +1,41 @@
 /* 设计令牌 + 全局基础
  *
- * 方向：framed-sheet（tinted L 形外框 + 白色画布）。
- * 硬约束：全站强制浅色 —— 办公 PC 显示器对比与色彩表现有限，深色系观感差。
- * 所以这里固定 color-scheme: light，且不提供任何暗色分支。
+ * 方向：深色外框 + 白色画布（framed-sheet 的深色版）。
+ * 默认仍是浅色（color-scheme: light），但不再把「浅色」当硬约束：
+ * 深色只服务于外壳和个别反相色块，画布保持纸白；配色以对比、可读与观感为准。
  */
 
 :root {
   color-scheme: light;
 
+  /* 外壳（侧栏 + 顶栏）：深青框。深色把白画布托起来，也给品牌一个落点。
+   * 这一组只用于外壳，不参与画布内的语义配色。 */
+  --chrome: #0e2228;
+  --chrome-raised: #16333b;
+  --chrome-line: #27444d;
+  --chrome-text: #e9f2f4;
+  --chrome-muted: #a3b7bc;
+  --chrome-faint: #7f979d;
+  --chrome-accent: #7fd2e2;
+
   --ground: #f9fbfc;
   --surface: #ffffff;
+  /* 画布内的三级白：纯白画布 / 表头与悬停 / 面板内嵌 */
+  --surface-tint: #fbfcfd;
+  --surface-sunken: #f6f8f9;
   --raised: #f4f6f8;
   --active: #ebedee;
   --border: #e8eaec;
   --rule: #f0f1f2;
-  --control: #cdced1;
+  /* 控件描边按 3:1 取（原 #cdced1 只有 1.57:1，在办公屏上几乎看不见）。
+   * 输入框、下拉、按钮共用这一个值。 */
+  --control: #8f969b;
+  --control-hover: #727b80;
 
   --text: #131416;
   --muted: #5d5f60;
-  --faint: #8a9299;
+  /* 辅助文字 4.77:1（原 #8a9299 仅 3.16:1，11px 灰字在普通屏上发虚） */
+  --faint: #6b747a;
 
   --accent: #1b6c80;
   --accent-weak: #eaf2f4;
@@ -94,8 +111,11 @@
    */
   --shift-day-bg: #dff3ff;
   --shift-day-ink: #02689f;
-  --shift-night-bg: #e3eaf3;
-  --shift-night-ink: #1e3a5f;
+  /* 夜班是六色里唯一的反相块：深蓝底 + 近白字。
+   * 原来浅蓝灰 #e3eaf3 和事假 #e5e7eb 几乎是同一个灰，矩阵里要回头看图例才分得清；
+   * 反相之后一眼可辨，也正好呼应「昼夜」这个品牌。 */
+  --shift-night-bg: #1e3a5f;
+  --shift-night-ink: #eef4fb;
   --shift-rest-bg: #dcfce7;
   --shift-rest-ink: #047857;
   --shift-dayx-bg: #fff0c2;
@@ -129,11 +149,19 @@
    * 纵向却空出一大截，看着就是色块没居中。 */
   --matrix-pill-gap: 4px;
 
-  --fs-title: 22px;
-  --fs-section: 16px;
+  /* 字号阶梯：11 微标签 / 12 辅助 / 14 正文 / 17 分区标题 / 26 页面标题 / 28 关键数值。
+   * 旧阶梯 93% 的文字挤在 10–13px，13 到 22 中间是空的，整页读起来像一张表格。 */
+  --fs-title: 26px;
+  --fs-section: 17px;
   --fs-kpi: 28px;
   --fs-body: 14px;
   --fs-small: 12px;
+
+  /* 动效：只给「进入」用，停留态不动。 */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
 }
 
 *,
@@ -358,14 +386,14 @@ p {
   width: 100%;
   height: var(--control-height);
   padding: 0 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control);
   border-radius: var(--radius-control);
   background: var(--surface);
   font-size: 13px;
 }
 
 .input:hover {
-  border-color: var(--control);
+  border-color: var(--control-hover);
 }
 
 .input:focus {
@@ -393,7 +421,7 @@ p {
   min-width: 0;
   height: var(--control-height);
   padding: 0 26px 0 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control);
   border-radius: var(--radius-control);
   background: var(--surface);
   font-size: 13px;
@@ -401,7 +429,7 @@ p {
 }
 
 .select-trigger:hover:not(:disabled) {
-  border-color: var(--control);
+  border-color: var(--control-hover);
 }
 
 .select-trigger[aria-expanded="true"] {

@@ -18,8 +18,8 @@
  */
 .settings-label h2 {
   margin-bottom: 6px;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .settings-label h2::before {
@@ -45,8 +45,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 面板：给一层 1px 边界。原来只有一层几乎与白底同色的 #fafbfc，
- * 在廉价办公屏上等于「没有容器」，右边的表单像是直接浮在页面上。 */
+/* 面板：给一层 1px 边界 + 比画布低一档的底。
+ * 原来只有一层几乎与白底同色的近白，在办公屏上等于「没有容器」。 */
 .settings-panel {
   display: flex;
   flex-direction: column;
@@ -54,7 +54,7 @@
   padding: 18px;
   border: 1px solid var(--rule);
   border-radius: var(--radius-card);
-  background: #fafbfc;
+  background: var(--surface-sunken);
 }
 
 .settings-actions {
@@ -206,12 +206,12 @@
   padding: 0 0 7px;
   border-bottom: 1px solid var(--rule);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* 行悬停：整行淡淡抬起一层，扫描一列时知道自己在哪一行 */
 .member-row:hover {
-  background: #fbfcfd;
+  background: var(--surface-tint);
 }
 
 /* 表头文字再右移 9px，去对齐输入框**里面**的文字：
@@ -284,7 +284,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -307,11 +307,11 @@
   transition: border-color 120ms ease, background 120ms ease;
 }
 
-/* 悬停：原来把底色换成 --raised，可面板底色本身就是 #fafbfc，两者几乎同色，
+/* 悬停：原来把底色换成 --raised，可面板底色本身就是近白，两者几乎同色，
  * 鼠标划过等于没有反馈。改成描边变深 + 极淡底。 */
 .pattern-chip:hover {
   border-color: var(--control);
-  background: #fbfcfd;
+  background: var(--surface-tint);
 }
 
 /* 选中：从「纯黑双描边」改成强调色 —— 黑框在这页太重，也和全站强调色脱节 */
@@ -411,7 +411,7 @@
  * 边框比列表卡片深一档（--control），否则浅灰在廉价办公屏上几乎看不出边界。 */
 .pattern-preview-inline {
   border-color: var(--control);
-  background: #fbfcfd;
+  background: var(--surface-tint);
 }
 
 .pattern-preview-head {
@@ -423,8 +423,8 @@
 }
 
 .pattern-preview-title {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .pattern-preview-note {
@@ -610,8 +610,8 @@ button.shift-cell:hover {
   gap: 8px;
   padding-bottom: 9px;
   border-bottom: 1px solid var(--rule);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .profile-tag {
