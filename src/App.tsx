@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Shell, type Route } from './components/Shell'
 import { DayEditor } from './components/DayEditor'
 import { ScrollOverlay } from './components/ScrollOverlay'
@@ -7,9 +7,7 @@ import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
 import { Wizard } from './screens/Wizard'
-import { backupText, buildBackupFileName, downloadBackup, parseBackup } from './data/backup'
-import { canChooseBackupDir, getBackupDir, writeBackupFile } from './data/backupDir'
-import { currentMonthKey, formatMonthTitle, getPeriod, shiftMonth, type MonthKey } from './data/period'
+import { formatMonthTitle } from './data/period'
 import {
   createMemberId,
   emptyRoster,
@@ -21,7 +19,9 @@ import {
 import { emptySalary, type SelfIdentity } from './data/profile'
 import { formatOvertimeHours } from './data/overtime'
 import { SHIFT_META, type ShiftType } from './data/shifts'
-import { getCloseBehavior, syncCloseBehaviorToShell } from './data/windowPrefs'
+import { getCloseBehavior, syncCloseBehaviorToShell } from './platform/windowPrefs'
+import { useBackupFlow } from './hooks/useBackupFlow'
+import { useMonthNavigation } from './hooks/useMonthNavigation'
 import { useRoster } from './hooks/useRoster'
 
 /** 从哪儿点开的格子：矩阵只能改班次，概览页的日历能记加班 */
@@ -49,7 +49,6 @@ const ROUTE_TITLE: Record<Route, string> = {
 export function App() {
   const api = useRoster()
   const [route, setRoute] = useState<Route>(readRoute)
-  const [monthKey, setMonthKey] = useState<MonthKey>(() => currentMonthKey())
   /** 进设置页时落在哪个 tab：从「月度概览」的薪资空态点进去时直接到个人资料 */
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('roster')
   const [wizardSkipped, setWizardSkipped] = useState(false)
@@ -57,7 +56,8 @@ export function App() {
   const [statusText, setStatusText] = useState('数据已就绪')
   const [notice, setNotice] = useState('')
 
-  const period = useMemo(() => getPeriod(monthKey), [monthKey])
+  const { monthKey, period, goMonth, goToday, atCurrentMonth } = useMonthNavigation()
+  const { backup, restore } = useBackupFlow(api, { setStatusText, setNotice })
 
   useEffect(() => {
     function onHashChange() {
@@ -92,53 +92,6 @@ export function App() {
     setSettingsTab('profile')
     navigate('settings')
   }, [navigate])
-
-  const goMonth = useCallback((delta: number) => {
-    setMonthKey(current => shiftMonth(current, delta))
-  }, [])
-
-  async function backup() {
-    const fileName = buildBackupFileName(new Date())
-    const dir = getBackupDir()
-
-    // 壳里且设过目录 → 直接写进去。用户挑的地方才是真·「默认存放位置」，
-    // 这时再退回下载夹会让人以为文件跑到别处去了。
-    if (dir && canChooseBackupDir()) {
-      try {
-        const saved = await writeBackupFile(dir, fileName, backupText(api.roster))
-        setStatusText(`已导出到 ${saved}`)
-        return
-      } catch (error) {
-        setStatusText(`导出失败：${error instanceof Error ? error.message : String(error)}`)
-        return
-      }
-    }
-
-    try {
-      const downloaded = downloadBackup(api.roster)
-      setStatusText(`已导出 ${downloaded}`)
-    } catch {
-      setStatusText('导出失败')
-    }
-  }
-
-  async function restore(file: File) {
-    setStatusText('正在导入…')
-    try {
-      const result = parseBackup(await file.text())
-      api.replaceRoster(result.roster)
-      setStatusText('导入完成')
-
-      const base = `已导入 ${result.memberCount} 位成员、${result.overrideCount} 条记录`
-      setNotice(
-        result.droppedMembers.length > 0
-          ? `${base}；另有 ${result.droppedMembers.length} 位成员的班序在备份里不存在，未能恢复：${result.droppedMembers.join('、')}`
-          : base
-      )
-    } catch (error) {
-      setStatusText(error instanceof Error ? error.message : '导入失败')
-    }
-  }
 
   function clearAll() {
     api.replaceRoster({ ...emptyRoster })
@@ -220,10 +173,7 @@ export function App() {
       <Shell
         memberCount={api.roster.members.length}
         monthTitle={formatMonthTitle(monthKey)}
-        atCurrentMonth={
-          // MonthKey 是 { year, month } 对象，比引用永远 false，必须逐字段比
-          monthKey.year === currentMonthKey().year && monthKey.month === currentMonthKey().month
-        }
+        atCurrentMonth={atCurrentMonth}
         notice={notice ? { text: notice, onDismiss: () => setNotice('') } : undefined}
         route={route}
         statusText={statusText}
@@ -235,7 +185,7 @@ export function App() {
         }}
         onRestore={file => void restore(file)}
         onShiftMonth={goMonth}
-        onToday={() => setMonthKey(currentMonthKey())}
+        onToday={goToday}
       >
         {route === 'settings' ? (
           <SettingsScreen

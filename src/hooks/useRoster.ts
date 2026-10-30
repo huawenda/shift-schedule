@@ -6,11 +6,9 @@ import {
   addTodo,
   findMember,
   isRosterEmpty,
-  loadRoster,
   removePattern,
   removeTodo,
   restoreDay,
-  saveRoster,
   saveSalary as applySalary,
   toggleTodo,
   upsertPattern,
@@ -20,7 +18,8 @@ import {
 } from '../data/roster'
 import type { CustomPattern } from '../data/patterns'
 import type { SalaryInput, SelfIdentity } from '../data/profile'
-import { isPersistenceAvailable } from '../data/storage'
+import { loadRoster, saveRoster } from '../platform/rosterStore'
+import { isPersistenceAvailable } from '../platform/storage'
 import type { ShiftType } from '../data/shifts'
 
 /**

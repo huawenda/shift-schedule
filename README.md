@@ -157,7 +157,7 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 - **键是 memberId 不是姓名**，所以改名不会丢历史
 - **删除成员会连带删除其全部记录**，删前提示条数
 
-这些规范化逻辑统一在 `src/data/roster.ts` 与 `src/data/overtime.ts`，界面层不要自己拼 key。
+这些规范化逻辑统一在 `src/data/roster/` 与 `src/data/overtime.ts`，界面层不要自己拼 key。
 
 ---
 
@@ -318,24 +318,36 @@ localStorage 按「协议 + 域名 + 端口」分区，因此下面三处是**�
 
 ```
 src/
-├── data/                    纯逻辑，零 React 依赖，可直接单测
+├── data/                    纯规则：不碰 React、DOM、存储与 Tauri，可直接单测
+│   ├── roster/              花名册域（外部一律从 './roster' 引用，不直接进子文件）
+│   │   ├── model.ts         成员 / 改班记录 / 本人 / 花名册 的类型与常量
+│   │   ├── normalize.ts     校验与归一化（导入、旧数据收敛）
+│   │   ├── queries.ts       查询 + 班序缓存 + 班序显示名
+│   │   ├── commands.ts      改班 / 成员 / 班序 / 待办四类命令
+│   │   ├── self.ts          本人身份与薪资
+│   │   └── index.ts         统一出口
 │   ├── shifts.ts            6 种班次的类型、单字、色调、时段
 │   ├── patterns.ts          内置 13 条 + 自建班序 + 24 天循环 + 解析器
 │   ├── period.ts            结算月推算（30/31 天、无限翻月）+ 月历网格补齐
-│   ├── roster.ts            成员 + 自建班序 + 覆盖记录 + 本人与薪资（核心）
 │   ├── profile.ts           薪资四项的类型、金额清洗、解析
 │   ├── overtime.ts          加班规则：可记范围、预设档位、0.5 步长归一化
 │   ├── leave.ts             事假时长：半天 4h / 一天 8h、只对事假生效
 │   ├── stats.ts             月度统计：班次天数、三类加班、加班费与实发（纯函数）
-│   ├── storage.ts           localStorage 封装 + 内存兜底
-│   ├── backup.ts            导出 / 导入（只认当前格式）
+│   ├── backup.ts            备份格式与解析（只认当前 v5）
 │   ├── dateUtils.ts         日期键、加减天、模运算
 │   ├── calendarMeta.ts      农历与节日角标（lunar-javascript）
-│   ├── todos.ts             待办：归一化、排序、按日期分组、便笺色分配
-│   ├── backupDir.ts         备份默认目录（仅桌面壳）+ 写盘
-│   └── env.ts               运行环境判断（Tauri 壳 / 浏览器）
+│   └── todos.ts             待办：归一化、排序、按日期分组、便笺色分配
+├── platform/                平台适配：浏览器存储、Tauri 壳、文件下载
+│   ├── storage.ts           localStorage 封装 + 内存兜底
+│   ├── rosterStore.ts       花名册读写（读回时走 data/roster 的归一化）
+│   ├── env.ts               运行环境判断（Tauri 壳 / 浏览器）
+│   ├── backupDir.ts         备份目录（仅桌面壳）+ 写盘
+│   ├── download.ts          浏览器 / 静态版的备份下载
+│   └── windowPrefs.ts       关闭行为偏好（同步给 Rust）
 ├── hooks/
 │   ├── useRoster.ts         花名册状态 + 自动落盘
+│   ├── useBackupFlow.ts     导出 / 导入流程
+│   ├── useMonthNavigation.ts 结算月导航（翻月 / 回本月 / 周期）
 │   └── useDialogFocus.ts    弹层打开时移入焦点，避免背景残留焦点环
 ├── components/
 │   ├── Shell.tsx            228 侧栏 + 48 顶栏 + 白色画布
@@ -357,8 +369,8 @@ src/
 │   ├── MatrixScreen.tsx     全员矩阵页（含今日 3 格概览条）
 │   ├── OverviewScreen.tsx   月度概览页（日历 + 统计，日历锁本人）
 │   └── SettingsScreen.tsx   设置：人员配置 / 个人资料 两个 tab
-├── styles/                  tokens → shell → schedule → stats → settings → wizard
-├── App.tsx                  三个 hash 路由、月份、弹层、提示
+├── styles/                  tokens → shell → schedule → stats → todos → settings → wizard
+├── App.tsx                  三个 hash 路由、弹层与提示（备份与月份已抽成 hook）
 └── main.tsx
 
 fixtures/
@@ -367,9 +379,9 @@ fixtures/
                             数据刻意落在当前结算周期内，含法定加班、事假与三条待办
 ```
 
-分层原则：**`data/` 不知道 React 的存在**，`screens/` 不直接碰 localStorage，
-持久化只在 `useRoster` 与 `data/` 里发生。要加统计页，只需在 `data/` 加纯函数、
-在 `screens/` 加视图。
+分层原则：**`data/` 只放规则**，不碰 React、DOM、localStorage 与 Tauri；平台相关一律在
+`platform/`，`screens/` 不直接碰存储；持久化只在 `useRoster`（写）与 `platform/rosterStore`
+（读）发生。要加统计页，只需在 `data/` 加纯函数、在 `screens/` 加视图。
 
 ---
 

@@ -2,14 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { fromRows, MemberRowsEditor, toRows, type MemberRow, type PatternOption } from '../components/MemberRowsEditor'
 import { PatternList } from '../components/PatternList'
 import { ProfileSection } from '../components/ProfileSection'
-import { isTauriShell } from '../data/env'
+import { isTauriShell } from '../platform/env'
 import {
   canChooseBackupDir,
   getBackupDir,
   pickBackupDir,
   resolveDefaultDownloadDir,
   setBackupDir as saveBackupDir
-} from '../data/backupDir'
+} from '../platform/backupDir'
 import {
   MAX_CUSTOM_PATTERNS,
   PATTERN_ANCHOR_DATE,
@@ -24,7 +24,7 @@ import {
   setCloseBehavior as saveCloseBehavior,
   syncCloseBehaviorToShell,
   type CloseBehavior
-} from '../data/windowPrefs'
+} from '../platform/windowPrefs'
 
 /** 设置分两页：班序与成员占满屏，个人信息/备份/清空放另一页，各自不再互相挤压 */
 export type SettingsTab = 'roster' | 'profile'

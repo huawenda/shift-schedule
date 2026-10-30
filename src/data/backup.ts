@@ -54,23 +54,6 @@ export function backupText(roster: Roster): string {
   return JSON.stringify(createBackup(roster), null, 2)
 }
 
-export function downloadBackup(roster: Roster): string {
-  const fileName = buildBackupFileName(new Date())
-  const blob = new Blob([backupText(roster)], { type: 'application/json' })
-  const objectUrl = URL.createObjectURL(blob)
-
-  const link = document.createElement('a')
-  link.href = objectUrl
-  link.download = fileName
-  link.rel = 'noopener'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
-  return fileName
-}
-
 /**
  * 解析备份文本。格式不对时抛出可直接展示给用户的中文错误。
  *
