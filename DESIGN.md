@@ -1,8 +1,7 @@
 # 昼夜 · 个人倒班记录本 视觉规范
 
-> 适用范围：**只**描述 `apps/local-standalone`。
-> 根目录 `DESIGN.md` 与 `docs/` 下的 UI 文档讲的是 `apps/web` 与 `apps/miniapp`，
-> 与本项目**没有任何关系**——本项目不 import `packages/core`，视觉也不与 Web 共用一套（见 §10）。
+> 适用范围：描述**本仓库唯一的应用**（昼夜 · 个人倒班记录本）。
+> 本仓库已不再包含 Web 版与小程序代码，视觉规范只有这一份（见 §10）。
 >
 > **真相顺序**：`src/styles/tokens.scss` > `README.md` §4/§7 > 本文。
 > 本文只解释「为什么这么定」，数值一旦冲突以 tokens 为准；改设计请先改令牌，再回来改这里。
@@ -358,9 +357,9 @@
 ## 9. 验收
 
 ```bash
-pnpm --filter shift-schedule-local run typecheck
-pnpm --filter shift-schedule-local run test        # 223 个用例
-pnpm --filter shift-schedule-local run build
+pnpm typecheck
+pnpm test              # 223 个用例
+pnpm build
 node scripts/verify-dist.mjs                       # 412 项端到端（http + file://）
 node scripts/verify-tauri-shell.mjs                # 壳内 31 项（需先 --no-bundle 构建）
 node scripts/shoot-showcase.mjs                    # 4 张产品展示图
@@ -382,19 +381,18 @@ node scripts/shoot-showcase.mjs                    # 4 张产品展示图
 
 ---
 
-## 10. 与 apps/web 的关系
+## 10. 仓库形态
 
-**没有关系，连代码副本都不共享。**
+**本仓库只有这一个应用，没有工作区、共享包或需要对齐的其他界面。**
 
-v1 时这里曾拷一份 `packages/core` 到 `src/core/`，用 `@local/core` 别名引用。
-2026-10 通用化重写时连同别名一起删除：本项目的模型是「班序固定 + 成员自定义」，
-与 Web 版「13 个人写死在数据里」已经不是同一套逻辑，继续共享只会互相牵制。
+v1 时这里曾拷一份 `packages/core` 到 `src/core/`，用 `@local/core` 别名引用；
+2026-10 通用化重写时连同别名一起删除。2026-10-30 Web 版与小程序整条移出仓库后，
+视觉与规范只剩这一份，不再需要与其他产品线做区分。
 
 因此：
 
-- 不受 `apps/web` / `packages/core` 改动影响，也不回灌；
-- 根 `DESIGN.md`（Web 与小程序的设计规范）**不适用于本项目**；
-- 视觉唯一权威是 `src/styles/tokens.scss`。
+- 没有其他前端需要对齐，也没有会被外部改动牵制的地方；
+- 本文与 `README.md` 就是完整的设计规范，视觉唯一权威是 `src/styles/tokens.scss`。
 
 ---
 

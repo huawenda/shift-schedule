@@ -1,0 +1,5 @@
+# pnpm 11 把「放行哪些依赖的安装脚本」放在这个文件里，与工作区分组共用同一份配置。
+# 本仓库没有 packages 工作区，这个文件只承载 allowBuilds 设置。
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true

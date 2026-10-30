@@ -1,30 +1,40 @@
 {
-  "name": "shift-schedule-miniapp",
-  "version": "0.1.0",
+  "name": "shift-schedule-local",
+  "version": "1.0.0",
   "private": true,
-  "description": "倒班表 Web/PWA 主线与小程序旁支",
+  "type": "module",
   "packageManager": "pnpm@11.28.6",
   "engines": {
     "node": ">=18"
   },
+  "description": "昼夜 · 个人倒班记录本：无登录、无鉴权、无任何网络请求，数据只存在本机浏览器",
   "scripts": {
-    "dev:web": "pnpm --filter @shift-schedule/web dev",
-    "dev:web:https": "node scripts/dev-web-https.mjs",
-    "build:web": "pnpm --filter @shift-schedule/web build",
-    "preview:web": "pnpm --filter @shift-schedule/web preview",
-    "typecheck:web": "pnpm --filter @shift-schedule/web typecheck",
-    "dev:local": "pnpm --filter shift-schedule-local dev",
-    "dev:weapp": "pnpm --filter @shift-schedule/miniapp dev:weapp",
-    "build:weapp": "pnpm --filter @shift-schedule/miniapp build:weapp",
-    "typecheck:miniapp": "pnpm --filter @shift-schedule/miniapp typecheck",
-    "test:miniapp": "pnpm --filter @shift-schedule/miniapp test",
-    "test:core": "pnpm --filter @shift-schedule/core test",
-    "typecheck:core": "pnpm --filter @shift-schedule/core typecheck",
-    "typecheck": "pnpm typecheck:miniapp",
-    "typecheck:all": "pnpm typecheck:miniapp && pnpm typecheck:core && pnpm typecheck:web",
-    "test": "pnpm test:miniapp && pnpm test:core",
-    "verify:web": "pnpm typecheck:web && pnpm build:web",
-    "verify:miniapp": "pnpm typecheck:miniapp && pnpm test:miniapp && pnpm build:weapp",
-    "verify:all": "pnpm typecheck:all && pnpm test && pnpm build:web && pnpm build:weapp"
+    "dev": "node scripts/dev.mjs",
+    "dev:open": "node scripts/dev.mjs --open",
+    "dev:lan": "node scripts/dev.mjs --lan",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 6181",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify:dist": "node scripts/verify-dist.mjs",
+    "verify:tauri": "node scripts/verify-tauri-shell.mjs",
+    "screenshot:dist": "node scripts/screenshot-dist.mjs",
+    "shoot:showcase": "node scripts/shoot-showcase.mjs",
+    "desktop:dev": "tauri dev --config desktop/src-tauri/tauri.conf.json",
+    "desktop:build": "tsc --noEmit && tauri build --config desktop/src-tauri/tauri.conf.json"
+  },
+  "dependencies": {
+    "lunar-javascript": "^1.7.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.3",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7",
+    "sass": "^1.95.1",
+    "typescript": "^5.9.3",
+    "vite": "^4.5.14",
+    "vitest": "^0.34.6"
   }
 }

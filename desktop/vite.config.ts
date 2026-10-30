@@ -67,7 +67,7 @@ function stripPwaAssetsPlugin(): Plugin {
  * base 仍为 './'：Tauri 注入资源时用的是相对路径，保持一致最省事。
  */
 export default defineConfig({
-  // root 指向 apps/local-standalone（而不是 desktop/）：index.html 与 src/ 都在那里，
+  // root 指向仓库根（而不是 desktop/）：index.html 与 src/ 都在那里，
   // 壳与静态版共用同一份入口。
   root: appRoot,
   base: './',

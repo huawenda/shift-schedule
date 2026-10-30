@@ -1,36 +1,35 @@
+# 依赖与包管理器缓存
 node_modules/
 .pnpm-store/
 .swc/
+
+# 构建产物：dist 是静态版，dist-tauri 是桌面壳的前端产物
 dist/
-dist-h5/
-project.private.config.json
+dist-tauri/
+**/build/
+
+# 桌面壳的 Rust 编译产物（数 GB），.gitignore 已写在 desktop/src-tauri/ 内，这里再兜一层
+desktop/src-tauri/target/
+desktop/src-tauri/gen/schemas/
+
+# 交付包：绿色版 exe 与可直接分发的 zip，几十 MB，不入库
+dist-package/
+*.zip
+
+# 截图/回归产物。design/screenshots/ 是产品展示图，要跟着源码入库，只忽略根目录的临时截图
+/screenshots/
+/shots-daily/
+.tmp-shots/
+
+# 本机开发环境与证书，不入库
 .env
 .env.local
 certs/
 .DS_Store
+
+# 日志
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-h5-dev.log
-web-dev*.log
-.codex-dev-web.*.log
-
-# 构建产物
-**/build/
-
-# 桌面版交付包（几十 MB 的二进制，不入库）
-dist-package/
-*.zip
-
-# 本机开发环境记忆，不入库
-.workbuddy/
-
-# 截图/探针等临时脚本与产物
-.tmp-shots/
-
-# 设计方向抽签的中间产物（taste skill 生成，不入库）
-.taste-skill/
-
-# 小程序实机截图工具（miniprogram-automator 独立安装目录）
-apps/miniapp/.automator/

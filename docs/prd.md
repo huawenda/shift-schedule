@@ -2,7 +2,7 @@
 
 - 版本：v1.0（已定稿，可开工）
 - 日期：2026-10-27
-- 范围：`apps/local-standalone`（技术栈不变）
+- 范围：本仓库根（需求提出时位于 `apps/local-standalone`，2026-10-30 已提升到根；技术栈不变）
 - 状态：需求、视觉方向、5 项待确认事项均已定；**只做排班页**，统计/薪资/加班一律不在第一版
 - v1.0 变更：视觉基调定为**强制浅色**（§5.0）；确定夜班配色、弹层班次、班序别名、备份兼容、删成员五件事（§9）
 - **v1.1 变更（2026-10-28）**：**备份与存储不再兼容旧格式**（§15）。本文中所有「兼容 v1/v2 备份」的条目 ——
@@ -289,7 +289,7 @@ font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif
 - React 18 + Vite 4 + TypeScript + SCSS；**不引入任何 UI 库、图表库、状态库**。
 - 路由：继续用 `#/schedule`、`#/settings` 两个 hash，不装 react-router。
 - 构建产物必须保持 `file://` 双击可跑：`base: './'`、IIFE 单包、`assetsInlineLimit` 拉满、`<script defer>` 改写。
-- **不改 `apps/web` 与 `packages/core`**：本目录已不再有 core 副本（`src/core` 与 `@local/core` 别名都已删除），通用化改动只发生在本目录。
+- **不引入任何外部包依赖**：Web 版与 `packages/core` 已从仓库移除，通用化改动全部自包含在本仓库（`src/core` 与 `@local/core` 别名早在通用化重写时删除）。
 - 旧 `TeamMatrix` / `MonthCalendar` / `ShiftPlaque` / `StatsView` 全部删除后重写；没有复用旧组件。
 
 ---
@@ -332,7 +332,7 @@ font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif
 5. **备份 v2 + v1 兼容导入**。
 6. **收口**：删除 `StatsView`、`salaryInputs` 等死代码，跑 typecheck + test + build，校验 `file://`。
 
-每步完成后跑一次 `pnpm --filter shift-schedule-local typecheck`，第 6 步跑 `test` 与 `build`。
+每步完成后跑一次 `pnpm typecheck`，第 6 步跑 `pnpm test` 与 `pnpm build`。
 
 ---
 
