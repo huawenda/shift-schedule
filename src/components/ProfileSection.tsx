@@ -146,9 +146,12 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
               <span className="field-label">姓名</span>
               <input
                 aria-label="本人姓名"
+                autoComplete="off"
                 className="input"
                 maxLength={12}
+                name="self-name"
                 placeholder="你的姓名"
+                spellCheck={false}
                 value={name}
                 onChange={event => setName(event.target.value)}
               />
@@ -175,9 +178,12 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
               <span className="field-label">岗位</span>
               <input
                 aria-label="本人岗位"
+                autoComplete="off"
                 className="input"
                 maxLength={12}
+                name="self-position"
                 placeholder="岗位（可选）"
+                spellCheck={false}
                 value={position}
                 onChange={event => setPosition(event.target.value)}
               />
@@ -220,9 +226,11 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
                 <div className="money-input">
                   <input
                     aria-label={field.label}
+                    autoComplete="off"
                     className="input"
                     disabled={!self}
                     inputMode="decimal"
+                    name={field.key}
                     placeholder="0.00"
                     value={salary[field.key]}
                     onChange={event => patchSalary(field.key, event.target.value)}

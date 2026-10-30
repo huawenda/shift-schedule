@@ -33,7 +33,18 @@ export function ShiftEditor({
 }: ShiftEditorProps) {
   const dialogRef = useDialogFocus<HTMLElement>()
   const [selected, setSelected] = useState<ShiftType | null>(currentShift)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
   const edited = Boolean(record)
+  const dirty = selected !== currentShift
+
+  /** 改了还没保存就关闭：先拦一下，别把改动静默丢掉 */
+  function requestClose() {
+    if (dirty) {
+      setConfirmDiscard(true)
+      return
+    }
+    onClose()
+  }
 
   const extraText = [
     record?.overtimeHours ? `+${formatOvertimeHours(record.overtimeHours)} 加班` : '',
@@ -49,14 +60,14 @@ export function ShiftEditor({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') requestClose()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+  }, [onClose, dirty, confirmDiscard])
 
   return (
-    <div className="sheet-backdrop" role="presentation" onMouseDown={onClose}>
+    <div className="sheet-backdrop" role="presentation" onMouseDown={requestClose}>
       <section
         aria-label="修改班次"
         aria-modal="true"
@@ -73,7 +84,7 @@ export function ShiftEditor({
               {formatMonthDay(date)} · 周{weekdayLabel(date)} · 模板 {templateShift ? SHIFT_META[templateShift].label : '—'}
             </p>
           </div>
-          <button className="btn btn-quiet" type="button" onClick={onClose}>关闭</button>
+          <button className="btn btn-quiet" type="button" onClick={requestClose}>关闭</button>
         </header>
 
         <div className="dialog-options" role="group" aria-label="选择班次">
@@ -98,25 +109,37 @@ export function ShiftEditor({
         ) : null}
 
         <footer className="dialog-foot">
-          <button
-            className="btn btn-quiet"
-            disabled={!edited}
-            type="button"
-            onClick={() => onApply(null)}
-          >
-            恢复默认
-          </button>
-          <div className="dialog-actions">
-            <button className="btn" type="button" onClick={onClose}>取消</button>
-            <button
-              className="btn btn-primary"
-              disabled={!selected}
-              type="button"
-              onClick={() => selected && onApply(selected)}
-            >
-              保存
-            </button>
-          </div>
+          {confirmDiscard ? (
+            <>
+              <span className="dialog-discard">有未保存的修改</span>
+              <div className="dialog-actions">
+                <button className="btn" type="button" onClick={() => setConfirmDiscard(false)}>继续编辑</button>
+                <button className="btn btn-danger" type="button" onClick={onClose}>放弃修改</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <button
+                className="btn btn-quiet"
+                disabled={!edited}
+                type="button"
+                onClick={() => onApply(null)}
+              >
+                恢复默认
+              </button>
+              <div className="dialog-actions">
+                <button className="btn" type="button" onClick={requestClose}>取消</button>
+                <button
+                  className="btn btn-primary"
+                  disabled={!selected}
+                  type="button"
+                  onClick={() => selected && onApply(selected)}
+                >
+                  保存
+                </button>
+              </div>
+            </>
+          )}
         </footer>
       </section>
     </div>

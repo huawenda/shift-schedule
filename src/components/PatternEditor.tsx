@@ -86,9 +86,12 @@ export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEdi
             <span className="field-label">班序名称</span>
             <input
               aria-label="班序名称"
+              autoComplete="off"
               autoFocus
               className="input"
+              name="pattern-name"
               placeholder="比如：4A、4B、4C"
+              spellCheck={false}
               value={draft.name}
               onChange={event => setDraft(current => ({ ...current, name: event.target.value }))}
             />

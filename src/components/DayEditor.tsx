@@ -74,6 +74,8 @@ export function DayEditor({
 }: DayEditorProps) {
   const dialogRef = useDialogFocus<HTMLElement>()
   const [tab, setTab] = useState<DayEditorTab>('shift')
+  /** 改过但没保存时关闭弹层：先就地确认，别静默丢改动 */
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [todoText, setTodoText] = useState('')
   const [shift, setShift] = useState<ShiftType | null>(currentShift)
   const [overtimeText, setOvertimeText] = useState(() => {
@@ -84,14 +86,6 @@ export function DayEditor({
   const [leaveDuration, setLeaveDuration] = useState<LeaveDuration>(
     record?.leaveDuration ?? DEFAULT_LEAVE_DURATION
   )
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
 
   const overtimeAllowed = Boolean(shift && canRecordOvertime(shift))
   const legalAllowed = overtimeAllowed
@@ -109,6 +103,14 @@ export function DayEditor({
     (legalAllowed && isLegal) !== (record?.isLegal === true) ||
     (leaveAllowed ? leaveDuration : DEFAULT_LEAVE_DURATION) !==
       (record?.leaveDuration ?? DEFAULT_LEAVE_DURATION)
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') requestClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose, dirty, tab, confirmDiscard])
 
   /** 换到不支持加班的班次时，把两段的值原地清掉（避免切回去又冒出来） */
   function pickShift(next: ShiftType) {
@@ -133,6 +135,15 @@ export function DayEditor({
     })
   }
 
+  /** 关闭前先拦住未保存的改动；待办页的改动是即时生效的，不受影响 */
+  function requestClose() {
+    if (tab === 'shift' && dirty) {
+      setConfirmDiscard(true)
+      return
+    }
+    onClose()
+  }
+
   /** 添加待办：加完清空输入框 */
   function submitTodo() {
     const body = todoText.trim()
@@ -142,7 +153,7 @@ export function DayEditor({
   }
 
   return (
-    <div className="sheet-backdrop" role="presentation" onMouseDown={onClose}>
+    <div className="sheet-backdrop" role="presentation" onMouseDown={requestClose}>
       <section
         aria-label="修改当天记录"
         aria-modal="true"
@@ -160,26 +171,30 @@ export function DayEditor({
               {templateShift ? SHIFT_META[templateShift].label : '—'}
             </p>
           </div>
-          <button className="btn btn-quiet" type="button" onClick={onClose}>关闭</button>
+          <button className="btn btn-quiet" type="button" onClick={requestClose}>关闭</button>
         </header>
 
         {/* 两个标签页：班次 / 待办 */}
-        <div className="dialog-tabs" role="tablist" aria-label="当天记录">
+        <div className="dialog-tabs" role="group" aria-label="当天记录">
           <button
-            aria-selected={tab === 'shift'}
+            aria-pressed={tab === 'shift'}
             className={`dialog-tab${tab === 'shift' ? ' is-on' : ''}`}
-            role="tab"
             type="button"
-            onClick={() => setTab('shift')}
+            onClick={() => {
+              setConfirmDiscard(false)
+              setTab('shift')
+            }}
           >
             班次
           </button>
           <button
-            aria-selected={tab === 'todo'}
+            aria-pressed={tab === 'todo'}
             className={`dialog-tab${tab === 'todo' ? ' is-on' : ''}`}
-            role="tab"
             type="button"
-            onClick={() => setTab('todo')}
+            onClick={() => {
+              setConfirmDiscard(false)
+              setTab('todo')
+            }}
           >
             待办
             {todos.length > 0 ? <span className="dialog-tab-count">{todos.length}</span> : null}
@@ -187,12 +202,14 @@ export function DayEditor({
         </div>
 
         {tab === 'todo' ? (
-          <div className="dialog-page" role="tabpanel">
+          <div className="dialog-page">
             <div className="todo-add">
               <input
                 aria-label="新增待办"
+                autoComplete="off"
                 className="input"
                 maxLength={MAX_TODO_TEXT}
+                name="todo-text"
                 placeholder="写点什么…"
                 type="text"
                 value={todoText}
@@ -316,9 +333,11 @@ export function DayEditor({
                     <label className="ot-input">
                       <input
                         aria-label="加班小时数"
+                        autoComplete="off"
                         className="input input-compact"
                         disabled={!overtimeAllowed}
                         inputMode="decimal"
+                        name="overtime-hours"
                         min={0}
                         max={MAX_OVERTIME_HOURS}
                         step={OVERTIME_STEP}
@@ -361,13 +380,21 @@ export function DayEditor({
           - 待办页：只有一个「完成」（待办改动立即生效，没有待保存的东西）
         */}
         <footer className="dialog-foot">
-          {tab === 'shift' ? (
+          {confirmDiscard ? (
+            <>
+              <span className="dialog-discard">有未保存的修改</span>
+              <div className="dialog-actions">
+                <button className="btn" type="button" onClick={() => setConfirmDiscard(false)}>继续编辑</button>
+                <button className="btn btn-danger" type="button" onClick={onClose}>放弃修改</button>
+              </div>
+            </>
+          ) : tab === 'shift' ? (
             <>
               <button className="btn btn-quiet" disabled={!hasRecord} type="button" onClick={onRestore}>
                 恢复默认
               </button>
               <div className="dialog-actions">
-                <button className="btn" type="button" onClick={onClose}>取消</button>
+                <button className="btn" type="button" onClick={requestClose}>取消</button>
                 <button className="btn btn-primary" disabled={!shift || !dirty} type="button" onClick={commit}>
                   保存
                 </button>

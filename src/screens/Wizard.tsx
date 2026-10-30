@@ -72,10 +72,13 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
                 <span className="field-label">你的姓名</span>
                 <input
                   aria-label="本人姓名"
+                  autoComplete="off"
                   autoFocus
                   className="input"
                   maxLength={12}
+                  name="self-name"
                   placeholder="比如：华文达"
+                  spellCheck={false}
                   value={selfName}
                   onChange={event => setSelfName(event.target.value)}
                 />

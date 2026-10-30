@@ -167,6 +167,7 @@ select {
 
 button {
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 button:disabled {
@@ -176,6 +177,24 @@ button:disabled {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* 弹层关闭后把焦点还给触发元素，但不要立刻补一圈键盘焦点环（见 useDialogFocus） */
+.is-focus-silent:focus-visible {
+  outline: none !important;
+}
+
+/* 微动效统一降级；toast 那套用动画实现，在 toasts.scss 里单独处理 */
+@media (prefers-reduced-motion: reduce) {
+  .rail-item,
+  .rail-icon,
+  .month-step,
+  .month-today,
+  .segmented-item,
+  .select-arrow,
+  .scroll-overlay-thumb {
+    transition: none;
+  }
 }
 
 h1,
@@ -335,10 +354,6 @@ p {
   color: var(--muted);
 }
 
-.btn-file {
-  cursor: pointer;
-}
-
 .input {
   width: 100%;
   height: var(--control-height);
@@ -429,6 +444,7 @@ p {
 }
 
 .select-popup {
+  overscroll-behavior: contain;
   position: fixed;
   z-index: 70;
   padding: 4px;

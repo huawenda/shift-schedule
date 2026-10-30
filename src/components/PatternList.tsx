@@ -268,7 +268,9 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
                 <span>输入「{pendingDelete.name}」以确认</span>
                 <input
                   aria-label={`输入 ${pendingDelete.name} 以确认删除`}
+                  autoComplete="off"
                   className="input"
+                  name="pattern-delete-confirm"
                   value={confirmText}
                   onChange={event => setConfirmText(event.target.value)}
                 />

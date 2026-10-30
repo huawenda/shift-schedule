@@ -153,6 +153,7 @@ export function SummaryBar({ roster, period }: SummaryBarProps) {
                 {open ? (
                   <section
                     aria-label={`${cell.label}人员`}
+                    autoFocus
                     className="summary-popover"
                     id={popoverId}
                     role="dialog"
@@ -163,7 +164,6 @@ export function SummaryBar({ roster, period }: SummaryBarProps) {
                       <span className="summary-popover-count">{cell.people.length} 人</span>
                       <button
                         aria-label="关闭名单"
-                        autoFocus
                         className="summary-popover-close"
                         type="button"
                         onClick={() => setOpenLabel(null)}

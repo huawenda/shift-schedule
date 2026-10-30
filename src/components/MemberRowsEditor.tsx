@@ -188,9 +188,12 @@ export function MemberRowsEditor({
           ) : (
             <input
               aria-label={`第 ${index + 1} 位成员的姓名`}
+              autoComplete="off"
               className="input"
               maxLength={12}
+              name={`member-name-${index}`}
               placeholder="姓名"
+              spellCheck={false}
               value={row.name}
               onChange={event => patch(index, { name: event.target.value })}
             />
@@ -219,9 +222,12 @@ export function MemberRowsEditor({
           ) : (
             <input
               aria-label={`${row.name || `第 ${index + 1} 位成员`} 的岗位`}
+              autoComplete="off"
               className="input"
               maxLength={12}
+              name={`member-position-${index}`}
               placeholder="岗位（可选）"
+              spellCheck={false}
               value={row.position}
               onChange={event => patch(index, { position: event.target.value })}
             />

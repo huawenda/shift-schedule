@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { getEffectiveShift, getOverrideMap, isSelf, patternLabelOf, type Member, type Roster } from '../data/roster'
 import type { Period } from '../data/period'
 import { SHIFT_META, SHIFT_TYPES, shiftToneClass, type ShiftType } from '../data/shifts'
@@ -45,6 +46,11 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   /** 聚焦行：同一时间只高亮一行，再点同一个人取消 */
   const [focusedId, setFocusedId] = useState<string | null>(null)
+  /**
+   * 键盘游标：整张矩阵只保留一个 tab stop，进入后用方向键在单元格间移动。
+   * col = -1 表示行首「姓名 / 班序」单元格。
+   */
+  const [cursor, setCursor] = useState({ row: 0, col: 0 })
 
   // 滚动条藏了，就得让滚轮能横滚：有横向溢出时把 deltaY 转成 scrollLeft。
   // 滚到两端就放行（不 preventDefault），页面继续纵向滚，不把人困在矩阵里。
@@ -76,6 +82,48 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
     )
   }
 
+  const lastRow = roster.members.length - 1
+  const lastCol = dayCount - 1
+  const cursorRow = Math.min(cursor.row, lastRow)
+  const cursorCol = Math.min(cursor.col, lastCol)
+
+  /** 方向键在矩阵内移动焦点；行首姓名格与日期格之间也能左右切换 */
+  function onGridKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement
+    const cell = target.closest<HTMLElement>('[data-cell]')
+    if (!cell) return
+
+    const [rawRow, rawCol] = (cell.dataset.cell ?? '0:0').split(':').map(Number)
+    let row = rawRow
+    let col = rawCol
+
+    switch (event.key) {
+      case 'ArrowRight':
+        col = col < 0 ? 0 : Math.min(lastCol, col + 1)
+        break
+      case 'ArrowLeft':
+        col = col <= 0 ? -1 : col - 1
+        break
+      case 'ArrowDown':
+        row = Math.min(lastRow, row + 1)
+        break
+      case 'ArrowUp':
+        row = Math.max(0, row - 1)
+        break
+      default:
+        return
+    }
+
+    event.preventDefault()
+    setCursor({ row, col })
+    event.currentTarget
+      .querySelector<HTMLElement>(`[data-cell="${row}:${col}"]`)
+      ?.focus({ preventScroll: false })
+  }
+
+  const cellTabIndex = (row: number, col: number) => (row === cursorRow && col === cursorCol ? 0 : -1)
+  const syncCursor = (row: number, col: number) => setCursor({ row, col })
+
   return (
     <section className={`matrix${byName ? ' is-by-name' : ''}`} aria-label="全员排班矩阵">
       <div className="matrix-scroll" ref={scrollRef} style={{ ['--days' as string]: dayCount }}>
@@ -95,8 +143,8 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
           </div>
         </div>
 
-        <div className="matrix-body">
-          {roster.members.map(member => {
+        <div className="matrix-body" onKeyDown={onGridKeyDown}>
+          {roster.members.map((member, rowIndex) => {
             const selfRow = isSelf(roster, member.id)
             const patternText = [patternLabelOf(roster, member), member.position].filter(Boolean).join(' · ')
             // 按姓名时姓名已经写进每个格子，行头再写一遍就是重复
@@ -121,30 +169,39 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
               key={member.id}
             >
               <button
+                aria-label={`${member.name} ${patternText}，${focusedId === member.id ? '取消聚焦整行' : '聚焦整行'}`}
                 aria-pressed={focusedId === member.id}
                 className={`matrix-name-cell${selfRow ? ' is-self' : ''}`}
+                data-cell={`${rowIndex}:-1`}
+                tabIndex={cellTabIndex(rowIndex, -1)}
                 title={`${member.name} · ${patternText}（${focusedId === member.id ? '点击取消聚焦' : '点击聚焦整行'}）`}
                 type="button"
+                onFocus={() => syncCursor(rowIndex, -1)}
                 onClick={() => setFocusedId(current => (current === member.id ? null : member.id))}
               >
                 {nameContent}
               </button>
 
               <div className="matrix-days">
-                {period.dates.map(date => {
+                {period.dates.map((date, colIndex) => {
                   const shift: ShiftType | null = getEffectiveShift(roster, member, date, overrideMap)
                   const isToday = date === today
+                  const shiftLabel = shift ? SHIFT_META[shift].label : '无班次'
 
                   return (
                     <button
+                      aria-label={`${member.name} ${date} ${shiftLabel}`}
                       className={[
                         'matrix-cell',
                         shift ? shiftToneClass(shift) : 'is-blank',
                         isToday ? 'is-today' : ''
                       ].filter(Boolean).join(' ')}
+                      data-cell={`${rowIndex}:${colIndex}`}
                       key={date}
-                      title={shift ? `${member.name} ${date} ${SHIFT_META[shift].label}` : ''}
+                      tabIndex={cellTabIndex(rowIndex, colIndex)}
+                      title={shift ? `${member.name} ${date} ${shiftLabel}` : ''}
                       type="button"
+                      onFocus={() => syncCursor(rowIndex, colIndex)}
                       onClick={() => onEdit(member, date)}
                     >
                       {shift ? (byName ? member.name : SHIFT_META[shift].short) : '—'}

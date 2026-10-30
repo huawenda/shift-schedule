@@ -198,6 +198,7 @@ export function Select({ ariaLabel, className, disabled, groups, onChange, value
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={ariaLabel}
+        role="combobox"
         className={`select-trigger${className ? ` ${className}` : ''}`}
         disabled={disabled}
         ref={triggerRef}

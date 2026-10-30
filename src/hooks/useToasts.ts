@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type ToastTone = 'info' | 'warning' | 'error'
 
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
 export interface ToastItem {
   id: number
   text: string
@@ -11,6 +16,8 @@ export interface ToastItem {
   duration: number | null
   closable: boolean
   leaving: boolean
+  /** 可选操作按钮（如「撤销」）；点了之后提示自动关闭 */
+  action?: ToastAction
 }
 
 export interface ToastOptions {
@@ -18,6 +25,7 @@ export interface ToastOptions {
   detail?: string
   duration?: number | null
   closable?: boolean
+  action?: ToastAction
 }
 
 export interface ToastUpdate extends ToastOptions {
@@ -123,7 +131,7 @@ export function useToasts(): ToastApi {
     const existing = current.find(item => item.text === text && !item.leaving)
     if (existing) {
       setToasts(list => list.map(item => (
-        item.id === existing.id ? { ...item, detail: options.detail, tone, duration, closable } : item
+        item.id === existing.id ? { ...item, detail: options.detail, tone, duration, closable, action: options.action } : item
       )))
       if (duration === null) stopTimer(existing.id)
       else schedule(existing.id, duration)
@@ -137,7 +145,16 @@ export function useToasts(): ToastApi {
     }
 
     const id = ++nextId.current
-    setToasts(list => [...list, { id, text, detail: options.detail, tone, duration, closable, leaving: false }])
+    setToasts(list => [...list, {
+      id,
+      text,
+      detail: options.detail,
+      tone,
+      duration,
+      closable,
+      leaving: false,
+      action: options.action
+    }])
     if (duration !== null) schedule(id, duration)
     return id
   }, [removeNow, schedule, stopTimer])
@@ -155,7 +172,8 @@ export function useToasts(): ToastApi {
       detail: options.detail ?? item.detail,
       tone: options.tone ?? item.tone,
       duration,
-      closable
+      closable,
+      action: options.action ?? item.action
     } : item)))
 
     if (duration === null) stopTimer(id)

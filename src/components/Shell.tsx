@@ -116,6 +116,17 @@ export function Shell({
 
   return (
     <div className="app">
+      <a
+        className="skip-link"
+        href="#main"
+        onClick={event => {
+          // 不能直接改 hash：那会触发路由监听，把视图切回概览
+          event.preventDefault()
+          document.getElementById('main')?.focus()
+        }}
+      >
+        跳到主内容
+      </a>
       <nav className="rail" aria-label="主导航">
         <div className="rail-brand">
           <svg className="rail-mark" viewBox="0 0 192 192" aria-hidden="true" focusable="false">
@@ -136,36 +147,48 @@ export function Shell({
 
         <div className="rail-nav">
           <p className="rail-group-label">视图</p>
-          <button
+          <a
             aria-current={route === 'matrix' ? 'page' : undefined}
             className={`rail-item${route === 'matrix' ? ' is-active' : ''}`}
-            type="button"
-            onClick={() => onNavigate('matrix')}
+            href="#/matrix"
+            onClick={event => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              onNavigate('matrix')
+            }}
           >
             <IconMatrix />
             全员矩阵
-          </button>
-          <button
+          </a>
+          <a
             aria-current={route === 'overview' ? 'page' : undefined}
             className={`rail-item${route === 'overview' ? ' is-active' : ''}`}
-            type="button"
-            onClick={() => onNavigate('overview')}
+            href="#/overview"
+            onClick={event => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              onNavigate('overview')
+            }}
           >
             <IconCalendar />
             月度概览
-          </button>
+          </a>
         </div>
 
         <div className="rail-foot">
-          <button
+          <a
             aria-current={route === 'settings' ? 'page' : undefined}
             className={`rail-item${route === 'settings' ? ' is-active' : ''}`}
-            type="button"
-            onClick={() => onNavigate('settings')}
+            href="#/settings"
+            onClick={event => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              onNavigate('settings')
+            }}
           >
             <IconSettings />
             设置
-          </button>
+          </a>
         </div>
       </nav>
 
@@ -201,13 +224,15 @@ export function Shell({
             ref={fileRef}
             accept="application/json,.json"
             className="visually-hidden"
+            name="backup-file"
+            tabIndex={-1}
             type="file"
             onChange={handleFile}
           />
         </div>
       </header>
 
-      <main className="sheet">
+      <main className="sheet" id="main" tabIndex={-1}>
         {children}
       </main>
     </div>

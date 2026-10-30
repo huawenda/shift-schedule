@@ -72,6 +72,7 @@ export function SettingsScreen({
   onStartWizard
 }: SettingsScreenProps) {
   const [tab, setTab] = useState<SettingsTab>(initialTab)
+  const fileRef = useRef<HTMLInputElement>(null)
   const [rows, setRows] = useState<MemberRow[]>(() => toRows(roster.members))
   const [dirty, setDirty] = useState(false)
   const [confirmText, setConfirmText] = useState('')
@@ -341,19 +342,20 @@ export function SettingsScreen({
               <div className="settings-panel">
                 <div className="settings-actions">
                   <button className="btn" type="button" onClick={onBackup}>导出备份</button>
-                  <label className="btn btn-file">
-                    导入备份
-                    <input
-                      accept="application/json,.json"
-                      className="visually-hidden"
-                      type="file"
-                      onChange={event => {
-                        const file = event.target.files?.[0]
-                        if (file) onRestore(file)
-                        event.target.value = ''
-                      }}
-                    />
-                  </label>
+                  <button className="btn" type="button" onClick={() => fileRef.current?.click()}>导入备份</button>
+                  <input
+                    ref={fileRef}
+                    accept="application/json,.json"
+                    className="visually-hidden"
+                    name="backup-file"
+                    tabIndex={-1}
+                    type="file"
+                    onChange={event => {
+                      const file = event.target.files?.[0]
+                      if (file) onRestore(file)
+                      event.target.value = ''
+                    }}
+                  />
                 </div>
                 {/* 默认存放目录：只对本机有效，所以不进备份文件，也不跟着换机器走 */}
                 <div className="backup-dir">
@@ -393,7 +395,9 @@ export function SettingsScreen({
                 <div className="danger-row">
                   <input
                     aria-label="输入清空以确认"
+                    autoComplete="off"
                     className="input"
+                    name="clear-confirm"
                     placeholder="输入「清空」以确认"
                     value={confirmText}
                     onChange={event => setConfirmText(event.target.value)}

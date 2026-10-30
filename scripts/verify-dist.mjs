@@ -2324,7 +2324,7 @@ async function runScenario(name, url, downloadDir) {
     await client.evaluate(clickByText('.rail-item', '设置'))
     await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
     await switchSettingsTab(client, '个人资料')
-    await waitFor(client, 'Boolean(document.querySelector(".btn-file input[type=file]"))', '导入入口')
+    await waitFor(client, 'Boolean(document.querySelector(".settings-actions input[type=file]"))', '导入入口')
 
     // 备份的默认存放目录：静态版没有 __TAURI__，「选择…」必须是禁用态
     const backupDirRow = await client.evaluate(`(() => {
@@ -2353,7 +2353,7 @@ async function runScenario(name, url, downloadDir) {
     const { root } = await client.send('DOM.getDocument', { depth: -1 })
     const { nodeId } = await client.send('DOM.querySelector', {
       nodeId: root.nodeId,
-      selector: '.btn-file input[type=file]'
+      selector: '.settings-actions input[type=file]'
     })
     check(`${name}: 找到导入用的文件输入框`, Boolean(nodeId), String(nodeId))
 

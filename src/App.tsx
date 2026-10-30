@@ -146,8 +146,29 @@ export function App() {
   /** 矩阵弹层：只改班次 */
   function applyShift(shift: ShiftType | null) {
     if (!editor) return
-    api.editShift(editor.memberId, editor.date, shift)
-    toast.info(shift ? `已保存：${SHIFT_META[shift].label}` : '已恢复为模板班次')
+    const { memberId, date } = editor
+    const previous = editorRecord
+    api.editShift(memberId, date, shift)
+
+    if (shift) {
+      toast.info(`已保存：${SHIFT_META[shift].label}`)
+    } else {
+      // 恢复默认会清掉整条记录，给一个 5 秒撤销窗口
+      toast.info(previous ? '已恢复为模板班次（加班/法定一并清空）' : '已恢复为模板班次', {
+        duration: 5000,
+        action: previous
+          ? {
+            label: '撤销',
+            onClick: () => api.saveDay(memberId, date, {
+              shift: previous.shift,
+              overtimeHours: previous.overtimeHours,
+              isLegal: previous.isLegal,
+              leaveDuration: previous.leaveDuration
+            })
+          }
+          : undefined
+      })
+    }
     setEditor(null)
   }
 
@@ -169,8 +190,23 @@ export function App() {
 
   function restoreDay() {
     if (!editor) return
-    api.resetDay(editor.memberId, editor.date)
-    toast.info('已恢复默认（班次、加班、法定一并清空）', { duration: 3200 })
+    const { memberId, date } = editor
+    const previous = editorRecord
+    api.resetDay(memberId, date)
+    toast.info('已恢复默认（班次、加班、法定一并清空）', {
+      duration: 5000,
+      action: previous
+        ? {
+          label: '撤销',
+          onClick: () => api.saveDay(memberId, date, {
+            shift: previous.shift,
+            overtimeHours: previous.overtimeHours,
+            isLegal: previous.isLegal,
+            leaveDuration: previous.leaveDuration
+          })
+        }
+        : undefined
+    })
     setEditor(null)
   }
 
