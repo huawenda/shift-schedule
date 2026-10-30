@@ -27,7 +27,7 @@ echo   Port 6182 is strict. If a previous tauri dev did not exit,
 echo   this will fail instead of picking another port.
 echo   Close the old shell window first.
 echo.
-echo   Do NOT also start dev.bat on 6180, unless you want to
+echo   Do NOT also start web-dev.bat on 6180, unless you want to
 echo   compare browser and shell side by side.
 echo.
 echo   Close the shell window or press Ctrl+C to stop this.
