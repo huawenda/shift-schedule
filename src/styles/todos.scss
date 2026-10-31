@@ -39,9 +39,11 @@
   min-width: 0;
   min-height: 0;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  /* 与统计卡同一套：无边框 + 极浅投影，浮在降了一档的画布上 */
+  border: 0;
+  border-radius: var(--radius-panel);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
@@ -80,12 +82,14 @@
   white-space: nowrap;
 }
 
-/* 空态：虚线框 —— 一片灰字贴在卡片左上角，看起来像没写完；
- * 框起来之后一眼就知道「这里是空的，不是坏了」。 */
+/* 空态：内凹浅槽 —— 一片灰字贴在卡片左上角，看起来像没写完；
+ * 装进浅槽之后一眼就知道「这里是空的，不是坏了」。 */
 .todo-empty {
   padding: 18px 12px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-card);
+  /* 与卡片同一套材质：内凹浅槽，不用虚线框 */
+  border: 0;
+  border-radius: var(--radius-panel);
+  background: var(--surface-sunken);
   color: var(--muted);
   font-size: var(--fs-small);
   line-height: 1.7;
@@ -304,8 +308,9 @@
 /* 弹层里的空态也用虚线框，与卡片空态同一套语言（不影响统计卡里的 .stat-empty） */
 .dialog-page > .stat-empty {
   padding: 16px 12px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-card);
+  border: 0;
+  border-radius: var(--radius-panel);
+  background: var(--surface-sunken);
   text-align: center;
 }
 

@@ -295,9 +295,9 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(statLook)
     )
     check(
-      `${name}: 本月概览六格用日历同款浅色色条（白班 #dff3ff，不是深墨色）`,
-      statLook.cells === 6 && statLook.cellBg === 'rgb(255, 255, 255)' &&
-        statLook.leftW === 3 && statLook.leftColor === 'rgb(223, 243, 255)',
+      `${name}: 本月概览六格是班次色贴片（白班底 #dff3ff，格间不画分隔线）`,
+      statLook.cells === 6 && statLook.cellBg === 'rgb(223, 243, 255)' &&
+        statLook.leftW === 0,
       JSON.stringify(statLook)
     )
 
@@ -613,16 +613,16 @@ async function runScenario(name, url, downloadDir) {
       }
     })()`)
     check(
-      `${name}: 设置页区块有强调色竖条、面板有 1px 边界`,
+      `${name}: 设置页区块有强调色竖条、面板改用白卡（不再画边框）`,
       settingsLook.barW === 3 && settingsLook.barBg === 'rgb(27, 108, 128)' &&
-        settingsLook.panelBorder === 1,
+        settingsLook.panelBorder === 0,
       JSON.stringify(settingsLook)
     )
     check(
       `${name}: 班序卡更松、24 格条有浅灰轨道，成员表头有分隔线`,
       JSON.stringify(settingsLook.chipPad) === JSON.stringify([8, 9]) &&
         settingsLook.chipRadius === '7px' &&
-        settingsLook.trackH === 12 && settingsLook.trackBg === 'rgb(244, 246, 248)' &&
+        settingsLook.trackH === 14 && settingsLook.trackBg === 'rgb(244, 246, 248)' &&
         settingsLook.headBorder === 1,
       JSON.stringify(settingsLook)
     )
@@ -654,7 +654,7 @@ async function runScenario(name, url, downloadDir) {
       pinnedRoster.canvasOverflow === 'hidden' &&
         pinnedRoster.flowOverflow === 'auto' &&
         pinnedRoster.borderTop === '1px solid' &&
-        pinnedRoster.borderColor === 'rgb(240, 241, 242)' &&
+        pinnedRoster.borderColor === 'rgb(232, 235, 238)' &&
         pinnedRoster.scrolled > 0 &&
         pinnedRoster.headTop === pinnedRoster.headTopAfter,
       JSON.stringify(pinnedRoster)
@@ -882,7 +882,7 @@ async function runScenario(name, url, downloadDir) {
         // 样式区别：底色不同、整格更淡
         outsideBg: outside[0] ? bg(outside[0]) : '',
         insideBg: inside[0] ? bg(inside[0]) : '',
-        outsideOpacity: outside[0] ? getComputedStyle(outside[0]).opacity : '',
+        outsideOpacity: outside[0] ? getComputedStyle(outside[0].firstElementChild).opacity : '',
         insideOpacity: inside[0] ? getComputedStyle(inside[0]).opacity : '',
         outsideTitles: outside.slice(0, 2).map(cell => cell.title)
       }
@@ -1652,7 +1652,7 @@ async function runScenario(name, url, downloadDir) {
         polish.rowPad === 5 && polish.subIndent === 14 &&
           polish.firstGroupBorder === 0 && polish.secondGroupBorder === 1 &&
           polish.rateBg === 'rgb(244, 246, 248)' &&
-          polish.strongBorder === 'rgb(232, 234, 236)',
+          polish.strongBorder === 'rgb(194, 201, 206)',
         JSON.stringify(polish)
       )
 

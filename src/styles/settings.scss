@@ -45,16 +45,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 面板：给一层 1px 边界 + 比画布低一档的底。
- * 原来只有一层几乎与白底同色的近白，在办公屏上等于「没有容器」。 */
+/* 面板：白卡 + 极浅投影，与概览页的统计卡同一套壳。
+ * 原来是一层「近白底 + 1px 边」，在浅灰画布上既不像卡片、也不像内凹面板。 */
 .settings-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 18px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-card);
-  background: var(--surface-sunken);
+  /* 与概览页卡片同一套：白卡 + 极浅投影，不再用内凹面板去和画布抢边界 */
+  border: 0;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 .settings-actions {
@@ -230,12 +232,14 @@
   color: var(--muted);
 }
 
-/* 自建班序为空：做成虚线框，与待办卡的空态同一套语言。
+/* 自建班序为空：做成内凹浅槽，与待办卡的空态同一套语言。
  * 原来只有一行 12px 小字贴在面板左上角，看不出「这里是空的」还是「这里坏了」。 */
 .pattern-group .member-editor-empty {
   padding: 16px 12px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-card);
+  /* 空态改成「内凹的浅槽」，和卡片是同一套材质；虚线框是另一套语言，看着像占位图 */
+  border: 0;
+  border-radius: var(--radius-panel);
+  background: var(--surface-sunken);
   color: var(--muted);
   text-align: center;
 }
@@ -330,23 +334,24 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 24 格缩略色条：外面套一层浅灰轨道，看起来像一小段「胶囊」，
- * 而不是一排直接贴在白底上的色块（只做纹理，不代表精确宽度） */
+/* 24 格缩略色条：外面套一层浅灰轨道，看起来像一小段「胶囊」。
+ * 格与格之间留 2px、每格自己带圆角 —— 借日历药丸块的语言，
+ * 原来是 1px 缝隙的纯色方块，像一排像素而不是班次的缩略。 */
 .pattern-bar {
   display: flex;
-  gap: 1px;
-  height: 12px;
-  padding: 1px;
+  gap: 2px;
+  height: 14px;
+  padding: 2px;
   overflow: hidden;
-  border-radius: var(--radius-mark);
+  border-radius: var(--radius-control);
   background: var(--raised);
 }
 
 .pattern-bar-seg {
   display: block;
   flex: 1 1 0;
+  border-radius: 2px;
   min-width: 0;
-  border-radius: 1px;
 }
 
 .pattern-rows {

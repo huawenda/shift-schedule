@@ -28,9 +28,11 @@
 .today-strip {
   display: grid;
   grid-template-columns: 148px minmax(0, 1.35fr) minmax(0, 0.85fr) minmax(0, 1.1fr);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--surface-tint);
+  /* 与统计卡同一套：无边框 + 极浅投影，浮在降了一档的画布上 */
+  border: 0;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 .today-cell {
@@ -162,9 +164,11 @@
   flex-direction: column;
   gap: 10px;
   padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  /* 卡片靠「白 + 极浅投影」浮在降了一档的画布上，不再用边框勾轮廓 */
+  border: 0;
+  border-radius: var(--radius-panel);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 /*
@@ -179,6 +183,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  /* 与待办卡同一套：分隔线内缩在卡片内边距里，不通栏 ——
+   * 通栏会把抬头压成一条「表格线」，内缩才留得住呼吸感 */
   padding-bottom: 9px;
   border-bottom: 1px solid var(--rule);
 }
@@ -246,53 +252,58 @@
 .day-counts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 /*
- * 六个格子：白底 + 1px 边 + **左侧 3px 班次色条**。
+ * 六个格子做成「贴片」：整块铺班次浅底 + 墨色字，与日历里的班次块同一套颜色。
  *
- * 色条用的是日历班次块 / 矩阵图例里的那个**浅底色**（`--shift-*-bg`），
- * 也就是「和日历同一个颜色」，不是 `.t-*` 的深墨色。
- * 墨色是给色块上的文字用的，单独抽成 3px 细条会暗成墨线，
- * 而且 夜班/事假 都是暗蓝灰、特勤/法定 都是棕橙，两两撞色。
+ * 原来是「白底 + 1px 边 + 3px 色条」的表格写法，靠四条竖分隔线撑结构；
+ * 线一多又浅，卡片就只剩下一个矩形框。改成贴片后**一条分隔线都不用**，
+ * 形状由色块自己的边界给出，数字直接坐在颜色上。
  */
 .day-count {
   display: flex;
   align-items: baseline;
-  gap: 5px;
-  padding: 6px 9px 6px 8px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--raised);
-  border-radius: var(--radius-control);
-  background: var(--surface);
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+  color: var(--muted);
 }
 
-/* 色条颜色：六格各按班次取「浅底」（特勤 = 白特 + 夜特，取白特那档暖黄） */
+/* 六格各取自己的「浅底 + 墨字」一对，与日历、矩阵图例完全同一组令牌 */
 .day-count.is-day {
-  border-left-color: var(--shift-day-bg);
+  background: var(--shift-day-bg);
+  color: var(--shift-day-ink);
 }
 
 .day-count.is-night {
-  border-left-color: var(--shift-night-bg);
+  background: var(--shift-night-bg);
+  color: var(--shift-night-ink);
 }
 
 .day-count.is-rest {
-  border-left-color: var(--shift-rest-bg);
+  background: var(--shift-rest-bg);
+  color: var(--shift-rest-ink);
 }
 
+/* 特勤 = 白特 + 夜特，取白特那档暖黄 */
 .day-count.is-special {
-  border-left-color: var(--shift-dayx-bg);
+  background: var(--shift-dayx-bg);
+  color: var(--shift-dayx-ink);
 }
 
 .day-count.is-leave {
-  border-left-color: var(--shift-leave-bg);
+  background: var(--shift-leave-bg);
+  color: var(--shift-leave-ink);
 }
 
-/* 法定：法定的底色是 #fffbeb，几乎等于白，画成 3px 细条看不见 ——
- * 用「法」角标的描边色（浅黄），仍是同一套警示色。 */
+/* 法定没有班次色，用「法」角标那套警示色。
+ * 底色取描边色而不是 --warning-bg：后者几乎等于白，六个贴片里会显得像空格子。 */
 .day-count.is-legal {
-  border-left-color: var(--warning-border);
+  background: var(--warning-border);
+  color: var(--warning-ink);
 }
 
 .day-count-num {
@@ -303,7 +314,8 @@
 
 .day-count-label {
   font-size: var(--fs-small);
-  color: var(--muted);
+  color: inherit;
+  opacity: 0.72;
 }
 
 /* 卡片右侧的小时标记：加班用日历同款的暖橙，靠右对齐不挤天数 */
@@ -534,13 +546,18 @@
  * 3. 组标题左侧一道 2px 中性竖条，给每段一个视觉锚点。
  */
 .money-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  column-gap: 16px;
   padding: 5px 0;
   font-size: var(--fs-control);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+.money-row > span:last-child,
+.money-group > span:last-child {
+  text-align: right;
 }
 
 .money-row.is-deduct span:last-child {
@@ -549,9 +566,9 @@
 
 /* 组标题（基本项 / 加班工资 / 扣款项）：右侧跟一个该组的小计 */
 .money-group {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  column-gap: 16px;
   margin-top: 14px;
   padding-top: 10px;
   border-top: 1px solid var(--rule);
@@ -604,7 +621,7 @@
 .money-row.is-strong {
   margin-top: 10px;
   padding-top: 9px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-strong);
   color: var(--text);
   font-size: var(--fs-body);
 }
@@ -618,8 +635,11 @@
  */
 .money-row.is-total {
   margin-top: 8px;
-  padding: 7px 9px;
-  border-radius: 5px;
+  /* 横向内边距归 0：金额列才能和上面各行对齐，账单竖线也才落得准 */
+  padding: 7px 0;
+  border-top: 1px solid var(--border-strong);
+  /* 会计双线：合计行下面压一道双线，整列读起来是「结账」 */
+  border-bottom: 3px double var(--border-strong);
   background: var(--accent-weak);
   color: var(--accent);
   font-size: var(--fs-body);

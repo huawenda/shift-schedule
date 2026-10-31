@@ -384,8 +384,8 @@
   margin: 0 8px 8px 0;
   border: 1px solid rgba(0, 0, 0, 0.35);
   border-radius: var(--radius-sheet);
-  background: var(--surface);
-  /* 白画布恢复正文色：标题、姓名、日期、数值不能继承深框的灰 */
+  background: var(--canvas);
+  /* 降了一档的画布恢复正文色：标题、姓名、日期、数值不能继承深框的灰 */
   color: var(--text);
   /* 深框上，白纸靠一层低位投影脱离背景；画布内部仍然不用投影 */
   box-shadow: 0 10px 34px rgba(2, 10, 13, 0.26);

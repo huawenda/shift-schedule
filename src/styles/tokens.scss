@@ -25,12 +25,18 @@
   /* 画布内的三级白：纯白画布 / 表头与悬停 / 面板内嵌 */
   --surface-tint: #fbfcfd;
   --surface-sunken: #f6f8f9;
+  /* 画布底：降一档，白色卡片才能靠色调台阶浮起来，而不必靠深边框勾出来 */
+  --canvas: #f2f4f6;
   /* 周期外日期的压暗底：比 --raised 深、比 --active 浅 */
   --surface-dim: #f1f3f5;
   --raised: #f4f6f8;
   --active: #ebedee;
-  --border: #e8eaec;
-  --rule: #f0f1f2;
+  /* 线条分三级：结构线（卡片外沿 / 表格外框）> 分隔线（卡内分组）> 发丝线（密集表格）。
+   * 原先前两级几乎同色（1.2:1 与 1.1:1），眼睛分不出「卡边」和「格子线」，
+   * 每条都要多费一次判断，看着就「若隐若现」、发累。 */
+  --border-strong: #c2c9ce;
+  --border: #d9dee2;
+  --rule: #e8ebee;
   /* 控件描边按 3:1 取（原 #cdced1 只有 1.57:1，在办公屏上几乎看不见）。
    * 输入框、下拉、按钮共用这一个值。 */
   --control: #8f969b;
@@ -145,9 +151,12 @@
   --radius-control: 6px;
   --radius-card: 8px;
   --radius-dialog: 12px;
+  --radius-panel: 12px;
   --radius-sheet: 16px;
   --radius-pill: 999px;
 
+  /* 卡片浮起用的极浅投影：只在卡片这一层，浮层（弹层/提示）继续用更重的那支 */
+  --shadow-card: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 24px rgba(19, 20, 22, 0.06);
   /* 全站几乎不用阴影，只有底部提示需要从画布上「浮起来」一档 */
   --shadow-toast: 0 10px 30px rgba(19, 20, 22, 0.12);
 

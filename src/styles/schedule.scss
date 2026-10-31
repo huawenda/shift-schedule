@@ -8,9 +8,11 @@
   z-index: 10;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--surface-tint);
+  /* 与概览页的今日条同一套：白色卡片 + 极浅投影，浮在浅灰画布上 */
+  border: 0;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 .summary-cell {
@@ -240,9 +242,11 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  /* 矩阵是「一整块白板」：外沿无边框 + 极浅投影，内部格线保持发丝级 */
+  border: 0;
+  border-radius: var(--radius-panel);
   background: var(--surface);
+  box-shadow: var(--shadow-card);
   /* 滚动条彻底隐藏（横向也不留）—— 30 天横滚改由「鼠标在矩阵上滚滚轮」驱动，
    * 见 TeamMatrix 里的 wheel 监听。原生滚动条在 Windows 上又粗又有箭头，
    * 而且横向那条永远压在最后一行格子下面，比留着更碍事。 */
@@ -337,15 +341,17 @@
 .matrix-name {
   overflow: hidden;
   font-size: var(--fs-body);
-  font-weight: 500;
+  /* 姓名是行头里最重的信息：600 + 与班序拉开的字级，扫 13 行时先落在名字上 */
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .matrix-pattern {
   overflow: hidden;
-  font-size: var(--fs-small);
+  font-size: var(--fs-label);
   color: var(--muted);
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -562,9 +568,12 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--border);
+  /* 与卡片同一套：无外框 + 极浅投影；格线仍靠 1px 缝隙的底色画出来。
+   * 缝隙取发丝线而不是结构线：31 格 × 2 个方向的线太多，用结构线整张日历会变「重」。 */
+  border: 0;
+  border-radius: var(--radius-panel);
+  background: var(--rule);
+  box-shadow: var(--shadow-card);
   grid-column: 1;
   grid-row: 2;
 }
@@ -587,12 +596,16 @@
 }
 
 /* 周期外的日期：内容和周期内完全一样（农历 + 班次 + 角标），
- * 只靠「底色压暗 + 整体淡一档 + 不可点」区分。
- * 底色比目标色深一档，是因为 opacity 会把它一起提亮。 */
+ * 只靠「底色微退 + 内容淡出 + 不可点」区分。
+ * 不要用比画布更深的灰去填：那一块会比画布还重，看着像日历被挖了几个洞；
+ * 现在是「同底的格子 + 淡掉的内容」，读起来是「这一段不属于本期」而不是「缺了一块」。 */
 .cal-cell.is-outside {
-  background: var(--surface-dim);
-  opacity: 0.78;
+  background: var(--surface-sunken);
   cursor: default;
+}
+
+.cal-cell.is-outside > * {
+  opacity: 0.45;
 }
 
 /*
@@ -1075,8 +1088,10 @@
 
 .empty {
   padding: 48px 24px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-card);
+  /* 与卡片同一套材质：内凹浅槽，不用虚线框 */
+  border: 0;
+  border-radius: var(--radius-panel);
+  background: var(--surface-sunken);
   text-align: center;
 }
 
