@@ -211,21 +211,8 @@ interface DayOverride {
 
 ### 5.1 令牌
 
-```css
-:root {
-  color-scheme: light;
-  --ground: #f9fbfc;   --surface: #ffffff;  --raised: #f4f6f8;
-  --active: #ebedee;   --border: #e8eaec;   --rule: #f0f1f2;
-  --control: #8f969b;  --text: #131416;     --muted: #5d5f60;  --faint: #6b747a;
-  --chrome: #0e2228;   --chrome-text: #e9f2f4; --chrome-accent: #7fd2e2;
-  --accent: #1b6c80;
-  --chart-1: #1b6c80;  --chart-2: #2f70bb;  --chart-3: #a86f0c;
-  --radius-card: 8px;  --radius-control: 6px; --radius-sheet: 16px;
-  --sheet-inset: 8px;  --sidebar-width: 228px; --topbar-height: 48px;
-  --gap: 24px;  --pad: 24px;  --row-height: 48px; --control-height: 32px;
-  --fs-title: 26px; --fs-section: 17px; --fs-kpi: 28px; --fs-body: 14px; --fs-small: 12px;
-}
-```
+不在本文抄第二份。颜色、字号、圆角、间距令牌的唯一来源是 `src/styles/tokens.scss`；
+本文只记录口径与取舍，数值冲突时一律以那份文件为准。
 
 ### 5.2 字体（离线约束下的取舍）
 

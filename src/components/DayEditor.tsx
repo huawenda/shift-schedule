@@ -4,6 +4,7 @@ import { useDialogFocus } from '../hooks/useDialogFocus'
 import {
   MAX_OVERTIME_HOURS,
   OVERTIME_STEP,
+  canMarkLegal,
   canRecordOvertime,
   formatOvertimeHours,
   getOvertimePresets,
@@ -88,7 +89,8 @@ export function DayEditor({
   )
 
   const overtimeAllowed = Boolean(shift && canRecordOvertime(shift))
-  const legalAllowed = overtimeAllowed
+  /** 法定与加班不是同一条规则：休息日也能是法定日 */
+  const legalAllowed = Boolean(shift && canMarkLegal(shift))
   const overtimeHours = overtimeAllowed ? normalizeOvertimeHours(overtimeText) : 0
   const presets = useMemo(
     () => (shift ? getOvertimePresets(shift, legalAllowed && isLegal) : []),
@@ -112,13 +114,12 @@ export function DayEditor({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose, dirty, tab, confirmDiscard])
 
-  /** 换到不支持加班的班次时，把两段的值原地清掉（避免切回去又冒出来） */
+  /** 换到不支持加班 / 法定的班次时，把对应的值原地清掉（避免切回去又冒出来） */
   function pickShift(next: ShiftType) {
     setShift(next)
-    if (!canRecordOvertime(next)) {
-      setOvertimeText('')
-      setIsLegal(false)
-    }
+    // 两条规则分开清：休息能标法定，但记不了加班
+    if (!canRecordOvertime(next)) setOvertimeText('')
+    if (!canMarkLegal(next)) setIsLegal(false)
   }
 
   function pickPreset(hours: number) {
@@ -257,17 +258,23 @@ export function DayEditor({
         ) : (
           <>
             <div className="dialog-options" role="group" aria-label="选择班次">
-              {SHIFT_TYPES.map(item => (
-                <button
-                  aria-pressed={shift === item}
-                  className={`option ${shiftToneClass(item)}${shift === item ? ' is-on' : ''}`}
-                  key={item}
-                  type="button"
-                  onClick={() => pickShift(item)}
-                >
-                  {SHIFT_META[item].label}
-                </button>
-              ))}
+              {SHIFT_TYPES.map(item => {
+                // 默认班次是休息的日子不存在「请假」这回事，不允许改成事假
+                const leaveBlocked = item === '事假' && templateShift === '休息'
+                return (
+                  <button
+                    aria-label={leaveBlocked ? `${SHIFT_META[item].label}（默认班次是休息，不可选）` : undefined}
+                    aria-pressed={shift === item}
+                    className={`option ${shiftToneClass(item)}${shift === item ? ' is-on' : ''}`}
+                    disabled={leaveBlocked}
+                    key={item}
+                    type="button"
+                    onClick={() => pickShift(item)}
+                  >
+                    {SHIFT_META[item].label}
+                  </button>
+                )
+              })}
             </div>
 
             {leaveAllowed ? (

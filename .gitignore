@@ -19,6 +19,7 @@ dist-package/
 # 截图/回归产物。design/screenshots/ 是产品展示图，要跟着源码入库，只忽略根目录的临时截图
 /screenshots/
 /shots-daily/
+/shots-check/
 .tmp-shots/
 
 # 本机开发环境与证书，不入库

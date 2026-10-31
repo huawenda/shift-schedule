@@ -27,7 +27,7 @@
 }
 
 .summary-label {
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 500;
   color: var(--muted);
 }
@@ -41,7 +41,7 @@
 
 .summary-unit {
   margin-left: 4px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 400;
   color: var(--faint);
 }
@@ -50,7 +50,7 @@
 .summary-names {
   margin: 4px 0 0;
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--fs-control);
   line-height: 1.5;
   color: var(--muted);
   text-overflow: ellipsis;
@@ -63,7 +63,7 @@
   border: 0;
   background: transparent;
   color: var(--accent);
-  font-size: 12px;
+  font-size: var(--fs-small);
   line-height: 1.5;
 }
 
@@ -77,10 +77,10 @@
   display: inline-block;
   margin-left: 3px;
   padding: 0 3px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--shift-dayx-bg);
   color: var(--shift-dayx-ink);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   line-height: 14px;
   vertical-align: 1px;
 }
@@ -118,13 +118,13 @@
 }
 
 .summary-popover-title {
-  font-size: 13px;
+  font-size: var(--fs-control);
   font-weight: 600;
 }
 
 .summary-popover-count {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-small);
 }
 
 .summary-popover-close {
@@ -133,7 +133,7 @@
   border: 0;
   background: transparent;
   color: var(--faint);
-  font-size: 16px;
+  font-size: var(--fs-subhead);
   line-height: 1;
 }
 
@@ -158,7 +158,7 @@
   gap: 12px;
   padding: 5px 0;
   border-bottom: 1px solid var(--rule);
-  font-size: 13px;
+  font-size: var(--fs-control);
 }
 
 .summary-popover-name {
@@ -170,8 +170,8 @@
 }
 
 .summary-popover-position {
-  color: var(--faint);
-  font-size: 12px;
+  color: var(--muted);
+  font-size: var(--fs-small);
 }
 
 /* 浮层内部滚动条：与自绘下拉同一档，避免原生深灰条在小面板里抢眼 */
@@ -185,7 +185,7 @@
 
 .summary-popover-list::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(19, 20, 22, 0.14);
   background-clip: content-box;
 }
@@ -199,7 +199,7 @@
   grid-column: 1 / -1;
   padding: 7px 16px;
   border-top: 1px solid var(--rule);
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -322,7 +322,7 @@
   background: var(--surface-tint);
   border-bottom: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 500;
   cursor: default;
 }
@@ -336,7 +336,7 @@
 
 .matrix-name {
   overflow: hidden;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -344,8 +344,8 @@
 
 .matrix-pattern {
   overflow: hidden;
-  font-size: 12px;
-  color: var(--faint);
+  font-size: var(--fs-small);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -365,7 +365,7 @@
   height: var(--row-height);
   border-right: 1px solid var(--rule);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-label);
   line-height: 1.1;
 }
 
@@ -392,7 +392,7 @@
 
 .matrix-day-week {
   color: var(--faint);
-  font-size: 11px;
+  font-size: var(--fs-label);
 }
 
 /*
@@ -417,7 +417,7 @@
   border-right: 1px solid var(--rule);
   border-radius: 0;
   background: transparent;
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 500;
   line-height: 1;
 }
@@ -430,7 +430,7 @@
   position: absolute;
   inset: var(--matrix-pill-gap);
   z-index: -1;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--tone-bg, transparent);
   content: '';
 }
@@ -482,7 +482,7 @@
 }
 
 .matrix.is-by-name .matrix-cell {
-  font-size: 11px;
+  font-size: var(--fs-label);
 }
 
 /* 注意：这一视图**不要**再单独覆盖 `::before` 的 inset。
@@ -498,7 +498,7 @@
 }
 
 .matrix.is-by-name .matrix-pattern {
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -510,7 +510,7 @@
   align-items: center;
   gap: 14px;
   padding: 0 2px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -523,12 +523,12 @@
 .legend-swatch {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
 }
 
 .legend-hint {
   margin-left: auto;
-  color: var(--faint);
+  color: var(--muted);
 }
 
 /* ── 个人日历 ─────────────────────────────────────────── */
@@ -551,7 +551,7 @@
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-label);
   text-align: center;
   grid-column: 1;
   grid-row: 1;
@@ -590,7 +590,7 @@
  * 只靠「底色压暗 + 整体淡一档 + 不可点」区分。
  * 底色比目标色深一档，是因为 opacity 会把它一起提亮。 */
 .cal-cell.is-outside {
-  background: #f1f3f5;
+  background: var(--surface-dim);
   opacity: 0.78;
   cursor: default;
 }
@@ -622,7 +622,7 @@
   display: inline-block;
   align-self: flex-start;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--fs-control);
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
 }
@@ -646,7 +646,7 @@
 
 .cal-meta {
   color: var(--faint);
-  font-size: 11px;
+  font-size: var(--fs-label);
   line-height: 1.2;
 }
 
@@ -657,8 +657,8 @@
 .cal-shift {
   margin-top: auto;
   padding: 3px 0;
-  border-radius: 3px;
-  font-size: 12px;
+  border-radius: var(--radius-mark);
+  font-size: var(--fs-small);
   font-weight: 500;
   text-align: center;
   white-space: nowrap;
@@ -677,10 +677,10 @@
 .cal-ot {
   height: 15px;
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--overtime-bg);
   color: var(--overtime-ink);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 700;
   line-height: 15px;
   white-space: nowrap;
@@ -691,11 +691,11 @@
 .cal-leave {
   height: 15px;
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--raised);
   box-shadow: inset 0 0 0 1px var(--border);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   line-height: 15px;
   white-space: nowrap;
@@ -707,11 +707,11 @@
   justify-content: center;
   width: 15px;
   height: 15px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--warning-bg);
   box-shadow: inset 0 0 0 1px var(--warning-border);
   color: var(--warning-ink);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   line-height: 1;
 }
@@ -720,8 +720,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
-  color: var(--faint);
+  font-size: var(--fs-label);
+  color: var(--muted);
   grid-column: 1;
   grid-row: 3;
 }
@@ -766,7 +766,7 @@
   /* 兜底：窗口矮的时候弹层内部滚动，而不是把底部按钮顶出屏幕 */
   max-height: calc(100vh - 48px);
   overflow-y: auto;
-  border-radius: 12px;
+  border-radius: var(--radius-dialog);
   background: var(--surface);
   box-shadow: 0 18px 48px rgba(6, 14, 18, 0.28);
   animation: dialog-in var(--dur-base) var(--ease-out);
@@ -795,7 +795,7 @@
 
 .dialog-sub {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -812,8 +812,16 @@
   height: 44px;
   border: 1px solid transparent;
   border-radius: var(--radius-control);
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 500;
+}
+
+/* 不可选的班次（默认班次是休息时不能请事假）：退回中性灰，和其余彩色块分开 */
+.option:disabled {
+  border-color: var(--border);
+  background: var(--raised);
+  color: var(--faint);
+  cursor: not-allowed;
 }
 
 /* 选中态：边框 + 右上角对勾。
@@ -822,7 +830,7 @@
   position: absolute;
   top: 4px;
   right: 7px;
-  font-size: 11px;
+  font-size: var(--fs-label);
   line-height: 1;
   content: "✓";
 }
@@ -858,7 +866,7 @@
 /* 关闭弹层时拦住未保存的改动：和按钮同一行，不额外撑高弹层 */
 .dialog-discard {
   color: var(--warning-ink);
-  font-size: 12px;
+  font-size: var(--fs-small);
 }
 
 /* ── 日历弹层的「加班 / 法定」两段 ─────────────────────── */
@@ -907,7 +915,7 @@
 
 .dialog-day .todo-list::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(19, 20, 22, 0.14);
   background-clip: content-box;
 }
@@ -966,13 +974,13 @@
 }
 
 .section-title {
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 600;
 }
 
 .section-note {
-  font-size: 11px;
-  color: var(--faint);
+  font-size: var(--fs-label);
+  color: var(--muted);
 }
 
 .ot-row {
@@ -994,7 +1002,7 @@
   border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1016,8 +1024,8 @@
 }
 
 .ot-empty {
-  font-size: 12px;
-  color: var(--faint);
+  font-size: var(--fs-small);
+  color: var(--muted);
 }
 
 .ot-input {
@@ -1032,7 +1040,7 @@
 }
 
 .ot-unit {
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -1059,7 +1067,7 @@
   background: var(--warning-bg);
   box-shadow: inset 0 0 0 1px var(--warning-border);
   color: var(--warning-ink);
-  font-size: 12px;
+  font-size: var(--fs-small);
   line-height: 1.5;
 }
 
@@ -1074,12 +1082,12 @@
 
 .empty-title {
   margin-bottom: 6px;
-  font-size: 16px;
+  font-size: var(--fs-subhead);
   font-weight: 600;
 }
 
 .empty-text {
-  font-size: 13px;
+  font-size: var(--fs-control);
   color: var(--muted);
 }
 

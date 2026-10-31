@@ -18,7 +18,7 @@
  */
 .settings-label h2 {
   margin-bottom: 6px;
-  font-size: 16px;
+  font-size: var(--fs-subhead);
   font-weight: 600;
 }
 
@@ -35,13 +35,13 @@
 
 .settings-label p {
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   line-height: 1.65;
   color: var(--muted);
 }
 
 .settings-meta {
-  color: var(--faint) !important;
+  color: var(--muted) !important;
   font-variant-numeric: tabular-nums;
 }
 
@@ -64,7 +64,7 @@
 }
 
 .settings-hint {
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -80,7 +80,7 @@
 
 .backup-dir-label {
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -94,7 +94,7 @@
   border-radius: var(--radius-control);
   background: var(--raised);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--fs-small);
   line-height: calc(var(--control-height) - 2px);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -107,8 +107,8 @@
 
 .settings-footnote {
   padding-top: 4px;
-  font-size: 12px;
-  color: var(--faint);
+  font-size: var(--fs-small);
+  color: var(--muted);
 }
 
 /* ── 成员表 ───────────────────────────────────────────── */
@@ -147,7 +147,7 @@
   justify-content: center;
   height: 24px;
   color: var(--faint);
-  font-size: 13px;
+  font-size: var(--fs-control);
   line-height: 1;
   cursor: grab;
   user-select: none;
@@ -176,7 +176,7 @@
   border-color: transparent;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-small);
   line-height: 1;
 }
 
@@ -187,7 +187,7 @@
 
 .btn-icon:disabled {
   background: transparent;
-  color: #c9cdd1;
+  color: var(--icon-disabled);
 }
 
 .member-row.is-dragging {
@@ -206,7 +206,7 @@
   padding: 0 0 7px;
   border-bottom: 1px solid var(--rule);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-small);
 }
 
 /* 行悬停：整行淡淡抬起一层，扫描一列时知道自己在哪一行 */
@@ -226,7 +226,7 @@
 
 .member-editor-empty {
   padding: 8px 2px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -236,7 +236,7 @@
   padding: 16px 12px;
   border: 1px dashed var(--border);
   border-radius: var(--radius-card);
-  color: var(--faint);
+  color: var(--muted);
   text-align: center;
 }
 
@@ -249,7 +249,7 @@
   border-radius: var(--radius-control);
   background: var(--danger-weak);
   color: var(--danger);
-  font-size: 12px;
+  font-size: var(--fs-small);
   line-height: 1.6;
 }
 
@@ -284,7 +284,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -325,7 +325,7 @@
 }
 
 .pattern-chip-name {
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -338,7 +338,7 @@
   height: 12px;
   padding: 1px;
   overflow: hidden;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--raised);
 }
 
@@ -380,15 +380,15 @@
 
 .pattern-row-name {
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--fs-control);
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .pattern-row-usage {
-  font-size: 12px;
-  color: var(--faint);
+  font-size: var(--fs-small);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -423,13 +423,13 @@
 }
 
 .pattern-preview-title {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 
 .pattern-preview-note {
-  font-size: 11px;
-  color: var(--faint);
+  font-size: var(--fs-label);
+  color: var(--muted);
 }
 
 .pattern-grid {
@@ -453,7 +453,7 @@
   height: 46px;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sub);
   line-height: 1.1;
 }
 
@@ -473,13 +473,13 @@ button.shift-cell:hover {
 }
 
 .shift-cell-num {
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-variant-numeric: tabular-nums;
   opacity: 0.65;
 }
 
 .shift-cell-text {
-  font-size: 13px;
+  font-size: var(--fs-control);
   font-weight: 500;
 }
 
@@ -494,7 +494,7 @@ button.shift-cell:hover {
   height: 34px;
   border: 1px solid transparent;
   border-radius: var(--radius-control);
-  font-size: 13px;
+  font-size: var(--fs-control);
   font-weight: 500;
 }
 
@@ -539,25 +539,25 @@ button.shift-cell:hover {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
 .field-note {
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 400;
-  color: var(--faint);
+  color: var(--muted);
 }
 
 .editor-active {
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 .editor-hint {
-  font-size: 12px;
-  color: var(--faint);
+  font-size: var(--fs-small);
+  color: var(--muted);
 }
 
 .editor-warn {
@@ -566,7 +566,7 @@ button.shift-cell:hover {
   border-radius: var(--radius-control);
   background: var(--warning-bg);
   color: var(--warning-ink);
-  font-size: 12px;
+  font-size: var(--fs-small);
   line-height: 1.6;
 }
 
@@ -577,7 +577,7 @@ button.shift-cell:hover {
   border-radius: var(--radius-control);
   background: var(--danger-weak);
   color: var(--danger);
-  font-size: 12px;
+  font-size: var(--fs-small);
   line-height: 1.6;
 }
 
@@ -585,7 +585,7 @@ button.shift-cell:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -610,16 +610,16 @@ button.shift-cell:hover {
   gap: 8px;
   padding-bottom: 9px;
   border-bottom: 1px solid var(--rule);
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 
 .profile-tag {
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--raised);
   color: var(--faint);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 400;
 }
 
@@ -645,7 +645,7 @@ button.shift-cell:hover {
 }
 
 .money-unit {
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--faint);
 }
 
@@ -657,7 +657,7 @@ button.shift-cell:hover {
   margin: 0;
   padding: 16px 18px;
   list-style: none;
-  font-size: 13px;
+  font-size: var(--fs-control);
   line-height: 1.6;
   color: var(--muted);
 }
@@ -669,6 +669,11 @@ button.shift-cell:hover {
 
 /* ── 成员表里的本人行（只读） ─────────────────────────── */
 
+/*
+ * 本人行的三个只读格子：白底 + 浅灰描边，和可编辑输入框同一套形状，
+ * 只是边框轻一档、文字退一档 —— 一眼能看出「这是字段，但改不了」。
+ * 原来铺的是 --raised，而面板底也是近白，两者差不到 1 级，整行像浮在背景上。
+ */
 .member-locked {
   display: flex;
   align-items: center;
@@ -677,9 +682,10 @@ button.shift-cell:hover {
   height: var(--control-height);
   padding: 0 8px;
   border-radius: var(--radius-control);
-  background: var(--raised);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--control-soft);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--fs-control);
 }
 
 .member-locked-name {
@@ -690,14 +696,14 @@ button.shift-cell:hover {
 }
 
 .member-locked-pattern {
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 .member-locked-position {
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
   text-overflow: ellipsis;
   white-space: nowrap;

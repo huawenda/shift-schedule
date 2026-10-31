@@ -22,8 +22,8 @@
 }
 
 .wizard-step {
-  font-size: 12px;
-  color: var(--faint);
+  font-size: var(--fs-small);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -42,7 +42,7 @@
 
 .wizard-lead {
   margin-bottom: 14px;
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 1.75;
 }
 
@@ -52,7 +52,7 @@
   gap: 9px;
   margin: 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--fs-control);
   line-height: 1.7;
   color: var(--muted);
 }
@@ -79,7 +79,7 @@
 
 .wizard-note {
   margin-top: 14px;
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -95,7 +95,7 @@
   gap: 12px;
   padding: 9px 14px;
   border-bottom: 1px solid var(--rule);
-  font-size: 13px;
+  font-size: var(--fs-control);
 }
 
 .wizard-summary-row:last-child {

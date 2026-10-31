@@ -19,6 +19,11 @@ interface StatsPanelsProps {
   onOpenProfile: () => void
 }
 
+/** 天数可以是半天：整数不带小数点，0.5 保留一位 */
+function formatDays(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
 /** 六张卡片的数据形状：天数、右侧小时标记、以及是不是"扣项"样式 */
 interface DayCard {
   key: string
@@ -124,7 +129,7 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
         <div className="day-counts">
           {cards.map(card => (
             <div className={`day-count is-${card.key}`} key={card.key}>
-              <span className="day-count-num">{card.days}</span>
+              <span className="day-count-num">{formatDays(card.days)}</span>
               <span className="day-count-label">{card.label}</span>
               {card.hours > 0 ? (
                 <span className={`day-count-extra${card.muted ? ' is-leave' : ''}`}>
@@ -136,9 +141,9 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
         </div>
 
         <p className="stat-foot">
-          出勤 <strong>{days.work}</strong> 天
+          出勤 <strong>{formatDays(days.work)}</strong> 天
           {leave.days > 0 ? (
-            <> · 事假 <strong>{leave.days}</strong> 天</>
+            <> · 事假 <strong>{formatDays(leave.days)}</strong> 天</>
           ) : null}
         </p>
       </section>

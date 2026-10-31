@@ -412,9 +412,18 @@ async function runScenario(name, url, downloadDir) {
         todayCellShadow: todayCell ? getComputedStyle(todayCell).boxShadow : 'none',
         nameW: nameCell ? Math.round(nameCell.getBoundingClientRect().width) : -1,
         // 姓名 / 班序两行都不该被省略号截断
-        nameClipped: names.some(node => node.scrollWidth > node.clientWidth + 1)
+        nameClipped: names.some(node => node.scrollWidth > node.clientWidth + 1),
+        // 画布内的重要文字必须继承正文色，不能继承深色外框的文字色
+        titleColor: getComputedStyle(document.querySelector('.canvas-title')).color,
+        nameColor: getComputedStyle(document.querySelector('.matrix-name')).color
       }
     })()`)
+    check(
+      `${name}: 画布标题与矩阵姓名用正文色（不继承深框的灰）`,
+      matrixLook.titleColor === 'rgb(19, 20, 22)' &&
+        matrixLook.nameColor === 'rgb(19, 20, 22)',
+      JSON.stringify({ title: matrixLook.titleColor, name: matrixLook.nameColor })
+    )
     check(
       `${name}: 矩阵色块四边留白等宽（格子直角 + ::before 画块，列线才连续）`,
       matrixLook.cellRadius === '0px' && matrixLook.cellBg === 'rgba(0, 0, 0, 0)' &&
@@ -651,14 +660,27 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(pinnedRoster)
     )
 
-    const selfRow = await client.evaluate(`(() => ({
-      selfBadges: document.querySelectorAll('.member-row .badge-self').length,
-      selfInputs: document.querySelectorAll('.member-row.is-self input, .member-row.is-self select, .member-row.is-self .select-trigger').length,
-      selfDeleteDisabled: Boolean(document.querySelector('.member-row.is-self .btn-quiet[disabled]'))
-    }))()`)
+    const selfRow = await client.evaluate(`(() => {
+      const row = document.querySelector('.member-row.is-self')
+      const locked = row?.querySelector('.member-locked')
+      const lockedCs = locked ? getComputedStyle(locked) : null
+      return {
+        selfBadges: document.querySelectorAll('.member-row .badge-self').length,
+        selfInputs: document.querySelectorAll('.member-row.is-self input, .member-row.is-self select, .member-row.is-self .select-trigger').length,
+        selfDeleteDisabled: Boolean(document.querySelector('.member-row.is-self .btn-quiet[disabled]')),
+        lockedBg: lockedCs?.backgroundColor ?? '',
+        lockedShadow: lockedCs?.boxShadow ?? ''
+      }
+    })()`)
     check(
       `${name}: 成员表里的本人行只读且删除禁用`,
       selfRow.selfBadges === 1 && selfRow.selfInputs === 0 && selfRow.selfDeleteDisabled === true,
+      JSON.stringify(selfRow)
+    )
+    check(
+      `${name}: 本人行的只读格子有独立浅灰描边，和面板背景分开`,
+      selfRow.lockedBg === 'rgb(255, 255, 255)' &&
+        selfRow.lockedShadow.includes('inset'),
       JSON.stringify(selfRow)
     )
 
@@ -1841,7 +1863,7 @@ async function runScenario(name, url, downloadDir) {
       check(
         `${name}: 事假卡片写 4h，底部不再重复小时`,
         leaveUi.leaveCardExtra === '4h' && leaveUi.leaveCardIsLeave === true &&
-          leaveUi.overviewFoot.includes('事假1天') && !leaveUi.overviewFoot.includes('4h'),
+          leaveUi.overviewFoot.includes('事假0.5天') && !leaveUi.overviewFoot.includes('4h'),
         JSON.stringify(leaveUi)
       )
       check(

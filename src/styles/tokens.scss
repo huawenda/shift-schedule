@@ -17,12 +17,16 @@
   --chrome-muted: #a3b7bc;
   --chrome-faint: #7f979d;
   --chrome-accent: #7fd2e2;
+  /* 深框上按钮的悬停底：比 --chrome-raised 亮一档，不另立色系 */
+  --chrome-hover: #1d3d46;
 
   --ground: #f9fbfc;
   --surface: #ffffff;
   /* 画布内的三级白：纯白画布 / 表头与悬停 / 面板内嵌 */
   --surface-tint: #fbfcfd;
   --surface-sunken: #f6f8f9;
+  /* 周期外日期的压暗底：比 --raised 深、比 --active 浅 */
+  --surface-dim: #f1f3f5;
   --raised: #f4f6f8;
   --active: #ebedee;
   --border: #e8eaec;
@@ -31,11 +35,21 @@
    * 输入框、下拉、按钮共用这一个值。 */
   --control: #8f969b;
   --control-hover: #727b80;
+  /* 只读控件：比可编辑控件轻一档，但仍能勾出边界（1.5:1） */
+  --control-soft: #c2c9cd;
+  /* 禁用图标：比 --control-soft 略亮，只用于图标按钮的不可用态 */
+  --icon-disabled: #c9cdd1;
 
+  /* 文字只留两级可见层级：正文 / 辅助。颜色不再用来「退远」信息 ——
+   * 辅助文字压到 7.9:1，最弱的灰也有 6:1，层级交给字号与字重。
+   * 原先 --faint 4.77:1 又大面积用于标签，11px 下看着像「被禁用」，整页发灰。 */
   --text: #131416;
-  --muted: #5d5f60;
-  /* 辅助文字 4.77:1（原 #8a9299 仅 3.16:1，11px 灰字在普通屏上发虚） */
-  --faint: #6b747a;
+  --muted: #4c5256;
+  --faint: #5d6468;
+  /* 压在深色底上的字：墨底按钮、选中段、已完成待办的勾 */
+  --text-inverse: #ffffff;
+  /* 纯黑：只用于墨底按钮悬停再深一档，其余一律用 --text */
+  --text-strong: #000000;
 
   --accent: #1b6c80;
   --accent-weak: #eaf2f4;
@@ -59,6 +73,7 @@
 
   --danger: #b42318;
   --danger-weak: #fdecea;
+  --danger-border: #e3b5b0;
   --warning-ink: #92400e;
   --warning-bg: #fffbeb;
   --warning-border: #fde68a;
@@ -125,9 +140,13 @@
   --shift-leave-bg: #e5e7eb;
   --shift-leave-ink: #475467;
 
-  --radius-card: 8px;
+  --radius-mark: 3px;
+  --radius-sub: 4px;
   --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-dialog: 12px;
   --radius-sheet: 16px;
+  --radius-pill: 999px;
 
   /* 全站几乎不用阴影，只有底部提示需要从画布上「浮起来」一档 */
   --shadow-toast: 0 10px 30px rgba(19, 20, 22, 0.12);
@@ -149,13 +168,25 @@
    * 纵向却空出一大截，看着就是色块没居中。 */
   --matrix-pill-gap: 4px;
 
-  /* 字号阶梯：11 微标签 / 12 辅助 / 14 正文 / 17 分区标题 / 26 页面标题 / 28 关键数值。
-   * 旧阶梯 93% 的文字挤在 10–13px，13 到 22 中间是空的，整页读起来像一张表格。 */
-  --fs-title: 26px;
-  --fs-section: 17px;
-  --fs-kpi: 28px;
-  --fs-body: 14px;
+  /* 字号阶梯：每一档都有明确角色，代码里不允许再出现阶梯外的字号。
+   * 10 角标 / 11 标签 / 12 说明 / 13 控件 / 14 正文 / 16 小标题 /
+   * 17 分区标题 / 18 小数值 / 20 中数值 / 22 大数值 / 26 页面标题 / 28 关键数值。
+   *
+   * 13 是控件档：控件、成员表、弹层、待办都比正文小一号。它原本只写在代码里、
+   * 没进阶梯，于是全项目 28 处 13px 变成了「规则之外的例外」—— 阶梯要覆盖在用的档位，
+   * 而不是反过来让代码迁就一张更短的清单。 */
+  --fs-micro: 10px;
+  --fs-label: 11px;
   --fs-small: 12px;
+  --fs-control: 13px;
+  --fs-body: 14px;
+  --fs-subhead: 16px;
+  --fs-section: 17px;
+  --fs-metric-sm: 18px;
+  --fs-metric-md: 20px;
+  --fs-metric-lg: 22px;
+  --fs-title: 26px;
+  --fs-kpi: 28px;
 
   /* 动效：只给「进入」用，停留态不动。 */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -309,10 +340,10 @@ p {
   flex: 0 0 auto;
   padding: 0 4px;
   height: 15px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--accent-weak);
   color: var(--accent);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   line-height: 15px;
   white-space: nowrap;
@@ -331,7 +362,7 @@ p {
   border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-control);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -360,15 +391,15 @@ p {
 .btn-primary {
   border-color: var(--text);
   background: var(--text);
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #000;
+  background: var(--text-strong);
 }
 
 .btn-danger {
-  border-color: #e3b5b0;
+  border-color: var(--danger-border);
   color: var(--danger);
 }
 
@@ -389,7 +420,7 @@ p {
   border: 1px solid var(--control);
   border-radius: var(--radius-control);
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--fs-control);
 }
 
 .input:hover {
@@ -424,7 +455,7 @@ p {
   border: 1px solid var(--control);
   border-radius: var(--radius-control);
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--fs-control);
   text-align: left;
 }
 
@@ -498,7 +529,7 @@ p {
 
 .select-popup::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(19, 20, 22, 0.14);
   background-clip: content-box;
 }
@@ -514,8 +545,8 @@ p {
 
 .select-group {
   padding: 6px 8px 3px;
-  color: var(--faint);
-  font-size: 11px;
+  color: var(--muted);
+  font-size: var(--fs-label);
   line-height: 1.4;
 }
 
@@ -523,8 +554,8 @@ p {
   height: 28px;
   padding: 0 8px;
   overflow: hidden;
-  border-radius: 4px;
-  font-size: 13px;
+  border-radius: var(--radius-sub);
+  font-size: var(--fs-control);
   line-height: 28px;
   text-overflow: ellipsis;
   white-space: nowrap;

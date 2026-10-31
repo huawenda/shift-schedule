@@ -35,7 +35,7 @@
   background: var(--surface);
   box-shadow: var(--shadow-toast);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-control);
   line-height: 1.5;
   pointer-events: auto;
   animation: toast-in 180ms ease-out;
@@ -79,7 +79,7 @@
 
 .toast-detail {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-small);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -89,10 +89,10 @@
   margin-top: 1px;
   padding: 0 4px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sub);
   background: transparent;
   color: var(--accent);
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
@@ -112,7 +112,7 @@
   height: 22px;
   margin-top: -2px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sub);
   background: transparent;
   color: var(--faint);
   cursor: pointer;

@@ -25,9 +25,9 @@ describe('canRecordOvertime / canMarkLegal', () => {
     expect(canRecordOvertime('事假')).toBe(false)
   })
 
-  it('法定标记与加班同一口径', () => {
+  it('法定标记比加班宽一档：休息日也能是法定日', () => {
     SHIFT_TYPES.forEach(shift => {
-      expect(canMarkLegal(shift)).toBe(canRecordOvertime(shift))
+      expect(canMarkLegal(shift)).toBe(shift === '休息' ? true : canRecordOvertime(shift))
     })
   })
 })
@@ -87,9 +87,10 @@ describe('formatOvertimeHours', () => {
 })
 
 describe('sanitizeOvertime', () => {
-  it('不支持加班的班次一律清空 —— 不留「休息 + 3h」这种脏数据', () => {
-    expect(sanitizeOvertime('休息', 3, true)).toEqual({ overtimeHours: undefined, isLegal: undefined })
-    expect(sanitizeOvertime('事假', 2, false)).toEqual({ overtimeHours: undefined, isLegal: undefined })
+  it('不支持加班的班次清掉小时，但休息仍可标法定', () => {
+    expect(sanitizeOvertime('休息', 3, true)).toEqual({ overtimeHours: undefined, isLegal: true })
+    expect(sanitizeOvertime('休息', 3, false)).toEqual({ overtimeHours: undefined, isLegal: undefined })
+    expect(sanitizeOvertime('事假', 2, true)).toEqual({ overtimeHours: undefined, isLegal: undefined })
   })
 
   it('0 小时归一成 undefined，法定 false 也归一成 undefined', () => {

@@ -49,7 +49,7 @@
 
 .today-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 500;
   letter-spacing: 0.04em;
 }
@@ -58,7 +58,7 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  font-size: 20px;
+  font-size: var(--fs-metric-md);
   font-weight: 600;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -66,7 +66,7 @@
 
 .today-week {
   color: var(--faint);
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 400;
 }
 
@@ -83,8 +83,8 @@
   height: 26px;
   padding: 0 10px;
   border: 0;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--radius-control);
+  font-size: var(--fs-control);
   font-weight: 600;
   line-height: 26px;
 }
@@ -104,7 +104,7 @@
 }
 
 .today-value {
-  font-size: 22px;
+  font-size: var(--fs-metric-lg);
   font-weight: 600;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -117,17 +117,17 @@
 .today-unit {
   margin-left: 3px;
   color: var(--faint);
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 400;
 }
 
 .today-sub {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-small);
 }
 
 .today-sub.is-empty {
-  color: var(--faint);
+  color: var(--muted);
 }
 
 /*
@@ -185,7 +185,7 @@
 
 .stat-title {
   text-wrap: balance;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 
@@ -204,8 +204,8 @@
 }
 
 .stat-note {
-  font-size: 11px;
-  color: var(--faint);
+  font-size: var(--fs-label);
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -213,7 +213,7 @@
   margin-top: auto;
   padding-top: 8px;
   border-top: 1px solid var(--rule);
-  font-size: 13px;
+  font-size: var(--fs-control);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -224,14 +224,14 @@
 }
 
 .stat-hint {
-  font-size: 11px;
-  color: var(--faint);
+  font-size: var(--fs-label);
+  color: var(--muted);
 }
 
 .stat-empty {
   padding: 4px 0;
-  font-size: 12px;
-  color: var(--faint);
+  font-size: var(--fs-small);
+  color: var(--muted);
 }
 
 .stat-empty-block {
@@ -296,13 +296,13 @@
 }
 
 .day-count-num {
-  font-size: 18px;
+  font-size: var(--fs-metric-sm);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .day-count-label {
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
@@ -310,10 +310,10 @@
 .day-count-extra {
   margin-left: auto;
   padding: 0 5px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--overtime-bg);
   color: var(--overtime-ink);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 600;
   line-height: 17px;
   font-variant-numeric: tabular-nums;
@@ -435,7 +435,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  font-size: 11px;
+  font-size: var(--fs-label);
   line-height: 1.2;
   font-weight: 600;
   color: var(--muted);
@@ -444,25 +444,27 @@
   white-space: nowrap;
 }
 
-/* 数值跟柱子的班次色走：白班柱上的数字是蓝的，夜班柱上是墨蓝的 */
+/* 数值跟柱子的班次色走：白班柱上的数字是蓝的，夜班柱上是墨蓝的。
+ * 全部取班次令牌，不再手抄十六进制 —— 之前抄了一份，改色时两边就会不同步。 */
 .ot-col-value.is-day {
-  color: #02689f;
+  color: var(--shift-day-ink);
 }
 
+/* 夜班反相块的「墨」是近白，铺在白底上会消失；这里直接用夜班底色当字色 */
 .ot-col-value.is-night {
-  color: #1e3a5f;
+  color: var(--shift-night-bg);
 }
 
 .ot-col-value.is-dayx {
-  color: #b45309;
+  color: var(--shift-dayx-ink);
 }
 
 .ot-col-value.is-nightx {
-  color: #9a3412;
+  color: var(--shift-nightx-ink);
 }
 
 .ot-col-value.is-legal {
-  color: #92400e;
+  color: var(--warning-ink);
 }
 
 /* 柱子本体 */
@@ -470,7 +472,7 @@
   width: 100%;
   /* 卡片宽度除以五列 ≈ 90px，柱子占七成左右，留出左右余量 */
   max-width: 64px;
-  border-radius: 3px 3px 0 0;
+  border-radius: var(--radius-mark) var(--radius-mark) 0 0;
   /* 有值但很小时不至于看不见 */
   min-height: 2px;
 }
@@ -481,7 +483,7 @@
  * 日历上那个「白班」小块就是这个颜色，柱形图里看到柱子就能对上号。
  */
 .ot-bar.is-day {
-  background: #dff3ff;
+  background: var(--shift-day-bg);
 }
 
 .ot-bar.is-night {
@@ -489,24 +491,24 @@
 }
 
 .ot-bar.is-dayx {
-  background: #fff0c2;
+  background: var(--shift-dayx-bg);
 }
 
 .ot-bar.is-nightx {
-  background: #fde7c7;
+  background: var(--shift-nightx-bg);
 }
 
 /* 法定没有对应班次，用「法」角标那套警示色。
  * 比 --warning-bg（#fffbeb）深一档 —— 那个色在白底上几乎看不见。 */
 .ot-bar.is-legal {
-  background: #fde68a;
+  background: var(--warning-border);
 }
 
 /* 横轴类目名 */
 .ot-col-label {
   flex: 1 1 0;
   min-width: 0;
-  font-size: 11px;
+  font-size: var(--fs-label);
   color: var(--muted);
   text-align: center;
   white-space: nowrap;
@@ -536,7 +538,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 5px 0;
-  font-size: 13px;
+  font-size: var(--fs-control);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -553,7 +555,7 @@
   margin-top: 14px;
   padding-top: 10px;
   border-top: 1px solid var(--rule);
-  font-size: 13px;
+  font-size: var(--fs-control);
   font-weight: 600;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -589,10 +591,10 @@
 .money-rate {
   margin-left: 6px;
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--raised);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-style: normal;
   line-height: 16px;
   font-variant-numeric: tabular-nums;
@@ -604,7 +606,7 @@
   padding-top: 9px;
   border-top: 1px solid var(--border);
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--fs-body);
 }
 
 /*
@@ -620,12 +622,12 @@
   border-radius: 5px;
   background: var(--accent-weak);
   color: var(--accent);
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 
 .money-row.is-total span:last-child {
-  font-size: 18px;
+  font-size: var(--fs-metric-sm);
   color: var(--accent);
 }
 
@@ -664,7 +666,7 @@
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-control);
 }
 
 .detail-table th:nth-child(1) {
@@ -687,7 +689,7 @@
   padding: 7px 0 6px;
   border-bottom: 1px solid var(--border);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-small);
   font-weight: 500;
   text-align: center;
 }
@@ -722,7 +724,7 @@
 .detail-week {
   margin-left: 4px;
   color: var(--faint);
-  font-size: 11px;
+  font-size: var(--fs-label);
 }
 
 /*
@@ -738,8 +740,8 @@
 
 .detail-shift {
   padding: 1px 6px;
-  border-radius: 3px;
-  font-size: 11px;
+  border-radius: var(--radius-mark);
+  font-size: var(--fs-label);
 }
 
 .detail-legal {
@@ -748,11 +750,11 @@
   left: calc(100% + 3px);
   transform: translateY(-50%);
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--warning-bg);
   box-shadow: inset 0 0 0 1px var(--warning-border);
   color: var(--warning-ink);
-  font-size: 10px;
+  font-size: var(--fs-micro);
   line-height: 1.5;
   white-space: nowrap;
 }
@@ -769,7 +771,7 @@
   display: inline-block;
   min-width: 55px;
   padding: 2px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--pay-1-bg);
   color: var(--pay-1-ink);
   font-weight: 600;

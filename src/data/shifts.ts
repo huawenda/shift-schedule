@@ -40,6 +40,23 @@ export function isWorkShift(shift: ShiftType): boolean {
   return shift !== '休息' && shift !== '事假'
 }
 
+/**
+ * 原生班次：**只有白班 / 夜班 / 休息**。
+ *
+ * 其余三种都是**人为改动**：白特、夜特是把白班/夜班升成特勤，事假是把班次换成请假。
+ * 一个人同一时刻只有一天一个班次，所以不存在「白特 + 事假」这种叠加 ——
+ * 事假的原始班次只可能是白班或夜班（休息日不允许请假）。
+ *
+ * **法定不是班次**：它是挂在某一天班次上的属性（`DayOverride.isLegal`），
+ * 不占班次的位置，也不出现在班次选择里。
+ */
+export function nativeShiftOf(shift: ShiftType): '白班' | '夜班' | '休息' {
+  if (shift === '夜班' || shift === '夜特') return '夜班'
+  if (shift === '休息') return '休息'
+  // 白班 / 白特，以及事假（它自己的原始班次得从模板取，不会走到这里）
+  return '白班'
+}
+
 export function shiftToneClass(shift: ShiftType): string {
   return `t-${SHIFT_META[shift].tone}`
 }

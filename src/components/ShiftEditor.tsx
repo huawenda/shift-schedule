@@ -88,17 +88,23 @@ export function ShiftEditor({
         </header>
 
         <div className="dialog-options" role="group" aria-label="选择班次">
-          {SHIFT_TYPES.map(shift => (
-            <button
-              aria-pressed={selected === shift}
-              className={`option ${shiftToneClass(shift)}${selected === shift ? ' is-on' : ''}`}
-              key={shift}
-              type="button"
-              onClick={() => setSelected(shift)}
-            >
-              {SHIFT_META[shift].label}
-            </button>
-          ))}
+          {SHIFT_TYPES.map(shift => {
+            // 模板是休息的日子不存在「请假」这回事，不允许改成事假
+            const leaveBlocked = shift === '事假' && templateShift === '休息'
+            return (
+              <button
+                aria-label={leaveBlocked ? `${SHIFT_META[shift].label}（模板是休息，不可选）` : undefined}
+                aria-pressed={selected === shift}
+                className={`option ${shiftToneClass(shift)}${selected === shift ? ' is-on' : ''}`}
+                disabled={leaveBlocked}
+                key={shift}
+                type="button"
+                onClick={() => setSelected(shift)}
+              >
+                {SHIFT_META[shift].label}
+              </button>
+            )
+          })}
         </div>
 
         {willClearExtra ? (

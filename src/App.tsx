@@ -41,11 +41,11 @@ function routeHash(route: Route): string {
   return '#/overview'
 }
 
-/** 任务栏 / 浏览器标签页直接显示当前视图名，不再带应用名前缀 */
+/** 任务栏 / 原生标题栏：品牌 + 当前视图，避免和页面 H1 重复成两行同名 */
 const ROUTE_TITLE: Record<Route, string> = {
-  overview: '月度概览',
-  matrix: '全员矩阵',
-  settings: '设置'
+  overview: '昼夜 · 月度概览',
+  matrix: '昼夜 · 全员矩阵',
+  settings: '昼夜 · 设置'
 }
 
 export function App() {

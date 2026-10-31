@@ -68,14 +68,14 @@
 }
 
 .todo-card-title {
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 
 /* 抬头不再画强调竖条：概览页已经有一张主卡带了竖条，
  * 这一根再加上去，两个装置就互相抵消了。 */
 .todo-card-stat {
-  font-size: 12px;
+  font-size: var(--fs-small);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -86,8 +86,8 @@
   padding: 18px 12px;
   border: 1px dashed var(--border);
   border-radius: var(--radius-card);
-  color: var(--faint);
-  font-size: 12px;
+  color: var(--muted);
+  font-size: var(--fs-small);
   line-height: 1.7;
   text-align: center;
 }
@@ -117,7 +117,7 @@
   align-items: baseline;
   gap: 6px;
   margin: 0 0 6px;
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-variant-numeric: tabular-nums;
 }
 
@@ -164,8 +164,8 @@
   gap: 7px;
   margin: 0;
   padding: 5px 8px;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--radius-control);
+  font-size: var(--fs-control);
   line-height: 1.5;
 }
 
@@ -186,7 +186,7 @@
   margin-top: 2.75px;
   padding: 0;
   border: 1px solid var(--control);
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: var(--surface);
   cursor: pointer;
 }
@@ -201,8 +201,8 @@
   background: var(--accent);
   /* 用两条线拼一个勾（勾的落点按 14×14 的框调过） */
   background-image:
-    linear-gradient(45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%),
-    linear-gradient(-45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%);
+    linear-gradient(45deg, transparent 45%, var(--text-inverse) 45%, var(--text-inverse) 55%, transparent 55%),
+    linear-gradient(-45deg, transparent 45%, var(--text-inverse) 45%, var(--text-inverse) 55%, transparent 55%);
   background-size: 7px 7px, 7px 7px;
   background-position: 3px 6px, 3px 3px;
   background-repeat: no-repeat;
@@ -243,7 +243,7 @@
   margin-bottom: -1px;
   background: transparent;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--fs-control);
   cursor: pointer;
 }
 
@@ -263,10 +263,10 @@
   min-width: 17px;
   margin-left: 5px;
   padding: 0 4px;
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background: var(--raised);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 500;
   line-height: 16px;
   text-align: center;
@@ -327,7 +327,7 @@
   margin: 0 -6px;
   padding: 5px 6px;
   border-radius: 5px;
-  font-size: 13px;
+  font-size: var(--fs-control);
   line-height: 1.5;
 }
 
@@ -343,10 +343,10 @@
   height: 18px;
   padding: 0;
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-mark);
   background: transparent;
   color: var(--todo-ink, var(--faint));
-  font-size: 14px;
+  font-size: var(--fs-body);
   line-height: 18px;
   opacity: 0.55;
   cursor: pointer;
@@ -361,8 +361,8 @@
 /* 弹层底部的说明文字 */
 .dialog-tip {
   margin: 0;
-  font-size: 11px;
-  color: var(--faint);
+  font-size: var(--fs-label);
+  color: var(--muted);
 }
 
 /* 底栏按钮靠右（待办页只有一个「完成」） */

@@ -11,6 +11,7 @@ import {
 import { getPeriod } from './period'
 import { emptySalary } from './profile'
 import type { Member, Roster } from './roster'
+import { nativeShiftOf } from './shifts'
 
 const period = getPeriod({ year: 2026, month: 11 }) // 2026-10-20 ~ 2026-11-19，31 天
 const member: Member = { id: 'm1', name: '华文达', patternId: '4F' }
@@ -88,9 +89,9 @@ describe('月度天数与加班汇总', () => {
       stats.days.day + stats.days.night + stats.days.rest +
       stats.days.daySpecial + stats.days.nightSpecial + stats.days.leave + stats.days.legal
     expect(sum).toBe(period.dates.length)
-    // 法定那天照样出勤
+    // 没有法定日时，出勤 = 白 + 夜 + 白特 + 夜特
     expect(stats.days.work).toBe(
-      stats.days.day + stats.days.night + stats.days.daySpecial + stats.days.nightSpecial + stats.days.legal
+      stats.days.day + stats.days.night + stats.days.daySpecial + stats.days.nightSpecial
     )
   })
 
@@ -107,6 +108,90 @@ describe('月度天数与加班汇总', () => {
     expect(stats.overtime.legal).toBe(3)
     expect(stats.overtime.total).toBe(15)
     expect(stats.days.legal).toBe(1)
+  })
+
+  it('休息标了法定：从休息挪到法定，且不算出勤、不产生加班', () => {
+    const date = period.dates[0]
+    const plain = computeMonthStats(
+      makeRoster([{ memberId: 'm1', date, shift: '休息' }]),
+      member,
+      period
+    )
+    const legalRest = computeMonthStats(
+      makeRoster([{ memberId: 'm1', date, shift: '休息', isLegal: true }]),
+      member,
+      period
+    )
+
+    expect(legalRest.days.rest).toBe(plain.days.rest - 1)
+    expect(legalRest.days.legal).toBe(plain.days.legal + 1)
+
+    // 六格相加仍是整月天数：没有重复计数
+    const sum =
+      legalRest.days.day + legalRest.days.night + legalRest.days.rest +
+      legalRest.days.daySpecial + legalRest.days.nightSpecial + legalRest.days.leave + legalRest.days.legal
+    expect(sum).toBe(period.dates.length)
+
+    // 那天没上班 → 不算出勤
+    expect(legalRest.days.work).toBe(plain.days.work)
+    // 休息不记加班，标了法定也变不出加班费
+    expect(legalRest.overtime.total).toBe(plain.overtime.total)
+  })
+
+  it('法定日没加班不算出勤，有加班才算', () => {
+    const date = period.dates[0]
+    const idle = computeMonthStats(
+      makeRoster([{ memberId: 'm1', date, shift: '白班', isLegal: true }]),
+      member,
+      period
+    )
+    const worked = computeMonthStats(
+      makeRoster([{ memberId: 'm1', date, shift: '白班', isLegal: true, overtimeHours: 10 }]),
+      member,
+      period
+    )
+
+    // 两种情况都算「法定」天数 —— 变的只是出勤
+    expect(idle.days.legal).toBe(worked.days.legal)
+    // 没加班说明那天在休息，不计出勤
+    expect(worked.days.work).toBe(idle.days.work + 1)
+    expect(idle.overtime.total).toBe(0)
+    expect(worked.overtime.legal).toBe(10)
+  })
+
+  it('事假半天：0.5 天记事假、0.5 天还给默认班次；整天全记事假', () => {
+    const date = period.dates[0]
+    const half = computeMonthStats(
+      makeRoster([{ memberId: 'm1', date, shift: '事假', leaveDuration: '4h' }]),
+      member,
+      period
+    )
+    const full = computeMonthStats(
+      makeRoster([{ memberId: 'm1', date, shift: '事假' }]),
+      member,
+      period
+    )
+
+    expect(half.leave.hours).toBe(4)
+    expect(full.leave.hours).toBe(8)
+
+    expect(half.days.leave).toBe(0.5)
+    expect(full.days.leave).toBe(1)
+    expect(half.leave.days).toBe(0.5)
+    expect(full.leave.days).toBe(1)
+
+    // 半天比整天多 0.5 天出勤
+    expect(half.days.work).toBe(full.days.work + 0.5)
+    // 另外 0.5 天回到默认班次：四个有工时的格子合计多 0.5
+    expect(
+      half.days.day + half.days.night + half.days.daySpecial + half.days.nightSpecial
+    ).toBe(full.days.day + full.days.night + full.days.daySpecial + full.days.nightSpecial + 0.5)
+
+    // 六格合计仍是整月天数
+    const sum =
+      half.days.day + half.days.night + half.days.rest +
+      half.days.daySpecial + half.days.nightSpecial + half.days.leave + half.days.legal
+    expect(sum).toBe(period.dates.length)
   })
 
   it('只记加班、班次没改的日子同样进统计（覆盖记录里的班次就是模板值）', () => {
@@ -315,6 +400,16 @@ describe('夜班津贴', () => {
 })
 
 
+describe('原生班次', () => {
+  it('白特/夜特折回白班/夜班，休息就是休息', () => {
+    expect(nativeShiftOf('白班')).toBe('白班')
+    expect(nativeShiftOf('白特')).toBe('白班')
+    expect(nativeShiftOf('夜班')).toBe('夜班')
+    expect(nativeShiftOf('夜特')).toBe('夜班')
+    expect(nativeShiftOf('休息')).toBe('休息')
+  })
+})
+
 describe('事假扣款', () => {
   it('4h 事假计 4 小时，按 时薪 × 4 扣款', () => {
     const roster = makeRoster(
@@ -324,7 +419,7 @@ describe('事假扣款', () => {
     const stats = computeMonthStats(roster, member, period)
     const hourly = 8000 / 21.75 / 8
 
-    expect(stats.leave.days).toBe(1)
+    expect(stats.leave.days).toBe(0.5)
     expect(stats.leave.hours).toBe(4)
     expect(stats.salary.leaveDeduction).toBe(roundMoney(hourly * 4))
     expect(stats.salary.net).toBe(
@@ -347,7 +442,7 @@ describe('事假扣款', () => {
       filledSalary
     )
     const stats = computeMonthStats(roster, member, period)
-    expect(stats.leave).toEqual({ days: 2, hours: 12 })
+    expect(stats.leave).toEqual({ days: 1.5, hours: 12 })
   })
 
   it('加班与事假可以同时存在，两笔一起算进实发', () => {
@@ -450,8 +545,8 @@ describe('法定与班次互斥', () => {
     expect(withLegal.days.day).toBe(base.days.day - 1)
     expect(base.days.legal).toBe(0)
     expect(withLegal.days.legal).toBe(1)
-    // 出勤天数不变：法定那天照样上班
-    expect(withLegal.days.work).toBe(base.days.work)
+    // 那天没记加班 → 视为休息，不计出勤
+    expect(withLegal.days.work).toBe(base.days.work - 1)
   })
 
   it('六格（白/夜/休/特勤/事假/法定）相加仍等于本期天数', () => {

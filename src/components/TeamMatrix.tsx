@@ -37,6 +37,7 @@ interface TeamMatrixProps {
  *
  * 横向滚动条被彻底隐藏了（见 `styles/schedule.scss` 的 `.matrix-scroll`），
  * 改为「鼠标在矩阵范围内滚滚轮 → 横滚」，见下面的 wheel 监听。
+ * 行数多到矩阵纵向也溢出时，滚轮先归纵向，横向改用 Shift + 滚轮。
  */
 export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
   const today = todayKey()
@@ -63,10 +64,14 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
 
     function onWheel(event: WheelEvent) {
       if (event.deltaX !== 0) return
-      const max = scroll!.scrollWidth - scroll!.clientWidth
-      if (max <= 0) return
+      const maxX = scroll!.scrollWidth - scroll!.clientWidth
+      if (maxX <= 0) return
+      // 行数多到纵向也溢出时，滚轮先归纵向 —— 否则 deltaY 全被横滚吃掉，
+      // 最后几行永远够不着（滚动条又是隐藏的）。横向改用 Shift + 滚轮。
+      const overflowsY = scroll!.scrollHeight - scroll!.clientHeight > 1
+      if (overflowsY && !event.shiftKey) return
       const next = scroll!.scrollLeft + event.deltaY
-      if ((next <= 0 && scroll!.scrollLeft <= 0) || (next >= max && scroll!.scrollLeft >= max)) return
+      if ((next <= 0 && scroll!.scrollLeft <= 0) || (next >= maxX && scroll!.scrollLeft >= maxX)) return
       event.preventDefault()
       scroll!.scrollLeft = next
     }

@@ -5,7 +5,8 @@
  * `utils/legalOvertime.ts`，预设档位在 miniapp 的 `shiftEditRules`），
  * 但本地版不 import core —— 这里是按同一口径重写的一份。
  *
- * 一句话：只有**有工时的班次**才能记加班、才能标法定；休息与事假不能。
+ * 一句话：只有**有工时的班次**能记加班；法定标记另外允许「休息」——
+ * 法定节假日正好落在休息日是常态，那天算「法定天数」，不算「休息天数」。
  */
 
 import { isWorkShift, type ShiftType } from './shifts'
@@ -21,9 +22,15 @@ export function canRecordOvertime(shift: ShiftType): boolean {
   return isWorkShift(shift)
 }
 
-/** 能否标法定：与加班同一口径 */
+/**
+ * 能否标法定：有工时的班次，外加「休息」。
+ *
+ * 法定节假日与休息日重叠是常态，那天既没上班、也确实是法定日，所以要能标。
+ * 但它只计入**法定天数**、不计入休息天数，也不产生加班费 ——
+ * 法定加班费（×3）只发给「法定日真的上了一天班」的人。
+ */
 export function canMarkLegal(shift: ShiftType): boolean {
-  return isWorkShift(shift)
+  return isWorkShift(shift) || shift === '休息'
 }
 
 /**
@@ -58,15 +65,15 @@ export function formatOvertimeHours(hours: number): string {
 
 /**
  * 一条日记录的加班/法定是否「有效」。
- * 班次不支持时一律视为没有 —— 宁可少记，也不留「休息 + 3h」这种脏数据。
+ * 加班看班次支不支持，法定看 canMarkLegal ——
+ * 休息允许标法定，但绝不会留下「休息 + 3h」这种脏数据。
  */
 export function sanitizeOvertime(shift: ShiftType, hours?: number, isLegal?: boolean): {
   overtimeHours?: number
   isLegal?: boolean
 } {
-  if (!canRecordOvertime(shift)) return {}
-
-  const normalized = hours === undefined ? 0 : normalizeOvertimeHours(hours)
+  // 两条独立规则：不能记加班的班次照样可以标法定
+  const normalized = canRecordOvertime(shift) ? normalizeOvertimeHours(hours ?? 0) : 0
   const legal = canMarkLegal(shift) && isLegal === true ? true : undefined
 
   return {

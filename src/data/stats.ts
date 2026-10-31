@@ -9,10 +9,11 @@
  */
 
 import { leaveHoursOf } from './leave'
+import { canMarkLegal } from './overtime'
 import type { Period } from './period'
 import { parseMoney, type SalaryInput } from './profile'
 import { getRecordMap, getTemplateShift, overrideKey, type Member, type Roster } from './roster'
-import { isWorkShift, type ShiftType } from './shifts'
+import { isWorkShift, nativeShiftOf, type ShiftType } from './shifts'
 
 /** 加班的三个计价桶 —— 倍率不同，所以必须分开统计 */
 export type OvertimeKind = 'weekday' | 'special' | 'legal'
@@ -58,16 +59,26 @@ export interface ShiftDayCounts {
   /**
    * 法定天数。
    *
-   * **与班次互斥**：标了法定的那一天算「法定」，就不再算进白班 / 夜班 / 白特 / 夜特。
+   * **与班次互斥**：标了法定的那一天算「法定」，就不再算进白班 / 夜班 / 白特 / 夜特 / 休息。
    * 这样「本月概览」六张卡片的数字相加刚好等于本期天数，不会出现
    * 「12 白班 + 1 法定 = 13，而本月只有 31 天里却数出 32」这种重复。
+   *
+   * 「休息」也能标法定：法定节假日与休息日重叠时，那天归「法定」、不归「休息」。
    */
   legal: number
-  /** 出勤天数 = 白 + 夜 + 白特 + 夜特 + 法定（法定那天也是上班） */
+  /**
+   * 出勤天数（**可以是半天**）。
+   *
+   * - 白班 / 夜班 / 白特 / 夜特：不管有没有加班，都算 1 天
+   * - 法定日：只有真的产生了加班才算 —— 没加班说明那天在休息
+   * - 事假半天（4h）：0.5 天（另外 0.5 天算回默认班次）；整天（8h）不算
+   * - 休息：不计
+   */
   work: number
 }
 
 export interface LeaveSummary {
+  /** 事假天数：半天记 0.5，整天记 1（与「本月概览」的事假格同一口径） */
   days: number
   /** 事假小时合计：半天 4h、一天 8h（没记时长按一天） */
   hours: number
@@ -241,6 +252,18 @@ export function emptySalaryBreakdown(salary?: SalaryInput): SalaryBreakdown {
   }
 }
 
+/** 按班次把天数加到对应的格子上（天数可以是小数） */
+function addShiftDays(days: ShiftDayCounts, shift: ShiftType, amount: number) {
+  switch (shift) {
+    case '白班': days.day += amount; break
+    case '夜班': days.night += amount; break
+    case '休息': days.rest += amount; break
+    case '白特': days.daySpecial += amount; break
+    case '夜特': days.nightSpecial += amount; break
+    case '事假': days.leave += amount; break
+  }
+}
+
 /**
  * 算一个人一个结算月的全部统计。
  *
@@ -280,13 +303,15 @@ export function computeMonthStats(roster: Roster, member: Member, period: Period
 
   period.dates.forEach(date => {
     const record = recordMap.get(overrideKey(member.id, date))
-    const shift = record?.shift ?? getTemplateShift(roster, member, date)
+    const templateShift = getTemplateShift(roster, member, date)
+    const shift = record?.shift ?? templateShift
     if (!shift) return
 
     const isLegal = record?.isLegal === true
-    // 法定与班次**互斥**：这一天归「法定」，就不再计入白/夜/特勤 ——
+    // 法定与班次**互斥**：这一天归「法定」，就不再计入白/夜/特勤/休息 ——
     // 否则六张卡片相加会超出本期天数（同一天被数两次）。
-    const asLegal = isLegal && isWorkShift(shift)
+    // 「休息」也算：法定日撞上休息日时，它从「休息」挪到「法定」。
+    const asLegal = isLegal && canMarkLegal(shift)
 
     // 夜班津贴的天数：只要那天上的是夜班就算一天（夜特也算），
     // 与上面的互斥分类无关 —— 法定夜班在卡片里归「法定」格，津贴照发。
@@ -295,28 +320,38 @@ export function computeMonthStats(roster: Roster, member: Member, period: Period
       nightDays += 1
     }
 
+    const hours = record?.overtimeHours ?? 0
+    const leaveHours = shift === '事假' ? leaveHoursOf(record?.leaveDuration) : 0
+
+    // 半天事假：这天的 0.5 天回到**原生班次**（只有白班 / 夜班），另一半才记事假。
+    // 比如默认白班请半天假 → 白班 +0.5、事假 +0.5，合起来还是 1 天。
+    // 原生班次是休息时不拆 —— 休息日本就不允许请假（见 DayEditor 的禁用）。
+    const halfLeaveBase =
+      shift === '事假' && leaveHours === 4 && templateShift && isWorkShift(templateShift)
+        ? nativeShiftOf(templateShift)
+        : null
+
     if (asLegal) {
       days.legal += 1
+    } else if (halfLeaveBase) {
+      addShiftDays(days, halfLeaveBase, 0.5)
+      days.leave += 0.5
     } else {
-      switch (shift) {
-        case '白班': days.day += 1; break
-        case '夜班': days.night += 1; break
-        case '休息': days.rest += 1; break
-        case '白特': days.daySpecial += 1; break
-        case '夜特': days.nightSpecial += 1; break
-        case '事假': days.leave += 1; break
-      }
+      addShiftDays(days, shift, 1)
     }
-    // 法定那天照样出勤
-    if (isWorkShift(shift)) days.work += 1
 
-    // 事假：天数已在上面的 switch 里计过，这里补小时数
+    // 出勤判定：白/夜/白特/夜特不管有没有加班都算 1 天；
+    // 法定日只有「真的产生了加班」才算 —— 没加班说明那天在休息。
+    if (isWorkShift(shift) && (!asLegal || hours > 0)) days.work += 1
+    // 半天事假：另外半天算半个出勤；整天事假不算
+    if (halfLeaveBase) days.work += 0.5
+
+    // 事假：天数已在上面的分类里按半天/整天计过，这里补小时
     if (shift === '事假') {
-      leave.days += 1
-      leave.hours += leaveHoursOf(record?.leaveDuration)
+      leave.days += halfLeaveBase ? 0.5 : 1
+      leave.hours += leaveHours
     }
 
-    const hours = record?.overtimeHours ?? 0
     if (hours <= 0) return
 
     const kind = overtimeKindOf(shift, isLegal)

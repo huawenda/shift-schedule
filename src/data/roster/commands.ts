@@ -1,6 +1,6 @@
 import { isBuiltinPatternId, type CustomPattern } from '../patterns'
 import type { ShiftType } from '../shifts'
-import { canRecordOvertime, sanitizeOvertime } from '../overtime'
+import { canMarkLegal, canRecordOvertime, sanitizeOvertime } from '../overtime'
 import { sanitizeLeave } from '../leave'
 import { createTodoId, pickTodoTone, sortTodos, type Todo } from '../todos'
 import { overrideKey, type DayRecordInput, type Member, type Roster } from './model'
@@ -81,7 +81,7 @@ export function applyShiftEdit(
 
   const existing = getDayRecord(roster, memberId, date)
   const keepOvertime = canRecordOvertime(shift) ? existing?.overtimeHours : undefined
-  const keepLegal = canRecordOvertime(shift) ? existing?.isLegal : undefined
+  const keepLegal = canMarkLegal(shift) ? existing?.isLegal : undefined
   // 矩阵弹层不能改事假时长，但也不该把它抹掉：改成事假时沿用原值，改成别的班次就丢掉
   const keepLeave = shift === '事假' ? existing?.leaveDuration : undefined
 

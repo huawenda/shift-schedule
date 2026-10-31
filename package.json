@@ -20,6 +20,7 @@
     "verify:dist": "node scripts/verify-dist.mjs",
     "verify:tauri": "node scripts/verify-tauri-shell.mjs",
     "shoot:showcase": "node scripts/shoot-showcase.mjs",
+    "shoot:check": "node scripts/shoot-showcase.mjs --check",
     "desktop:dev": "tauri dev --config desktop/src-tauri/tauri.conf.json",
     "desktop:build": "tsc --noEmit && tauri build --config desktop/src-tauri/tauri.conf.json"
   },

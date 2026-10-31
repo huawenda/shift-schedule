@@ -1,15 +1,21 @@
 #!/usr/bin/env node
 /**
- * 产品展示图生成器。
+ * 截图工具：产品展示图 / UI 验收图。
  *
- *   node scripts/shoot-showcase.mjs                 # 输出到 design/screenshots/
+ *   node scripts/shoot-showcase.mjs                 # 展示图 → design/screenshots/
+ *   node scripts/shoot-showcase.mjs --check         # 验收图 → shots-check/（1:1，不合成画板）
  *   node scripts/shoot-showcase.mjs --out=D:\tmp    # 换输出目录
  *
- * 做两件事：
+ * 展示模式做两件事：
  *   1. 把 fixtures/展示样例6人.json 注入 localStorage，逐视图截原始图；
  *   2. 再把每张原始图放进圆角窗口 + 阴影的浅色画板，合成宣传物料风格的成图。
  *
- * 数据全部虚构，与 fixtures/班组13人.json 无关，人名也不重合。
+ * 验收模式只做第 1 件事，但换成真实窗口尺寸逐页取景，给「改完看图」用：
+ * 不合成画板、不放大，输出 1:1 像素，方便前后两张直接对比。
+ *
+ * 展示模式用 6 人虚构样例（人名与真实班组不重合，适合对外）；
+ * 验收模式用 13 人样例，并把里面的绝对日期挪到当前结算月，
+ * 否则验收图会随系统日期漂移：日子一变，日历整片空掉、待办日期也对不上「今天」。
  * 依赖：本机 Chrome/Edge，Node 18+（用全局 fetch / WebSocket），零第三方依赖。
  */
 
@@ -25,7 +31,18 @@ import { startStaticServer } from './lib/server.mjs'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectDir = path.resolve(__dirname, '..')
 const distDir = path.join(projectDir, 'dist')
-const fixturePath = path.join(projectDir, 'fixtures', '展示样例6人.json')
+
+const checkMode = process.argv.includes('--check')
+
+/**
+ * 展示模式用 6 人虚构样例；验收模式用 13 人真实规模样例 ——
+ * 6 人撑不满矩阵，看不出真实密度；13 人才能露出滚动与行高的问题。
+ */
+const fixturePath = path.join(
+  projectDir,
+  'fixtures',
+  checkMode ? '班组13人.json' : '展示样例6人.json'
+)
 
 const ROSTER_KEY = 'shift-schedule:local:roster:v2'
 
@@ -43,7 +60,9 @@ const SCALE = 2
 const outArg = process.argv.find(arg => arg.startsWith('--out='))
 const outDir = outArg
   ? path.resolve(outArg.slice('--out='.length))
-  : path.join(projectDir, 'design', 'screenshots')
+  : checkMode
+    ? path.join(projectDir, 'shots-check')
+    : path.join(projectDir, 'design', 'screenshots')
 
 if (!fs.existsSync(path.join(distDir, 'index.html'))) {
   console.error('dist/ 不存在，先跑 pnpm build')
@@ -64,6 +83,87 @@ const SHOT_HEIGHT = {
   overview: 1540,
   matrix: 700,
   dialog: 900
+}
+
+/**
+ * 验收模式的取景：真实窗口尺寸逐页，再加一张概览整页长图。
+ * 整页高度沿用展示图的 1540 —— 那是逐档试出来「一屏收得下整页」的最小值。
+ */
+const CHECK_SHOTS = [
+  { name: 'overview', route: '#/overview', height: 900, marker: '.calendar', hint: '真实窗口' },
+  { name: 'overview-full', route: '#/overview', height: SHOT_HEIGHT.overview, marker: '.calendar', hint: '整页' },
+  { name: 'matrix', route: '#/matrix', height: 900, marker: '.matrix', hint: '真实窗口' },
+  { name: 'settings', route: '#/settings', height: 900, marker: '.settings-section', hint: '真实窗口' }
+]
+
+/** 验收模式：1:1 逐页出图，不合成宣传板 */
+async function shootCheck(client, entryUrl, outDir) {
+  let lastRoute = null
+
+  for (const shot of CHECK_SHOTS) {
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: VIEW_W,
+      height: shot.height,
+      deviceScaleFactor: 1,
+      mobile: false
+    })
+
+    // 同一条路由只导航一次：概览的「真实窗口」和「整页」是同一页，只换视口高度
+    if (shot.route !== lastRoute) {
+      await client.send('Page.navigate', { url: entryUrl + shot.route })
+      await waitFor(
+        client,
+        `document.readyState === "complete" && Boolean(document.querySelector(${JSON.stringify(shot.marker)}))`,
+        `${shot.name} 加载`
+      )
+      lastRoute = shot.route
+    } else {
+      await waitFor(client, `Boolean(document.querySelector(${JSON.stringify(shot.marker)}))`, `${shot.name} 就绪`)
+    }
+
+    await sleep(340)
+    const { data } = await client.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
+    fs.writeFileSync(path.join(outDir, `${shot.name}.png`), Buffer.from(data, 'base64'))
+    console.log(`  ${shot.name}.png  ${VIEW_W}×${shot.height}  ${shot.hint}`)
+  }
+}
+
+function toDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * 验收模式：把样例里的绝对日期挪到「当前结算月 + 今天」。
+ *
+ * 班组13人.json 的改班集中在 2026-10-20 ~ 11-19，待办在 11-21 / 11-25。
+ * 原样注入的话，系统日期一走过那个月，日历就整片空掉、待办也停在别的日期，
+ * 「今日待办 0 项」会和待办卡上的条目对不上。这里按结算月起点整体平移：
+ * 改班跟着结算月走，待办一律落到今天。
+ */
+function rebaseToCurrentPeriod(roster) {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  // 结算月 = 上月 20 日 ~ 本月 19 日；今天 ≥ 20 号时落在下一个月
+  const settlement = today.getDate() >= 20
+    ? new Date(today.getFullYear(), today.getMonth() + 1, 1)
+    : new Date(today.getFullYear(), today.getMonth(), 1)
+  const periodStart = new Date(settlement.getFullYear(), settlement.getMonth() - 1, 20)
+
+  // 样例的第一条改班是 2026-10-20，以它为锚点
+  const anchor = new Date(2026, 9, 20)
+  const deltaDays = Math.round((periodStart.getTime() - anchor.getTime()) / 86400000)
+
+  const shiftDate = value => {
+    const [year, month, day] = value.split('-').map(Number)
+    return toDateKey(new Date(year, month - 1, day + deltaDays))
+  }
+
+  return {
+    ...roster,
+    overrides: (roster.overrides ?? []).map(item => ({ ...item, date: shiftDate(item.date) })),
+    todos: (roster.todos ?? []).map(item => ({ ...item, date: toDateKey(today) }))
+  }
 }
 
 /**
@@ -126,11 +226,12 @@ async function compose(client, rawPath, targetPath, boardFile, logicalH) {
 async function main() {
   const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'))
   if (fixture.version !== 5 || !fixture.roster?.members?.length) {
-    throw new Error('展示数据格式不对：需要 v5 备份结构且含成员')
+    throw new Error('样例数据格式不对：需要 v5 备份结构且含成员')
   }
 
   // 备份里没有 updatedAt（那是运行时的字段），注入时补上
-  const roster = { ...fixture.roster, updatedAt: Date.now() }
+  const baseRoster = checkMode ? rebaseToCurrentPeriod(fixture.roster) : fixture.roster
+  const roster = { ...baseRoster, updatedAt: Date.now() }
 
   const tmpDir = path.join(os.tmpdir(), `shift-showcase-${Date.now()}`)
   fs.mkdirSync(tmpDir, { recursive: true })
@@ -170,6 +271,13 @@ async function main() {
     await client.send('Page.reload', { ignoreCache: true })
     await waitFor(client, 'document.readyState === "complete"', '数据注入后加载')
     await waitFor(client, 'Boolean(document.querySelector(".calendar"))', '排班日历')
+
+    if (checkMode) {
+      console.log('数据已注入，开始出验收图')
+      await shootCheck(client, entryUrl, outDir)
+      console.log(`\n验收图目录：${outDir}`)
+      return
+    }
 
     console.log('数据已注入，开始截图')
 
