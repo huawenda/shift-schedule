@@ -14,6 +14,7 @@ import {
   emptyRoster,
   getDayRecord,
   getTemplateShift,
+  isSelf,
   type DayRecordInput,
   type Member
 } from './data/roster'
@@ -140,6 +141,11 @@ export function App() {
   }
 
   function openEditor(member: Member, date: string, source: EditSource) {
+    // 矩阵只改同事班次：本人的班次统一由个人日历管，两边不互相覆盖
+    if (source === 'matrix' && isSelf(api.roster, member.id)) {
+      toast.info('本人班次请在「月度概览」的日历里改')
+      return
+    }
     setEditor({ memberId: member.id, date, source })
   }
 

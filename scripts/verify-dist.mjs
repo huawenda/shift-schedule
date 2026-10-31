@@ -94,7 +94,7 @@ async function switchSettingsTab(client, label) {
   await sleep(150)
 }
 
-const firstCell = '.matrix-row .matrix-cell'
+const firstCell = '.matrix-row:not(.is-self) .matrix-cell'
 
 async function runScenario(name, url, downloadDir) {
   console.log(`\n=== 场景：${name} ===`)
@@ -769,6 +769,12 @@ async function runScenario(name, url, downloadDir) {
 
     await client.evaluate(clickByText('.rail-item', '全员矩阵'))
     await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '回到矩阵')
+
+    // 本人行只读：点本人的格子不弹层，改成提示去日历里改
+    await client.evaluate(`(() => { document.querySelector('.matrix-row.is-self .matrix-cell')?.click(); return true })()`)
+    await sleep(150)
+    const selfDialog = await client.evaluate('Boolean(document.querySelector(".dialog"))')
+    check(`${name}: 矩阵里点本人的格子不弹层（本人班次只在日历里改）`, selfDialog === false)
 
     // --- 3. 改班 ---
     const before = await client.evaluate(`document.querySelector(${JSON.stringify(firstCell)}).textContent.trim()`)

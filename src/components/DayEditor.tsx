@@ -92,6 +92,9 @@ export function DayEditor({
   /** 法定与加班不是同一条规则：休息日也能是法定日 */
   const legalAllowed = Boolean(shift && canMarkLegal(shift))
   const overtimeHours = overtimeAllowed ? normalizeOvertimeHours(overtimeText) : 0
+  /** 白特/夜特 = 休息日来上白班/夜班，必然产生加班：不记加班就不允许保存 */
+  const overtimeRequired = shift === '白特' || shift === '夜特'
+  const missingOvertime = overtimeRequired && overtimeHours <= 0
   const presets = useMemo(
     () => (shift ? getOvertimePresets(shift, legalAllowed && isLegal) : []),
     [shift, isLegal, legalAllowed]
@@ -316,8 +319,12 @@ export function DayEditor({
                   <div className="section-head">
                     <span className="section-title">加班</span>
                     {/* 可录加班时不写「0.5h 步长，最多 24h」：预设胶囊 + 输入框自己说明问题，
-                        这行小字只是在标题右边添一段噪音；只有灰掉时才需要解释为什么不能填 */}
-                    {overtimeAllowed ? null : <span className="section-note">休息与事假不记加班</span>}
+                        这行小字只是在标题右边添一段噪音；只有灰掉或缺失时才有必要解释 */}
+                    {!overtimeAllowed ? (
+                      <span className="section-note">休息与事假不记加班</span>
+                    ) : missingOvertime ? (
+                      <span className="section-note">特勤必须记录加班</span>
+                    ) : null}
                   </div>
 
                   <div className="ot-row">
@@ -402,7 +409,7 @@ export function DayEditor({
               </button>
               <div className="dialog-actions">
                 <button className="btn" type="button" onClick={requestClose}>取消</button>
-                <button className="btn btn-primary" disabled={!shift || !dirty} type="button" onClick={commit}>
+                <button className="btn btn-primary" disabled={!shift || !dirty || missingOvertime} type="button" onClick={commit}>
                   保存
                 </button>
               </div>
