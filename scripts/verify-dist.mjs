@@ -578,7 +578,7 @@ async function runScenario(name, url, downloadDir) {
       active: document.querySelector('.canvas-tools .segmented-item.is-on')?.textContent.trim() ?? '',
       patterns: document.querySelectorAll('.pattern-block').length,
       members: document.querySelectorAll('.member-editor').length,
-      profile: document.querySelectorAll('.profile-block').length
+      profile: document.querySelectorAll('.profile-section').length
     }))()`)
     check(
       `${name}: 设置分两页且默认落在人员配置`,
@@ -685,12 +685,12 @@ async function runScenario(name, url, downloadDir) {
     )
 
     await switchSettingsTab(client, '个人资料')
-    await waitFor(client, 'Boolean(document.querySelector(".profile-block"))', '个人信息区块')
+    await waitFor(client, 'Boolean(document.querySelector(".profile-section"))', '个人信息区块')
 
     const profilePageOnly = await client.evaluate(`(() => ({
       patterns: document.querySelectorAll('.pattern-block').length,
       members: document.querySelectorAll('.member-editor').length,
-      profile: document.querySelectorAll('.profile-block').length
+      profile: document.querySelectorAll('.profile-section').length
     }))()`)
     check(
       `${name}: 切到个人资料后班序与成员不再渲染`,
@@ -721,7 +721,7 @@ async function runScenario(name, url, downloadDir) {
     await sleep(150)
     check(
       `${name}: 保存本人信息（只改岗位）`,
-      await client.evaluate(clickByText('.profile-block .btn-primary', '保存本人信息'))
+      await client.evaluate(clickByText('.profile-section .btn-primary', '保存本人信息'))
     )
     await sleep(300)
     const selfPosition = await client.evaluate(`(() => {
@@ -750,7 +750,7 @@ async function runScenario(name, url, downloadDir) {
 
     check(`${name}: 填基本工资`, await client.evaluate(setInputBySelector('.salary-grid input', '8000')))
     await sleep(150)
-    check(`${name}: 保存薪资`, await client.evaluate(clickByText('.profile-block .btn-primary', '保存薪资')))
+    check(`${name}: 保存薪资`, await client.evaluate(clickByText('.profile-section .btn-primary', '保存薪资')))
     await sleep(300)
 
     const salaryStored = await client.evaluate(`(() => {
@@ -1711,12 +1711,12 @@ async function runScenario(name, url, downloadDir) {
       await client.evaluate(clickByText('.rail-item', '设置'))
       await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
       await switchSettingsTab(client, '个人资料')
-      await waitFor(client, 'Boolean(document.querySelector(".profile-block"))', '个人信息区块')
+      await waitFor(client, 'Boolean(document.querySelector(".profile-section"))', '个人信息区块')
       await client.evaluate(setInputBySelector('.profile-form input', '张三丰'))
       await sleep(150)
       check(
         `${name}: 改本人姓名触发保存`,
-        await client.evaluate(clickByText('.profile-block .btn-primary', '保存本人信息'))
+        await client.evaluate(clickByText('.profile-section .btn-primary', '保存本人信息'))
       )
       await waitFor(client, 'Boolean(document.querySelector(".impact-list"))', '换人确认弹层')
       const impactText = await client.evaluate('document.querySelector(".impact-list").textContent.trim()')

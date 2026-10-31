@@ -124,9 +124,10 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
   }
 
   return (
-    <section className="settings-section">
+    <>
+    <section className="settings-section profile-section">
       <div className="settings-label">
-        <h2>个人信息</h2>
+        <h2>本人</h2>
         <p>这是你自己的记录本：日历只显示本人。</p>
         <p>更改姓名或班序会清空本人名下的考勤记录与薪资。</p>
         <p className="settings-meta">
@@ -135,12 +136,6 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
       </div>
 
       <div className="settings-panel">
-        <div className="profile-block">
-          <h3 className="profile-title">
-            本人
-            {self ? null : <span className="profile-tag">未设置</span>}
-          </h3>
-
           <div className="profile-form">
             <label className="field">
               <span className="field-label">姓名</span>
@@ -207,13 +202,16 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
             </button>
             {self ? null : <span className="settings-hint">设置后个人日历只显示你本人。</span>}
           </div>
-        </div>
+      </div>
+    </section>
 
-        <div className="profile-block">
-          <h3 className="profile-title">
-            薪资
-          </h3>
+    <section className="settings-section profile-section">
+      <div className="settings-label">
+        <h2>薪资</h2>
+        <p>每月固定的基线，用来算时薪、加班费与实发。</p>
+      </div>
 
+      <div className="settings-panel">
           {self ? null : <p className="settings-hint">先设置本人，才能填薪资。</p>}
 
           <div className="salary-grid">
@@ -251,8 +249,8 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
               保存薪资
             </button>
           </div>
-        </div>
       </div>
+    </section>
 
       {pending ? (
         <div className="sheet-backdrop" role="presentation" onMouseDown={() => setPending(null)}>
@@ -294,6 +292,6 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
           </section>
         </div>
       ) : null}
-    </section>
+    </>
   )
 }

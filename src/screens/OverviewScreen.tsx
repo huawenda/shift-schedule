@@ -148,9 +148,9 @@ export function OverviewScreen({
             <span className="today-value is-money">
               {stats?.salary.hasBase ? `¥${formatMoney(stats.salary.net)}` : '—'}
             </span>
-            <span className={`today-sub${stats?.salary.hasBase ? '' : ' is-empty'}`}>
-              {stats?.salary.hasBase ? '含加班费与夜班津贴' : '未填基本工资'}
-            </span>
+            {stats?.salary.hasBase ? null : (
+              <span className="today-sub is-empty">未填基本工资</span>
+            )}
           </div>
         </section>
       ) : null}
