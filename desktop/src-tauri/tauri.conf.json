@@ -24,6 +24,7 @@
         "center": true,
         "fullscreen": false,
         "theme": "Light",
+        "backgroundColor": "#0e2228",
         "dragDropEnabled": false
       }
     ],

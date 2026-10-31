@@ -45,6 +45,68 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
+/// 把原生标题栏染成和深青外框同色（`--chrome: #0e2228`）。
+///
+/// 不做自绘标题栏：保留系统的缩放、贴靠、阴影、Alt+Space 菜单与高 DPI 处理，
+/// 只把那条浅灰 caption 换掉，窗口与内容的接缝就消失了。
+/// - Win11：caption / text / border 三个 DWM 属性都生效，颜色与外壳完全一致；
+/// - Win10 或旧版 Win11：caption 颜色可能被忽略，但 immersive dark mode
+///   仍会把标题栏变深灰，至少不再是一条白条。
+#[cfg(target_os = "windows")]
+fn paint_caption(window: &tauri::WebviewWindow) {
+    use std::ffi::c_void;
+
+    use windows::Win32::Graphics::Dwm::{
+        DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_CAPTION_COLOR, DWMWA_TEXT_COLOR,
+        DWMWA_USE_IMMERSIVE_DARK_MODE,
+    };
+
+    let Ok(hwnd) = window.hwnd() else {
+        return;
+    };
+
+    // COLORREF = 0x00BBGGRR：#0E2228 / #E9F2F4
+    let caption = 0x0028_220E_u32;
+    let text = 0x00F4_F2E9_u32;
+    let border = caption;
+    let dark = 1_i32;
+
+    let dark_result = unsafe {
+        DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_USE_IMMERSIVE_DARK_MODE,
+            &dark as *const i32 as *const c_void,
+            4,
+        )
+    };
+
+    // 系统不支持自定义 caption 颜色时，至少让标题栏走暗色。
+    if dark_result.is_err() {
+        let _ = window.set_theme(Some(tauri::Theme::Dark));
+    }
+
+    unsafe {
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_CAPTION_COLOR,
+            &caption as *const u32 as *const c_void,
+            4,
+        );
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_TEXT_COLOR,
+            &text as *const u32 as *const c_void,
+            4,
+        );
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_BORDER_COLOR,
+            &border as *const u32 as *const c_void,
+            4,
+        );
+    }
+}
+
 /// 把备份写进用户指定的目录，返回完整路径。
 ///
 /// 为什么要自定义命令，而不是用 fs 插件：`capabilities/default.json` 里 fs 的写权限
@@ -87,6 +149,13 @@ pub fn run() {
         .plugin(init_dialog())
         .plugin(init_fs())
         .setup(|app| {
+            #[cfg(target_os = "windows")]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    paint_caption(&window);
+                }
+            }
+
             let toggle = MenuItem::with_id(app, "toggle", "显示 / 隐藏主窗口", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
