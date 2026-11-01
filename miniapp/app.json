@@ -1,0 +1,28 @@
+{
+  "pages": [
+    "pages/calendar/index",
+    "pages/matrix/index",
+    "pages/settings/index",
+    "pages/overview/index",
+    "pages/members/index",
+    "pages/pattern/index"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#f2f4f6",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#7f979d",
+    "selectedColor": "#7fd2e2",
+    "backgroundColor": "#0e2228",
+    "list": [
+      { "pagePath": "pages/calendar/index", "text": "日历" },
+      { "pagePath": "pages/matrix/index", "text": "矩阵" },
+      { "pagePath": "pages/settings/index", "text": "设置" }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2"
+}

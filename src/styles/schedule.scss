@@ -230,6 +230,10 @@
   bottom: 0;
   width: 32px;
   background: linear-gradient(to left, var(--surface), rgba(255, 255, 255, 0));
+  /* 白板右缘是 12px 圆角，这层渐隐正好压在角上：
+   * 不裁弧的话，它用不透明白把 arc 以外的区域填实，
+   * 右上 / 右下看着就是两个直角 —— 跟着卡片裁同一道弧。 */
+  clip-path: inset(0 round 0 var(--radius-panel) var(--radius-panel) 0);
   pointer-events: none;
   transition: opacity var(--dur-fast) ease;
 }

@@ -1,0 +1,60 @@
+<nav-bar back title="本月概览" />
+
+<view class="page" style="padding-top: {{navHeight}}px">
+  <view class="paper block">
+    <view class="block-head">
+      <text class="block-title">本期班次</text>
+      <text class="block-note">{{period.range}} · {{period.days}} 天</text>
+    </view>
+    <view class="slips">
+      <view wx:for="{{counts}}" wx:key="label" class="slip t-{{item.tone}}">
+        <text class="slip-value">{{item.value}}</text>
+        <text class="slip-label">{{item.label}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="paper block">
+    <view class="block-head">
+      <text class="block-title">加班分布</text>
+      <text class="block-note">合计 {{overtimeTotal}}</text>
+    </view>
+    <view wx:for="{{ots}}" wx:key="kind" class="ot-row">
+      <view class="ot-top">
+        <text class="ot-label">{{item.label}}</text>
+        <text class="ot-hours">{{item.hoursText}}</text>
+        <text class="ot-pay">{{item.payText}}</text>
+      </view>
+      <view class="ot-bar">
+        <view class="ot-fill kind-{{item.kind}}" style="width: {{item.percent}}%"></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="paper block">
+    <view class="block-head">
+      <text class="block-title">薪资</text>
+      <text class="block-note">本月应发与实发</text>
+    </view>
+
+    <view wx:for="{{earnRows}}" wx:key="label" class="money-row">
+      <text class="money-label">{{item.label}}</text>
+      <text class="money-value">{{item.value}}</text>
+    </view>
+
+    <view class="money-row is-strong">
+      <text>应发</text>
+      <text class="money-value">{{grossText}}</text>
+    </view>
+
+    <view wx:for="{{deductRows}}" wx:key="label" class="money-row is-deduct">
+      <text class="money-label">{{item.label}}</text>
+      <text class="money-value">{{item.value}}</text>
+    </view>
+
+    <view class="money-row is-total">
+      <text>实发</text>
+      <text class="money-value">{{netText}}</text>
+    </view>
+  </view>
+</view>

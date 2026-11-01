@@ -1,0 +1,58 @@
+<nav-bar action="今天" bind:action="onToday" />
+
+<view class="page" style="padding-top: {{navHeight}}px; padding-bottom: {{tabBarHeight}}px">
+  <view class="paper sheet">
+    <!-- 今日概览：只数人、不算工时；白特并入白班、夜特并入夜班 -->
+    <view class="summary">
+      <view class="summary-item">
+        <text class="summary-num">{{summary.day}}</text>
+        <text class="summary-label">今日白班</text>
+      </view>
+      <view class="summary-item">
+        <text class="summary-num">{{summary.night}}</text>
+        <text class="summary-label">今日夜班</text>
+      </view>
+      <view class="summary-item">
+        <text class="summary-num">{{summary.rest}}</text>
+        <text class="summary-label">今日休息</text>
+      </view>
+    </view>
+
+    <view class="matrix">
+      <view class="names">
+        <view class="names-head"></view>
+        <view wx:for="{{rows}}" wx:key="id" class="name-row">
+          <text class="name">{{item.name}}</text>
+          <view class="name-sub-row">
+            <text class="name-sub">{{item.pattern}} · {{item.position}}</text>
+            <text wx:if="{{item.isSelf}}" class="badge">本人</text>
+          </view>
+        </view>
+      </view>
+
+      <scroll-view class="days" scroll-x enable-flex scroll-left="{{scrollLeft}}">
+        <view class="days-inner">
+          <view class="day-head">
+            <view wx:for="{{days}}" wx:key="key" class="day-cell {{item.isToday ? 'is-today' : ''}}">
+              <text class="day-num">{{item.day}}</text>
+              <text class="day-week">{{item.weekday}}</text>
+            </view>
+          </view>
+
+          <view wx:for="{{rows}}" wx:key="id" wx:for-item="row" class="day-row">
+            <view wx:for="{{row.cells}}" wx:key="key" class="pill-cell">
+              <view class="pill t-{{item.tone}}">{{item.short}}</view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="legend">
+      <view wx:for="{{legends}}" wx:key="label" class="legend-item">
+        <view class="legend-dot t-{{item.tone}}">{{item.short}}</view>
+        <text class="legend-text">{{item.label}}</text>
+      </view>
+    </view>
+  </view>
+</view>

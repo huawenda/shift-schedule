@@ -1,0 +1,63 @@
+/*
+ * 全局基础：只放每个页面都会用到的东西。
+ * 具体的排版落在各页 wxss 里 —— 共享太多会让「改一页动全站」。
+ */
+page {
+  background: var(--canvas);
+  color: var(--text);
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 页面容器：上让导航栏、下让 tabBar。
+ * 两个高度都是 px（含状态栏 / 安全区），由页面从 app.globalData 取后写进 style */
+.page {
+  box-sizing: border-box;
+}
+
+/* 纸面：一页最多一张。白底 + 24 圆角 + 极浅投影 */
+.paper {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* 数值列一律等宽数字：金额、天数、日期对不齐时整列看着在抖 */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------- 班次六色
+ * 语义色，永远配文字，不靠色块单独表意。
+ * 夜班是唯一的反相块，日历与矩阵都靠它建立秩序。 */
+.t-day {
+  background: var(--shift-day-bg);
+  color: var(--shift-day-ink);
+}
+
+.t-night {
+  background: var(--shift-night-bg);
+  color: var(--shift-night-ink);
+}
+
+.t-rest {
+  background: var(--shift-rest-bg);
+  color: var(--shift-rest-ink);
+}
+
+.t-dayx {
+  background: var(--shift-dayx-bg);
+  color: var(--shift-dayx-ink);
+}
+
+.t-nightx {
+  background: var(--shift-nightx-bg);
+  color: var(--shift-nightx-ink);
+}
+
+.t-leave {
+  background: var(--shift-leave-bg);
+  color: var(--shift-leave-ink);
+}

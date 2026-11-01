@@ -1,0 +1,82 @@
+/* 设置：整页白纸。分组标题 + 发丝线，不加卡片 —— 一叠白卡会变成表格的碎片。 */
+
+page {
+  background: var(--surface);
+}
+
+.page {
+  min-height: 100vh;
+}
+
+.group {
+  padding-top: var(--gap-xl);
+}
+
+.group-title {
+  display: block;
+  padding: 0 var(--gap-lg) var(--gap-xs);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+.rows {
+  background: var(--surface);
+}
+
+.row {
+  min-height: 104rpx;
+  padding: var(--gap-sm) var(--gap-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  /* 分隔线画在行底：WXSS 里 `.row + .row` 这种兄弟选择器不生效，
+   * 用它当分隔线时整页一条线都不会出现 */
+  border-bottom: 2rpx solid var(--rule);
+}
+
+.rows .row:last-child {
+  border-bottom: 0;
+}
+
+.row:active {
+  background: var(--surface-sunken);
+}
+
+.row.is-static:active {
+  background: var(--surface);
+}
+
+.row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+  min-width: 0;
+}
+
+.row-title {
+  font-size: var(--fs-body);
+  line-height: 1.3;
+}
+
+.row-title.is-danger {
+  color: var(--danger);
+}
+
+.row-sub {
+  color: var(--faint);
+  font-size: var(--fs-micro);
+  line-height: 1.3;
+}
+
+.row-arrow {
+  flex: 0 0 auto;
+  color: var(--control);
+  font-size: var(--fs-body);
+  line-height: 1;
+}
+
+.row-value {
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}

@@ -1,0 +1,23 @@
+<nav-bar back title="{{title}}" />
+
+<view class="page" style="padding-top: {{navHeight}}px">
+  <view class="head">
+    <text class="head-title">24 天循环</text>
+    <text class="head-note">{{builtin ? '内置班序 · 只读' : '自定义班序 · 可编辑'}} · {{users}} 人使用</text>
+  </view>
+
+  <view class="grid">
+    <view
+      wx:for="{{cells}}"
+      wx:key="day"
+      class="cell t-{{item.tone}} {{builtin ? 'is-readonly' : ''}}"
+      data-index="{{index}}"
+      bindtap="onTap"
+    >
+      <text class="cell-index">{{item.day}}</text>
+      <text class="cell-shift">{{item.short}}</text>
+    </view>
+  </view>
+
+  <text class="foot">{{builtin ? '内置班序照搬真实四班两倒节奏，不能改' : '点一下：白 → 夜 → 休 循环'}}</text>
+</view>

@@ -1,0 +1,10 @@
+<view class="nav" style="padding-top: {{statusBarHeight}}px">
+  <view class="nav-inner">
+    <view class="nav-left">
+      <view wx:if="{{back}}" class="nav-back" bindtap="onBack">‹</view>
+      <text wx:if="{{title}}" class="nav-title">{{title}}</text>
+      <text wx:else class="nav-brand">昼夜</text>
+    </view>
+    <view wx:if="{{action}}" class="nav-action" bindtap="onAction">{{action}}</view>
+  </view>
+</view>

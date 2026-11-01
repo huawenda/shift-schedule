@@ -1,0 +1,84 @@
+<nav-bar />
+
+<view class="page" style="padding-top: {{navHeight}}px; padding-bottom: {{tabBarHeight}}px">
+  <view class="group">
+    <text class="group-title">本人</text>
+    <view class="rows">
+      <view class="row" bindtap="onSoon">
+        <view class="row-main">
+          <text class="row-title">{{profile.name}}</text>
+          <text class="row-sub">{{profile.pattern}} · {{profile.position}}</text>
+        </view>
+        <text class="row-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="group">
+    <text class="group-title">薪资</text>
+    <view class="rows">
+      <view class="row" bindtap="onSoon">
+        <view class="row-main">
+          <text class="row-title">月度应发</text>
+          <text class="row-sub">基本 {{profile.salary.base}} · 绩效 {{profile.salary.performance}} · 岗位 {{profile.salary.position}}</text>
+        </view>
+        <text class="row-arrow">›</text>
+      </view>
+      <view class="row" bindtap="onSoon">
+        <view class="row-main">
+          <text class="row-title">社保公积金</text>
+          <text class="row-sub">每月个人缴纳 {{profile.salary.social}}</text>
+        </view>
+        <text class="row-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="group">
+    <text class="group-title">人员配置</text>
+    <view class="rows">
+      <view class="row" bindtap="onMembers">
+        <view class="row-main">
+          <text class="row-title">成员与班序</text>
+          <text class="row-sub">{{memberCount}} 人 · {{patternCount}} 条班序</text>
+        </view>
+        <text class="row-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="group">
+    <text class="group-title">数据</text>
+    <view class="rows">
+      <view class="row" bindtap="onSoon">
+        <view class="row-main"><text class="row-title">导出备份</text></view>
+        <text class="row-arrow">›</text>
+      </view>
+      <view class="row" bindtap="onSoon">
+        <view class="row-main"><text class="row-title">导入备份</text></view>
+        <text class="row-arrow">›</text>
+      </view>
+      <view class="row" bindtap="onSoon">
+        <view class="row-main"><text class="row-title">载入演示数据</text></view>
+        <text class="row-arrow">›</text>
+      </view>
+      <view class="row" bindtap="onSoon">
+        <view class="row-main"><text class="row-title is-danger">清空所有数据</text></view>
+        <text class="row-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="group">
+    <text class="group-title">关于</text>
+    <view class="rows">
+      <view class="row is-static">
+        <view class="row-main">
+          <text class="row-title">离线运行</text>
+          <text class="row-sub">数据只在本机，不上传</text>
+        </view>
+        <text class="row-value">v0.1</text>
+      </view>
+    </view>
+  </view>
+</view>
