@@ -1,0 +1,98 @@
+/*
+ * 全局基础：只放每个页面都会用到的东西。
+ * 具体的排版落在各页 wxss 里 —— 共享太多会让「改一页动全站」。
+ */
+page {
+  background: var(--canvas);
+  color: var(--text);
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 页面容器：上让导航栏、下让 tabBar。
+ * 两个高度都是 px（含状态栏 / 安全区），由页面从 app.globalData 取后写进 style */
+.page {
+  box-sizing: border-box;
+}
+
+/* 纸面：一页最多一张。暖纸底 + 收紧的圆角 + 一道发丝线；不再叠投影 */
+.paper {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* 数值列一律等宽数字：金额、天数、日期对不齐时整列看着在抖 */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 历书语言：日期 / 金额 / 计数用等宽，标题用衬线 */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.serif {
+  font-family: var(--font-brand);
+}
+
+/* ------------------------------------------------------------ 进入动效
+ * 只给「进入」：卡片淡入 + 上移 16rpx，页面内按 40ms 错开。
+ * 停留、点击、切换都不动 —— 参考点在于让人看到层级顺序，而不是炫技。 */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise var(--dur-base) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------- 班次六色
+ * 语义色，永远配文字，不靠色块单独表意。
+ * 夜班是唯一的反相块，日历与矩阵都靠它建立秩序。 */
+.t-day {
+  background: var(--shift-day-bg);
+  color: var(--shift-day-ink);
+}
+
+.t-night {
+  background: var(--shift-night-bg);
+  color: var(--shift-night-ink);
+}
+
+.t-rest {
+  background: var(--shift-rest-bg);
+  color: var(--shift-rest-ink);
+}
+
+.t-dayx {
+  background: var(--shift-dayx-bg);
+  color: var(--shift-dayx-ink);
+}
+
+.t-nightx {
+  background: var(--shift-nightx-bg);
+  color: var(--shift-nightx-ink);
+}
+
+.t-leave {
+  background: var(--shift-leave-bg);
+  color: var(--shift-leave-ink);
+}

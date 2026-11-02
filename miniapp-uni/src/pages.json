@@ -1,0 +1,18 @@
+{
+  "pages": [
+    { "path": "pages/calendar/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/matrix/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/settings/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/overview/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/members/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/pattern/index", "style": { "navigationStyle": "custom" } }
+  ],
+  "globalStyle": {
+    "navigationStyle": "custom",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "昼夜",
+    "backgroundColor": "#0e2228",
+    "backgroundColorTop": "#0e2228",
+    "backgroundColorBottom": "#0e2228"
+  }
+}

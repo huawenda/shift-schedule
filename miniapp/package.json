@@ -1,6 +1,0 @@
-{
-  "name": "zhouye-miniapp",
-  "private": true,
-  "type": "commonjs",
-  "description": "昼夜小程序端：CommonJS 便于在 Node 里做冒烟验证；微信开发者工具不读这个文件"
-}

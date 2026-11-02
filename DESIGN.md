@@ -1,7 +1,7 @@
 # 昼夜 · 个人倒班记录本 视觉规范
 
 > 适用范围：描述**本仓库唯一的应用**（昼夜 · 个人倒班记录本）。
-> 桌面端（Tauri 壳 + React）的规范在本文件；小程序端另见 [miniapp/DESIGN.md](miniapp/DESIGN.md)——
+> 桌面端（Tauri 壳 + React）的规范在本文件；小程序端另见 [miniapp-uni/DESIGN.md](miniapp-uni/DESIGN.md)——
 > 它只写移动端的差异与取舍，颜色令牌与视觉基调两处必须一致。
 >
 > **真相顺序**：`src/styles/tokens.scss` > `README.md` §4/§7 > 本文。
@@ -494,14 +494,14 @@ node scripts/shoot-showcase.mjs --check            # 4 张验收图（1:1，出�
 v1 时这里曾拷一份 `packages/core` 到 `src/core/`，用 `@local/core` 别名引用；
 2026-10 通用化重写时连同别名一起删除。
 
-2026-11 小程序端重启，代码在 `miniapp/`（与 master 上已弃用的旧 miniapp 无关）。
-它复用 `src/data` 的统计口径，界面是独立的一套移动端规范（见 `miniapp/DESIGN.md`）；
-数据层仍只有 `src/data` 一个来源，小程序侧的 `miniapp/lib/data` 是构建产物、不入库。
+2026-11 小程序端重构为 uni-app（Vue 3 + TS + Vite，编译目标 `mp-weixin`），代码在 `miniapp-uni/`；
+原生版 `miniapp/` 已删除。它复用 `src/data` 的统计口径（通过 `@data` alias 直接引用，不再产生产物），
+界面是独立的一套移动端规范（见 `miniapp-uni/DESIGN.md`）。
 
 因此：
 
 - 两套界面共用颜色令牌与视觉基调，尺寸、外壳、布局分开定；
-- 数值权威仍是 `src/styles/tokens.scss`，`miniapp/styles/tokens.wxss` 必须与它同值。
+- 数值权威仍是 `src/styles/tokens.scss`，`miniapp-uni/src/styles/tokens.scss` 必须与它同值。
 
 ---
 

@@ -22,11 +22,9 @@ dist-package/
 /shots-check/
 .tmp-shots/
 
-# 小程序侧的数据层产物：由 pnpm build:core 从 src/data 生成，唯一来源在 src
-/miniapp/lib/
-
+# 小程序侧：uni-app 工程自带 node_modules / dist 的忽略规则，见 miniapp-uni/.gitignore
 # 微信开发者工具的本地私有配置：记录本机基础库版本与编译开关，每台机器都会重写
-/miniapp/project.private.config.json
+miniapp-uni/project.private.config.json
 
 # 本机开发环境与证书，不入库
 .env

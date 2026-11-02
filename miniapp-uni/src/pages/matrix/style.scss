@@ -1,0 +1,238 @@
+/* 全员矩阵 ·「历书」
+ *
+ * 结构不变：姓名列固定、日期列横滑。
+ * 样式：发丝线分栏、日期等宽、班次是小方印；姓名列比旧版窄一档，给日期留位置。
+ */
+
+.page {
+  min-height: 100vh;
+}
+
+.sheet {
+  margin: var(--gap-md);
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------ 今日概览 */
+
+.summary {
+  display: flex;
+  align-items: stretch;
+  padding: var(--gap-md) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.summary-item {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rpx;
+}
+
+.summary-divider {
+  width: 1px;
+  margin: 6rpx 0;
+  background: var(--border);
+}
+
+.summary-num {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-section);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.summary-label {
+  color: var(--faint);
+  font-size: var(--fs-micro);
+}
+
+/* ------------------------------------------------------------ 表格 */
+
+.matrix {
+  display: flex;
+}
+
+.names {
+  flex: 0 0 296rpx;
+  border-right: 1px solid var(--border-strong);
+}
+
+.names-head {
+  height: 60rpx;
+  border-bottom: 1px solid var(--rule);
+  box-sizing: border-box;
+}
+
+.name-row {
+  height: 92rpx;
+  padding: 0 var(--gap-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2rpx;
+  border-bottom: 2rpx solid var(--rule);
+  box-sizing: border-box;
+}
+
+.name-line {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+.name {
+  color: var(--text);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.name-sub {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* 本人：朱红描边小方印，不用底色 */
+.badge {
+  flex: 0 0 auto;
+  padding: 0 6rpx;
+  height: 28rpx;
+  line-height: 26rpx;
+  border: 1px solid var(--accent);
+  border-radius: 2rpx;
+  color: var(--accent);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+}
+
+.days-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  width: 0;
+}
+
+.days {
+  width: 100%;
+  height: 100%;
+}
+
+.days-inner {
+  width: 1488rpx; /* 31 列 × 48rpx */
+}
+
+.days-fade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 24rpx;
+  background: linear-gradient(to left, var(--surface), rgba(250, 247, 240, 0));
+  pointer-events: none;
+}
+
+.day-head {
+  display: flex;
+  height: 60rpx;
+  border-bottom: 1px solid var(--rule);
+  box-sizing: border-box;
+}
+
+.day-cell {
+  flex: 0 0 48rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 今天只标表头：浅朱底 + 朱红数字 */
+.day-cell.is-today {
+  background: var(--accent-weak);
+}
+
+.day-num {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  line-height: 1.15;
+}
+
+.day-cell.is-today .day-num {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.day-week {
+  color: var(--faint);
+  font-size: var(--fs-micro);
+  line-height: 1.15;
+}
+
+.day-row {
+  display: flex;
+  height: 92rpx;
+  border-bottom: 2rpx solid var(--rule);
+  box-sizing: border-box;
+}
+
+.pill-cell {
+  flex: 0 0 48rpx;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 班次方印 */
+.pill {
+  width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  border-radius: var(--radius-sub);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------ 图例 */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-sm) var(--gap-md);
+  padding: var(--gap-sm) var(--gap-md) var(--gap-md);
+  border-top: 1px solid var(--rule);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.legend-dot {
+  width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  border-radius: var(--radius-sub);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+}
+
+.legend-text {
+  color: var(--faint);
+  font-size: var(--fs-micro);
+}

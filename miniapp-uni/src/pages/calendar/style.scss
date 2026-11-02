@@ -1,0 +1,363 @@
+/* 个人日历 ·「历书」
+ *
+ * 布局不变：月份条 / 今日卡 / 星期栏 / 七列网格 / 页脚。
+ * 样式重做：暖纸 + 墨黑今日卡 + 朱红「今天」；日期等宽，班次退成一枚小方印。
+ */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  margin: var(--gap-sm) var(--gap-md);
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------ 月份条
+ * 翻月钮只画箭头，不铺底；命中区仍 88rpx。 */
+
+.month-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx var(--gap-md) 0;
+}
+
+.month-hit {
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.month-step {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--control);
+  font-size: var(--fs-body);
+  line-height: 1;
+}
+
+.month-hit:active .month-step {
+  color: var(--text);
+}
+
+.month-title {
+  margin: 0 var(--gap-md);
+  color: var(--text);
+  font-family: var(--font-brand);
+  font-size: var(--fs-title);
+  letter-spacing: 0.03em;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--gap-md) 12rpx;
+}
+
+.range {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+}
+
+/* ------------------------------------------------------------ 今日卡
+ * 墨黑块 + 左侧朱红竖条；班次用衬线大字，时段与待办用等宽。 */
+
+.today-card {
+  position: relative;
+  margin: 0 var(--gap-md) var(--gap-sm);
+  padding: var(--gap-md);
+  border-radius: var(--radius-block);
+  background: var(--text);
+  overflow: hidden;
+}
+
+.today-mark {
+  position: absolute;
+  top: var(--gap-md);
+  bottom: var(--gap-md);
+  left: 0;
+  width: 6rpx;
+  background: var(--accent);
+}
+
+.today-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.today-label {
+  color: var(--chrome-faint);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.02em;
+}
+
+.today-time {
+  color: var(--chrome-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  letter-spacing: 0.02em;
+}
+
+.today-main {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 8rpx;
+}
+
+.today-shift {
+  color: var(--chrome-text);
+  font-family: var(--font-brand);
+  font-size: var(--fs-kpi);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1.05;
+}
+
+.today-flags {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--gap-xs);
+  padding-bottom: 8rpx;
+}
+
+.today-foot {
+  margin-top: var(--gap-sm);
+  padding-top: var(--gap-sm);
+  border-top: 1px solid var(--chrome-line);
+}
+
+.today-todo {
+  color: var(--chrome-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+
+/* ------------------------------------------------------------ 星期栏 */
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: var(--gap-sm) var(--gap-sm) var(--gap-xs);
+}
+
+.weekday {
+  text-align: center;
+  color: var(--faint);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.18em;
+}
+
+/* ------------------------------------------------------------ 网格
+ * 不铺底、不画格线：格子之间只靠留白与日期列的对齐。 */
+
+.grid {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: minmax(96rpx, 1fr);
+  margin: 0 var(--gap-sm) 12rpx;
+}
+
+.cell {
+  position: relative;
+  padding: 8rpx 4rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.cell:active {
+  opacity: 0.82;
+}
+
+/* 日期：等宽；今天改成朱红实心方块 */
+.cell-day {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  line-height: 1.2;
+}
+
+.cell.is-today .cell-day {
+  width: 42rpx;
+  height: 42rpx;
+  line-height: 42rpx;
+  border-radius: var(--radius-sub);
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-weight: 600;
+}
+
+/* 农历标记：只在节日出现 */
+.cell-meta {
+  color: var(--faint);
+  font-size: var(--fs-micro);
+  line-height: 1.1;
+}
+
+.cell-meta.is-festival {
+  color: var(--accent);
+}
+
+/* 班次：一枚 36rpx 小方印，单字；深色块是夜班 */
+.cell-char {
+  width: 36rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  border-radius: var(--radius-sub);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+}
+
+/* 与模板不同：方印加一道内描边 */
+.cell-char.is-changed {
+  box-shadow: inset 0 0 0 1px var(--shift-mark);
+}
+
+.cell-char.t-night.is-changed {
+  box-shadow: inset 0 0 0 1px var(--shift-mark-inverse);
+}
+
+/* 周期外：整体淡出，不再压底色 */
+.cell.is-outside .cell-day,
+.cell.is-outside .cell-meta,
+.cell.is-outside .cell-char,
+.cell.is-outside .cell-flags {
+  opacity: 0.35;
+}
+
+/* ------------------------------------------------------------ 角标 */
+
+.cell-flags {
+  position: absolute;
+  top: 4rpx;
+  right: 2rpx;
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.flag {
+  padding: 1rpx 4rpx;
+  border-radius: 2rpx;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.flag-ot {
+  background: var(--overtime-bg);
+  color: var(--overtime-ink);
+  font-weight: 700;
+}
+
+.flag-legal {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+
+.flag-leave {
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* ------------------------------------------------------------ 页脚 */
+
+.foot {
+  padding: var(--gap-sm) var(--gap-md);
+  border-top: 1px solid var(--rule);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx 18rpx;
+}
+
+.lg {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  color: var(--faint);
+  font-size: var(--fs-micro);
+}
+
+.sw {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 2rpx;
+  display: block;
+}
+
+.sw-ot {
+  background: var(--overtime-bg);
+}
+
+.sw-legal {
+  background: var(--warning-bg);
+  box-shadow: inset 0 0 0 1px var(--warning-border);
+}
+
+.sw-leave {
+  background: var(--shift-leave-bg);
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  margin-top: var(--gap-xs);
+}
+
+.stat {
+  flex: 1 1 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+.stat-num {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-control);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.stat-label {
+  color: var(--faint);
+  font-size: var(--fs-micro);
+}
+
+.stat-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 28rpx;
+  background: var(--border);
+}
