@@ -230,6 +230,35 @@
   --dur-base: 180ms;
 }
 
+/* ------------------------------------------------------------ 小屏
+ *
+ * 桌面 Tauri 窗口最小 1466，下面两档都碰不到它；1440 的产物验收也在断点之上。
+ * 这里只改「节奏」令牌，组件自己的断点写在各自的样式文件里。
+ */
+@media (max-width: 1023px) {
+  :root {
+    --pad: var(--sp-4);
+    --gap: var(--sp-4);
+    /* 触摸设备上 30px 的控件太薄，抬到 36px；输入框字号另见下方 coarse 规则。 */
+    --control-height: 36px;
+  }
+}
+
+@media (max-width: 639px) {
+  :root {
+    --pad: var(--sp-3);
+    --gap: var(--sp-3);
+  }
+}
+
+/* iOS Safari 在字号小于 16px 的输入框聚焦时会把整页放大。
+ * 只在「窄屏 + 粗指针」同时成立时抬字号：桌面窄窗不受影响。 */
+@media (max-width: 1023px) and (pointer: coarse) {
+  .input {
+    font-size: 16px;
+  }
+}
+
 *,
 *::before,
 *::after {

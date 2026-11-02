@@ -550,6 +550,23 @@
   color: var(--muted);
 }
 
+/* 触屏专用的横滑提示：默认不渲染，只在粗指针 / 无悬停的设备上出现 */
+.legend-hint-touch {
+  display: none;
+}
+
+@media (hover: none) and (max-width: 1023px) {
+  .legend-hint {
+    display: none;
+  }
+
+  .legend-hint-touch {
+    display: inline;
+    margin-left: auto;
+    color: var(--muted);
+  }
+}
+
 /* ── 个人日历 ─────────────────────────────────────────── */
 
 /*
@@ -1152,5 +1169,184 @@
   .sheet-backdrop,
   .dialog {
     animation: none;
+  }
+}
+
+/* ------------------------------------------------------------ 小屏：概览条 / 矩阵 / 弹层 */
+
+@media (max-width: 1023px) {
+  /* 矩阵概览条：三格保留，但 34px 的数值在窄屏上会顶到格子边 */
+  .summary-cell {
+    min-height: 96px;
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .summary-value {
+    font-size: 28px;
+  }
+
+  .summary-names {
+    font-size: var(--fs-small);
+  }
+
+  /* 浮层原来取格子的一半 —— 手机上只有约 65px。
+   * 改成视口宽；第二、三格右对齐弹出，免得超出屏幕右缘。 */
+  .summary-popover {
+    width: min(320px, calc(100vw - var(--sp-5)));
+  }
+
+  .summary-cell:nth-child(2) .summary-popover,
+  .summary-cell:nth-child(3) .summary-popover {
+    left: auto;
+    right: 0;
+  }
+
+  .summary-popover-list {
+    max-height: 220px;
+  }
+
+  /* 矩阵：姓名列 120 → 88、行高 40 → 36；30 天仍然横滚，不压缩字号到读不了 */
+  .matrix {
+    --matrix-name-width: 88px;
+    --row-height: 36px;
+    --matrix-name-cell: 48px;
+    --matrix-pill-gap: 3px;
+  }
+
+  .matrix-name-cell {
+    padding: 0 6px;
+  }
+
+  .matrix-name {
+    font-size: var(--fs-control);
+  }
+
+  .matrix-pattern {
+    font-size: var(--fs-micro);
+  }
+
+  .matrix-cell {
+    font-size: var(--fs-label);
+  }
+
+  .matrix-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .matrix-legend {
+    gap: var(--sp-3);
+  }
+
+  /* 弹层内容现在跟着 36px 的控件走：原来写死的 83px 卡片会装不下 */
+  .dialog-section {
+    height: auto;
+    min-height: 83px;
+  }
+
+  .dialog-day {
+    --day-content-height: auto;
+  }
+
+  .dialog-day .dialog-page {
+    height: auto;
+  }
+
+  .dialog-day .todo-list {
+    max-height: 45dvh;
+  }
+}
+
+@media (max-width: 639px) {
+  .summary-cell {
+    min-height: 88px;
+  }
+
+  /* 日历：7 列在 390px 下每格约 51px，农历那行放不下，只保留节日 */
+  .cal-cell {
+    min-height: 60px;
+    padding: 4px 5px;
+    gap: 2px;
+  }
+
+  .cal-day {
+    font-size: var(--fs-small);
+  }
+
+  .cal-meta {
+    display: none;
+  }
+
+  .cal-meta.is-festival {
+    display: block;
+  }
+
+  .cal-shift {
+    padding: 2px 0;
+    font-size: var(--fs-label);
+  }
+
+  .cal-corner {
+    top: 3px;
+    right: 4px;
+    gap: 3px;
+  }
+
+  .cal-ot,
+  .cal-leave {
+    height: 14px;
+    padding: 0 3px;
+    font-size: var(--fs-micro);
+    line-height: 14px;
+  }
+
+  .cal-legal {
+    width: 14px;
+    height: 14px;
+  }
+
+  .calendar-legend {
+    flex-wrap: wrap;
+    gap: var(--sp-1) var(--sp-2);
+  }
+
+  .calendar-legend .legend-text:not(:last-child) {
+    margin-right: 0;
+  }
+
+  /* 弹层改底部抽屉：贴住屏幕下缘，只留上圆角；
+   * 底部内边距加安全区，全面屏的手势条不会压住「保存」 */
+  .sheet-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .dialog,
+  .dialog-day,
+  .dialog-wide,
+  .dialog-narrow {
+    width: 100%;
+    max-height: 88dvh;
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  }
+
+  .dialog-head {
+    padding: var(--sp-3);
+  }
+
+  .dialog-foot {
+    padding: 0 var(--sp-3) calc(var(--sp-3) + env(safe-area-inset-bottom));
+  }
+
+  .dialog-options {
+    padding: var(--sp-3);
+    gap: 6px;
+  }
+
+  .option {
+    height: 42px;
+  }
+
+  .dialog-warn {
+    margin: 0 var(--sp-3) var(--sp-2);
   }
 }

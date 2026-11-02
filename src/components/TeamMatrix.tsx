@@ -254,6 +254,8 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
           </span>
         ))}
         {byName ? <span className="legend-hint">横向滚动查看整月</span> : null}
+        {/* 触屏没有滚轮可横滚，单独给一句「左右滑动」；桌面由 CSS 隐藏 */}
+        <span className="legend-hint-touch">左右滑动查看整月</span>
       </div>
     </section>
   )

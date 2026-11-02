@@ -594,3 +594,135 @@
     animation: none;
   }
 }
+
+/* ------------------------------------------------------------ 小屏外壳
+ *
+ * 228px 侧栏在 390px 手机上吃掉 58% 的宽度，所以 ≤1023 把外壳改成三行网格：
+ * 顶栏 / 画布 / 底部标签栏。
+ *
+ * 底栏走**网格行**而不是 position: fixed：它自己占一行，
+ * 画布就不会被浮层盖住，也不用再算安全区的 padding 补偿。
+ * 顶栏和底栏各自加 env(safe-area-inset-*)，全面屏上才不会压到状态栏 / 手势条。
+ */
+@media (max-width: 1023px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows:
+      calc(var(--topbar-height) + env(safe-area-inset-top))
+      minmax(0, 1fr)
+      auto;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .topbar {
+    grid-column: 1;
+    grid-row: 1;
+    /* 手机上顶栏只保留「月份导航」这一件事，三列压成一列 */
+    grid-template-columns: minmax(0, 1fr);
+    padding: env(safe-area-inset-top) var(--sp-3) 0;
+    gap: 0;
+  }
+
+  .month-track {
+    grid-column: 1;
+  }
+
+  /* 导出 / 导入在设置页已经有一份；顶栏在手机上放不下三个控件 */
+  .topbar-right {
+    display: none;
+  }
+
+  /* 画布铺满整屏：8px 外框 + 16px 圆角在小屏上是纯损耗 */
+  .sheet {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* 侧栏 → 底部标签栏。
+   * .rail-nav / .rail-foot 用 display: contents 把自己「展开」，
+   * 三个入口于是直接成为 .rail 的 flex 项，才能等宽平分；
+   * 若保留两个子容器，它们各占 1/3 / 1/3，第三格会空出来。 */
+  .rail {
+    grid-column: 1;
+    grid-row: 3;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 2px;
+    padding: var(--sp-1) var(--sp-2) calc(var(--sp-1) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--chrome-line);
+  }
+
+  .rail-brand,
+  .rail-group-label {
+    display: none;
+  }
+
+  .rail-nav,
+  .rail-foot {
+    display: contents;
+  }
+
+  /* 概览是默认页，手机底栏把它放第一格；桌面侧栏顺序不动 */
+  .rail-nav a[href="#/overview"] {
+    order: -1;
+  }
+
+  .rail-item {
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    height: 48px;
+    padding: 0 var(--sp-1);
+    font-size: var(--fs-label);
+  }
+
+  .rail-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* 页头与工具栏允许换行：390px 下标题和分段控件经常挤不进一行 */
+  .canvas-head {
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+  }
+
+  .canvas-tools {
+    margin-left: auto;
+  }
+}
+
+/* 触屏没有「悬停」，自绘滚动条既看不见也拖不动 */
+@media (hover: none) {
+  .scroll-overlay {
+    display: none;
+  }
+}
+
+/* 手机紧凑档：标题降一档、副标允许换行、画布间距再收一格 */
+@media (max-width: 639px) {
+  .canvas {
+    gap: var(--sp-3);
+  }
+
+  .canvas-title {
+    font-size: var(--fs-metric-lg);
+  }
+
+  /* 副标是一枚胶囊，手机上一行放不下「区间 · 天数 · 姓名 · 班序」 */
+  .canvas-sub {
+    white-space: normal;
+    border-radius: var(--radius-control);
+    line-height: 1.5;
+  }
+
+  .segmented-item {
+    height: 32px;
+  }
+}

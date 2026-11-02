@@ -374,3 +374,51 @@
 .dialog-actions-end {
   margin-left: auto;
 }
+
+/* ------------------------------------------------------------ 小屏：日历与待办上下排
+ *
+ * 840 的固定日历列 + 右侧待办，在 1399 以下就开始挤：
+ * 1366 的笔记本上待办只剩不到 200px，再窄一点就只剩一条缝。
+ * 所以这一档把两栏拆成单列：日历仍限宽 840（格子不会被拉成 160px 一块），
+ * 待办落到日历图例下方、通栏。
+ *
+ * 待办卡原来是「外壳不流内容 + 内容绝对定位铺满」来吃日历高度。
+ * 单列后没有同一行的参照物，绝对定位会直接塌成 0 高 —— 必须改回普通流。
+ */
+@media (max-width: 1399px) {
+  .overview-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendar-weekdays,
+  .calendar-grid,
+  .calendar-legend {
+    width: 100%;
+    max-width: 840px;
+    justify-self: start;
+  }
+
+  /* 图例之后另起一行：第 1/2/3 行分别是星期栏、日期网格、图例 */
+  .todo-card {
+    grid-column: 1;
+    grid-row: 4;
+    position: relative;
+  }
+
+  .todo-card-fill {
+    position: static;
+    inset: auto;
+  }
+
+  /* 待办再多也不把页面拉长，卡片内部自己滚 */
+  .todo-scroll {
+    max-height: 40vh;
+    max-height: 40dvh;
+  }
+}
+
+@media (max-width: 639px) {
+  .todo-card-fill {
+    padding: var(--sp-3);
+  }
+}

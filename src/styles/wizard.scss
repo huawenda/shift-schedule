@@ -115,3 +115,35 @@
   display: flex;
   gap: var(--sp-2);
 }
+
+/* ------------------------------------------------------------ 小屏：向导
+ *
+ * 760px 卡片 + 32px 外边距在 390px 手机上只剩一条缝。
+ * 改成整宽、顶部对齐（内容超过一屏时从顶部开始滚，而不是上半截被裁掉）。
+ */
+@media (max-width: 639px) {
+  .wizard {
+    align-items: flex-start;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: var(--sp-3);
+  }
+
+  .wizard-card {
+    width: 100%;
+    padding: var(--sp-4);
+    border-radius: var(--radius-panel);
+  }
+
+  .wizard-title {
+    font-size: var(--fs-metric-lg);
+  }
+
+  .wizard-self {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wizard-body {
+    min-height: 0;
+  }
+}

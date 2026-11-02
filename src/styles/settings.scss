@@ -713,3 +713,152 @@ button.shift-cell:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ------------------------------------------------------------ 小屏：设置页单列
+ *
+ * 320px 标题列 + 右侧面板在窄屏上只剩一条缝，所以改成上下排。
+ * 成员表原来的「姓名 / 班序 / 岗位 / 删除」四列在手机上每格不到 100px，
+ * 这里折成两行卡片：第一行姓名 + 操作，第二行班序 + 岗位。
+ * 字段类名在 MemberRowsEditor 里显式加上 —— 用 nth-child 排会随「本人行」
+ * 少一个拖动把手而错位。
+ */
+@media (max-width: 1023px) {
+  .settings-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-3);
+    padding-bottom: var(--sp-4);
+  }
+
+  .pattern-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name usage"
+      "bar bar"
+      "actions actions";
+    row-gap: var(--sp-2);
+  }
+
+  .pattern-row > .pattern-row-name {
+    grid-area: name;
+  }
+
+  .pattern-row > .pattern-bar {
+    grid-area: bar;
+  }
+
+  .pattern-row > .pattern-row-usage {
+    grid-area: usage;
+    text-align: right;
+  }
+
+  .pattern-row > .pattern-row-actions {
+    grid-area: actions;
+    justify-content: flex-end;
+  }
+
+  /* 表头在手机上隐藏：字段已经有 placeholder，留着只会占一行高度 */
+  .member-editor-head {
+    display: none;
+  }
+
+  .member-editor.is-sortable .member-row {
+    grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "handle name name actions"
+      "handle pattern position actions";
+    row-gap: var(--sp-2);
+  }
+
+  .member-editor:not(.is-sortable) .member-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name name actions"
+      "pattern position actions";
+    row-gap: var(--sp-2);
+  }
+
+  .member-handle {
+    grid-area: handle;
+    align-self: center;
+  }
+
+  .member-field-name {
+    grid-area: name;
+  }
+
+  .member-field-pattern {
+    grid-area: pattern;
+  }
+
+  .member-field-position {
+    grid-area: position;
+  }
+
+  .member-row-actions {
+    grid-area: actions;
+    align-self: center;
+  }
+
+  .danger-row {
+    flex-wrap: wrap;
+  }
+
+  .danger-row .input {
+    max-width: none;
+    flex: 1 1 140px;
+  }
+
+  /* 备份目录：标签独占一行，路径与按钮排第二行 */
+  .backup-dir {
+    flex-wrap: wrap;
+  }
+
+  .backup-dir-label {
+    flex: 0 0 100%;
+  }
+
+  .backup-dir-path {
+    flex: 1 1 140px;
+  }
+}
+
+@media (max-width: 639px) {
+  /* 两张宽度在 settings.scss 里定义、源顺序晚于 schedule.scss 的窄弹层 */
+  .dialog-wide,
+  .dialog-narrow {
+    width: 100%;
+  }
+
+  .dialog-body {
+    padding: var(--sp-3);
+  }
+
+  .settings-panel {
+    padding: var(--sp-3);
+  }
+
+  .pattern-chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pattern-preview {
+    padding: var(--sp-2);
+  }
+
+  .pattern-grid-row {
+    gap: 3px;
+  }
+
+  .shift-cell {
+    height: 38px;
+  }
+
+  .shift-cell-text {
+    font-size: var(--fs-label);
+  }
+
+  .profile-form,
+  .salary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

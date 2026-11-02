@@ -4,6 +4,7 @@
  *
  *   node scripts/verify-dist.mjs                # HTTP 托管 + file:// 双击，两种都测
  *   node scripts/verify-dist.mjs --only=file
+ *   node scripts/verify-dist.mjs --only=mobile   # 只跑 390×844 小屏布局
  *
  * 覆盖（对应 PRD §8 验收标准）：
  *   1. 空数据首次打开 → 出现三步向导
@@ -2731,6 +2732,270 @@ async function runScenario(name, url, downloadDir) {
   }
 }
 
+/**
+ * 小屏验收：390×844（iPhone 14 尺寸）下检查「重排」是否真的发生。
+ *
+ * 只跑 http 一遍 —— 这些断言全是布局，与 file:// / http 的存储差异无关。
+ * 样例班组直接写进 localStorage，省掉一遍向导流程。
+ */
+async function runMobileChecks(url, downloadDir) {
+  const name = 'mobile'
+  console.log('\n=== 场景：mobile 390×844 ===')
+  fs.mkdirSync(downloadDir, { recursive: true })
+
+  const userDataDir = path.join(os.tmpdir(), `shift-verify-mobile-${Date.now()}`)
+  const { child: chrome, debugPort } = launchHeadlessChrome({ userDataDir, target: url })
+
+  let client = null
+
+  try {
+    const page = await waitForJsonEndpoint(debugPort)
+    client = createCdpClient(page.webSocketDebuggerUrl)
+    await client.ready
+    await client.send('Runtime.enable')
+    await client.send('Page.enable')
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: 390,
+      height: 844,
+      deviceScaleFactor: 3,
+      mobile: true
+    })
+    await client.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
+
+    await waitFor(
+      client,
+      `location.href.startsWith(${JSON.stringify(url.replace(/[^/]*$/, ''))})`,
+      '标签页加载到目标地址'
+    )
+
+    const roster = JSON.parse(fs.readFileSync(fixturePath, 'utf8')).roster
+    await client.evaluate(
+      `localStorage.setItem(${JSON.stringify(ROSTER_KEY)}, ${JSON.stringify(JSON.stringify({ ...roster, updatedAt: Date.now() }))}); true`
+    )
+    await client.send('Page.reload', { ignoreCache: true })
+    await waitFor(client, 'Boolean(document.querySelector(".plaque"))', '概览页值班牌')
+
+    // --- 概览：外壳 + 值班牌 + 日历/待办 + 统计 ---
+    const layout = await client.evaluate(`(() => {
+      const rect = sel => document.querySelector(sel)?.getBoundingClientRect()
+      const one = sel => document.querySelector(sel)
+      const rail = rect('.rail')
+      const plaque = rect('.plaque')
+      const bars = Array.from(document.querySelectorAll('.plaque-rhythm i'))
+      const widths = bars.map(node => Math.round(node.getBoundingClientRect().width * 10) / 10)
+      const calGrid = rect('.calendar-grid')
+      const todo = rect('.todo-card')
+      const cell = rect('.cal-cell')
+      const cards = Array.from(document.querySelectorAll('.stat-card')).map(node => node.getBoundingClientRect())
+      return {
+        vw: window.innerWidth,
+        vh: window.innerHeight,
+        docW: document.documentElement.scrollWidth,
+        railBottom: Math.round(rail?.bottom ?? -1),
+        railH: Math.round(rail?.height ?? -1),
+        railItemH: Math.round(rect('.rail-item')?.height ?? -1),
+        topbarRight: one('.topbar-right') ? getComputedStyle(one('.topbar-right')).display : 'missing',
+        plaqueH: Math.round(plaque?.height ?? -1),
+        bars: bars.length,
+        barW: widths,
+        calLeft: Math.round(calGrid?.left ?? -1),
+        calW: Math.round(calGrid?.width ?? -1),
+        calBottom: Math.round(calGrid?.bottom ?? -1),
+        todoLeft: Math.round(todo?.left ?? -1),
+        todoTop: Math.round(todo?.top ?? -1),
+        todoH: Math.round(todo?.height ?? -1),
+        cellW: Math.round(cell?.width ?? -1),
+        cellH: Math.round(cell?.height ?? -1),
+        cardLefts: [...new Set(cards.map(item => Math.round(item.left)))],
+        cardHeights: cards.map(item => Math.round(item.height)),
+        otBarH: Array.from(document.querySelectorAll('.ot-bar'))
+          .map(node => Math.round(node.getBoundingClientRect().height)),
+        coarse: window.matchMedia('(pointer: coarse)').matches,
+        controlH: Math.round(rect('.month-switch')?.height ?? -1)
+      }
+    })()`)
+
+    check(
+      `${name}: 页面没有横向溢出`,
+      layout.docW <= layout.vw + 1,
+      JSON.stringify({ docW: layout.docW, vw: layout.vw })
+    )
+    check(
+      `${name}: 侧栏改成底部标签栏`,
+      layout.railBottom >= layout.vh - 1 && layout.railH >= 46 && layout.railItemH >= 44,
+      JSON.stringify({ bottom: layout.railBottom, vh: layout.vh, h: layout.railH, item: layout.railItemH })
+    )
+    check(
+      `${name}: 顶栏不再放导出 / 导入`,
+      layout.topbarRight === 'none',
+      JSON.stringify({ topbarRight: layout.topbarRight })
+    )
+    check(
+      `${name}: 值班牌仍完整显示`,
+      layout.plaqueH >= 150,
+      JSON.stringify({ plaqueH: layout.plaqueH })
+    )
+    check(
+      `${name}: 节奏条 30 格等宽`,
+      layout.bars >= 30 &&
+        Math.max(...layout.barW) - Math.min(...layout.barW) <= 1,
+      JSON.stringify({ bars: layout.bars, min: Math.min(...layout.barW), max: Math.max(...layout.barW) })
+    )
+    check(
+      `${name}: 日历与待办改成上下排`,
+      layout.todoLeft === layout.calLeft &&
+        layout.todoTop > layout.calBottom &&
+        layout.todoH > 0,
+      JSON.stringify({
+        calLeft: layout.calLeft,
+        todoLeft: layout.todoLeft,
+        calBottom: layout.calBottom,
+        todoTop: layout.todoTop,
+        todoH: layout.todoH
+      })
+    )
+    check(
+      `${name}: 日历格子适配 7 列`,
+      layout.cellW >= 44 && layout.cellW <= 60 && layout.cellH >= 58,
+      JSON.stringify({ w: layout.cellW, h: layout.cellH })
+    )
+    check(
+      `${name}: 统计卡单列且都没有塌成 0 高`,
+      layout.cardLefts.length === 1 && layout.cardHeights.every(h => h > 0),
+      JSON.stringify(layout.cardHeights)
+    )
+    check(
+      `${name}: 加班分布的柱高按数值展开（不是 2px 基线）`,
+      layout.otBarH.length >= 4 &&
+        Math.max(...layout.otBarH) > 100 &&
+        layout.otBarH.filter(h => h > 20).length >= 3,
+      JSON.stringify(layout.otBarH)
+    )
+    check(
+      `${name}: 控件抬到 36px（触摸）`,
+      layout.controlH >= 36,
+      JSON.stringify({ controlH: layout.controlH, coarse: layout.coarse })
+    )
+
+    // --- 矩阵：姓名列收窄、行高收紧、仍可横滑 ---
+    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+    await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '全员矩阵页')
+    const matrix = await client.evaluate(`(() => {
+      const scroll = document.querySelector('.matrix-scroll')
+      const nameCell = document.querySelector('.matrix-name-cell')
+      const row = document.querySelector('.matrix-row')
+      return {
+        scrollW: scroll?.scrollWidth ?? -1,
+        clientW: scroll?.clientWidth ?? -1,
+        nameW: Math.round(nameCell?.getBoundingClientRect().width ?? -1),
+        cellH: Math.round(document.querySelector('.matrix-cell')?.getBoundingClientRect().height ?? -1),
+        rowH: Math.round(row?.getBoundingClientRect().height ?? -1),
+        // 首个成员「华文达」在 88px 列里要能完整显示（含「本人」徽章）
+        firstNameClipped: (() => {
+          const name = row?.querySelector('.matrix-name')
+          return name ? name.scrollWidth > name.clientWidth + 1 : true
+        })(),
+        docW: document.documentElement.scrollWidth,
+        vw: window.innerWidth
+      }
+    })()`)
+    check(
+      `${name}: 矩阵姓名列收到 88px、行高 36px`,
+      matrix.nameW === 88 && matrix.cellH === 36 && matrix.rowH <= 38,
+      JSON.stringify({ nameW: matrix.nameW, cellH: matrix.cellH, rowH: matrix.rowH })
+    )
+    check(
+      `${name}: 矩阵首行姓名不被截断`,
+      matrix.firstNameClipped === false,
+      JSON.stringify({ firstNameClipped: matrix.firstNameClipped })
+    )
+    check(
+      `${name}: 矩阵仍可横向滚动`,
+      matrix.scrollW > matrix.clientW,
+      JSON.stringify({ scrollW: matrix.scrollW, clientW: matrix.clientW })
+    )
+    check(
+      `${name}: 矩阵页没有横向溢出`,
+      matrix.docW <= matrix.vw + 1,
+      JSON.stringify({ docW: matrix.docW, vw: matrix.vw })
+    )
+
+    // --- 设置：标题与面板上下排、成员行折成两行 ---
+    await client.evaluate(clickByText('.rail-item', '设置'))
+    await waitFor(client, 'Boolean(document.querySelector(".settings-section"))', '设置页')
+    await sleep(200)
+    const settings = await client.evaluate(`(() => {
+      const section = document.querySelector('.settings-section')
+      const label = section?.querySelector('.settings-label')
+      const panel = section?.querySelector('.settings-panel')
+      const row = document.querySelector('.member-row')
+      return {
+        cols: section ? getComputedStyle(section).gridTemplateColumns : '',
+        labelBottom: Math.round(label?.getBoundingClientRect().bottom ?? -1),
+        panelTop: Math.round(panel?.getBoundingClientRect().top ?? -1),
+        labelLeft: Math.round(label?.getBoundingClientRect().left ?? -1),
+        panelLeft: Math.round(panel?.getBoundingClientRect().left ?? -1),
+        rowH: Math.round(row?.getBoundingClientRect().height ?? -1),
+        docW: document.documentElement.scrollWidth,
+        vw: window.innerWidth
+      }
+    })()`)
+    check(
+      `${name}: 设置区块改成上下排`,
+      settings.cols.trim().split(' ').length === 1 &&
+        settings.panelTop > settings.labelBottom &&
+        settings.panelLeft === settings.labelLeft,
+      JSON.stringify(settings)
+    )
+    check(
+      `${name}: 成员行折成两行（不再是五列）`,
+      settings.rowH >= 70,
+      JSON.stringify({ rowH: settings.rowH })
+    )
+    check(
+      `${name}: 设置页没有横向溢出`,
+      settings.docW <= settings.vw + 1,
+      JSON.stringify({ docW: settings.docW, vw: settings.vw })
+    )
+
+    // --- 弹层：贴底抽屉，整宽、不超出视口 ---
+    await client.evaluate(clickByText('.rail-item', '月度概览'))
+    await waitFor(client, 'Boolean(document.querySelector(".calendar-grid"))', '回到概览页')
+    await client.evaluate(`document.querySelector('.cal-cell:not(.is-outside)')?.click(); true`)
+    await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
+    await sleep(250)
+    const dialog = await client.evaluate(`(() => {
+      const node = document.querySelector('.dialog-day')
+      const rect = node.getBoundingClientRect()
+      return {
+        top: Math.round(rect.top),
+        bottom: Math.round(rect.bottom),
+        w: Math.round(rect.width),
+        vw: window.innerWidth,
+        vh: window.innerHeight,
+        radius: getComputedStyle(node).borderTopLeftRadius
+      }
+    })()`)
+    check(
+      `${name}: 弹层是贴底的整宽抽屉`,
+      dialog.w === dialog.vw &&
+        dialog.bottom >= dialog.vh - 1 &&
+        dialog.top >= 0 &&
+        dialog.radius === '16px',
+      JSON.stringify(dialog)
+    )
+    await client.evaluate(clickByText('.dialog-head button', '关闭'))
+    await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+  } catch (error) {
+    check(`${name}: 场景执行`, false, error.message)
+  } finally {
+    client?.close()
+    chrome.kill()
+    await sleep(300)
+    fs.rmSync(userDataDir, { recursive: true, force: true })
+  }
+}
+
 async function main() {
   if (!fs.existsSync(distIndex)) {
     console.error('没有找到 dist/index.html，请先运行 pnpm build')
@@ -2751,11 +3016,15 @@ async function main() {
   const { server, port } = await startStaticServer(distDir)
 
   try {
-    if (only !== 'file') {
+    if (only !== 'file' && only !== 'mobile') {
       await runScenario('http', `http://127.0.0.1:${port}/index.html`, path.join(downloadDir, 'http'))
     }
-    if (only !== 'http') {
+    if (only !== 'http' && only !== 'mobile') {
       await runScenario('file', pathToFileURL(distIndex).href, path.join(downloadDir, 'file'))
+    }
+    // 小屏重排只跟视口有关，跑一遍就够（http 场景顺手复用同一个静态服务）
+    if (only !== 'file') {
+      await runMobileChecks(`http://127.0.0.1:${port}/index.html`, path.join(downloadDir, 'mobile'))
     }
   } finally {
     server.close()

@@ -181,7 +181,7 @@ export function MemberRowsEditor({
           ) : null}
 
           {isSelfRow ? (
-            <span className="member-locked" title="本人的姓名与班序请在「个人信息」里改">
+            <span className="member-locked member-field-name" title="本人的姓名与班序请在「个人信息」里改">
               <span className="member-locked-name">{row.name}</span>
               <span className="badge-self">本人</span>
             </span>
@@ -189,7 +189,7 @@ export function MemberRowsEditor({
             <input
               aria-label={`第 ${index + 1} 位成员的姓名`}
               autoComplete="off"
-              className="input"
+              className="input member-field-name"
               maxLength={12}
               name={`member-name-${index}`}
               placeholder="姓名"
@@ -200,12 +200,13 @@ export function MemberRowsEditor({
           )}
 
           {isSelfRow ? (
-            <span className="member-locked member-locked-pattern">
+            <span className="member-locked member-locked-pattern member-field-pattern">
               {patternNames.get(row.patternId) ?? row.patternId}
             </span>
           ) : (
             <Select
               ariaLabel={`${row.name || `第 ${index + 1} 位成员`} 的班序`}
+              className="member-field-pattern"
               groups={patternGroups}
               value={row.patternId}
               onChange={next => patch(index, { patternId: next })}
@@ -214,7 +215,7 @@ export function MemberRowsEditor({
 
           {isSelfRow ? (
             <span
-              className="member-locked member-locked-position"
+              className="member-locked member-locked-position member-field-position"
               title="本人的岗位请在「个人信息」里改"
             >
               {row.position || '—'}
@@ -223,7 +224,7 @@ export function MemberRowsEditor({
             <input
               aria-label={`${row.name || `第 ${index + 1} 位成员`} 的岗位`}
               autoComplete="off"
-              className="input"
+              className="input member-field-position"
               maxLength={12}
               name={`member-position-${index}`}
               placeholder="岗位（可选）"
