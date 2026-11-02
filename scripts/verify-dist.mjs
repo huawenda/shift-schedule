@@ -270,6 +270,38 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(subBadge)
     )
 
+    // 今日值班牌：三列 + 整期节奏条，宽度与统计块一致，深青底
+    const plaque = await client.evaluate(`(() => {
+      const p = document.querySelector('.plaque')
+      const grid = document.querySelector('.stats-grid')
+      return {
+        exists: Boolean(p),
+        cells: document.querySelectorAll('.plaque-cell').length,
+        bars: document.querySelectorAll('.plaque-rhythm i').length,
+        tally: document.querySelectorAll('.plaque-tally > div').length,
+        todayBars: document.querySelectorAll('.plaque-rhythm i.is-today').length,
+        barsGap: document.querySelectorAll('.plaque-rhythm-gap').length,
+        barWidths: Array.from(document.querySelectorAll('.plaque-rhythm i')).map(node =>
+          Math.round(node.getBoundingClientRect().width * 100) / 100
+        ),
+        bg: p ? getComputedStyle(p).backgroundColor : '',
+        w: Math.round(p?.getBoundingClientRect().width ?? 0),
+        h: Math.round(p?.getBoundingClientRect().height ?? 0),
+        gridW: Math.round(grid?.getBoundingClientRect().width ?? 0)
+      }
+    })()`)
+    check(
+      `${name}: 概览页有今日值班牌（三列 + 整期节奏条）`,
+      plaque.exists && plaque.cells === 3 && plaque.bars >= 30 &&
+        plaque.tally > 0 && Math.abs(plaque.w - plaque.gridW) <= 1 &&
+        // 900 高窗口下画布会内容溢出：牌面不能被 flex 收缩压成 0 高
+        plaque.h >= 150 && plaque.bg === 'rgb(14, 34, 40)' &&
+        // 节奏条：色块等宽，且按默认班次分组（组间有 gap 元素）
+        plaque.barsGap >= 1 &&
+        Math.max(...plaque.barWidths) - Math.min(...plaque.barWidths) <= 1,
+      JSON.stringify(plaque)
+    )
+
     // 统计卡观感：抬头有发丝线 + 强调色小竖条；六格带班次色条；实发是浅青结论条
     const statLook = await client.evaluate(`(() => {
       const head = document.querySelector('.stat-card .stat-head')

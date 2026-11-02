@@ -19,120 +19,263 @@
   width: 100%;
 }
 
-/* ── 今日条 ─────────────────────────────────────────────
+/* ── 今日值班牌 ─────────────────────────────────────────
  *
- * 概览页的第一问是「我今天什么班、还有几件事、这个月能拿多少」。
- * 日历里今天只有一小圈描边，所以要有一条把这三件事直接摆出来的横条。
+ * 概览页的第一问是「现在/下一班是什么、还有多久、这个月怎么排」。
+ * 深青底与外壳同一个色系，是画布上唯一的暗块；三列回答三件事，
+ * 下方节奏条把整期 30/31 天铺成一排，今天那格用 1px 亮边圈出来。
  * 只讲本人，不混入全员出勤（全员口径留在矩阵页的概览条里）。
  */
-.today-strip {
-  display: grid;
-  /* 四格按内容重要度分宽：日期窄、班次与待办均分、实发略宽（金额最长） */
-  grid-template-columns: 132px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr);
-  /* 与统计卡同一套：无边框 + 极浅投影，浮在降了一档的画布上 */
-  border: 0;
+.plaque {
+  /* 画布是固定高度的 flex 列，内容超高时子项会被收缩。
+   * overflow: hidden 会把自动最小高度算成 0，于是牌面能被压成 0 高、内容被裁掉；
+   * flex: none 明确「这块不参与收缩」，超高时让画布滚动。 */
+  flex: none;
+  overflow: hidden;
   border-radius: var(--radius-panel);
-  background: var(--surface);
+  background: var(--chrome);
+  color: var(--chrome-text);
   box-shadow: var(--shadow-raised);
 }
 
-.today-cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
+.plaque-top {
+  display: grid;
+  /* 三列按信息重量分宽：班次最重、倒计时次之、本月统计收窄 */
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.9fr);
+}
+
+.plaque-cell {
   min-width: 0;
-  padding: var(--sp-3) var(--sp-4);
-  border-right: 1px solid var(--border);
+  padding: 12px 20px 10px;
 }
 
-.today-cell:last-child {
-  border-right: 0;
+.plaque-cell + .plaque-cell {
+  border-left: 1px solid var(--chrome-line);
 }
 
-.today-label {
-  color: var(--muted);
+.plaque-label {
+  display: block;
+  color: var(--chrome-muted);
   font-size: var(--fs-label);
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 14px;
 }
 
-.today-date {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: var(--fs-metric-md);
-  font-weight: 600;
-  /* 与右侧几格共用 28px 主值行：四格的第二行才会落在同一条基线上 */
-  line-height: 28px;
-  font-variant-numeric: tabular-nums;
-}
-
-.today-week {
-  color: var(--faint);
-  font-size: var(--fs-small);
-  font-weight: 400;
-}
-
-.today-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-}
-
-/* 班次块本身就是按钮：点一下直接改今天的班 */
-.today-shift {
-  height: 26px;
-  padding: 0 10px;
+/* 班次名本身就是「改班」入口：点一下打开对应日期的弹层 */
+.plaque-shift {
+  display: block;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 0;
+  overflow: hidden;
   border: 0;
-  border-radius: var(--radius-control);
-  font-size: var(--fs-control);
-  font-weight: 600;
-  line-height: 26px;
+  background: transparent;
+  color: var(--chrome-text);
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.today-shift:hover {
-  filter: brightness(0.96);
+button.plaque-shift {
+  cursor: pointer;
+  transition: color var(--dur-fast) ease;
 }
 
-.today-shift.is-blank {
-  background: var(--raised);
-  color: var(--faint);
+button.plaque-shift:hover {
+  color: var(--chrome-accent);
+}
+
+button.plaque-shift:focus-visible {
+  outline: 2px solid var(--chrome-accent);
+  outline-offset: 2px;
+}
+
+.plaque-shift.is-static {
   cursor: default;
 }
 
-.today-shift.is-blank:hover {
-  filter: none;
+.plaque-range {
+  margin-top: 6px;
+  overflow: hidden;
+  color: var(--chrome-muted);
+  font-size: var(--fs-small);
+  letter-spacing: 0.02em;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.today-value {
-  font-size: var(--fs-metric-lg);
-  font-weight: 600;
-  /* 与日期、班次胶囊统一到 28px 主值行 */
-  line-height: 28px;
+.plaque-cd {
+  margin-top: 4px;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.today-value.is-money {
-  color: var(--accent);
+.plaque-cd small {
+  margin: 0 4px 0 2px;
+  color: var(--chrome-muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
-.today-unit {
-  margin-left: 3px;
-  color: var(--faint);
+/* 非本期月份：倒计时位置换成一句说明，字号收一档，不假装还有数字 */
+.plaque-cd.is-text {
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.plaque-progress {
+  position: relative;
+  height: 2px;
+  margin-top: 10px;
+  background: var(--chrome-line);
+}
+
+.plaque-progress i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--chrome-accent);
+}
+
+.plaque-progress em {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 8px;
+  background: var(--chrome-accent);
+}
+
+.plaque-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 8px;
+}
+
+.plaque-tally div {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.plaque-tally i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.plaque-tally b {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.plaque-tally span {
+  color: var(--chrome-muted);
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+}
+
+.plaque-today {
+  margin-top: 8px;
+  color: var(--chrome-muted);
   font-size: var(--fs-small);
-  font-weight: 400;
+  line-height: 16px;
 }
 
-.today-sub {
-  color: var(--muted);
-  font-size: var(--fs-small);
+.plaque-today b {
+  color: var(--chrome-text);
+  font-weight: 700;
 }
 
-.today-sub.is-empty {
-  color: var(--muted);
+/* ── 整期节奏条 ───────────────────────────────────────── */
+
+.plaque-rhythm-wrap {
+  padding: 8px 20px 10px;
+  border-top: 1px solid var(--chrome-line);
+}
+
+.plaque-rhythm-head {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 4px;
+  color: var(--chrome-muted);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.12em;
+  line-height: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 节奏条用 flex：所有色块等宽（flex: 1 1 0）。
+ * 组与组之间插一个 4px 的 gap 元素，加上两侧各 2px 的容器 gap，正好 8px；
+ * 同组内仍然只有容器 gap 的 2px。 */
+.plaque-rhythm {
+  display: flex;
+  gap: 2px;
+}
+
+.plaque-rhythm i {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 20px;
+  border-radius: 2px;
+}
+
+.plaque-rhythm-gap {
+  flex: 0 0 var(--sp-1);
+}
+
+/* 休息也画条：整期节奏要连续，不能靠留白去猜哪几天没排班；
+ * 休息用低饱和绿，和白/夜班拉开明度差。 */
+.plaque-rhythm i.is-rest {
+  background: var(--shift-rest-on-dark);
+}
+
+.plaque-rhythm i.is-today {
+  box-shadow: inset 0 0 0 1px var(--chrome-text);
+}
+
+/* 深底班次色：色点与节奏条共用同一组令牌 */
+.plaque-tally i.is-day,
+.plaque-rhythm i.is-day {
+  background: var(--shift-day-on-dark);
+}
+
+.plaque-tally i.is-night,
+.plaque-rhythm i.is-night {
+  background: var(--shift-night-on-dark);
+}
+
+.plaque-tally i.is-rest {
+  background: var(--shift-rest-on-dark);
+}
+
+.plaque-tally i.is-dayx,
+.plaque-rhythm i.is-dayx {
+  background: var(--shift-dayx-on-dark);
+}
+
+.plaque-tally i.is-nightx,
+.plaque-rhythm i.is-nightx {
+  background: var(--shift-nightx-on-dark);
+}
+
+.plaque-tally i.is-leave,
+.plaque-rhythm i.is-leave {
+  background: var(--shift-leave-on-dark);
 }
 
 /*

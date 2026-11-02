@@ -8,7 +8,7 @@
   z-index: 10;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  /* 与概览页的今日条同一套：白色卡片 + 极浅投影，浮在浅灰画布上 */
+  /* 与概览页的统计卡/待办卡同一套：白色卡片 + 极浅投影，浮在浅灰画布上 */
   border: 0;
   border-radius: var(--radius-panel);
   background: var(--surface);

@@ -146,6 +146,16 @@
   --shift-leave-bg: #e5e7eb;
   --shift-leave-ink: #475467;
 
+  /* 深底上的班次色：值班牌的节奏条与色点用。
+   * 日历那套「浅底 + 墨字」是为白纸设计的，深底上夜班墨蓝会直接糊进背景；
+   * 这里保持同一色相，只把明度抬到深青底上能一眼分档的一档。 */
+  --shift-day-on-dark: #7cc7ea;
+  --shift-night-on-dark: #7e9fe0;
+  --shift-rest-on-dark: #6fae8a;
+  --shift-dayx-on-dark: #ffd27a;
+  --shift-nightx-on-dark: #f0a56a;
+  --shift-leave-on-dark: #9aa6b0;
+
   --radius-mark: 3px;
   --radius-sub: 4px;
   --radius-control: 6px;

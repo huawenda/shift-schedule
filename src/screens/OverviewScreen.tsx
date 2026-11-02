@@ -2,11 +2,10 @@ import { useMemo } from 'react'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { StatsPanels } from '../components/StatsPanels'
 import { TodoCard } from '../components/TodoCard'
-import { formatMonthDay, todayKey, weekdayLabel } from '../data/dateUtils'
-import { formatLeaveDuration } from '../data/leave'
-import { formatOvertimeHours } from '../data/overtime'
+import { TodayPlaque } from '../components/TodayPlaque'
+import { getCalendarMeta } from '../data/calendarMeta'
+import { todayKey } from '../data/dateUtils'
 import { formatPeriodRange, type Period } from '../data/period'
-import { formatMoney } from '../data/profile'
 import {
   getRecordMap,
   getSelf,
@@ -16,8 +15,9 @@ import {
   type Member,
   type Roster
 } from '../data/roster'
-import { SHIFT_META, shiftToneClass } from '../data/shifts'
+import type { ShiftType } from '../data/shifts'
 import { computeMonthStats } from '../data/stats'
+import { useCurrentShift } from '../hooks/useCurrentShift'
 
 interface OverviewScreenProps {
   roster: Roster
@@ -63,15 +63,28 @@ export function OverviewScreen({
     return counts
   }, [periodTodos])
 
-  /** 今日条只在本期包含今天时出现；翻到别的月份就没有「今天」可言 */
+  /** 值班牌只在本期包含今天时显示倒计时；翻到别的月份就只保留月度统计与节奏条 */
   const today = todayKey()
   const todayInPeriod = period.dates.includes(today)
-  const todayRecord = self ? recordMap.get(overrideKey(self.id, today)) : undefined
-  const todayShift = self ? todayRecord?.shift ?? getTemplateShift(roster, self, today) : null
-  const todayOvertime = todayRecord?.overtimeHours ?? 0
-  const todayLeave = todayShift === '事假' ? formatLeaveDuration(todayRecord?.leaveDuration) : ''
   const todayTodos = roster.todos.filter(todo => todo.date === today)
-  const todayOpen = todayTodos.filter(todo => !todo.done).length
+  const todayMeta = getCalendarMeta(today).label
+
+  /** 本期逐日班次：模板 + 整天记录里的改写，供倒计时与节奏条使用 */
+  const selfShifts = useMemo(() => {
+    if (!self) return period.dates.map(() => '休息' as ShiftType)
+    return period.dates.map(date => {
+      const record = recordMap.get(overrideKey(self.id, date))
+      return record?.shift ?? getTemplateShift(roster, self, date) ?? '休息'
+    })
+  }, [period.dates, recordMap, roster, self])
+
+  /** 默认班次（模板）：节奏条按它分组，白特/夜特因此归进默认休息组 */
+  const selfDefaultShifts = useMemo(() => {
+    if (!self) return period.dates.map(() => '休息' as ShiftType)
+    return period.dates.map(date => getTemplateShift(roster, self, date) ?? '休息')
+  }, [period.dates, roster, self])
+
+  const moment = useCurrentShift(period.dates, selfShifts)
 
   return (
     <div className="canvas is-overview">
@@ -86,73 +99,25 @@ export function OverviewScreen({
       </div>
 
       {/*
-        今日条：概览页的第一问是「我今天什么班、还有几件事、这个月能拿多少」。
-        只讲本人，全员出勤口径仍留在矩阵页的概览条里。
+        今日值班牌：概览页的第一问是「现在/下一班是什么、还有多久、这个月怎么排」。
+        只讲本人，全员出勤口径仍留在矩阵页的概览条里；
+        「本月实发」不再放这里，下面的薪资卡已经有一份，避免同一页两处同数。
       */}
-      {todayInPeriod && self ? (
-        <section className="today-strip" aria-label="今日概览">
-          <div className="today-cell">
-            <span className="today-label">今天</span>
-            <span className="today-date">
-              {formatMonthDay(today)}
-              <span className="today-week">周{weekdayLabel(today)}</span>
-            </span>
-          </div>
-
-          <div className="today-cell">
-            <span className="today-label">今日班次</span>
-            <div className="today-row">
-              {todayShift ? (
-                <button
-                  aria-label={`改今天（${today}）的班次`}
-                  className={`today-shift ${shiftToneClass(todayShift)}`}
-                  type="button"
-                  onClick={() => onEdit(self, today)}
-                >
-                  {SHIFT_META[todayShift].label}
-                </button>
-              ) : (
-                <span className="today-shift is-blank">未排班</span>
-              )}
-              {todayOvertime > 0 ? (
-                <span className="cal-ot" title={`今日加班 ${formatOvertimeHours(todayOvertime)}`}>
-                  +{formatOvertimeHours(todayOvertime)}
-                </span>
-              ) : null}
-              {todayRecord?.isLegal ? (
-                <span className="cal-legal" aria-hidden="true" title="法定节假日">法</span>
-              ) : null}
-              {todayLeave ? (
-                <span className="cal-leave" title={`事假 ${todayLeave}`}>{todayLeave}</span>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="today-cell">
-            <span className="today-label">今日待办</span>
-            <span className="today-value">
-              {todayTodos.length}
-              <span className="today-unit">项</span>
-            </span>
-            <span className={`today-sub${todayTodos.length === 0 ? ' is-empty' : ''}`}>
-              {todayTodos.length === 0
-                ? '今天没有待办'
-                : todayOpen > 0
-                  ? `未完成 ${todayOpen} 项`
-                  : '已经全部完成'}
-            </span>
-          </div>
-
-          <div className="today-cell">
-            <span className="today-label">本月实发</span>
-            <span className="today-value is-money">
-              {stats?.salary.hasBase ? `¥${formatMoney(stats.salary.net)}` : '—'}
-            </span>
-            {stats?.salary.hasBase ? null : (
-              <span className="today-sub is-empty">未填基本工资</span>
-            )}
-          </div>
-        </section>
+      {self && stats ? (
+        <TodayPlaque
+          dates={period.dates}
+          defaultShifts={selfDefaultShifts}
+          moment={moment}
+          onEditDate={date => onEdit(self, date)}
+          personGroup={patternNameOf(roster, self.patternId)}
+          personName={self.name}
+          shifts={selfShifts}
+          summary={stats.days}
+          today={today}
+          todayInPeriod={todayInPeriod}
+          todayMeta={todayMeta}
+          todayTodoCount={todayTodos.length}
+        />
       ) : null}
 
       {/*
