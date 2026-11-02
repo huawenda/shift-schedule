@@ -2769,6 +2769,20 @@ async function runMobileChecks(url, downloadDir) {
     )
 
     const roster = JSON.parse(fs.readFileSync(fixturePath, 'utf8')).roster
+    // 小屏日历标记验收：给「今天」造一条同时有加班与法定的记录，
+    // 这是最容易把日期挤掉的一种格子。今天必然在本期，格子一定在网格里。
+    const now = new Date()
+    const pad = value => String(value).padStart(2, '0')
+    const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    const legalRecord = { memberId: 'm-01', date: todayKey, shift: '夜班', overtimeHours: 10, isLegal: true }
+    const existingLegal = roster.overrides.findIndex(record => record.memberId === 'm-01' && record.date === todayKey)
+    if (existingLegal >= 0) roster.overrides[existingLegal] = legalRecord
+    else roster.overrides.push(legalRecord)
+    // 今天再挂一条待办：同一格里同时有 待办竖条 / 法定 / 加班，是最挤的一种组合
+    roster.todos = [
+      ...roster.todos,
+      { id: 't-mobile-marker', date: todayKey, text: '交班前检查', tone: 1, done: false, createdAt: Date.now() }
+    ]
     await client.evaluate(
       `localStorage.setItem(${JSON.stringify(ROSTER_KEY)}, ${JSON.stringify(JSON.stringify({ ...roster, updatedAt: Date.now() }))}); true`
     )
@@ -2859,6 +2873,79 @@ async function runMobileChecks(url, downloadDir) {
       layout.cellW >= 44 && layout.cellW <= 60 && layout.cellH >= 58,
       JSON.stringify({ w: layout.cellW, h: layout.cellH })
     )
+    const badgeLayout = await client.evaluate(`(() => {
+      const cells = Array.from(document.querySelectorAll('.cal-cell'))
+      const cell = cells.find(node => node.querySelector('.cal-legal') && node.querySelector('.cal-ot'))
+      if (!cell) return null
+      const rect = node => node.getBoundingClientRect()
+      const day = rect(cell.querySelector('.cal-day'))
+      const legal = rect(cell.querySelector('.cal-legal'))
+      const meta = rect(cell.querySelector('.cal-meta'))
+      const ot = rect(cell.querySelector('.cal-ot'))
+      const shift = rect(cell.querySelector('.cal-shift'))
+      const box = rect(cell)
+      const overlaps = (a, b) =>
+        !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom)
+      return {
+        dayLegalOverlap: overlaps(day, legal),
+        dayBottom: Math.round(day.bottom),
+        metaTop: Math.round(meta.top),
+        otTop: Math.round(ot.top),
+        otBottom: Math.round(ot.bottom),
+        shiftTop: Math.round(shift.top),
+        metaHeight: Math.round(meta.height),
+        // 普通日子也要有农历：所有非空标签都必须真的占位
+        metaEverywhere: Array.from(document.querySelectorAll('.cal-cell .cal-meta'))
+          .filter(node => node.textContent.trim())
+          .every(node => node.getBoundingClientRect().height > 0),
+        cellRight: Math.round(box.right),
+        legalRight: Math.round(legal.right),
+        otRight: Math.round(ot.right)
+      }
+    })()`)
+    check(
+      `${name}: 法定在右上角不压日期，农历与加班按顺序下排`,
+      badgeLayout !== null &&
+        badgeLayout.dayLegalOverlap === false &&
+        badgeLayout.legalRight <= badgeLayout.cellRight &&
+        badgeLayout.otRight <= badgeLayout.cellRight &&
+        badgeLayout.dayBottom <= badgeLayout.metaTop &&
+        badgeLayout.metaTop <= badgeLayout.otTop &&
+        badgeLayout.otBottom <= badgeLayout.shiftTop &&
+        badgeLayout.metaHeight > 0 &&
+        badgeLayout.metaEverywhere === true,
+      JSON.stringify(badgeLayout)
+    )
+    const todoMark = await client.evaluate(`(() => {
+      const day = document.querySelector('.cal-day.is-todo')
+      if (!day) return null
+      const cs = getComputedStyle(day)
+      const bar = getComputedStyle(day, '::before')
+      const cell = day.closest('.cal-cell')
+      const dayRect = day.getBoundingClientRect()
+      const cellRect = cell.getBoundingClientRect()
+      return {
+        borderBottom: cs.borderBottomWidth,
+        barContent: bar.content,
+        barWidth: bar.width,
+        barHeight: bar.height,
+        barBg: bar.backgroundColor,
+        barLeft: bar.left,
+        dayLeftGap: Math.round(dayRect.left - cellRect.left)
+      }
+    })()`)
+    check(
+      `${name}: 待办标记改成日期左侧的竖条`,
+      todoMark !== null &&
+        todoMark.borderBottom === '0px' &&
+        todoMark.barContent !== 'none' &&
+        todoMark.barWidth === '3px' &&
+        todoMark.barHeight === '12px' &&
+        todoMark.barBg === 'rgb(193, 113, 42)' &&
+        todoMark.barLeft === '-4px' &&
+        todoMark.dayLeftGap >= 3,
+      JSON.stringify(todoMark)
+    )
     check(
       `${name}: 统计卡单列且都没有塌成 0 高`,
       layout.cardLefts.length === 1 && layout.cardHeights.every(h => h > 0),
@@ -2877,9 +2964,40 @@ async function runMobileChecks(url, downloadDir) {
       JSON.stringify({ controlH: layout.controlH, coarse: layout.coarse })
     )
 
-    // --- 矩阵：姓名列收窄、行高收紧、仍可横滑 ---
+    // --- 矩阵：名单浮层 + 姓名列收窄、行高收紧、仍可横滑 ---
     await client.evaluate(clickByText('.rail-item', '全员矩阵'))
     await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '全员矩阵页')
+
+    // 第二格（今日夜班）最容易把按格子对齐的浮层顶出屏幕左缘
+    await client.evaluate(`document.querySelectorAll('.summary-more')[1]?.click(); true`)
+    await waitFor(client, 'Boolean(document.querySelector(".summary-popover"))', '名单浮层')
+    await sleep(150)
+    const popover = await client.evaluate(`(() => {
+      const node = document.querySelector('.summary-popover')
+      const bar = document.querySelector('.summary')
+      const rect = node.getBoundingClientRect()
+      const barRect = bar.getBoundingClientRect()
+      return {
+        left: Math.round(rect.left),
+        right: Math.round(rect.right),
+        top: Math.round(rect.top),
+        w: Math.round(rect.width),
+        barLeft: Math.round(barRect.left),
+        barRight: Math.round(barRect.right),
+        barBottom: Math.round(barRect.bottom)
+      }
+    })()`)
+    check(
+      `${name}: 名单浮层贴着概览条、整宽且不出屏`,
+      popover.left === popover.barLeft &&
+        popover.right === popover.barRight &&
+        popover.top > popover.barBottom &&
+        popover.w === popover.barRight - popover.barLeft,
+      JSON.stringify(popover)
+    )
+    await client.evaluate('document.querySelector(".summary-popover-close")?.click(); true')
+    await waitFor(client, '!document.querySelector(".summary-popover")', '名单浮层关闭')
+
     const matrix = await client.evaluate(`(() => {
       const scroll = document.querySelector('.matrix-scroll')
       const nameCell = document.querySelector('.matrix-name-cell')
