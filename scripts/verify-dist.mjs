@@ -302,7 +302,7 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(plaque)
     )
 
-    // 统计卡观感：抬头有发丝线 + 强调色小竖条；六格带班次色条；实发是浅青结论条
+    // 统计卡观感：抬头有发丝线 + 强调色小竖条；六格带班次色条；实发是浅青结算贴片
     const statLook = await client.evaluate(`(() => {
       const head = document.querySelector('.stat-card .stat-head')
       const title = head?.querySelector('.stat-title')
@@ -399,6 +399,41 @@ async function runScenario(name, url, downloadDir) {
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '矩阵出现 3 行')
     check(`${name}: 矩阵页出现 1 本人 + 2 同事`, true)
     check(`${name}: 今日概览条只在矩阵页`, await client.evaluate('document.querySelectorAll(".summary").length === 1'))
+
+    // 矩阵概览条与值班牌同一套材质：深青底、亮字、发丝分隔
+    const summaryLook = await client.evaluate(`(() => {
+      const card = document.querySelector('.summary')
+      const cell = document.querySelector('.summary-cell')
+      const label = document.querySelector('.summary-label')
+      const value = document.querySelector('.summary-value')
+      const more = document.querySelector('.summary-more')
+      return {
+        cells: document.querySelectorAll('.summary-cell').length,
+        bg: getComputedStyle(card).backgroundColor,
+        color: getComputedStyle(card).color,
+        cellBorder: getComputedStyle(cell).borderRightColor,
+        labelColor: getComputedStyle(label).color,
+        labelSize: getComputedStyle(label).fontSize,
+        valueColor: getComputedStyle(value).color,
+        valueSize: getComputedStyle(value).fontSize,
+        valueWeight: getComputedStyle(value).fontWeight,
+        moreColor: getComputedStyle(more).color
+      }
+    })()`)
+    check(
+      `${name}: 矩阵概览条与值班牌同材质（深青底 + 发丝分隔）`,
+      summaryLook.cells === 3 &&
+        summaryLook.bg === 'rgb(14, 34, 40)' &&
+        summaryLook.color === 'rgb(233, 242, 244)' &&
+        summaryLook.cellBorder === 'rgb(39, 68, 77)' &&
+        summaryLook.labelColor === 'rgb(163, 183, 188)' &&
+        summaryLook.labelSize === '11px' &&
+        summaryLook.valueColor === 'rgb(233, 242, 244)' &&
+        summaryLook.valueSize === '34px' &&
+        summaryLook.valueWeight === '700' &&
+        summaryLook.moreColor === 'rgb(127, 210, 226)',
+      JSON.stringify(summaryLook)
+    )
 
     // 矩阵里本人那一行带徽章，同事没有
     const selfBadges = await client.evaluate(`(() => {
@@ -1323,7 +1358,7 @@ async function runScenario(name, url, downloadDir) {
           // 组内明细：三个基本项 + 三类加班工资 + 社保
           moneySubs: Array.from(salaryCard?.querySelectorAll('.money-row.is-sub') ?? [])
             .map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
-          net: salaryCard?.querySelector('.money-row.is-total span:last-child')?.textContent.trim() ?? '',
+          net: salaryCard?.querySelector('.money-summary-item.is-total .money-summary-value')?.textContent.trim() ?? '',
           detailRows: detail?.querySelectorAll('tbody tr').length ?? 0,
           detailPay: detail?.querySelector('tbody tr td.is-num:last-child')?.textContent.trim() ?? ''
         }
@@ -1378,24 +1413,24 @@ async function runScenario(name, url, downloadDir) {
         }
       })()`)
       check(
-        `${name}: 加班分布是五根柱的柱形图`,
-        otChart.colCount === 5 &&
+        `${name}: 加班分布是四根柱的柱形图（无法定工时不显示法定柱）`,
+        otChart.colCount === 4 &&
           JSON.stringify(otChart.labels) ===
-            JSON.stringify(['白班加班', '夜班加班', '白特加班', '夜特加班', '法定加班']),
+            JSON.stringify(['白班加班', '夜班加班', '白特加班', '夜特加班']),
         JSON.stringify(otChart)
       )
       check(
         `${name}: 柱顶标出加班小时数`,
         // 本场景只记了一天 3h 加班（白班或夜班），那根柱是唯一非零的
         otChart.values.filter(text => text === '3h').length === 1 &&
-          otChart.values.filter(text => text === '0h').length === 4,
+          otChart.values.filter(text => text === '0h').length === 3,
         JSON.stringify(otChart.values)
       )
       check(
         `${name}: 柱高按数值排布（非零那根最高，其余贴地）`,
         // 有值那根的高度显著大于零值那几根（零值只留 2px 基线）
         Math.max(...otChart.barHeights) > 40 &&
-          otChart.barHeights.filter(h => h <= 3).length === 4,
+          otChart.barHeights.filter(h => h <= 3).length === 3,
         JSON.stringify(otChart.barHeights)
       )
       check(
@@ -1405,14 +1440,13 @@ async function runScenario(name, url, downloadDir) {
       )
       check(
         `${name}: 柱色与日历班次色块一致`,
-        // 白班 #dff3ff / 夜班 #1e3a5f（反相深蓝）/ 白特 #fff0c2 / 夜特 #fde7c7 / 法定 #fde68a
+        // 白班 #dff3ff / 夜班 #1e3a5f（反相深蓝）/ 白特 #fff0c2 / 夜特 #fde7c7
         JSON.stringify(otChart.barBg) ===
           JSON.stringify([
             'rgb(223, 243, 255)',
             'rgb(30, 58, 95)',
             'rgb(255, 240, 194)',
-            'rgb(253, 231, 199)',
-            'rgb(253, 230, 138)'
+            'rgb(253, 231, 199)'
           ]),
         JSON.stringify(otChart.barBg)
       )
@@ -1439,7 +1473,7 @@ async function runScenario(name, url, downloadDir) {
         `${name}: 数值紧贴各自柱顶（不是水平排成一行）`,
         // 每根柱顶到自己数值的底边间距都在 1~3px；
         // 若数值被改成排在绘图区顶部，各柱间距会各不相同且远大于 3
-        otChart.valueGaps.length === 5 &&
+        otChart.valueGaps.length === 4 &&
           otChart.valueGaps.every(gap => gap >= 1 && gap <= 3),
         JSON.stringify(otChart.valueGaps)
       )
@@ -1486,13 +1520,27 @@ async function runScenario(name, url, downloadDir) {
         JSON.stringify(statsWithOvertime)
       )
       const totalRow = await client.evaluate(`(() => {
-        const row = document.querySelector('.money-row.is-total')
-        const cs = row ? getComputedStyle(row) : null
-        return { bg: cs?.backgroundColor ?? '', color: cs?.color ?? '' }
+        const gross = document.querySelector('.money-summary-item:not(.is-total)')
+        const total = document.querySelector('.money-summary-item.is-total')
+        const grossValue = gross?.querySelector('.money-summary-value')
+        const totalValue = total?.querySelector('.money-summary-value')
+        const grossCs = grossValue ? getComputedStyle(grossValue) : null
+        const totalCs = totalValue ? getComputedStyle(totalValue) : null
+        return {
+          bg: total ? getComputedStyle(total).backgroundColor : '',
+          color: totalCs?.color ?? '',
+          totalSize: totalCs?.fontSize ?? '',
+          grossSize: grossCs?.fontSize ?? '',
+          totalWeight: totalCs?.fontWeight ?? '',
+          grossWeight: grossCs?.fontWeight ?? ''
+        }
       })()`)
       check(
-        `${name}: 实发是浅青结论条（整卡唯一有底色的一行）`,
-        totalRow.bg === 'rgb(234, 242, 244)' && totalRow.color === 'rgb(27, 108, 128)',
+        `${name}: 应发/实发是同字号的结算贴片，实发只靠浅青底色区分`,
+        totalRow.bg === 'rgb(234, 242, 244)' &&
+          totalRow.color === 'rgb(19, 20, 22)' &&
+          totalRow.totalSize === totalRow.grossSize &&
+          totalRow.totalWeight === totalRow.grossWeight,
         JSON.stringify(totalRow)
       )
       check(
@@ -1668,7 +1716,7 @@ async function runScenario(name, url, downloadDir) {
         const groups = Array.from(document.querySelectorAll('.money-group'))
         const second = groups[1]
         const rate = document.querySelector('.money-rate')
-        const strong = document.querySelector('.money-row.is-strong')
+        const summary = document.querySelector('.money-summary')
         return {
           thBg: th ? getComputedStyle(th).backgroundColor : '',
           cardPad: card
@@ -1683,7 +1731,7 @@ async function runScenario(name, url, downloadDir) {
           firstGroupBorder: groups[0] ? parseFloat(getComputedStyle(groups[0]).borderTopWidth) : -1,
           secondGroupBorder: second ? parseFloat(getComputedStyle(second).borderTopWidth) : -1,
           rateBg: rate ? getComputedStyle(rate).backgroundColor : '',
-          strongBorder: strong ? getComputedStyle(strong).borderTopColor : ''
+          summaryBorder: summary ? getComputedStyle(summary).borderTopColor : ''
         }
       })()`)
       check(
@@ -1698,7 +1746,7 @@ async function runScenario(name, url, downloadDir) {
         polish.rowPad === 5 && polish.subIndent === 16 &&
           polish.firstGroupBorder === 0 && polish.secondGroupBorder === 1 &&
           polish.rateBg === 'rgb(244, 246, 248)' &&
-          polish.strongBorder === 'rgb(194, 201, 206)',
+          polish.summaryBorder === 'rgb(194, 201, 206)',
         JSON.stringify(polish)
       )
 
@@ -1841,7 +1889,7 @@ async function runScenario(name, url, downloadDir) {
             .map(node => node.textContent.trim()),
           otEmpty: Boolean(card('加班分布')?.querySelector('.stat-empty')),
           detailRows: card('每日明细')?.querySelectorAll('tbody tr').length ?? -1,
-          net: card('薪资计算')?.querySelector('.money-row.is-total span:last-child')?.textContent.trim() ?? '',
+          net: card('薪资计算')?.querySelector('.money-summary-item.is-total .money-summary-value')?.textContent.trim() ?? '',
           // 卡片上的小时标记也要跟着消失（既没有加班也没有事假）
           badges: document.querySelectorAll('.stat-card .day-count-extra').length
         }
@@ -1908,7 +1956,7 @@ async function runScenario(name, url, downloadDir) {
           groups: Array.from(card('薪资计算')?.querySelectorAll('.money-group') ?? [])
             .map(node => node.textContent.replace(/\\s+/g, ' ').trim()),
           leaveRow: rows.find(text => text.includes('事假扣款')) ?? '',
-          net: rows.find(text => text.startsWith('实发')) ?? ''
+          net: card('薪资计算')?.querySelector('.money-summary-item.is-total .money-summary-value')?.textContent.trim() ?? ''
         }
       })()`)
       check(`${name}: 日历角标标出「4h」`, leaveUi.corner === '4h', JSON.stringify(leaveUi))
@@ -2020,6 +2068,19 @@ async function runScenario(name, url, downloadDir) {
         `${name}: 法定日的加班归到「法定」格，原班次格不带小时`,
         afterLegal.legalHours === '10h' && afterLegal[workHoursKey] === '',
         JSON.stringify({ legalHours: afterLegal.legalHours, workHours: afterLegal[workHoursKey] })
+      )
+      const otAfterLegal = await client.evaluate(`(() => {
+        const cols = Array.from(document.querySelectorAll('.stat-card .ot-col'))
+        return {
+          count: cols.length,
+          labels: Array.from(document.querySelectorAll('.stat-card .ot-axis-row .ot-col-label'))
+            .map(node => node.textContent.trim())
+        }
+      })()`)
+      check(
+        `${name}: 有法定加班时恢复法定柱`,
+        otAfterLegal.count === 5 && otAfterLegal.labels.includes('法定加班'),
+        JSON.stringify(otAfterLegal)
       )
 
       // 夜班津贴的口径是「所有夜间出勤」：法定夜班在卡片上归「法定」格，津贴照发。
@@ -2373,10 +2434,21 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(midAlign)
     )
 
+    const summaryHIn = await client.evaluate(
+      'Math.round(document.querySelector(".summary").getBoundingClientRect().height)'
+    )
     await client.evaluate(`document.querySelectorAll('.month-step')[1].click(); true`)
     await sleep(200)
     const titleAfter = await client.evaluate('document.querySelector(".month-title").textContent.trim()')
     check(`${name}: 切换月份`, titleBefore !== titleAfter, `${titleBefore} → ${titleAfter}`)
+    const summaryHOut = await client.evaluate(
+      'Math.round(document.querySelector(".summary").getBoundingClientRect().height)'
+    )
+    check(
+      `${name}: 非本期与本期概览条同高（切月不跳）`,
+      summaryHOut === summaryHIn,
+      JSON.stringify({ in: summaryHIn, out: summaryHOut })
+    )
     // 切到下期后「回到本期」应当重新可用，且文字回到强调色
     const todayAfterShift = await client.evaluate(`(() => {
       const today = document.querySelector('.month-today')

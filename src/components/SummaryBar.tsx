@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { getEffectiveShift, getOverrideMap, type Member, type Roster } from '../data/roster'
 import type { ShiftType } from '../data/shifts'
 import type { Period } from '../data/period'
-import { formatChineseDate, todayKey } from '../data/dateUtils'
+import { todayKey } from '../data/dateUtils'
 
 interface SummaryBarProps {
   roster: Roster
@@ -191,13 +191,6 @@ export function SummaryBar({ roster, period }: SummaryBarProps) {
           </div>
         )
       })}
-      {inPeriod
-        ? null
-        : (
-          <p className="summary-note">
-            今天不在本月（{formatChineseDate(period.startDate)} - {formatChineseDate(period.endDate)}）范围内
-          </p>
-        )}
     </section>
   )
 }

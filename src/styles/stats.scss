@@ -763,42 +763,50 @@ button.plaque-shift:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-/* 应发：三段明细到这里收口。标签退到辅助色，数值升一档 ——
- * 它还是「行」，但比上面的明细重，又比实发轻，形成沉降的两级。 */
-.money-row.is-strong {
-  margin-top: var(--sp-3);
-  padding: var(--sp-3) 0 var(--sp-2);
-  border-top: 1px solid var(--border-strong);
-  color: var(--muted);
-  font-size: var(--fs-control);
-}
-
-.money-row.is-strong span:last-child {
-  font-size: var(--fs-subhead);
-  font-weight: 600;
-  color: var(--text);
-}
-
 /*
- * 实发：全卡的结论。
+ * 应发 / 实发：两枚并排的结算贴片，替掉原先两行「左标签、右金额」的表格尾。
  *
- * 不做通栏色带 —— 那条色带会从卡片左边缘拉到右边缘，看着像贴在底部的横条。
- * 改成**内缩的结论块**：负外边距吃掉卡片内边距再还回去同样的 padding，
- * 金额列因此仍与上面各行严格对齐，左右各让出 12px 变成一块「收据总额」。
+ * 两枚贴片字号与字重完全一致（标签 11/600、金额 18/700），区别只在底色：
+ * 应发中性浅底，实发浅青底。上方一条结构线把它和明细分开，作为整卡收口。
+ * 贴片本身左标签、下金额，比两行长条更好读，也更像「结算」而不是又一行账目。
  */
-.money-row.is-total {
-  margin: var(--sp-2) calc(-1 * var(--sp-3)) 0;
+.money-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-strong);
+}
+
+.money-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--radius-control);
-  background: var(--accent-weak);
-  color: var(--accent);
-  font-size: var(--fs-control);
-  font-weight: 600;
+  background: var(--surface-sunken);
 }
 
-.money-row.is-total span:last-child {
+.money-summary-item.is-total {
+  background: var(--accent-weak);
+}
+
+.money-summary-label {
+  color: var(--muted);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 16px;
+}
+
+.money-summary-value {
+  color: var(--text);
   font-size: var(--fs-metric-sm);
-  color: var(--accent);
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── 每日明细 ─────────────────────────────────────────── */

@@ -38,11 +38,11 @@ interface DayCard {
 const OVERTIME_KINDS: OvertimeKind[] = ['weekday', 'special', 'legal']
 
 /**
- * 加班分布柱形图的五根柱。
+ * 加班分布柱形图的分类：白班 / 夜班 / 白特 / 夜特常态显示，法定有值才出现。
  *
  * 用的是**卡片归类**那套口径（`overtimeByGroup`）：
  * 标了法定的那天，加班只算进「法定」柱，不再重复计入它原本的班次柱 ——
- * 五柱相加正好等于总加班小时，能与薪资卡对账。
+ * 有法定时五柱相加正好等于总加班小时，能与薪资卡对账。
  *
  * 配色直接复用班次语义色类（`.t-day` 等，与日历、矩阵里的班次块同一套），
  * 法定没有对应班次，用「法」角标那套警示色。
@@ -101,18 +101,20 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
   ]
 
   /**
-   * 加班分布的五根柱：高度按**最大值归一化**（最高的柱子画满绘图区）。
+   * 加班分布：白班 / 夜班 / 白特 / 夜特四根常态显示，法定柱只在真有法定加班时出现。
+   * 没有法定加班时留一根 0h 柱只会让右边多一块空白，也会让人以为漏了数据。
    *
-   * 归一化而不是固定刻度，是因为加班量每月差别很大 ——
-   * 固定刻度会让淡季的柱子全贴地，看不出分布；归一化后对比的是构成比例。
-   * 零高度的柱子留一条基线（靠 CSS 的 min-height），不让人以为漏了数据。
+   * 高度按**最大值归一化**（最高的柱子画满绘图区）。固定刻度会让淡季的柱子全贴地，
+   * 看不出分布；归一化后对比的是构成比例。零高度的其他柱子留一条基线。
    */
-  const otColumns = OVERTIME_COLUMNS.map(column => ({
-    ...column,
-    hours: overtimeByGroup[column.group],
-    /** 相对绘图区高度的百分比 */
-    ratio: 0
-  }))
+  const otColumns = OVERTIME_COLUMNS
+    .map(column => ({
+      ...column,
+      hours: overtimeByGroup[column.group],
+      /** 相对绘图区高度的百分比 */
+      ratio: 0
+    }))
+    .filter(column => column.group !== '法定' || column.hours > 0)
   const otMax = otColumns.reduce((max, column) => Math.max(max, column.hours), 0)
   otColumns.forEach(column => {
     column.ratio = otMax > 0 ? (column.hours / otMax) * 100 : 0
@@ -263,13 +265,15 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
               </li>
               ) : null}
 
-              <li className="money-row is-strong">
-                <span>应发</span>
-                <span>{formatMoney(salary.gross)}</span>
-              </li>
-              <li className="money-row is-total">
-                <span>实发</span>
-                <span>{formatMoney(salary.net)}</span>
+              <li className="money-summary">
+                <div className="money-summary-item">
+                  <span className="money-summary-label">应发</span>
+                  <span className="money-summary-value">{formatMoney(salary.gross)}</span>
+                </div>
+                <div className="money-summary-item is-total">
+                  <span className="money-summary-label">实发</span>
+                  <span className="money-summary-value">{formatMoney(salary.net)}</span>
+                </div>
               </li>
             </ul>
 

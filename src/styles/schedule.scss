@@ -2,16 +2,18 @@
 
 /* ── 概览条 ───────────────────────────────────────────── */
 
+/* 与概览页值班牌同一套深青材质：深底 + 亮字 + 发丝分隔线。
+ * 三格内容、列宽、格子结构都不变，只换材质与字级。 */
 .summary {
   position: relative;
   /* 高于矩阵表头的 sticky（z-index 3/4），浮层才不会被日期行盖住 */
   z-index: 10;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  /* 与概览页的统计卡/待办卡同一套：白色卡片 + 极浅投影，浮在浅灰画布上 */
   border: 0;
   border-radius: var(--radius-panel);
-  background: var(--surface);
+  background: var(--chrome);
+  color: var(--chrome-text);
   box-shadow: var(--shadow-raised);
 }
 
@@ -20,8 +22,11 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* 本期格子有姓名与「查看名单」，非本期没有；固定 123px 让两种状态同高，
+   * 否则切月时整张卡会上下跳。非本期多出来的空间留在格子内，分隔线仍通到底。 */
+  min-height: 123px;
   padding: var(--sp-3) var(--sp-4);
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--chrome-line);
 }
 
 .summary-cell:last-child {
@@ -29,23 +34,26 @@
 }
 
 .summary-label {
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--muted);
+  color: var(--chrome-muted);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 14px;
 }
 
 .summary-value {
-  font-size: var(--fs-kpi);
-  font-weight: 600;
+  color: var(--chrome-text);
+  font-size: 34px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
 
 .summary-unit {
   margin-left: 4px;
+  color: var(--chrome-muted);
   font-size: var(--fs-small);
-  font-weight: 400;
-  color: var(--faint);
+  font-weight: 500;
 }
 
 /* 一行姓名摘要：绝不让它换行撑高卡片，完整名单在浮层里 */
@@ -54,7 +62,7 @@
   overflow: hidden;
   font-size: var(--fs-control);
   line-height: 1.5;
-  color: var(--muted);
+  color: var(--chrome-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -64,13 +72,20 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--accent);
+  color: var(--chrome-accent);
   font-size: var(--fs-small);
   line-height: 1.5;
+  transition: color var(--dur-fast) ease;
 }
 
 .summary-more:hover {
+  color: var(--chrome-text);
   text-decoration: underline;
+}
+
+.summary-more:focus-visible {
+  outline: 2px solid var(--chrome-accent);
+  outline-offset: 2px;
 }
 
 /* 「特」标记：白特并入白班、夜特并入夜班后，名单里靠它认人。
@@ -103,7 +118,9 @@
   padding: var(--sp-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
+  /* 浮层是白纸，必须把深底上的亮字重新压回正文色，否则白底白字 */
   background: var(--surface);
+  color: var(--text);
   box-shadow: var(--shadow-floating);
 }
 
@@ -195,14 +212,6 @@
 .summary-popover-list::-webkit-scrollbar-thumb:hover {
   background: rgba(19, 20, 22, 0.24);
   background-clip: content-box;
-}
-
-.summary-note {
-  grid-column: 1 / -1;
-  padding: var(--sp-2) var(--sp-4);
-  border-top: 1px solid var(--rule);
-  font-size: var(--fs-small);
-  color: var(--muted);
 }
 
 /* ── 全员矩阵 ─────────────────────────────────────────── */
