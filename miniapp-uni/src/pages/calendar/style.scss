@@ -11,7 +11,7 @@
 }
 
 .sheet {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   margin: var(--gap-sm) var(--gap-md);
@@ -169,10 +169,10 @@
  * 线宽与矩阵姓名列的分隔线同档，两页看起来是一套东西。 */
 
 .grid {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-auto-rows: minmax(96rpx, 1fr);
+  grid-auto-rows: minmax(96rpx, 104rpx);
   margin: 0 var(--gap-sm) 12rpx;
   border-top: 1px solid var(--border);
   border-left: 1px solid var(--border);
@@ -189,15 +189,15 @@
   opacity: 0.82;
 }
 
-/* 日号：钉在左上，整月的数字成一条竖线；今天在同一个角换成朱红方块 */
+/* 日号：钉在左上，整月的数字成一条竖线；今天在同一个角换成朱红字 */
 .cell-day {
   position: absolute;
-  top: 8rpx;
+  top: 6rpx;
   left: 6rpx;
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
-  line-height: 1.2;
+  line-height: 26rpx;
 }
 
 .cell.is-today {
@@ -209,11 +209,8 @@
   font-weight: 600;
 }
 
-/* 农历：左下固定槽位。没有农历就留空，方印不跟着上下抖 */
+/* 农历：中排左端。没有农历就留空，位置不动 */
 .cell-meta {
-  position: absolute;
-  bottom: 7rpx;
-  left: 6rpx;
   color: var(--faint);
   font-size: var(--fs-micro);
   line-height: 1.1;
@@ -223,19 +220,36 @@
   color: var(--accent);
 }
 
-/* 班次：一枚 36rpx 小方印，绝对居中；深色块是夜班 */
+/* 中排：农历（左）+ 法定（右），在上排与方印之间垂直居中 */
+.cell-mid {
+  position: absolute;
+  top: 32rpx;
+  right: 4rpx;
+  bottom: 36rpx;
+  left: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cell-mid .flag-legal {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+/* 班次：独占第三行，铺满格内宽度，写完整两个字 */
 .cell-char {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 36rpx;
-  height: 36rpx;
-  margin: -18rpx 0 0 -18rpx;
-  line-height: 36rpx;
+  right: 4rpx;
+  bottom: 4rpx;
+  left: 6rpx;
+  height: 32rpx;
+  line-height: 32rpx;
   text-align: center;
   border-radius: var(--radius-sub);
-  font-size: var(--fs-micro);
+  font-size: var(--fs-meta);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 /* 与模板不同：方印加一道内描边 */
@@ -256,19 +270,13 @@
 }
 
 /* ------------------------------------------------------------ 角标
- * 两处各一枚：法定在右上，加班 / 事假在右下，永不叠加。
- * 两者不会同一天出现（业务上事假当天不计加班），所以用 v-if / v-else-if 占同一个角。 */
-
-.cell-legal {
-  position: absolute;
-  top: 4rpx;
-  right: 4rpx;
-}
+ * 两处各一枚：加班 / 事假在上排右端（与日号同一水平中心线），法定在中排右端。
+ * 事假当天不计加班，所以两者共用上排右端，用 v-if / v-else-if 只渲染一个。 */
 
 .cell-ot {
   position: absolute;
+  top: 6rpx;
   right: 4rpx;
-  bottom: 5rpx;
 }
 
 .flag {
@@ -277,7 +285,7 @@
   font-family: var(--font-mono);
   font-size: var(--fs-micro);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 24rpx;
   white-space: nowrap;
 }
 

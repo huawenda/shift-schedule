@@ -22,7 +22,7 @@
         <view class="today-main">
           <text class="today-shift">{{ today.shift }}</text>
           <view class="today-flags">
-            <text v-if="today.overtime" class="flag flag-ot">+{{ today.overtime }}h 加班</text>
+            <text v-if="today.overtime" class="flag flag-ot">{{ today.overtime }}h 加班</text>
             <text v-if="today.legal" class="flag flag-legal">法定</text>
           </view>
         </view>
@@ -40,7 +40,7 @@
         >{{ weekday }}</text>
       </view>
 
-      <!-- 网格：四角锚定 —— 日号左上、法定右上、农历左下、加班/事假右下，方印恒居中 -->
+      <!-- 网格：三行等宽 —— 上排 日号 + 加班/事假，中排 农历 + 法定，下排 班次独占 -->
       <view class="grid">
         <view
           v-for="item in cells"
@@ -49,14 +49,16 @@
           :class="[item.inPeriod ? '' : 'is-outside', item.isToday ? 'is-today' : '']"
         >
           <text class="cell-day">{{ item.day }}</text>
-          <text v-if="item.legal" class="flag flag-legal cell-legal">法</text>
-          <text v-if="item.meta" class="cell-meta" :class="{ 'is-festival': item.isFestival }">{{ item.meta }}</text>
           <text v-if="item.otText" class="flag flag-ot cell-ot">{{ item.otText }}</text>
           <text v-else-if="item.leaveText" class="flag flag-leave cell-ot">{{ item.leaveText }}</text>
+          <view class="cell-mid">
+            <text v-if="item.meta" class="cell-meta" :class="{ 'is-festival': item.isFestival }">{{ item.meta }}</text>
+            <text v-if="item.legal" class="flag flag-legal">法</text>
+          </view>
           <text
             class="cell-char"
             :class="['t-' + item.tone, item.changed ? 'is-changed' : '']"
-          >{{ item.shiftShort }}</text>
+          >{{ item.shift }}</text>
         </view>
       </view>
 

@@ -196,7 +196,7 @@ function cellOf(date, inPeriod) {
     shiftLabel: SHIFT_META[shift].label || shift,
     // 描边只表示「与模板不同」：加班、法定各有自己的角标，不重复表达
     changed: Boolean(record.shift) && record.shift !== base,
-    otText: overtime > 0 ? '+' + (Number.isInteger(overtime) ? overtime : overtime.toFixed(1)) + 'h' : '',
+    otText: overtime > 0 ? (Number.isInteger(overtime) ? overtime : overtime.toFixed(1)) + 'h' : '',
     legal: Boolean(record.isLegal),
     leaveText,
     todoCount: TODO_COUNTS[date] || 0
