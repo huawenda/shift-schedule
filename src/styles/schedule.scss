@@ -12,7 +12,7 @@
   border: 0;
   border-radius: var(--radius-panel);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-raised);
 }
 
 .summary-cell {
@@ -20,7 +20,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 11px 16px;
+  padding: var(--sp-3) var(--sp-4);
   border-right: 1px solid var(--border);
 }
 
@@ -100,11 +100,11 @@
   left: 0;
   z-index: 5;
   width: 50%;
-  padding: 10px 12px 12px;
+  padding: var(--sp-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: 0 10px 24px rgba(19, 20, 22, 0.09), 0 2px 6px rgba(19, 20, 22, 0.05);
+  box-shadow: var(--shadow-floating);
 }
 
 .summary-popover:focus {
@@ -157,7 +157,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
   padding: 5px 0;
   border-bottom: 1px solid var(--rule);
   font-size: var(--fs-control);
@@ -199,7 +199,7 @@
 
 .summary-note {
   grid-column: 1 / -1;
-  padding: 7px 16px;
+  padding: var(--sp-2) var(--sp-4);
   border-top: 1px solid var(--rule);
   font-size: var(--fs-small);
   color: var(--muted);
@@ -210,7 +210,7 @@
 .matrix {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
   min-height: 0;
 }
 
@@ -250,7 +250,7 @@
   border: 0;
   border-radius: var(--radius-panel);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-raised);
   /* 滚动条彻底隐藏（横向也不留）—— 30 天横滚改由「鼠标在矩阵上滚滚轮」驱动，
    * 见 TeamMatrix 里的 wheel 监听。原生滚动条在 Windows 上又粗又有箭头，
    * 而且横向那条永远压在最后一行格子下面，比留着更碍事。 */
@@ -518,7 +518,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: var(--sp-4);
   padding: 0 2px;
   font-size: var(--fs-small);
   color: var(--muted);
@@ -547,7 +547,7 @@
  * 日历在概览页是「网格行」的一部分，用 display:contents 把自己拆开 ——
  * 星期栏、日期网格、图例分别落到父级 grid 的三行，
  * 于是右侧的待办卡可以跟 .calendar-grid 精确对齐同一行（等高）。
- * 宽度由父级 grid 的列宽（900）决定，这里不再自己限宽。
+ * 宽度由父级 grid 的列宽（840）决定，这里不再自己限宽。
  *
  * 日历上方**不放标题**：本人姓名/班序已经在页面副标题里，重复一遍没有信息量。
  */
@@ -577,7 +577,7 @@
   border: 0;
   border-radius: var(--radius-panel);
   background: var(--rule);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-raised);
   grid-column: 1;
   grid-row: 2;
 }
@@ -744,7 +744,7 @@
 }
 
 .calendar-legend .legend-text:not(:last-child) {
-  margin-right: 14px;
+  margin-right: var(--sp-4);
 }
 
 .cal-shift.is-blank {
@@ -772,7 +772,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--sp-5);
   background: rgba(15, 20, 24, 0.26);
   animation: backdrop-in var(--dur-base) ease-out;
 }
@@ -785,7 +785,7 @@
   overflow-y: auto;
   border-radius: var(--radius-dialog);
   background: var(--surface);
-  box-shadow: 0 18px 48px rgba(6, 14, 18, 0.28);
+  box-shadow: var(--shadow-overlay);
   animation: dialog-in var(--dur-base) var(--ease-out);
 }
 
@@ -800,8 +800,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -820,8 +820,8 @@
 .dialog-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  padding: 18px;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
 }
 
 .option {
@@ -867,8 +867,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 0 18px 16px;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-4) var(--sp-4);
 }
 
 .dialog {
@@ -890,9 +890,11 @@
 
 .dialog-day {
   width: 480px;
-  /* 班次页内容高度：选项区 128（18 + 44×2 + 8 + 14）+ 两张卡 190（83 + 12，×2）。
-   * 待办页固定成同一高度，两个 tab 的弹层总高才会严格相等。 */
-  --day-content-height: 318px;
+  /* 班次页内容高度：选项区 126（16 + 44×2 + 8 + 14）+ 两张卡 190（83 + 12，×2）。
+   * 待办页固定成同一高度，两个 tab 的弹层总高才会严格相等。
+   * ⚠️ 改选项区的上下 padding 或卡片数量时，这个值必须同步重算 ——
+   * 差 1px 就会让垂直居中的弹层在切 tab 时位移，文字重新栅格化。 */
+  --day-content-height: 316px;
 }
 
 /* 待办页与班次页同高：必须是 height 而不是 min-height，
@@ -945,8 +947,8 @@
   /* 高度写死而不是靠内容撑：标题行带不带说明小字，卡片都必须一样高。
    * 83 = 上下 padding 24 + 边框 2 + 标题行 27 + 内容区 30。 */
   height: 83px;
-  margin: 0 18px 12px;
-  padding: 12px 14px;
+  margin: 0 var(--sp-4) var(--sp-3);
+  padding: var(--sp-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--ground);
@@ -958,7 +960,7 @@
 
 /* 四张卡等高：卡片本身的 padding / 边框 / 标题行都相同，差异只在内容区 ——
  * 加班输入框 30、法定与事假 segmented 28、说明文字单行 16.5。
- * 把内容区统一到 30px，四张卡就都是 444 × 83（宽度由 margin 18 决定，本来就一致）。 */
+ * 把内容区统一到 30px，四张卡就都是 448 × 83（宽度由 margin 16 决定，本来就一致）。 */
 .dialog-section > :last-child {
   min-height: 30px;
 }
@@ -1003,7 +1005,7 @@
 .ot-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .ot-presets {
@@ -1078,8 +1080,8 @@
 
 /* 矩阵弹层里的「改班会连带清掉加班」提示 */
 .dialog-warn {
-  margin: 0 18px 12px;
-  padding: 8px 10px;
+  margin: 0 var(--sp-4) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
   border-radius: var(--radius-control);
   background: var(--warning-bg);
   box-shadow: inset 0 0 0 1px var(--warning-border);
@@ -1121,10 +1123,15 @@
   }
 }
 
+/* 弹出动效：只位移 + 淡入，**不要 scale**。
+ * 0.985 → 1 的缩放会让文字在动画期间逐帧重栅格化，看起来就是「弹出时字在抖」；
+ * 位移只移动合成层，文字的栅格化只做一次，落定后不会再变。
+ * 这与 `.section-head` 那条亚像素修复不是同一类问题 —— 那条管的是弹层内部
+ * 切换状态时的高度差，这里管的是入场动画。 */
 @keyframes dialog-in {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.985);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;

@@ -9,12 +9,12 @@
 
 .toast-layer {
   position: fixed;
-  bottom: 24px;
+  bottom: var(--sp-5);
   left: 50%;
   z-index: 80;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
   align-items: center;
   width: max-content;
   max-width: min(560px, calc(100vw - 48px));
@@ -26,14 +26,14 @@
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--sp-2);
   width: max-content;
   max-width: 100%;
-  padding: 10px 8px 10px 16px;
+  padding: var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: var(--shadow-toast);
+  box-shadow: var(--shadow-floating);
   color: var(--text);
   font-size: var(--fs-control);
   line-height: 1.5;

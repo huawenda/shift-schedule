@@ -4,7 +4,7 @@
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
   gap: var(--gap);
-  padding-bottom: 22px;
+  padding-bottom: var(--sp-5);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -50,19 +50,19 @@
 .settings-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
   /* 与概览页卡片同一套：白卡 + 极浅投影，不再用内凹面板去和画布抢边界 */
   border: 0;
   border-radius: var(--radius-panel);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-raised);
 }
 
 .settings-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .settings-hint {
@@ -76,7 +76,7 @@
 .backup-dir {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   padding-top: 2px;
 }
 
@@ -118,7 +118,7 @@
 .member-editor {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 /* 姓名 / 班序 / 岗位 / 删除 —— 四列。班序列宽一点（名字可能较长），岗位列稍窄 */
@@ -126,7 +126,7 @@
 .member-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.8fr) 60px;
-  gap: 8px;
+  gap: var(--sp-2);
   align-items: center;
 }
 
@@ -205,7 +205,7 @@
   /* 不要给这一行加**左右**内边距：它和下面的行是两套独立的 grid，
    * 只要多 1px 的 padding，表头文字就会比输入框的左边框往右偏 1px。
    * 纵向的 padding 与分隔线不影响列宽，可以加。 */
-  padding: 0 0 7px;
+  padding: 0 0 var(--sp-2);
   border-bottom: 1px solid var(--rule);
   color: var(--muted);
   font-size: var(--fs-small);
@@ -274,13 +274,13 @@
 .pattern-block {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 
 .pattern-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 .pattern-group-label {
@@ -303,9 +303,9 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 9px;
+  padding: var(--sp-2);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-card);
   background: var(--surface);
   text-align: left;
   transition: border-color 120ms ease, background 120ms ease;
@@ -370,9 +370,9 @@
 .pattern-row {
   display: grid;
   grid-template-columns: minmax(0, 140px) minmax(0, 1fr) 58px auto;
-  gap: 10px;
+  gap: var(--sp-3);
   align-items: center;
-  padding: 7px 9px;
+  padding: var(--sp-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface);
@@ -406,7 +406,7 @@
 /* ── 24 格：预览与编辑器共用 ──────────────────────────── */
 
 .pattern-preview {
-  padding: 10px 12px 12px;
+  padding: var(--sp-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface);
@@ -423,8 +423,8 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 9px;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
 }
 
 .pattern-preview-title {
@@ -440,13 +440,13 @@
 .pattern-grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .pattern-grid-row {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 4px;
+  gap: var(--sp-1);
 }
 
 .shift-cell {
@@ -530,8 +530,8 @@ button.shift-cell:hover {
 .dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 18px;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
 }
 
 .field {
@@ -566,7 +566,7 @@ button.shift-cell:hover {
 }
 
 .editor-warn {
-  padding: 7px 10px;
+  padding: var(--sp-2) var(--sp-3);
   border: 1px solid var(--warning-border);
   border-radius: var(--radius-control);
   background: var(--warning-bg);
@@ -578,7 +578,7 @@ button.shift-cell:hover {
 /* ── 删除班序的二次确认 ───────────────────────────────── */
 
 .confirm-names {
-  padding: 6px 10px;
+  padding: var(--sp-2) var(--sp-3);
   border-radius: var(--radius-control);
   background: var(--danger-weak);
   color: var(--danger);
@@ -599,8 +599,8 @@ button.shift-cell:hover {
 .profile-block {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 15px 16px;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
@@ -608,12 +608,12 @@ button.shift-cell:hover {
 
 /* 抬头下一条发丝线：两块（本人 / 薪资）都是「标题 + 一堆输入框」，
  * 没有这条线时标题像飘在表单上面，两块之间的分界全靠卡片边框。
- * 线画在标题盒子的下沿（含 9px 内边距），所以仍然贴着卡片左右内边距对齐。 */
+ * 线画在标题盒子的下沿（含 8px 内边距），所以仍然贴着卡片左右内边距对齐。 */
 .profile-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 9px;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-2);
   border-bottom: 1px solid var(--rule);
   font-size: var(--fs-body);
   font-weight: 600;
@@ -632,7 +632,7 @@ button.shift-cell:hover {
 .salary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 /* 金额输入：数字右对齐 + 单位后缀，扫一眼能对齐位数 */
@@ -660,7 +660,7 @@ button.shift-cell:hover {
   flex-direction: column;
   gap: 6px;
   margin: 0;
-  padding: 16px 18px;
+  padding: var(--sp-4);
   list-style: none;
   font-size: var(--fs-control);
   line-height: 1.6;

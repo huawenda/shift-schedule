@@ -1,7 +1,7 @@
 /* 月度概览：日历 + 四块统计
  *
  * 版面上的两个约束：
- * 1. 整页限宽 1228（内容 1180 + 左右 padding）并居中 —— 日历本身只需要 900，
+ * 1. 整页限宽 1228（内容 1180 + 左右 padding）并居中 —— 日历本身只需要 840，
  *    撑宽只会更空；宽屏多出来的空间做成左右对称的边距。
  * 2. 统计块两列铺满 1180，比日历宽，正好把右下的空白吃掉。
  */
@@ -33,7 +33,7 @@
   border: 0;
   border-radius: var(--radius-panel);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-raised);
 }
 
 .today-cell {
@@ -42,7 +42,7 @@
   justify-content: center;
   gap: 2px;
   min-width: 0;
-  padding: 10px 16px;
+  padding: var(--sp-3) var(--sp-4);
   border-right: 1px solid var(--border);
 }
 
@@ -156,22 +156,22 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
   /* 固定高度下必须允许子项收缩，否则 .detail-scroll 的 overflow 不会触发 */
   min-height: 0;
-  padding: 16px 18px;
+  padding: var(--sp-4);
 }
 
 .stat-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px 18px;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
   /* 卡片靠「白 + 极浅投影」浮在降了一档的画布上，不再用边框勾轮廓 */
   border: 0;
   border-radius: var(--radius-panel);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-raised);
 }
 
 /*
@@ -185,10 +185,10 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-3);
   /* 与待办卡同一套：分隔线内缩在卡片内边距里，不通栏 ——
    * 通栏会把抬头压成一条「表格线」，内缩才留得住呼吸感 */
-  padding-bottom: 9px;
+  padding-bottom: var(--sp-2);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -220,7 +220,7 @@
 
 .stat-foot {
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: var(--sp-2);
   border-top: 1px solid var(--rule);
   font-size: var(--fs-control);
   color: var(--muted);
@@ -247,7 +247,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 /* ── 本月概览：六个班次的天数 ─────────────────────────── */
@@ -255,7 +255,7 @@
 .day-counts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--sp-2);
 }
 
 /*
@@ -269,7 +269,7 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  padding: 8px 10px;
+  padding: var(--sp-2) var(--sp-3);
   border-radius: var(--radius-card);
   background: var(--surface-sunken);
   color: var(--muted);
@@ -366,10 +366,10 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
   /* 固定高度下必须允许子项收缩，否则绘图区的 flex 不会生效 */
   min-height: 0;
-  padding: 16px 18px;
+  padding: var(--sp-4);
 }
 
 /* ── 加班分布（柱形图） ─────────────────────────────────── */
@@ -392,7 +392,7 @@
 .ot-plot-row {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: var(--sp-3);
   flex: 1 1 auto;
   min-height: 0;
   /* 横轴线用 --border 而不是 --rule：后者在白底上几乎看不见，
@@ -403,7 +403,7 @@
 /* 类目名那一行 */
 .ot-axis-row {
   display: flex;
-  gap: 10px;
+  gap: var(--sp-3);
   padding-top: 5px;
 }
 
@@ -544,14 +544,14 @@
  *
  * 这张卡是整页文字最密的地方：12 行、全是 12px 灰字、行距只有 4px，
  * 读起来像一张打印出来的账单。疏朗靠三件事，都不改内容、不加新颜色：
- * 1. 行距 4 → 5px，子行缩进 12 → 14px（缩进拉开，层级一眼能看出来）；
+ * 1. 行距 4 → 5px，子行缩进收到间距阶梯的 16px（缩进拉开，层级一眼能看出来）；
  * 2. 每个分组标题上方加一条发丝线（第一组除外），把整列切成三段；
  * 3. 组标题左侧一道 2px 中性竖条，给每段一个视觉锚点。
  */
 .money-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 96px;
-  column-gap: 16px;
+  column-gap: var(--sp-4);
   padding: 5px 0;
   font-size: var(--fs-control);
   color: var(--muted);
@@ -571,9 +571,9 @@
 .money-group {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 96px;
-  column-gap: 16px;
-  margin-top: 14px;
-  padding-top: 10px;
+  column-gap: var(--sp-4);
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
   border-top: 1px solid var(--rule);
   font-size: var(--fs-control);
   font-weight: 600;
@@ -602,7 +602,7 @@
 
 /* 组内明细：缩进对齐到组标题下方（缩进比组标题的字宽略深一档，层级更清楚） */
 .money-row.is-sub {
-  padding-left: 14px;
+  padding-left: var(--sp-4);
 }
 
 /* 行内的倍率标记（平日 ×1.5 等）：改成小胶囊。
@@ -623,8 +623,8 @@
 /* 应发：三段明细到这里收口。标签退到辅助色，数值升一档 ——
  * 它还是「行」，但比上面的明细重，又比实发轻，形成沉降的两级。 */
 .money-row.is-strong {
-  margin-top: 12px;
-  padding: 10px 0 7px;
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) 0 var(--sp-2);
   border-top: 1px solid var(--border-strong);
   color: var(--muted);
   font-size: var(--fs-control);
@@ -644,8 +644,8 @@
  * 金额列因此仍与上面各行严格对齐，左右各让出 12px 变成一块「收据总额」。
  */
 .money-row.is-total {
-  margin: 8px -12px 0;
-  padding: 9px 12px;
+  margin: var(--sp-2) calc(-1 * var(--sp-3)) 0;
+  padding: var(--sp-2) var(--sp-3);
   border-radius: var(--radius-control);
   background: var(--accent-weak);
   color: var(--accent);

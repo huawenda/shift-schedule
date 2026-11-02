@@ -311,8 +311,8 @@ async function runScenario(name, url, downloadDir) {
       }
     })()`)
     check(
-      `${name}: 日历保持 900 上限、统计区更宽`,
-      layout.cal <= 901 && layout.cal > 700 && layout.grid > layout.cal,
+      `${name}: 日历固定 840、统计区更宽`,
+      layout.cal >= 839 && layout.cal <= 841 && layout.grid > layout.cal,
       JSON.stringify(layout)
     )
 
@@ -620,8 +620,8 @@ async function runScenario(name, url, downloadDir) {
     )
     check(
       `${name}: 班序卡更松、24 格条有浅灰轨道，成员表头有分隔线`,
-      JSON.stringify(settingsLook.chipPad) === JSON.stringify([8, 9]) &&
-        settingsLook.chipRadius === '7px' &&
+      JSON.stringify(settingsLook.chipPad) === JSON.stringify([8, 8]) &&
+        settingsLook.chipRadius === '8px' &&
         settingsLook.trackH === 14 && settingsLook.trackBg === 'rgb(244, 246, 248)' &&
         settingsLook.headBorder === 1,
       JSON.stringify(settingsLook)
@@ -967,7 +967,13 @@ async function runScenario(name, url, downloadDir) {
         const dialog = document.querySelector('.dialog-day')
         if (!dialog) return null
         const rect = dialog.getBoundingClientRect()
-        return { w: Math.round(rect.width), h: Math.round(rect.height), viewH: window.innerHeight }
+        return {
+          w: Math.round(rect.width),
+          h: Math.round(rect.height),
+          // 原始高度：切 tab 前后要严格相等，差 1px 就会让文字重栅格化
+          hExact: Math.round(rect.height * 100) / 100,
+          viewH: window.innerHeight
+        }
       })()`)
       check(
         `${name}: 日历弹层放得进视口`,
@@ -1020,7 +1026,9 @@ async function runScenario(name, url, downloadDir) {
         footButtons: Array.from(document.querySelectorAll('.dialog-foot button'))
           .map(node => node.textContent.trim()),
         // 班次页的内容不该露出来
-        shiftOptions: document.querySelectorAll('.dialog-day .option').length
+        shiftOptions: document.querySelectorAll('.dialog-day .option').length,
+        // 切到待办页后的总高：必须与班次页完全相等
+        dialogH: Math.round((document.querySelector('.dialog-day')?.getBoundingClientRect().height ?? -1) * 100) / 100
       }))()`)
       check(
         `${name}: 待办页有输入框与添加按钮，空态给提示`,
@@ -1033,6 +1041,12 @@ async function runScenario(name, url, downloadDir) {
         `${name}: 待办页底栏只有「完成」（改动立即生效，不走保存）`,
         JSON.stringify(todoPage.footButtons) === JSON.stringify(['完成']),
         JSON.stringify(todoPage.footButtons)
+      )
+      // 弹层垂直居中：总高一变，footer 就亚像素位移，按钮内文字会重新栅格化
+      check(
+        `${name}: 班次 / 待办两页弹层总高一致（切 tab 不位移）`,
+        Boolean(dialogSize) && Math.abs(dialogSize.hExact - todoPage.dialogH) < 1,
+        JSON.stringify({ shift: dialogSize.hExact, todo: todoPage.dialogH })
       )
 
       // 添加一条待办
@@ -1641,15 +1655,15 @@ async function runScenario(name, url, downloadDir) {
         }
       })()`)
       check(
-        `${name}: 明细表头有浅底、卡片内边距 16/18、网格间距 16`,
+        `${name}: 明细表头有浅底、卡片内边距 16、网格间距 16`,
         polish.thBg === 'rgb(251, 252, 253)' &&
-          JSON.stringify(polish.cardPad) === JSON.stringify([16, 18]) &&
+          JSON.stringify(polish.cardPad) === JSON.stringify([16, 16]) &&
           polish.gap === 16,
         JSON.stringify(polish)
       )
       check(
-        `${name}: 薪资列表更疏朗（行距 5、缩进 14、分组有分隔线、倍率是小胶囊）`,
-        polish.rowPad === 5 && polish.subIndent === 14 &&
+        `${name}: 薪资列表更疏朗（行距 5、缩进 16、分组有分隔线、倍率是小胶囊）`,
+        polish.rowPad === 5 && polish.subIndent === 16 &&
           polish.firstGroupBorder === 0 && polish.secondGroupBorder === 1 &&
           polish.rateBg === 'rgb(244, 246, 248)' &&
           polish.strongBorder === 'rgb(194, 201, 206)',

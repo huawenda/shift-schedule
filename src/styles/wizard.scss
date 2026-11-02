@@ -5,17 +5,17 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 32px;
+  padding: var(--sp-6);
   background: var(--ground);
 }
 
 .wizard-card {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--sp-4);
   width: 760px;
   max-width: 100%;
-  padding: 28px 32px 24px;
+  padding: var(--sp-6) var(--sp-6) var(--sp-5);
   border: 1px solid var(--border);
   border-radius: var(--radius-sheet);
   background: var(--surface);
@@ -41,7 +41,7 @@
 }
 
 .wizard-lead {
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-4);
   font-size: var(--fs-body);
   line-height: 1.75;
 }
@@ -49,9 +49,9 @@
 .wizard-list {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: var(--sp-2);
   margin: 0;
-  padding-left: 18px;
+  padding-left: var(--sp-4);
   font-size: var(--fs-control);
   line-height: 1.7;
   color: var(--muted);
@@ -64,9 +64,9 @@
 .wizard-self {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-  padding: 14px 16px;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface-sunken);
@@ -78,7 +78,7 @@
 }
 
 .wizard-note {
-  margin-top: 14px;
+  margin-top: var(--sp-4);
   font-size: var(--fs-small);
   color: var(--muted);
 }
@@ -92,8 +92,8 @@
 .wizard-summary-row {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding: 9px 14px;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
   border-bottom: 1px solid var(--rule);
   font-size: var(--fs-control);
 }
@@ -106,12 +106,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 14px;
+  gap: var(--sp-3);
+  padding-top: var(--sp-4);
   border-top: 1px solid var(--rule);
 }
 
 .wizard-foot-left {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
 }

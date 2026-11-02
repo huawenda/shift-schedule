@@ -8,15 +8,15 @@
  * 这里把日历用 display:contents 拆成四块直接参与父级 grid 布局，
  * 待办卡与 .calendar-grid 落在**同一行**，于是两者行高天然一致。
  *
- * 列宽：日历 900（它的信息密度就那么多），待办吃掉右边剩下的宽度 ——
- * 于是待办卡的右边界与下面统计块的右边界自然对齐，不用额外对数字。
+ * 列宽：日历 840（120px 一格足够放下日号、农历、班次块与角标），
+ * 剩下的宽度留给待办 —— 于是待办卡的右边界与下面统计块的右边界自然对齐，不用额外对数字。
  */
 .overview-top {
   display: grid;
-  grid-template-columns: 900px minmax(0, 1fr);
+  grid-template-columns: 840px minmax(0, 1fr);
   grid-template-rows: auto auto auto;
-  column-gap: 14px;
-  row-gap: 12px;
+  column-gap: var(--sp-4);
+  row-gap: var(--sp-3);
   width: 100%;
 }
 
@@ -43,7 +43,7 @@
   border: 0;
   border-radius: var(--radius-panel);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-raised);
   overflow: hidden;
 }
 
@@ -52,8 +52,8 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 15px 16px;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
 }
 
 /*
@@ -64,8 +64,8 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 9px;
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-2);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -85,7 +85,7 @@
 /* 空态：内凹浅槽 —— 一片灰字贴在卡片左上角，看起来像没写完；
  * 装进浅槽之后一眼就知道「这里是空的，不是坏了」。 */
 .todo-empty {
-  padding: 18px 12px;
+  padding: var(--sp-4) var(--sp-3);
   /* 与卡片同一套材质：内凹浅槽，不用虚线框 */
   border: 0;
   border-radius: var(--radius-panel);
@@ -112,7 +112,7 @@
 
 /* 一个日期下的若干条待办 */
 .todo-group + .todo-group {
-  margin-top: 14px;
+  margin-top: var(--sp-4);
 }
 
 /* 日期行：日期深、星期淡，两级信息分开（原来一串同色小字，扫起来分不出重点） */
@@ -137,7 +137,7 @@
 .todo-items {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -235,13 +235,13 @@
  */
 .dialog-tabs {
   display: flex;
-  gap: 4px;
-  padding: 0 18px;
+  gap: var(--sp-1);
+  padding: 0 var(--sp-4);
   border-bottom: 1px solid var(--rule);
 }
 
 .dialog-tab {
-  padding: 8px 10px;
+  padding: var(--sp-2) var(--sp-3);
   border: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -286,16 +286,16 @@
 .dialog-page {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 18px 4px;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-4) var(--sp-1);
 }
 
 /* 新增待办：输入框 + 添加按钮，整块垫一层浅底 ——
  * 让它成为弹层里一个明确的「操作区」，而不是两个控件浮在白纸上。 */
 .todo-add {
   display: flex;
-  gap: 8px;
-  padding: 8px;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
   border-radius: var(--radius-card);
   background: var(--raised);
 }
@@ -307,7 +307,7 @@
 
 /* 弹层里的空态也用虚线框，与卡片空态同一套语言（不影响统计卡里的 .stat-empty） */
 .dialog-page > .stat-empty {
-  padding: 16px 12px;
+  padding: var(--sp-4) var(--sp-3);
   border: 0;
   border-radius: var(--radius-panel);
   background: var(--surface-sunken);
@@ -318,7 +318,7 @@
 .todo-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -328,10 +328,10 @@
 .todo-list-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--sp-2);
   margin: 0 -6px;
   padding: 5px 6px;
-  border-radius: 5px;
+  border-radius: var(--radius-sub);
   font-size: var(--fs-control);
   line-height: 1.5;
 }

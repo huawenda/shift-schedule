@@ -155,15 +155,31 @@
   --radius-sheet: 16px;
   --radius-pill: 999px;
 
-  /* 卡片浮起用的极浅投影：只在卡片这一层，浮层（弹层/提示）继续用更重的那支 */
-  --shadow-card: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 24px rgba(19, 20, 22, 0.06);
-  /* 全站几乎不用阴影，只有底部提示需要从画布上「浮起来」一档 */
-  --shadow-toast: 0 10px 30px rgba(19, 20, 22, 0.12);
+  /* 阴影只分三层，按「离画布多远」排序 —— 引用令牌，不再各自硬编码 rgba：
+   *   raised   白卡浮在降了一档的画布上（统计卡、待办卡、设置面板）
+   *   floating 浮在卡片之上的小面板（下拉、名单浮层、toast）
+   *   overlay  盖住整页的弹层（改班、班序编辑、确认框）
+   * sheet 是第四种情况：深色外框上的白色画布，背景更暗，需要更重的一层。 */
+  --shadow-raised: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 24px rgba(19, 20, 22, 0.06);
+  --shadow-floating: 0 2px 6px rgba(19, 20, 22, 0.05), 0 10px 24px rgba(19, 20, 22, 0.09);
+  --shadow-overlay: 0 18px 48px rgba(6, 14, 18, 0.28);
+  --shadow-sheet: 0 10px 34px rgba(2, 10, 13, 0.26);
+
+  /* 间距阶梯：4 / 8 / 12 / 16 / 24 / 32。
+   * 页面级节奏只取这几档；2–7px 的微调只用于图标与文字的贴合，不算节奏。
+   * 容器（画布、卡片、分区、弹层）的 gap / padding 一律引用令牌，不再写裸数字。 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
 
   --sidebar-width: 228px;
   --topbar-height: 48px;
-  --gap: 24px;
-  --pad: 24px;
+  /* 顶层版心间距：等于间距阶梯的 24 档 */
+  --gap: var(--sp-5);
+  --pad: var(--sp-5);
   --row-height: 40px;
   --control-height: 30px;
   /* 矩阵姓名列宽：两行字（姓名 13px / 班序·岗位 11px）实测 88px 就够，
@@ -366,7 +382,7 @@ p {
   justify-content: center;
   gap: 6px;
   height: var(--control-height);
-  padding: 0 12px;
+  padding: 0 var(--sp-3);
   border: 1px solid var(--control);
   border-radius: var(--radius-control);
   background: var(--surface);
@@ -425,7 +441,7 @@ p {
 .input {
   width: 100%;
   height: var(--control-height);
-  padding: 0 8px;
+  padding: 0 var(--sp-2);
   border: 1px solid var(--control);
   border-radius: var(--radius-control);
   background: var(--surface);
@@ -515,13 +531,13 @@ p {
   overscroll-behavior: contain;
   position: fixed;
   z-index: 70;
-  padding: 4px;
+  padding: var(--sp-1);
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--surface);
-  box-shadow: 0 10px 24px rgba(19, 20, 22, 0.09), 0 2px 6px rgba(19, 20, 22, 0.05);
+  box-shadow: var(--shadow-floating);
 }
 
 /* 弹层自己的滚动条：原生那条 14px 深灰 + 两端箭头，在 260px 高的小面板里特别抢眼。
@@ -561,7 +577,7 @@ p {
 
 .select-option {
   height: 28px;
-  padding: 0 8px;
+  padding: 0 var(--sp-2);
   overflow: hidden;
   border-radius: var(--radius-sub);
   font-size: var(--fs-control);
