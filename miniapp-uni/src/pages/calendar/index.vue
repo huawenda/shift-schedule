@@ -2,7 +2,7 @@
   <nav-bar action="概览 ›" @action="onOverview" />
 
   <view class="page" :style="{ paddingTop: frame.navHeight + 'px', paddingBottom: frame.tabBarHeight + 'px' }">
-    <view class="paper sheet rise">
+    <view class="paper sheet">
       <view class="month-row">
         <view class="month-hit" @tap="onStep"><view class="month-step">‹</view></view>
         <text class="month-title">{{ month.title }}</text>
@@ -40,7 +40,7 @@
         >{{ weekday }}</text>
       </view>
 
-      <!-- 网格：不铺底不画线，日期等宽、班次是小方印 -->
+      <!-- 网格：四角锚定 —— 日号左上、法定右上、农历左下、加班/事假右下，方印恒居中 -->
       <view class="grid">
         <view
           v-for="item in cells"
@@ -48,13 +48,11 @@
           class="cell"
           :class="[item.inPeriod ? '' : 'is-outside', item.isToday ? 'is-today' : '']"
         >
-          <view class="cell-flags">
-            <text v-if="item.leaveText" class="flag flag-leave">{{ item.leaveText }}</text>
-            <text v-if="item.legal" class="flag flag-legal">法</text>
-            <text v-if="item.otText" class="flag flag-ot">{{ item.otText }}</text>
-          </view>
           <text class="cell-day">{{ item.day }}</text>
+          <text v-if="item.legal" class="flag flag-legal cell-legal">法</text>
           <text v-if="item.meta" class="cell-meta" :class="{ 'is-festival': item.isFestival }">{{ item.meta }}</text>
+          <text v-if="item.otText" class="flag flag-ot cell-ot">{{ item.otText }}</text>
+          <text v-else-if="item.leaveText" class="flag flag-leave cell-ot">{{ item.leaveText }}</text>
           <text
             class="cell-char"
             :class="['t-' + item.tone, item.changed ? 'is-changed' : '']"

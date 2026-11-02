@@ -7,7 +7,7 @@
       <text class="head-note">{{ builtin ? '内置班序 · 只读' : '自定义班序 · 可编辑' }}</text>
     </view>
 
-    <view class="grid rise">
+    <view class="grid">
       <view
         v-for="(item, index) in cells"
         :key="item.day"

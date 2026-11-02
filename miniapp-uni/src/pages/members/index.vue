@@ -7,7 +7,7 @@
       <view class="seg-item" :class="{ 'is-on': tab === 'pattern' }" @tap="tab = 'pattern'">班序 {{ patterns.length }}</view>
     </view>
 
-    <view v-if="tab === 'member'" class="list rise">
+    <view v-if="tab === 'member'" class="list">
       <view v-for="item in members" :key="item.id" class="row" @tap="onMember(item)">
         <view class="avatar">{{ item.initial }}</view>
         <view class="row-main">

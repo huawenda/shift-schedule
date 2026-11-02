@@ -31,8 +31,9 @@ import { frame } from '../utils/app-frame'
 const props = defineProps<{ current: number }>()
 
 /**
- * 没有配原生 tabBar，切页用 reLaunch：三个 tab 页永远是单层栈。
- * 代价是没有 switchTab 的原生行为（本来也没有页面栈需求）。
+ * pages.json 里配了 tabBar.custom = true（原生栏由 custom-tab-bar 占位、不渲染），
+ * 所以这里能用 switchTab：三个 tab 页只在第一次进入时创建，之后复用同一份 WebView。
+ * 之前的 reLaunch 每次都重建页面，那一帧空白就是闪白的根源。
  */
 const list = [
   { index: 0, text: '日历', icon: 'calendar', path: '/pages/calendar/index' },
@@ -40,9 +41,20 @@ const list = [
   { index: 2, text: '设置', icon: 'settings', path: '/pages/settings/index' }
 ]
 
+/** 连点会连切两下，300ms 内只认第一下 */
+let switching = false
+
 function go(item: { index: number; path: string }) {
-  if (item.index === props.current) return
-  uni.reLaunch({ url: item.path })
+  if (switching || item.index === props.current) return
+  switching = true
+  uni.switchTab({
+    url: item.path,
+    complete: () => {
+      setTimeout(() => {
+        switching = false
+      }, 300)
+    }
+  })
 }
 </script>
 

@@ -2,7 +2,7 @@
   <nav-bar action="今天" @action="onToday" />
 
   <view class="page" :style="{ paddingTop: frame.navHeight + 'px', paddingBottom: frame.tabBarHeight + 'px' }">
-    <view class="paper sheet rise">
+    <view class="paper sheet">
       <view class="summary">
         <view class="summary-item">
           <text class="summary-num">{{ summary.day }}</text>

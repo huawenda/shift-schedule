@@ -2,7 +2,7 @@
   <nav-bar back title="本月概览" />
 
   <view class="page" :style="{ paddingTop: frame.navHeight + 'px' }">
-    <view class="paper block rise">
+    <view class="paper block">
       <view class="block-head">
         <text class="block-title">本期班次</text>
         <text class="block-note">{{ period.range }} · {{ period.days }} 天</text>
@@ -18,7 +18,7 @@
       </view>
     </view>
 
-    <view class="paper block rise" style="animation-delay: 40ms">
+    <view class="paper block">
       <view class="block-head">
         <text class="block-title">加班分布</text>
         <text class="block-note">合计 {{ overtimeTotal }}</text>
@@ -35,7 +35,7 @@
       </view>
     </view>
 
-    <view class="paper block rise" style="animation-delay: 80ms">
+    <view class="paper block">
       <view class="block-head">
         <text class="block-title">薪资</text>
         <text class="block-note">本月应发与实发</text>

@@ -42,7 +42,16 @@ check(
   appJson.pages.join(', ')
 )
 check('自定义导航栏', appJson.window.navigationStyle === 'custom', appJson.window.navigationStyle)
-check('未启用原生 tabBar', !appJson.tabBar, appJson.tabBar ? '存在' : '无')
+check(
+  'tabBar 走自定义模式（页内自绘）',
+  appJson.tabBar?.custom === true && ['calendar', 'matrix', 'settings'].every(name => appJson.tabBar.list.some(item => item.pagePath === `pages/${name}/index`)),
+  appJson.tabBar ? `custom=${appJson.tabBar.custom}` : '无'
+)
+check(
+  'custom-tab-bar 占位组件在产物里',
+  existsSync(join(DIST, 'custom-tab-bar/index.json')) && existsSync(join(DIST, 'custom-tab-bar/index.js')),
+  'custom-tab-bar/index'
+)
 
 const projectConfig = JSON.parse(read('project.config.json'))
 check('appid 未丢', projectConfig.appid === 'wxbd3cf9a208228cf6', projectConfig.appid)

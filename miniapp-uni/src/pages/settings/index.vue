@@ -2,7 +2,7 @@
   <nav-bar />
 
   <view class="page" :style="{ paddingTop: frame.navHeight + 'px', paddingBottom: frame.tabBarHeight + 'px' }">
-    <view class="me rise" @tap="onSoon">
+    <view class="me" @tap="onSoon">
       <view class="monogram">华</view>
       <view class="me-main">
         <text class="me-name">{{ profile.name }}</text>
@@ -11,7 +11,7 @@
       <text class="row-arrow">›</text>
     </view>
 
-    <view class="group rise" style="animation-delay: 40ms">
+    <view class="group">
       <view class="group-head">
         <text class="group-title">SALARY</text>
         <text class="group-note">每月固定</text>
@@ -34,7 +34,7 @@
       </view>
     </view>
 
-    <view class="group rise" style="animation-delay: 80ms">
+    <view class="group">
       <view class="group-head">
         <text class="group-title">ROSTER</text>
         <text class="group-note">{{ memberCount }} 人 · {{ patternCount }} 条班序</text>
@@ -50,7 +50,7 @@
       </view>
     </view>
 
-    <view class="group rise" style="animation-delay: 120ms">
+    <view class="group">
       <view class="group-head">
         <text class="group-title">DATA</text>
         <text class="group-note">只在本机</text>
@@ -75,7 +75,7 @@
       </view>
     </view>
 
-    <view class="group rise" style="animation-delay: 160ms">
+    <view class="group">
       <view class="group-head">
         <text class="group-title">ABOUT</text>
       </view>

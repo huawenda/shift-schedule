@@ -40,29 +40,9 @@ page {
   font-family: var(--font-brand);
 }
 
-/* ------------------------------------------------------------ 进入动效
- * 只给「进入」：卡片淡入 + 上移 16rpx，页面内按 40ms 错开。
- * 停留、点击、切换都不动 —— 参考点在于让人看到层级顺序，而不是炫技。 */
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(16rpx);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.rise {
-  animation: rise var(--dur-base) var(--ease-out) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rise {
-    animation: none;
-  }
-}
+/* ------------------------------------------------------------ 动效
+ * 小程序端不做入场动效：页面由 switchTab 缓存，首次创建时任何动画都可能在
+ * WebView 首帧上露出空白（闪白）。需要层级提示时用留白与线，不用动效。 */
 
 /* ---------------------------------------------------------- 班次六色
  * 语义色，永远配文字，不靠色块单独表意。

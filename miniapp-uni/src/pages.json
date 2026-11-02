@@ -7,12 +7,25 @@
     { "path": "pages/members/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/pattern/index", "style": { "navigationStyle": "custom" } }
   ],
+  "tabBar": {
+    "custom": true,
+    "color": "#867e6f",
+    "selectedColor": "#e8c58b",
+    "backgroundColor": "#171512",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/calendar/index", "text": "日历" },
+      { "pagePath": "pages/matrix/index", "text": "矩阵" },
+      { "pagePath": "pages/settings/index", "text": "设置" }
+    ]
+  },
   "globalStyle": {
     "navigationStyle": "custom",
     "navigationBarTextStyle": "white",
     "navigationBarTitleText": "昼夜",
-    "backgroundColor": "#0e2228",
-    "backgroundColorTop": "#0e2228",
-    "backgroundColorBottom": "#0e2228"
+    "backgroundColor": "#ede8de",
+    "backgroundColorTop": "#ede8de",
+    "backgroundColorBottom": "#ede8de",
+    "backgroundTextStyle": "dark"
   }
 }
