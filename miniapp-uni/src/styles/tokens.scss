@@ -58,6 +58,21 @@ page {
   --shift-mark: rgba(25, 23, 19, 0.55);
   --shift-mark-inverse: rgba(242, 239, 232, 0.7);
 
+  /* ---------------------------------------------------------- 待办便笺六色
+   * 与桌面端同一套：颜色只用来区分条目，不承载语义。 */
+  --todo-tone-1-bg: #fff3cf;
+  --todo-tone-1-ink: #7a4b00;
+  --todo-tone-2-bg: #ffe4e6;
+  --todo-tone-2-ink: #9f1239;
+  --todo-tone-3-bg: #e3f2fd;
+  --todo-tone-3-ink: #0b5a8a;
+  --todo-tone-4-bg: #e6f7ec;
+  --todo-tone-4-ink: #166534;
+  --todo-tone-5-bg: #f1eaff;
+  --todo-tone-5-ink: #5b21b6;
+  --todo-tone-6-bg: #ffe8d6;
+  --todo-tone-6-ink: #9a3412;
+
   /* ---------------------------------------------------------- 功能色 */
   --warning-bg: #f4e6c9;
   --warning-ink: #6b4a1b;

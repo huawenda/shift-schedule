@@ -65,54 +65,94 @@
 </template>
 
 <script setup lang="ts">
-import demo from '../../utils/demo.js'
+import { computed } from 'vue'
 import { frame } from '../../utils/app-frame'
 import NavBar from '../../components/nav-bar.vue'
+import { rosterStore } from '../../store/roster'
+import { getPeriod, formatPeriodRange } from '../../data/period'
+import { getSelf } from '../../data/roster'
+import { computeMonthStats, OVERTIME_KIND_LABEL } from '../../data/stats'
+import { formatMoney } from '../../data/profile'
 
-function money(value: number) {
-  return '¥' + value.toFixed(2)
-}
+const store = rosterStore
+const roster = computed(() => store.state.roster)
+const self = computed(() => getSelf(roster.value))
+const period = computed(() => {
+  const value = getPeriod(store.state.month)
+  return { ...value, range: formatPeriodRange(value), days: value.dates.length }
+})
 
-const period = demo.period
+const stats = computed(() => (
+  self.value ? computeMonthStats(roster.value, self.value, period.value) : null
+))
 
-const counts = demo.overview.counts.map((item: { label: string; value: number; tone: string }) => ({
-  ...item,
-  percent: Math.round((item.value / period.days) * 100) + '%'
-}))
+const money = (value: number) => '¥' + formatMoney(value)
 
-const hours = demo.overview.overtime.reduce((sum: number, item: { hours: number }) => sum + item.hours, 0)
+/** 六格班次贴片：白特 / 夜特合并成「特勤」，法定单独一格（与桌面端概览同一口径） */
+const counts = computed(() => {
+  const days = stats.value?.days
+  const total = period.value.days || 1
+  const list = [
+    { label: '白班', value: days?.day ?? 0, tone: 'day' },
+    { label: '夜班', value: days?.night ?? 0, tone: 'night' },
+    { label: '休息', value: days?.rest ?? 0, tone: 'rest' },
+    { label: '特勤', value: (days?.daySpecial ?? 0) + (days?.nightSpecial ?? 0), tone: 'dayx' },
+    { label: '事假', value: days?.leave ?? 0, tone: 'leave' },
+    { label: '法定', value: days?.legal ?? 0, tone: 'legal' }
+  ]
+  return list.map(item => ({
+    ...item,
+    percent: Math.round((item.value / total) * 100) + '%'
+  }))
+})
 
-const ots = demo.overview.overtime.map(
-  (item: { label: string; kind: string; hours: number; pay: number; ratio: number }) => ({
-    label: item.label,
-    kind: item.kind,
-    hoursText: item.hours + 'h',
-    payText: money(item.pay),
-    // 条长按当月最大值归一化（谁占大头看得最清楚），
-    // 文字里的百分比按总量（三类分别是总量的多少）
-    percent: Math.round(item.ratio * 100),
-    share: Math.round((item.hours / hours) * 100)
-  })
-)
+/** 三个计价桶：条长按当月最大值归一化，文字里的占比按总量 */
+const ots = computed(() => {
+  const overtime = stats.value?.overtime
+  const salary = stats.value?.salary
+  const rows = [
+    { kind: 'weekday' as const, hours: overtime?.weekday ?? 0, pay: salary?.weekdayPay ?? 0 },
+    { kind: 'special' as const, hours: overtime?.special ?? 0, pay: salary?.specialPay ?? 0 },
+    { kind: 'legal' as const, hours: overtime?.legal ?? 0, pay: salary?.legalPay ?? 0 }
+  ]
+  const total = overtime?.total ?? 0
+  const max = Math.max(...rows.map(row => row.hours), 1)
 
-const salary = demo.overview.salary
+  return rows.map(row => ({
+    label: OVERTIME_KIND_LABEL[row.kind],
+    kind: row.kind,
+    hoursText: row.hours + 'h',
+    payText: money(row.pay),
+    percent: Math.round((row.hours / max) * 100),
+    share: total > 0 ? Math.round((row.hours / total) * 100) : 0
+  }))
+})
 
-const earnRows = [
-  { label: '固定应发', value: money(salary.fixedTotal) },
-  { label: '平日加班', value: money(salary.weekdayPay) },
-  { label: '特勤加班', value: money(salary.specialPay) },
-  { label: '法定加班', value: money(salary.legalPay) },
-  { label: '夜班津贴', value: money(salary.nightAllowance) }
-]
+const overtimeTotal = computed(() => (stats.value ? stats.value.overtime.total : 0) + 'h')
 
-const deductRows = [
-  { label: '社保公积金', value: '−' + money(salary.socialFund) },
-  { label: '事假扣款', value: '−' + money(salary.leaveDeduction) }
-]
+const salary = computed(() => stats.value?.salary ?? null)
 
-const grossText = money(salary.gross)
-const netText = money(salary.net)
-const overtimeTotal = hours + 'h'
+const earnRows = computed(() => {
+  const value = salary.value
+  return [
+    { label: '固定应发', value: money(value?.fixedTotal ?? 0) },
+    { label: '平日加班', value: money(value?.weekdayPay ?? 0) },
+    { label: '特勤加班', value: money(value?.specialPay ?? 0) },
+    { label: '法定加班', value: money(value?.legalPay ?? 0) },
+    { label: '夜班津贴', value: money(value?.nightAllowance ?? 0) }
+  ]
+})
+
+const deductRows = computed(() => {
+  const value = salary.value
+  return [
+    { label: '社保公积金', value: '−' + money(value?.socialFund ?? 0) },
+    { label: '事假扣款', value: '−' + money(value?.leaveDeduction ?? 0) }
+  ]
+})
+
+const grossText = computed(() => money(salary.value?.gross ?? 0))
+const netText = computed(() => money(salary.value?.net ?? 0))
 </script>
 
 <style lang="scss" scoped>
@@ -297,19 +337,17 @@ const overtimeTotal = hours + 'h'
   color: var(--muted);
 }
 
-/* 实发：内缩的结论块 + 左侧强调竖条 */
+/* 实发：与「应发」同字号、同粗细、同对齐，只靠底色区分。
+ * 左右用 -8rpx 外边距 + 8rpx 内边距，把底色铺到文字两侧又不贴住卡片边线。 */
 .money-row.is-total {
-  margin: 8rpx calc(-1 * var(--gap-md)) 0;
-  padding: 14rpx var(--gap-md) 14rpx calc(var(--gap-md) - 6rpx);
-  border-left: 6rpx solid var(--accent);
-  border-radius: var(--radius-block);
+  margin: var(--gap-xs) calc(-1 * var(--gap-xs)) 0;
+  padding: 10rpx var(--gap-xs);
+  border-radius: var(--radius-control);
   background: var(--accent-weak);
-  color: var(--accent);
 }
 
 .money-row.is-total .money-value {
   font-size: var(--fs-body);
   font-weight: 600;
-  color: var(--accent);
 }
 </style>

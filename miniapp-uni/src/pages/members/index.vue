@@ -2,9 +2,12 @@
   <nav-bar back title="人员配置" />
 
   <view class="page" :style="{ paddingTop: frame.navHeight + 'px' }">
-    <view class="seg">
-      <view class="seg-item" :class="{ 'is-on': tab === 'member' }" @tap="tab = 'member'">成员 {{ members.length }}</view>
-      <view class="seg-item" :class="{ 'is-on': tab === 'pattern' }" @tap="tab = 'pattern'">班序 {{ patterns.length }}</view>
+    <!-- 分段吸顶：sticky 的 top 必须跟着导航栏实际高度走，所以由 frame 注入 -->
+    <view class="seg-pin" :style="{ top: frame.navHeight + 'px' }">
+      <view class="seg">
+        <view class="seg-item" :class="{ 'is-on': tab === 'member' }" @tap="tab = 'member'">成员 {{ members.length }}</view>
+        <view class="seg-item" :class="{ 'is-on': tab === 'pattern' }" @tap="tab = 'pattern'">班序 {{ patterns.length }}</view>
+      </view>
     </view>
 
     <view v-if="tab === 'member'" class="list">
@@ -72,7 +75,7 @@
         </scroll-view>
       </view>
 
-      <view class="switch-row" @tap="editor.isSelf = !editor.isSelf">
+      <view class="switch-row" @tap="onToggleSelf">
         <view class="switch-text">
           <text class="switch-label">设为本人</text>
           <text class="switch-note">日历只显示本人</text>
@@ -95,51 +98,114 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import demo from '../../utils/demo.js'
 import { frame } from '../../utils/app-frame'
 import NavBar from '../../components/nav-bar.vue'
+import { rosterStore } from '../../store/roster'
+import {
+  createMemberId,
+  getSelf,
+  patternLabelOf,
+  validateMembers
+} from '../../data/roster'
+import {
+  MAX_CUSTOM_PATTERNS,
+  createBlankCustomPattern,
+  isBuiltinPatternId,
+  resolvePatterns
+} from '../../data/patterns'
+import { SHIFT_META } from '../../data/shifts'
 
-const META = demo.labels.shift
+const store = rosterStore
+const roster = computed(() => store.state.roster)
+const self = computed(() => getSelf(roster.value))
 
-type Member = { id: string; name: string; pattern: string; position: string; isSelf: boolean; initial: string }
-type Editor = { mode: 'add' | 'edit'; id: string; name: string; position: string; patternId: string; isSelf: boolean }
-
-function toMember(member: { id: string; name: string; pattern: string; position: string }): Member {
-  return {
-    ...member,
-    isSelf: member.id === 'm-01',
-    initial: member.name.slice(0, 1)
-  }
+type MemberRow = {
+  id: string
+  name: string
+  pattern: string
+  patternId: string
+  position: string
+  isSelf: boolean
+  initial: string
 }
 
-const tab = ref<'member' | 'pattern'>('member')
-const members = ref<Member[]>(demo.members.map(toMember))
-const patterns = ref(
-  demo.patterns.map((pattern: any) => ({
-    ...pattern,
-    bars: pattern.shifts.map((shift: string) => META[shift].tone)
+const members = computed<MemberRow[]>(() => roster.value.members.map(member => ({
+  id: member.id,
+  name: member.name,
+  pattern: patternLabelOf(roster.value, member),
+  patternId: member.patternId,
+  position: member.position || '',
+  isSelf: member.id === self.value?.id,
+  initial: member.name.slice(0, 1)
+})))
+
+const patterns = computed(() => {
+  const lookup = resolvePatterns(roster.value.patterns)
+  return lookup.all.map(pattern => ({
+    id: pattern.id,
+    name: lookup.labelOf(pattern.id),
+    builtin: isBuiltinPatternId(pattern.id),
+    shifts: pattern.shifts,
+    /* 24 段缩略色条：一条班序的节奏，看这一排就够了 */
+    bars: pattern.shifts.map(shift => SHIFT_META[shift].tone),
+    users: roster.value.members.filter(member => member.patternId === pattern.id).length
   }))
-)
+})
+
+const tab = ref<'member' | 'pattern'>('member')
+
+type Editor = { mode: 'add' | 'edit'; id: string; name: string; position: string; patternId: string; isSelf: boolean }
 const editor = ref<Editor | null>(null)
 
 const canSave = computed(() => Boolean(editor.value && editor.value.name.trim().length > 0))
-const canDelete = computed(() => Boolean(editor.value && editor.value.mode === 'edit' && members.value.length > 1))
+const canDelete = computed(() => Boolean(editor.value && editor.value.mode === 'edit' && !editor.value.isSelf))
 
-function onMember(member: Member) {
+function onMember(member: MemberRow) {
+  /* 本人那一行的姓名与班序是身份，只能在「设置 → 本人」里改 */
+  if (member.isSelf) {
+    onChangeSelf()
+    return
+  }
   editor.value = {
     mode: 'edit',
     id: member.id,
     name: member.name,
-    position: member.position || '',
-    patternId: member.pattern,
-    isSelf: member.isSelf
+    position: member.position,
+    patternId: member.patternId,
+    isSelf: false
   }
 }
 
+/** 本人的身份不在这里换：会连带清空考勤与薪资，必须走设置里的那段提示 */
+function onChangeSelf() {
+  uni.showToast({ title: '本人的姓名与班序请到「设置 → 本人」修改', icon: 'none' })
+}
+
 function onAdd() {
+  if (tab.value === 'pattern') {
+    if (roster.value.patterns.length >= MAX_CUSTOM_PATTERNS) {
+      uni.showToast({ title: `自定义班序最多 ${MAX_CUSTOM_PATTERNS} 条`, icon: 'none' })
+      return
+    }
+
+    const names = new Set(roster.value.patterns.map(pattern => pattern.name))
+    const base = `自定义班序 ${roster.value.patterns.length + 1}`
+    let name = base
+    let index = 2
+    while (names.has(name)) {
+      name = `${base}-${index}`
+      index += 1
+    }
+
+    const pattern = createBlankCustomPattern()
+    store.savePattern({ ...pattern, name })
+    uni.navigateTo({ url: '/pages/pattern/index?id=' + pattern.id })
+    return
+  }
+
   editor.value = {
     mode: 'add',
-    id: 'm-' + (members.value.length + 1),
+    id: createMemberId(),
     name: '',
     position: '',
     patternId: '4F',
@@ -165,30 +231,46 @@ function onSave() {
 
   const name = current.name.trim()
   const position = current.position.trim()
-
-  let next = members.value
-  if (current.mode === 'add') {
-    next = next.concat([{ id: current.id, name, position, pattern: current.patternId, isSelf: current.isSelf, initial: name.slice(0, 1) }])
-  } else {
-    next = next.map(member => member.id === current.id
-      ? { ...member, name, position, pattern: current.patternId, isSelf: current.isSelf, initial: name.slice(0, 1) }
-      : member)
+  const member = {
+    id: current.id,
+    name,
+    patternId: current.patternId,
+    ...(position ? { position } : {})
   }
 
-  // 本人只能有一个：设了新的，其余全部取消
-  if (current.isSelf) {
-    next = next.map(member => ({ ...member, isSelf: member.id === current.id }))
+  const next = current.mode === 'add'
+    ? [...roster.value.members, member]
+    : roster.value.members.map(item => (item.id === current.id ? member : item))
+
+  const errors = validateMembers(
+    next.map(item => ({ id: item.id, name: item.name, patternId: item.patternId })),
+    roster.value.patterns,
+    { selfId: self.value?.id, selfName: self.value?.name }
+  )
+  if (errors.length > 0) {
+    uni.showToast({ title: errors[0], icon: 'none' })
+    return
   }
 
-  members.value = next
+  store.saveMembers(next)
   editor.value = null
 }
 
 function onDelete() {
-  if (!canDelete.value || !editor.value) return
-  const id = editor.value.id
-  members.value = members.value.filter(member => member.id !== id)
+  const current = editor.value
+  if (!current || !canDelete.value) return
+  store.saveMembers(roster.value.members.filter(member => member.id !== current.id))
   editor.value = null
+}
+
+/** 本人不在这里换：换人要连带清空考勤与薪资，走设置里的那段提示 */
+function onToggleSelf() {
+  if (!editor.value) return
+  if (editor.value.isSelf) {
+    uni.showToast({ title: '不能取消本人', icon: 'none' })
+    return
+  }
+  onChangeSelf()
 }
 
 function onClose() {
@@ -217,12 +299,20 @@ page {
 }
 
 /* ------------------------------------------------------------ 分段
- * 胶囊：浅底槽 + 选中白块浮起。两端方框更像筛选器，不像「切换视图」 */
+ * 胶囊：浅底槽 + 选中白块浮起。两端方框更像筛选器，不像「切换视图」。
+ * 吸顶：外层铺一块与纸面同色的通栏，滚上来的行从它底下消失，不会从胶囊两侧透出 */
+
+.seg-pin {
+  position: sticky;
+  z-index: 10;
+  margin: 0 calc(-1 * var(--gap-md));
+  padding: var(--gap-md) var(--gap-md) var(--gap-sm);
+  background: var(--surface);
+}
 
 .seg {
   display: flex;
   gap: 4rpx;
-  margin: var(--gap-md) 0 var(--gap-sm);
   padding: 4rpx;
   border-radius: 999rpx;
   background: var(--surface-sunken);

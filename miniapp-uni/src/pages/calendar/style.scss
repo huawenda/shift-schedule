@@ -1,7 +1,7 @@
 /* 个人日历 ·「历书」
  *
- * 布局不变：月份条 / 今日卡 / 星期栏 / 七列网格 / 页脚。
- * 样式重做：暖纸 + 墨黑今日卡 + 朱红「今天」；日期等宽，班次退成一枚小方印。
+ * 四张独立卡片，自上而下：月份 / 今日 / 统计 / 日历（网格落在最底部）。
+ * 样式：暖纸 + 墨黑今日卡 + 朱红「今天」；日期等宽，班次是一条长方印。
  */
 
 .page {
@@ -10,12 +10,55 @@
   flex-direction: column;
 }
 
-.sheet {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  margin: var(--gap-sm) var(--gap-md);
+/* 卡片的公共外框：纸面由 .paper 提供，这里只管外边距与裁切 */
+.card {
+  margin: 0 var(--gap-md) var(--gap-sm);
   overflow: hidden;
+}
+
+.card-month {
+  margin-top: var(--gap-sm);
+}
+
+.card-stats {
+  position: relative;
+  padding: var(--gap-sm) var(--gap-md) var(--gap-md);
+}
+
+.card-stats:active {
+  background: var(--active);
+}
+
+/* 统计卡同时是「本月概览」的入口：左侧一道 6rpx 朱红通高书脊 + 卡头标题与箭头，整卡可点 */
+.stats-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6rpx;
+  background: var(--accent);
+}
+
+.stats-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gap-md);
+}
+
+.stats-title {
+  color: var(--text);
+  font-family: var(--font-brand);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.stats-arrow {
+  color: var(--accent);
+  font-size: var(--fs-body);
+  line-height: 1;
 }
 
 /* ------------------------------------------------------------ 月份条
@@ -25,7 +68,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16rpx var(--gap-md) 0;
+  padding: 16rpx var(--gap-sm) 0;
 }
 
 .month-hit {
@@ -63,7 +106,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 var(--gap-md) 12rpx;
+  padding: 0 var(--gap-sm) 12rpx;
 }
 
 .range {
@@ -74,7 +117,7 @@
 }
 
 /* ------------------------------------------------------------ 今日卡
- * 墨黑块 + 左侧朱红竖条；班次用衬线大字，时段与待办用等宽。 */
+ * 墨黑块；班次用衬线大字，时段与待办用等宽。 */
 
 .today-card {
   position: relative;
@@ -83,15 +126,6 @@
   border-radius: var(--radius-block);
   background: var(--text);
   overflow: hidden;
-}
-
-.today-mark {
-  position: absolute;
-  top: var(--gap-md);
-  bottom: var(--gap-md);
-  left: 0;
-  width: 6rpx;
-  background: var(--accent);
 }
 
 .today-head {
@@ -306,18 +340,15 @@
   box-shadow: inset 0 0 0 1px var(--border);
 }
 
-/* ------------------------------------------------------------ 页脚 */
-
-.foot {
-  padding: var(--gap-sm) var(--gap-md);
-  border-top: 1px solid var(--rule);
-}
+/* ------------------------------------------------------------ 图例
+ * 落在纸面上，不进卡片：只用左右 24rpx 与卡片边缘对齐 */
 
 .legend {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8rpx 18rpx;
+  padding: 0 var(--gap-md) var(--gap-sm);
 }
 
 .lg {
@@ -351,22 +382,22 @@
 .stats {
   display: flex;
   align-items: center;
-  margin-top: var(--gap-xs);
 }
 
+/* 三组数据按内容宽度排布，中间的空白由分隔线撑开：
+ * 第一组贴左、第三组贴右，竖线落在两段空白的中线上 */
 .stat {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 6rpx;
-  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
 }
 
 .stat-num {
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: var(--fs-control);
+  font-size: var(--fs-section);
   font-weight: 600;
   line-height: 1.1;
 }
@@ -374,11 +405,515 @@
 .stat-label {
   color: var(--faint);
   font-size: var(--fs-micro);
+  line-height: 1.1;
 }
 
+/* 分隔线本身是一个可伸缩的空档，1px 竖线用伪元素画在空档中央 */
 .stat-divider {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+}
+
+.stat-divider::after {
+  content: '';
   width: 1px;
-  height: 28rpx;
+  height: 44rpx;
   background: var(--border);
+}
+
+/* ------------------------------------------------------------ 当天记录抽屉
+ * 与桌面端 `DayEditor` 同构：两个页签（班次 / 待办）。
+ * 班次页 = 六个班次 + 加班 + 法定（事假改为时长 + 说明），改动走「保存」；
+ * 待办页 = 输入框 + 清单，改动立即生效。
+ * 抽屉给 88vh 封顶，页头 / 页签 / 底栏固定，只有 sheet-body 内部滚动。 */
+
+.backdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(15, 20, 24, 0.26);
+}
+
+.sheet {
+  width: 100%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--gap-md) var(--gap-md) calc(var(--gap-md) + 14px);
+  box-sizing: border-box;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--surface);
+  box-shadow: var(--shadow-sheet);
+}
+
+.sheet-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  padding-bottom: var(--gap-sm);
+}
+
+.sheet-head-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+}
+
+/* 与桌面端一致：标题是成员名，日期退到副行 */
+.sheet-title {
+  color: var(--text);
+  font-family: var(--font-brand);
+  font-size: var(--fs-section);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.sheet-sub {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+}
+
+.sheet-close {
+  flex: 0 0 auto;
+  padding: 4rpx 8rpx;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+/* 页签用下划线，不用实心块：头部已经有标题，再压一条色带会头重脚轻 */
+.tabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--gap-xs);
+  border-bottom: 1px solid var(--rule);
+}
+
+.tab {
+  position: relative;
+  padding: 12rpx var(--gap-sm);
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: var(--fs-control);
+}
+
+.tab.is-on {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tab.is-on::after {
+  content: '';
+  position: absolute;
+  right: var(--gap-sm);
+  bottom: -1px;
+  left: var(--gap-sm);
+  height: 3rpx;
+  background: var(--accent);
+}
+
+/* 条数做成一枚小胶囊，比跟在文字后面的一串数字清楚 */
+.tab-count {
+  min-width: 32rpx;
+  margin-left: 8rpx;
+  padding: 0 8rpx;
+  border-radius: 999rpx;
+  background: var(--surface-sunken);
+  color: var(--muted);
+  font-size: var(--fs-micro);
+  line-height: 28rpx;
+  text-align: center;
+}
+
+.tab.is-on .tab-count {
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+
+.sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: var(--gap-md);
+}
+
+/* ------------------------------------------------------------ 班次页 */
+
+.shift-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap-xs);
+}
+
+/* 班次块直接用格子上的同一套色；选中只点 1px 墨边 + 右上角对勾，
+ * 夜班是深底，只靠边框会看不见，所以必须有不依赖边框色的标记 */
+.shift {
+  position: relative;
+  height: 104rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  box-sizing: border-box;
+}
+
+.shift.is-on {
+  border-color: var(--text);
+}
+
+.shift.is-blocked {
+  background: var(--surface-sunken);
+  color: var(--faint);
+  opacity: 0.55;
+}
+
+.shift-name {
+  font-size: var(--fs-control);
+  font-weight: 600;
+}
+
+.shift-check {
+  position: absolute;
+  top: 6rpx;
+  right: 10rpx;
+  font-size: var(--fs-micro);
+  line-height: 1;
+}
+
+.section {
+  margin-top: var(--gap-sm);
+  padding: var(--gap-sm);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: var(--surface-tint);
+}
+
+.section.is-disabled {
+  opacity: 0.55;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  min-height: 28rpx;
+  margin-bottom: 12rpx;
+}
+
+.section-title {
+  color: var(--text);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+}
+
+.section-note {
+  color: var(--faint);
+  font-size: var(--fs-micro);
+}
+
+.section-body {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+}
+
+/* 事假时长 / 法定：两格分段，宽度收到内容所需，不拉满整卡 */
+.seg {
+  display: flex;
+  width: 320rpx;
+  padding: 4rpx;
+  box-sizing: border-box;
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+}
+
+.seg-item {
+  flex: 1 1 0;
+  height: 56rpx;
+  line-height: 56rpx;
+  text-align: center;
+  border-radius: var(--radius-sub);
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+.seg-item.is-on {
+  border: 1px solid var(--rule);
+  box-sizing: border-box;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ot-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.ot-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.chip {
+  min-width: 72rpx;
+  height: 56rpx;
+  line-height: 54rpx;
+  padding: 0 12rpx;
+  box-sizing: border-box;
+  border: 1px solid var(--control);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  text-align: center;
+}
+
+.chip.is-on {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.ot-empty {
+  color: var(--faint);
+  font-size: var(--fs-meta);
+}
+
+.ot-input {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.input {
+  width: 100%;
+  height: 72rpx;
+  padding: 0 var(--gap-sm);
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: var(--fs-control);
+}
+
+.input-compact {
+  width: 110rpx;
+  height: 56rpx;
+  padding: 0 12rpx;
+}
+
+.ot-unit {
+  color: var(--muted);
+  font-size: var(--fs-micro);
+}
+
+/* ------------------------------------------------------------ 待办页 */
+
+.todo-add {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  padding: 8rpx;
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+}
+
+.todo-add .input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 64rpx;
+}
+
+.todo-empty {
+  display: block;
+  margin-top: var(--gap-md);
+  padding: var(--gap-lg) var(--gap-sm);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  color: var(--faint);
+  font-size: var(--fs-meta);
+  text-align: center;
+}
+
+.todo-list {
+  margin-top: var(--gap-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+/* 便笺：底色 / 字色来自 todo-tone-*，形状在这里给 */
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  padding: 14rpx var(--gap-sm);
+  border-radius: var(--radius-control);
+  background: var(--todo-bg, transparent);
+  color: var(--todo-ink, var(--text));
+}
+
+.todo-check {
+  position: relative;
+  flex: 0 0 auto;
+  width: 28rpx;
+  height: 28rpx;
+  margin-top: 6rpx;
+  box-sizing: border-box;
+  border: 1px solid var(--control);
+  border-radius: var(--radius-sub);
+  background: var(--surface);
+}
+
+.todo-item.is-done .todo-check {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.todo-item.is-done .todo-check::after {
+  content: '✓';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-inverse);
+  font-size: var(--fs-micro);
+  line-height: 1;
+}
+
+.todo-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.todo-item.is-done .todo-text {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.todo-remove {
+  flex: 0 0 auto;
+  width: 64rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  color: var(--todo-ink, var(--faint));
+  font-size: var(--fs-body);
+  opacity: 0.6;
+}
+
+.todo-tip {
+  display: block;
+  margin-top: var(--gap-sm);
+  color: var(--faint);
+  font-size: var(--fs-micro);
+}
+
+/* ------------------------------------------------------------ 底栏 */
+
+.sheet-foot {
+  flex: 0 0 auto;
+  margin-top: var(--gap-sm);
+  padding-top: var(--gap-sm);
+  border-top: 1px solid var(--rule);
+}
+
+.foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+}
+
+.foot-row.is-end {
+  justify-content: flex-end;
+}
+
+.foot-actions {
+  display: flex;
+  gap: var(--gap-xs);
+}
+
+.btn {
+  height: 88rpx;
+  padding: 0 var(--gap-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid var(--control);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-control);
+  font-weight: 600;
+}
+
+/* 添加按钮比主操作矮一档，跟输入框同高 */
+.btn.is-small {
+  flex: 0 0 auto;
+  height: 64rpx;
+  padding: 0 var(--gap-sm);
+  font-size: var(--fs-meta);
+}
+
+/* 恢复默认是次要动作：不描边，只留字 */
+.btn.is-quiet {
+  padding: 0 8rpx;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.btn-primary {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--text-inverse);
+}
+
+.btn-danger {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.discard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+}
+
+.discard-text {
+  color: var(--warning-ink);
+  font-size: var(--fs-meta);
+}
+
+.is-disabled {
+  opacity: 0.45;
 }

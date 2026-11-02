@@ -1,16 +1,21 @@
 /* 全员矩阵 ·「历书」
  *
- * 结构不变：姓名列固定、日期列横滑。
- * 样式：发丝线分栏、日期等宽、班次是小方印；姓名列比旧版窄一档，给日期留位置。
+ * 与桌面端同构：一个横向滚动容器 + 一张网格；姓名列用 position: sticky 固定在左缘，
+ * 行头与每一行共用同一套 grid-template-columns，所以列线天然对齐，宽度也由网格自己撑出。
  */
 
 .page {
   min-height: 100vh;
 }
 
-.sheet {
-  margin: var(--gap-md);
+/* 卡片公共外框：纸面由 .paper 提供，这里只管外边距与裁切 */
+.card {
+  margin: 0 var(--gap-md) var(--gap-sm);
   overflow: hidden;
+}
+
+.card-summary {
+  margin-top: var(--gap-sm);
 }
 
 /* ------------------------------------------------------------ 今日概览 */
@@ -19,7 +24,6 @@
   display: flex;
   align-items: stretch;
   padding: var(--gap-md) 0;
-  border-bottom: 1px solid var(--rule);
 }
 
 .summary-item {
@@ -49,31 +53,73 @@
   font-size: var(--fs-micro);
 }
 
-/* ------------------------------------------------------------ 表格 */
+/* ------------------------------------------------------------ 表格
+ * 小程序 scroll-view 里 position:sticky 不生效，所以仍是「固定姓名列 + 横向滚动日期区」两栏。
+ * 但列线不再靠 flex 碰运气：日期区的表头与每一行都是 grid，模板由同一个内联样式给出，
+ * 容器宽也是同一个内联样式里的 天数 × 48rpx，两边不可能差出一格。 */
 
 .matrix {
   display: flex;
 }
 
 .names {
-  flex: 0 0 296rpx;
-  border-right: 1px solid var(--border-strong);
+  flex: 0 0 180rpx;
+  border-right: 1px solid var(--border);
 }
 
 .names-head {
   height: 60rpx;
-  border-bottom: 1px solid var(--rule);
+  padding: 0 var(--gap-sm);
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
   box-sizing: border-box;
 }
 
+.names-title {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.18em;
+}
+
 .name-row {
-  height: 92rpx;
+  height: 76rpx;
   padding: 0 var(--gap-sm);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2rpx;
-  border-bottom: 2rpx solid var(--rule);
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
+.days-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.days {
+  width: 100%;
+  height: 100%;
+}
+
+.days-inner {
+  box-sizing: border-box;
+}
+
+.day-head {
+  display: grid;
+  height: 60rpx;
+  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
+.day-row {
+  display: grid;
+  height: 76rpx;
+  border-bottom: 1px solid var(--border);
   box-sizing: border-box;
 }
 
@@ -115,44 +161,25 @@
   font-weight: 600;
 }
 
-.days-wrap {
-  position: relative;
-  flex: 1 1 auto;
-  width: 0;
-}
-
-.days {
-  width: 100%;
-  height: 100%;
-}
-
-.days-inner {
-  width: 1488rpx; /* 31 列 × 48rpx */
-}
-
-.days-fade {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 24rpx;
-  background: linear-gradient(to left, var(--surface), rgba(250, 247, 240, 0));
-  pointer-events: none;
-}
-
-.day-head {
-  display: flex;
-  height: 60rpx;
-  border-bottom: 1px solid var(--rule);
-  box-sizing: border-box;
-}
-
 .day-cell {
-  flex: 0 0 48rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  border-right: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
+/* 最后一列不画右边线：卡片自己有一道边框，再画一道就成了双线 */
+.day-cell:last-child,
+.pill-cell:last-child {
+  border-right: 0;
+}
+
+/* 图例移出卡片后，表格最后一行紧贴卡片下缘：去掉行底线，别和卡片描边叠成双线 */
+.name-row:last-child,
+.day-row:last-child {
+  border-bottom: 0;
 }
 
 /* 今天只标表头：浅朱底 + 朱红数字 */
@@ -178,19 +205,12 @@
   line-height: 1.15;
 }
 
-.day-row {
-  display: flex;
-  height: 92rpx;
-  border-bottom: 2rpx solid var(--rule);
-  box-sizing: border-box;
-}
-
 .pill-cell {
-  flex: 0 0 48rpx;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-right: 1px solid var(--border);
+  box-sizing: border-box;
 }
 
 /* 班次方印 */
@@ -205,14 +225,14 @@
   font-weight: 700;
 }
 
-/* ------------------------------------------------------------ 图例 */
+/* ------------------------------------------------------------ 图例
+ * 落在纸面上，不进卡片：只用左右 24rpx 与卡片边缘对齐 */
 
 .legend {
   display: flex;
   flex-wrap: wrap;
   gap: var(--gap-sm) var(--gap-md);
-  padding: var(--gap-sm) var(--gap-md) var(--gap-md);
-  border-top: 1px solid var(--rule);
+  padding: 0 var(--gap-md) var(--gap-sm);
 }
 
 .legend-item {

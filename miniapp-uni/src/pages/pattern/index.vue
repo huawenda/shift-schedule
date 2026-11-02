@@ -26,7 +26,7 @@
     <view class="members">
       <view class="members-head">
         <text class="members-title">使用成员</text>
-        <text class="members-note">{{ users || '暂无' }}</text>
+        <text class="members-note">{{ usersText || '暂无' }}</text>
       </view>
       <view v-if="userNames.length" class="chips">
         <text v-for="name in userNames" :key="name" class="chip">{{ name }}</text>
@@ -39,43 +39,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import demo from '../../utils/demo.js'
 import { frame } from '../../utils/app-frame'
 import NavBar from '../../components/nav-bar.vue'
+import { rosterStore } from '../../store/roster'
+import { MAX_CUSTOM_PATTERNS, isBuiltinPatternId, resolvePatterns } from '../../data/patterns'
+import { SHIFT_META, type ShiftType } from '../../data/shifts'
 
 /** 班序格子里只能填这三种：白特 / 夜特 / 事假 是单天的临时决定，不进 24 天循环 */
-const CYCLE = ['白班', '夜班', '休息']
-const META = demo.labels.shift
+const CYCLE: ShiftType[] = ['白班', '夜班', '休息']
 
-type Cell = { day: string; shift: string; short: string; tone: string }
+const store = rosterStore
+const roster = computed(() => store.state.roster)
 
-function cellOf(shift: string, index: number): Cell {
-  return {
-    day: String(index + 1).padStart(2, '0'),
-    shift,
-    short: META[shift].short,
-    tone: META[shift].tone
-  }
-}
+const patternId = ref('4F')
 
-const title = ref('')
-const builtin = ref(true)
-const users = ref('')
-const userNames = ref<string[]>([])
-const cells = ref<Cell[]>([])
+const lookup = computed(() => resolvePatterns(roster.value.patterns))
+const pattern = computed(() => lookup.value.get(patternId.value))
+const builtin = computed(() => isBuiltinPatternId(patternId.value))
+const title = computed(() => lookup.value.labelOf(patternId.value))
+
+const users = computed(() => roster.value.members.filter(member => member.patternId === patternId.value))
+const userNames = computed(() => users.value.map(member => member.name))
+const usersText = computed(() => (users.value.length ? users.value.length + ' 人' : ''))
+
+const cells = computed(() => (pattern.value ? pattern.value.shifts : []).map((shift, index) => ({
+  day: String(index + 1).padStart(2, '0'),
+  shift,
+  short: SHIFT_META[shift].short,
+  tone: SHIFT_META[shift].tone
+})))
 
 onLoad((query: Record<string, string> | undefined) => {
   const id = (query && query.id) || '4F'
-  const pattern = demo.patterns.filter((item: { id: string }) => item.id === id)[0] || demo.patterns[0]
-  const matched = demo.members.filter((member: { pattern: string }) => member.pattern === pattern.id)
-
-  title.value = pattern.name
-  builtin.value = pattern.builtin
-  users.value = matched.length ? matched.length + ' 人' : ''
-  userNames.value = matched.map((member: { name: string }) => member.name)
-  cells.value = pattern.shifts.map((shift: string, index: number) => cellOf(shift, index))
+  patternId.value = lookup.value.has(id) ? id : '4F'
 })
 
 function onTap(index: number) {
@@ -84,15 +82,38 @@ function onTap(index: number) {
     return
   }
 
-  const current = cells.value[index]
-  const next = CYCLE[(CYCLE.indexOf(current.shift) + 1) % CYCLE.length]
-  const list = cells.value.slice()
-  list[index] = cellOf(next, index)
-  cells.value = list
+  const target = roster.value.patterns.find(item => item.id === patternId.value)
+  if (!target) return
+
+  const current = target.shifts[index]
+  const next = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length]
+  const shifts = target.shifts.slice()
+  shifts[index] = next
+  store.savePattern({ ...target, shifts })
 }
 
+/** 内置班序只读：复制成一条自定义班序，名字避开已有重名 */
 function onCopy() {
-  uni.showToast({ title: '演示阶段暂未接通', icon: 'none' })
+  if (roster.value.patterns.length >= MAX_CUSTOM_PATTERNS) {
+    uni.showToast({ title: `自定义班序最多 ${MAX_CUSTOM_PATTERNS} 条`, icon: 'none' })
+    return
+  }
+
+  const base = `${title.value}·副本`
+  const names = new Set(roster.value.patterns.map(item => item.name))
+  let name = base
+  let index = 2
+  while (names.has(name)) {
+    name = `${base}-${index}`
+    index += 1
+  }
+
+  const source = lookup.value.get(patternId.value)
+  if (!source) return
+
+  const id = 'cp-' + Date.now().toString(36)
+  store.savePattern({ id, name, shifts: [...source.shifts] })
+  uni.redirectTo({ url: '/pages/pattern/index?id=' + id })
 }
 </script>
 
