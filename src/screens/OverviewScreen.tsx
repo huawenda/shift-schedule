@@ -87,7 +87,7 @@ export function OverviewScreen({
   const moment = useCurrentShift(period.dates, selfShifts)
 
   return (
-    <div className="canvas is-overview">
+    <div className="canvas is-overview is-pinned">
       <div className="canvas-head">
         <div>
           <h1 className="canvas-title">月度概览</h1>
@@ -98,48 +98,51 @@ export function OverviewScreen({
         </div>
       </div>
 
-      {/*
-        今日值班牌：概览页的第一问是「现在/下一班是什么、还有多久、这个月怎么排」。
-        只讲本人，全员出勤口径仍留在矩阵页的概览条里；
-        「本月实发」不再放这里，下面的薪资卡已经有一份，避免同一页两处同数。
-      */}
-      {self && stats ? (
-        <TodayPlaque
-          dates={period.dates}
-          defaultShifts={selfDefaultShifts}
-          moment={moment}
-          onEditDate={date => onEdit(self, date)}
-          personGroup={patternNameOf(roster, self.patternId)}
-          personName={self.name}
-          shifts={selfShifts}
-          summary={stats.days}
-          today={today}
-          todayInPeriod={todayInPeriod}
-          todayMeta={todayMeta}
-          todayTodoCount={todayTodos.length}
-        />
-      ) : null}
+      {/* 页头固定：标题与副标留在原位，值班牌 / 日历 / 统计收进单独滚动的 flow */}
+      <div className="canvas-flow">
+        {/*
+          今日值班牌：概览页的第一问是「现在/下一班是什么、还有多久、这个月怎么排」。
+          只讲本人，全员出勤口径仍留在矩阵页的概览条里；
+          「本月实发」不再放这里，下面的薪资卡已经有一份，避免同一页两处同数。
+        */}
+        {self && stats ? (
+          <TodayPlaque
+            dates={period.dates}
+            defaultShifts={selfDefaultShifts}
+            moment={moment}
+            onEditDate={date => onEdit(self, date)}
+            personGroup={patternNameOf(roster, self.patternId)}
+            personName={self.name}
+            shifts={selfShifts}
+            summary={stats.days}
+            today={today}
+            todayInPeriod={todayInPeriod}
+            todayMeta={todayMeta}
+            todayTodoCount={todayTodos.length}
+          />
+        ) : null}
 
-      {/*
-        日历 + 待办并排：日历固定 840，待办吃掉右边剩下的宽度。
-        高度由日历决定（align-items: stretch 让待办卡跟着长到一样高），
-        右边界与下面统计块的右边界自然对齐。
-      */}
-      <div className="overview-top">
-        <MonthCalendar
-          member={self}
-          onEdit={onEdit}
-          period={period}
-          recordMap={recordMap}
-          roster={roster}
-          todoCounts={todoCounts}
-        />
-        <TodoCard todos={periodTodos} onToggle={onToggleTodo} />
+        {/*
+          日历 + 待办并排：日历固定 840，待办吃掉右边剩下的宽度。
+          高度由日历决定（align-items: stretch 让待办卡跟着长到一样高），
+          右边界与下面统计块的右边界自然对齐。
+        */}
+        <div className="overview-top">
+          <MonthCalendar
+            member={self}
+            onEdit={onEdit}
+            period={period}
+            recordMap={recordMap}
+            roster={roster}
+            todoCounts={todoCounts}
+          />
+          <TodoCard todos={periodTodos} onToggle={onToggleTodo} />
+        </div>
+
+        {stats ? (
+          <StatsPanels stats={stats} totalDays={period.dates.length} onOpenProfile={onOpenProfile} />
+        ) : null}
       </div>
-
-      {stats ? (
-        <StatsPanels stats={stats} totalDays={period.dates.length} onOpenProfile={onOpenProfile} />
-      ) : null}
     </div>
   )
 }

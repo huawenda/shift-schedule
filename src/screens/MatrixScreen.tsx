@@ -23,7 +23,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
   const [mode, setMode] = useState<MatrixMode>('shift')
 
   return (
-    <div className="canvas">
+    <div className="canvas is-pinned">
       <div className="canvas-head">
         <div>
           <h1 className="canvas-title">全员矩阵</h1>
@@ -54,9 +54,12 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
         </div>
       </div>
 
-      <SummaryBar period={period} roster={roster} />
+      {/* 页头固定：标题与视图切换留在原位，概览条与矩阵收进单独滚动的 flow */}
+      <div className="canvas-flow">
+        <SummaryBar period={period} roster={roster} />
 
-      <TeamMatrix mode={mode} period={period} roster={roster} onEdit={onEdit} />
+        <TeamMatrix mode={mode} period={period} roster={roster} onEdit={onEdit} />
+      </div>
     </div>
   )
 }
