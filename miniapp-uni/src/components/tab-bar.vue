@@ -1,5 +1,6 @@
 <template>
-  <view class="tabbar" :style="{ height: frame.tabBarHeight + 'px', paddingBottom: frame.safeBottom + 'px' }">
+  <view class="tabbar-host" :style="{ paddingBottom: frame.safeBottom + 'px' }">
+    <view class="tabbar">
     <view
       v-for="item in list"
       :key="item.path"
@@ -26,6 +27,7 @@
         </view>
       </view>
       <text class="tab-label">{{ item.text }}</text>
+    </view>
     </view>
   </view>
 </template>
@@ -63,20 +65,26 @@ function go(item: { index: number; path: string }) {
 </script>
 
 <style lang="scss" scoped>
-/* 与桌面 `.rail`（≤1023 档）同款：深青底 + 4px 内边距 + 48px 等宽项 + 2px 间隙 */
-.tabbar {
+/* C 方案：底栏取系统底部导航栏同款浅灰，有没有手势条都不会出现接缝 */
+.tabbar-host {
   position: fixed;
   right: 0;
   bottom: 0;
   left: 0;
   z-index: 20;
+  /* 安全区与底栏同一颜色，铺到屏幕最底 */
+  background: var(--surface-nav);
+}
+
+.tabbar {
   display: flex;
   align-items: stretch;
   gap: 2px;
+  height: 57px;
   padding: 4px 8px;
   overflow: hidden;
-  border-top: 1px solid var(--chrome-line);
-  background: var(--chrome);
+  border-top: 1px solid var(--rule);
+  background: var(--surface-nav);
   box-sizing: border-box;
 }
 
@@ -89,13 +97,13 @@ function go(item: { index: number; path: string }) {
   gap: 3px;
   height: 48px;
   border-radius: var(--radius-card);
-  color: var(--chrome-muted);
+  color: var(--muted);
   font-size: var(--fs-label);
 }
 
 .tab.is-on {
-  background: var(--chrome-weak);
-  color: var(--chrome-accent);
+  background: var(--accent-weak);
+  color: var(--accent);
 }
 
 .tab-label {
