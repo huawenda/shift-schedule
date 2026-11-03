@@ -22,11 +22,11 @@
             class="todo-item"
             :class="[`todo-tone-${todo.tone}`, todo.done ? 'is-done' : '']"
           >
-            <view
-              class="todo-check"
-              :class="{ 'is-done': todo.done }"
-              @tap.stop="$emit('toggle', todo.id)"
-            ></view>
+            <view class="todo-toggle" @tap.stop="$emit('toggle', todo.id)">
+              <view class="todo-check" :class="{ 'is-done': todo.done }">
+                <view v-if="todo.done" class="check-tick"></view>
+              </view>
+            </view>
             <text class="todo-text">{{ todo.text }}</text>
           </view>
         </view>
@@ -130,25 +130,46 @@ const summary = computed(() => summarizeTodos(props.todos))
   line-height: 1.5;
 }
 
-.todo-check {
+/* 点击热区 24px（视觉方块 14px 居中），负边距抵消放大的占位，行高不变 */
+.todo-toggle {
+  display: flex;
   flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  margin-top: 2.75px;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -2px 0 0 -4px;
+}
+
+/* 圆角矩形：未完成是白底细边，完成是实心青 + 白色勾 */
+.todo-check {
+  position: relative;
+  width: 16px;
+  height: 16px;
   border: 1px solid var(--control);
   border-radius: var(--radius-mark);
   background: var(--surface);
+  box-sizing: border-box;
 }
 
 .todo-check.is-done {
   border-color: var(--accent);
-  background-color: var(--accent);
-  background-image:
-    linear-gradient(45deg, transparent 45%, var(--text-inverse) 45%, var(--text-inverse) 55%, transparent 55%),
-    linear-gradient(-45deg, transparent 45%, var(--text-inverse) 45%, var(--text-inverse) 55%, transparent 55%);
-  background-position: 3px 6px, 3px 3px;
-  background-repeat: no-repeat;
-  background-size: 7px 7px, 7px 7px;
+  background: var(--accent);
+}
+
+/* 勾：宽 7 高 3.5、线宽 2。
+ * translate(-50%, -50%) 让勾的几何中心落在方块中心，再上移 0.5px ——
+ * L 形的拐角在左下，旋转后视觉重心天然偏下，不补这半像素看着就「沉」。 */
+.check-tick {
+  position: absolute;
+  top: calc(50% - 0.5px);
+  left: 50%;
+  width: 7px;
+  height: 3.5px;
+  border-bottom: 2px solid var(--text-inverse);
+  border-left: 2px solid var(--text-inverse);
+  border-radius: 1px;
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .todo-text {

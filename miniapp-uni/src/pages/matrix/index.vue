@@ -53,7 +53,7 @@
               <scroll-view
                 scroll-y
                 class="summary-popover-list"
-                :style="{ height: cell.listHeight + 'px' }"
+                :style="{ maxHeight: cell.listHeight + 'px' }"
               >
                 <view
                   v-for="(person, personIndex) in cell.people"

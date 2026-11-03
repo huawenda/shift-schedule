@@ -46,7 +46,11 @@
               class="todo-item"
               :class="['todo-tone-' + todo.tone, { 'is-done': todo.done }]"
             >
-              <view class="todo-check" @tap="onToggleTodo(todo.id)"></view>
+              <view class="todo-toggle" @tap="onToggleTodo(todo.id)">
+                <view class="todo-check" :class="{ 'is-done': todo.done }">
+                  <view v-if="todo.done" class="check-tick"></view>
+                </view>
+              </view>
               <text class="todo-text" @tap="onToggleTodo(todo.id)">{{ todo.text }}</text>
               <text class="todo-remove" @tap="onRemoveTodo(todo.id)">×</text>
             </view>
@@ -701,16 +705,42 @@ function onRemoveTodo(id: string) {
   background: var(--todo-bg);
 }
 
-.todo-check {
+/* 勾选：与概览卡片同一套（24px 热区 + 14px 圆角矩形，完成实心青 + 白色细勾） */
+.todo-toggle {
+  display: flex;
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--todo-ink);
-  border-radius: var(--radius-mark);
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -3px 0 -3px -4px;
 }
 
-.todo-item.is-done .todo-check {
-  background: var(--todo-ink);
+.todo-check {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--control);
+  border-radius: var(--radius-mark);
+  background: var(--surface);
+  box-sizing: border-box;
+}
+
+.todo-check.is-done {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.check-tick {
+  position: absolute;
+  top: calc(50% - 0.5px);
+  left: 50%;
+  width: 7px;
+  height: 3.5px;
+  border-bottom: 2px solid var(--text-inverse);
+  border-left: 2px solid var(--text-inverse);
+  border-radius: 1px;
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .todo-text {
