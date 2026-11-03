@@ -1,258 +1,461 @@
-/* 全员矩阵 ·「历书」
+/*
+ * 全员矩阵 —— 与桌面 ≤639 档 1:1。
  *
- * 与桌面端同构：一个横向滚动容器 + 一张网格；姓名列用 position: sticky 固定在左缘，
- * 行头与每一行共用同一套 grid-template-columns，所以列线天然对齐，宽度也由网格自己撑出。
+ * 结构对齐桌面 `.matrix`：姓名列 88px 固定，日期区 30 天横滚；
+ * 因为小程序 scroll-view 里 position: sticky 不可靠，这里把姓名列拆成独立一栏，
+ * 与日期区共用同一套行高（36px），列线仍然逐行对齐。
  */
 
 .page {
   min-height: 100vh;
+  background: var(--canvas);
+  box-sizing: border-box;
 }
 
-/* 卡片公共外框：纸面由 .paper 提供，这里只管外边距与裁切 */
-.card {
-  margin: 0 var(--gap-md) var(--gap-sm);
-  overflow: hidden;
-}
+/* 画布与冻结页头在 base.scss 里统一，三页共用 */
 
-.card-summary {
-  margin-top: var(--gap-sm);
-}
-
-/* ------------------------------------------------------------ 今日概览 */
+/* ------------------------------------------------------------ 今日概览条 */
 
 .summary {
+  position: relative;
+  z-index: 10;
   display: flex;
-  align-items: stretch;
-  padding: var(--gap-md) 0;
+  border-radius: var(--radius-panel);
+  background: var(--chrome);
+  color: var(--chrome-text);
+  box-shadow: var(--shadow-raised);
 }
 
-.summary-item {
+.summary-cell {
+  display: flex;
   flex: 1 1 0;
-  display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2rpx;
+  gap: 2px;
+  min-width: 0;
+  min-height: 88px;
+  padding: var(--sp-2) var(--sp-3);
+  border-right: 1px solid var(--chrome-line);
 }
 
-.summary-divider {
-  width: 1px;
-  margin: 6rpx 0;
-  background: var(--border);
-}
-
-.summary-num {
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: var(--fs-section);
-  font-weight: 600;
-  line-height: 1.1;
+.summary-cell.is-last {
+  border-right: 0;
 }
 
 .summary-label {
-  color: var(--faint);
-  font-size: var(--fs-micro);
+  color: var(--chrome-muted);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 14px;
 }
 
-/* ------------------------------------------------------------ 表格
- * 小程序 scroll-view 里 position:sticky 不生效，所以仍是「固定姓名列 + 横向滚动日期区」两栏。
- * 但列线不再靠 flex 碰运气：日期区的表头与每一行都是 grid，模板由同一个内联样式给出，
- * 容器宽也是同一个内联样式里的 天数 × 48rpx，两边不可能差出一格。 */
+.summary-value {
+  display: flex;
+  align-items: baseline;
+  color: var(--chrome-text);
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.summary-unit {
+  margin-left: 4px;
+  color: var(--chrome-muted);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.summary-names {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--chrome-muted);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-more {
+  align-self: flex-start;
+  color: var(--chrome-accent);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+/* 名单浮层：≤639 贴着整条概览条展开（以 .summary 为定位基准） */
+.summary-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 6;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-floating);
+}
+
+.summary-popover-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.summary-popover-title {
+  font-size: var(--fs-control);
+  font-weight: 600;
+}
+
+.summary-popover-count {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.summary-popover-close {
+  margin-left: auto;
+  padding: 0 4px;
+  color: var(--faint);
+  font-size: var(--fs-subhead);
+  line-height: 1;
+}
+
+.summary-popover-list {
+  margin-top: 4px;
+}
+
+.summary-popover-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--fs-control);
+}
+
+.summary-popover-item.is-last {
+  border-bottom: 0;
+}
+
+.summary-popover-name {
+  min-width: 0;
+  color: var(--text);
+}
+
+.summary-popover-position {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+/* 「特」标记：白特暖黄、夜特橙，与矩阵班次色同一套 */
+.summary-special {
+  display: inline-block;
+  margin-left: 3px;
+  padding: 0 3px;
+  border-radius: var(--radius-mark);
+  background: var(--shift-dayx-bg);
+  color: var(--shift-dayx-ink);
+  font-size: var(--fs-micro);
+  line-height: 14px;
+  vertical-align: 1px;
+}
+
+.summary-special.is-night {
+  background: var(--shift-nightx-bg);
+  color: var(--shift-nightx-ink);
+}
+
+/* 点浮层以外任何地方关闭 */
+.summary-backdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  background: transparent;
+}
+
+/* ------------------------------------------------------------ 矩阵 */
+
+/* 整块白板：外沿无边框 + 极浅投影，内部格线保持发丝级 */
+.matrix-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+}
 
 .matrix {
   display: flex;
+  min-width: 0;
 }
 
+/* 姓名列：固定 88px，背景自带底色（对应桌面 sticky 那种「不透明行头」） */
 .names {
-  flex: 0 0 180rpx;
+  flex: 0 0 auto;
   border-right: 1px solid var(--border);
+  background: var(--surface);
 }
 
-.names-head {
-  height: 60rpx;
-  padding: 0 var(--gap-sm);
+.name-head {
   display: flex;
   align-items: center;
+  height: 37px;
+  padding: 0 6px;
   border-bottom: 1px solid var(--border);
-  box-sizing: border-box;
+  background: var(--surface-tint);
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-weight: 500;
 }
 
-.names-title {
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  letter-spacing: 0.18em;
+.name-head-text {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-weight: 500;
 }
 
 .name-row {
-  height: 76rpx;
-  padding: 0 var(--gap-sm);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0;
-  border-bottom: 1px solid var(--border);
-  box-sizing: border-box;
+  gap: 1px;
+  height: 37px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--rule);
+  border-left: 2px solid transparent;
+  background: var(--surface);
 }
 
-.days-wrap {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
+.name-row.is-focused {
+  border-left-color: var(--accent);
+  background: var(--accent-weak);
 }
 
-.days {
-  width: 100%;
-  height: 100%;
-}
-
-.days-inner {
-  box-sizing: border-box;
-}
-
-.day-head {
-  display: grid;
-  height: 60rpx;
-  border-bottom: 1px solid var(--border);
-  box-sizing: border-box;
-}
-
-.day-row {
-  display: grid;
-  height: 76rpx;
-  border-bottom: 1px solid var(--border);
-  box-sizing: border-box;
+.name-row.is-last {
+  height: 36px;
+  border-bottom: 0;
 }
 
 .name-line {
   display: flex;
   align-items: center;
-  gap: 6rpx;
+  gap: 4px;
   min-width: 0;
 }
 
 .name {
-  color: var(--text);
-  font-size: var(--fs-meta);
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.name-sub {
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
+  color: var(--text);
+  font-size: var(--fs-control);
+  font-weight: 600;
   line-height: 1.2;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 本人：朱红描边小方印，不用底色 */
-.badge {
-  flex: 0 0 auto;
-  padding: 0 6rpx;
-  height: 28rpx;
-  line-height: 26rpx;
-  border: 1px solid var(--accent);
-  border-radius: 2rpx;
-  color: var(--accent);
+.pattern {
+  overflow: hidden;
+  color: var(--muted);
   font-size: var(--fs-micro);
-  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.day-cell {
+/* 按姓名时行头只剩「班序 · 岗位」，字号升到 12px 与桌面一致 */
+.pattern.is-row-mode {
+  font-size: var(--fs-small);
+}
+
+.days-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.days {
+  width: 100%;
+}
+
+.days-inner {
+  overflow: hidden;
+}
+
+.day-head {
+  display: grid;
+  height: 37px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-tint);
+}
+
+.matrix-day {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-right: 1px solid var(--border);
-  box-sizing: border-box;
+  gap: 1px;
+  height: 36px;
+  border-right: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: var(--fs-label);
+  line-height: 1.1;
 }
 
-/* 最后一列不画右边线：卡片自己有一道边框，再画一道就成了双线 */
-.day-cell:last-child,
-.pill-cell:last-child {
+.matrix-day.is-weekend {
+  background: var(--surface-tint);
+}
+
+/* 今天只标表头：底色微染 + 数字加重 + 底部 2px 色带 */
+.matrix-day.is-today {
+  background: var(--accent-weak);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.matrix-day.is-last {
   border-right: 0;
 }
 
-/* 图例移出卡片后，表格最后一行紧贴卡片下缘：去掉行底线，别和卡片描边叠成双线 */
-.name-row:last-child,
-.day-row:last-child {
-  border-bottom: 0;
+.matrix-day-num {
+  color: inherit;
+  font-variant-numeric: tabular-nums;
 }
 
-/* 今天只标表头：浅朱底 + 朱红数字 */
-.day-cell.is-today {
+.matrix-day-week {
+  color: var(--faint);
+  font-size: var(--fs-label);
+}
+
+.day-row {
+  display: grid;
+  height: 37px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+.day-row.is-focused {
   background: var(--accent-weak);
 }
 
-.day-num {
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  line-height: 1.15;
+.day-row.is-last {
+  height: 36px;
+  border-bottom: 0;
 }
 
-.day-cell.is-today .day-num {
-  color: var(--accent);
-  font-weight: 700;
+/*
+ * 格子：直角 + 列线；色块收成 3px 内缩的药丸块。
+ * 桌面用 `::before` + `z-index:-1` 画药丸；WXSS 的层叠上下文不可靠，
+ * 这里换成「格子 padding 3px + 实心内块」，四边留白等宽，视觉一致。
+ */
+.matrix-cell {
+  height: 36px;
+  padding: 3px;
+  border-right: 1px solid var(--rule);
 }
 
-.day-week {
-  color: var(--faint);
-  font-size: var(--fs-micro);
-  line-height: 1.15;
+.matrix-cell.is-last {
+  border-right: 0;
 }
 
-.pill-cell {
+.matrix-pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-right: 1px solid var(--border);
-  box-sizing: border-box;
+  width: 100%;
+  height: 30px;
+  overflow: hidden;
+  border-radius: var(--radius-mark);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-/* 班次方印 */
-.pill {
-  width: 32rpx;
-  height: 32rpx;
-  line-height: 32rpx;
-  border-radius: var(--radius-sub);
+.matrix-pill.is-blank {
+  background: transparent;
+  color: var(--faint);
+}
+
+/* 右缘渐隐：滚动条被藏了，它提示右边还有半个月；滚到头自动消失 */
+.matrix-edge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 32px;
+  background: linear-gradient(to left, var(--surface), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.matrix-edge.is-hidden {
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------ 空状态 */
+
+.empty {
+  padding: 48px 24px;
+  border-radius: var(--radius-panel);
+  background: var(--surface-sunken);
   text-align: center;
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  font-weight: 700;
 }
 
-/* ------------------------------------------------------------ 图例
- * 落在纸面上，不进卡片：只用左右 24rpx 与卡片边缘对齐 */
+.empty-title {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: var(--fs-subhead);
+  font-weight: 600;
+}
+
+.empty-text {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-control);
+}
+
+/* ------------------------------------------------------------ 图例 */
 
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gap-sm) var(--gap-md);
-  padding: 0 var(--gap-md) var(--gap-sm);
+  align-items: center;
+  gap: var(--sp-3) var(--sp-4);
+  padding: 0 2px;
+  color: var(--muted);
+  font-size: var(--fs-small);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 6rpx;
+  gap: 6px;
 }
 
-.legend-dot {
-  width: 32rpx;
-  height: 32rpx;
-  line-height: 32rpx;
-  border-radius: var(--radius-sub);
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  font-weight: 700;
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-mark);
 }
 
 .legend-text {
-  color: var(--faint);
-  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+/* 触屏没有滚轮可横滚，单独给一句「左右滑动」 */
+.legend-hint {
+  margin-left: auto;
+  color: var(--muted);
 }

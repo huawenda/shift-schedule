@@ -14,10 +14,15 @@
         <view v-else-if="item.icon === 'matrix'" class="g-matrix">
           <view v-for="cell in 4" :key="cell" class="g-cell"></view>
         </view>
-        <view v-else class="g-bars">
-          <view class="g-bar is-long"></view>
-          <view class="g-bar is-mid"></view>
-          <view class="g-bar is-short"></view>
+        <view v-else class="g-settings">
+          <view class="g-slider">
+            <view class="g-line"></view>
+            <view class="g-knob is-right"></view>
+          </view>
+          <view class="g-slider">
+            <view class="g-line"></view>
+            <view class="g-knob is-left"></view>
+          </view>
         </view>
       </view>
       <text class="tab-label">{{ item.text }}</text>
@@ -33,11 +38,10 @@ const props = defineProps<{ current: number }>()
 /**
  * pages.json 里配了 tabBar.custom = true（原生栏由 custom-tab-bar 占位、不渲染），
  * 所以这里能用 switchTab：三个 tab 页只在第一次进入时创建，之后复用同一份 WebView。
- * 之前的 reLaunch 每次都重建页面，那一帧空白就是闪白的根源。
  */
 const list = [
-  { index: 0, text: '日历', icon: 'calendar', path: '/pages/calendar/index' },
-  { index: 1, text: '矩阵', icon: 'matrix', path: '/pages/matrix/index' },
+  { index: 0, text: '月度概览', icon: 'calendar', path: '/pages/overview/index' },
+  { index: 1, text: '全员矩阵', icon: 'matrix', path: '/pages/matrix/index' },
   { index: 2, text: '设置', icon: 'settings', path: '/pages/settings/index' }
 ]
 
@@ -59,10 +63,7 @@ function go(item: { index: number; path: string }) {
 </script>
 
 <style lang="scss" scoped>
-/*
- * 颜色写死：mp-weixin 的自定义组件默认样式隔离，page 上的 CSS 变量不保证继承。
- * 四个值与 styles/tokens.scss 同源，改色时两处一起改。
- */
+/* 与桌面 `.rail`（≤1023 档）同款：深青底 + 4px 内边距 + 48px 等宽项 + 2px 间隙 */
 .tabbar {
   position: fixed;
   right: 0;
@@ -71,109 +72,113 @@ function go(item: { index: number; path: string }) {
   z-index: 20;
   display: flex;
   align-items: stretch;
-  box-sizing: border-box;
+  gap: 2px;
+  padding: 4px 8px;
   overflow: hidden;
-  background: #171512;
-  border-top: 1px solid #2c2822;
+  border-top: 1px solid var(--chrome-line);
+  background: var(--chrome);
+  box-sizing: border-box;
 }
 
 .tab {
-  flex: 1 1 0;
-  height: 100%;
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6rpx;
-  color: #867e6f;
+  gap: 3px;
+  height: 48px;
+  border-radius: var(--radius-card);
+  color: var(--chrome-muted);
+  font-size: var(--fs-label);
 }
 
-/* 选中整项转暖沙：图标与文字都用 currentColor，一处改色全部跟上 */
 .tab.is-on {
-  color: #e8c58b;
+  background: var(--chrome-weak);
+  color: var(--chrome-accent);
 }
 
 .tab-label {
-  font-size: 20rpx;
-  line-height: 1.2;
-}
-
-.tab.is-on .tab-label {
-  font-weight: 600;
+  line-height: 1;
 }
 
 /* ------------------------------------------------------------ 图标
- * 三个图标都用 view 拼，不引入图片：深青底上的小线性图标容易糊。 */
+ * 18px，与桌面底栏一致；全部用 view 拼，不引入图片。 */
 
 .glyph {
-  width: 34rpx;
-  height: 34rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 18px;
+  height: 18px;
 }
 
-/* 日历：细线方框 + 表头横线 */
+/* 日历：方框 + 表头横线 */
 .g-cal {
   position: relative;
-  width: 30rpx;
-  height: 30rpx;
-  border: 2rpx solid currentColor;
-  border-radius: 4rpx;
-  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1.3px solid currentColor;
+  border-radius: 3px;
 }
 
 .g-cal-bar {
   position: absolute;
-  top: 6rpx;
+  top: 4px;
   right: 0;
   left: 0;
-  height: 2rpx;
+  height: 1.3px;
   background: currentColor;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 /* 矩阵：2 × 2 空心小方块 */
 .g-matrix {
-  width: 30rpx;
-  height: 30rpx;
   display: flex;
   flex-wrap: wrap;
-  gap: 8rpx;
+  gap: 3px;
+  width: 16px;
+  height: 16px;
 }
 
 .g-cell {
-  width: 11rpx;
-  height: 11rpx;
-  border: 2rpx solid currentColor;
-  border-radius: 2rpx;
-  box-sizing: border-box;
+  width: 6px;
+  height: 6px;
+  border: 1.3px solid currentColor;
+  border-radius: 1.5px;
 }
 
-/* 设置：三条递减横线 */
-.g-bars {
-  width: 30rpx;
+/* 设置：两条推子 + 两个空心圆点 */
+.g-settings {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6rpx;
+  justify-content: center;
+  gap: 6px;
+  width: 16px;
+  height: 16px;
 }
 
-.g-bar {
-  height: 2rpx;
-  border-radius: 1rpx;
+.g-slider {
+  position: relative;
+  height: 1.3px;
   background: currentColor;
 }
 
-.g-bar.is-long {
-  width: 30rpx;
+.g-knob {
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border: 1.2px solid currentColor;
+  border-radius: 50%;
+  transform: translateY(-50%);
 }
 
-.g-bar.is-mid {
-  width: 22rpx;
+.g-knob.is-right {
+  right: 2px;
 }
 
-.g-bar.is-short {
-  width: 14rpx;
+.g-knob.is-left {
+  left: 2px;
 }
 </style>

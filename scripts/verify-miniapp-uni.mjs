@@ -12,7 +12,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const DIST = process.argv[2] || 'miniapp-uni/dist/build/mp-weixin'
-const PAGES = ['calendar', 'matrix', 'settings', 'overview', 'members', 'pattern']
+const PAGES = ['overview', 'matrix', 'settings']
 
 const failures = []
 function check(name, ok, detail) {
@@ -35,7 +35,7 @@ if (!existsSync(DIST)) {
 /* ------------------------------------------------------------ app 配置 */
 
 const appJson = JSON.parse(read('app.json'))
-check('注册 6 个页面', appJson.pages.length === 6, `${appJson.pages.length} 页`)
+check('注册 3 个页面', appJson.pages.length === 3, `${appJson.pages.length} 页`)
 check(
   '页面路径完整',
   PAGES.every(name => appJson.pages.includes(`pages/${name}/index`)),
@@ -44,7 +44,7 @@ check(
 check('自定义导航栏', appJson.window.navigationStyle === 'custom', appJson.window.navigationStyle)
 check(
   'tabBar 走自定义模式（页内自绘）',
-  appJson.tabBar?.custom === true && ['calendar', 'matrix', 'settings'].every(name => appJson.tabBar.list.some(item => item.pagePath === `pages/${name}/index`)),
+  appJson.tabBar?.custom === true && ['overview', 'matrix', 'settings'].every(name => appJson.tabBar.list.some(item => item.pagePath === `pages/${name}/index`)),
   appJson.tabBar ? `custom=${appJson.tabBar.custom}` : '无'
 )
 check(
@@ -71,47 +71,40 @@ for (const name of PAGES) {
 
   const pageJson = JSON.parse(read(`${dir}/index.json`))
   const using = pageJson.usingComponents || {}
-  const needsTab = ['calendar', 'matrix', 'settings'].includes(name)
   check(
     `${name} 组件注册正确`,
-    Boolean(using['nav-bar']) === true && Boolean(using['tab-bar']) === needsTab,
+    Boolean(using['nav-bar']) === true && Boolean(using['tab-bar']) === true,
     Object.keys(using).join(', ')
   )
 }
 
 /* ------------------------------------------------------------ 关键内容 */
 
-const calendar = read('pages/calendar/index.wxml')
-check('日历有月份条', calendar.includes('month-title'))
-check('日历有今日卡', calendar.includes('today-shift'))
-check('日历有格子循环与单字', calendar.includes('cell-char') && calendar.includes('wx:for'))
-check('日历有页脚统计', calendar.includes('stat-num'))
+const overview = read('pages/overview/index.wxml')
+check('概览有值班牌', overview.includes('today-plaque'))
+check('概览有日历', overview.includes('month-calendar'))
+check('概览有待办卡', overview.includes('todo-card'))
+check('概览有统计面板', overview.includes('stats-panels'))
+check('概览有改班抽屉', overview.includes('day-editor'))
 
 const matrix = read('pages/matrix/index.wxml')
 check('矩阵有姓名列', matrix.includes('name-row'))
 check('矩阵有横向滚动', matrix.includes('scroll-view'))
-check('矩阵有药丸格', matrix.includes('pill-cell'))
+check('矩阵有药丸格', matrix.includes('matrix-pill'))
+check('矩阵有名单浮层', matrix.includes('summary-popover'))
+check('矩阵有改班抽屉', matrix.includes('day-editor'))
 
 const settings = read('pages/settings/index.wxml')
-check('设置页有本人卡', settings.includes('me-name'))
-check('设置页有危险操作', settings.includes('is-danger') || settings.includes('danger'))
-
-const members = read('pages/members/index.wxml')
-check('人员配置有分段', members.includes('seg-item'))
-check('人员配置有抽屉', members.includes('backdrop') && members.includes('sheet-foot'))
-check('人员配置有开关', members.includes('switch'))
-
-const pattern = read('pages/pattern/index.wxml')
-check('班序有 24 格循环', pattern.includes('wx:for'))
-check('班序有使用成员', pattern.includes('members-title'))
-
-const overview = read('pages/overview/index.wxml')
-check('概览有班次贴片', overview.includes('slip'))
-check('概览有结账块', overview.includes('is-total'))
+check('设置页有两段分页', settings.includes('segmented-item'))
+check('设置页有班序区块', settings.includes('pattern-chip') && settings.includes('pattern-grid'))
+check('设置页有成员卡片', settings.includes('member-row'))
+check('设置页有个人资料', settings.includes('salary-grid'))
+check('设置页有危险操作', settings.includes('btn-danger'))
+check('设置页有底部抽屉', settings.includes('sheet-backdrop'))
 
 /* ------------------------------------------------------------ 组件与残留 */
 
-for (const name of ['nav-bar', 'tab-bar']) {
+for (const name of ['nav-bar', 'tab-bar', 'day-editor', 'pattern-grid']) {
   // uni 把组件平铺在 components/ 下，文件名是 <组件名>.wxml
   const files = [`components/${name}.wxml`, `components/${name}.json`, `components/${name}.wxss`, `components/${name}.js`]
   check(`${name} 组件齐全`, files.every(file => existsSync(join(DIST, file))))
@@ -125,7 +118,7 @@ check(
 )
 check(
   '页面跑在 uni 运行时上',
-  read('pages/calendar/index.js').includes('common/vendor.js'),
+  read('pages/overview/index.js').includes('common/vendor.js'),
   '编译产物应引用 common/vendor.js'
 )
 
@@ -133,5 +126,5 @@ if (failures.length > 0) {
   console.error(`\n${failures.length} 项未通过`)
   process.exitCode = 1
 } else {
-  console.log('\n全部通过：六个页面、外壳组件、令牌与关键结构都在产物里')
+  console.log('\n全部通过：三个页面、外壳组件、令牌与关键结构都在产物里')
 }

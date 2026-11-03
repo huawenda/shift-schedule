@@ -1,306 +1,787 @@
-/* 设置 ·「历书」
+/*
+ * 设置页 —— 与桌面 ≤639 档 1:1。
  *
- * 本人卡 + 每个分组一张卡，卡片之间 16rpx；靠字距与发丝线分栏。
+ * 区块结构：左栏标题 + 右侧白卡在手机上叠成上下两段；
+ * 成员表从「四列表格」折成「两行卡片」，班序折成 2 列 chips。
  */
 
 .page {
   min-height: 100vh;
+  background: var(--canvas);
+  box-sizing: border-box;
 }
 
-/* ------------------------------------------------------------ 本人 */
+/* 画布与冻结页头在 base.scss 里统一，三页共用 */
 
-.me {
-  margin: var(--gap-sm) var(--gap-md) var(--gap-sm);
-  padding: var(--gap-sm) var(--gap-md);
-  display: flex;
-  align-items: center;
-  gap: var(--gap-sm);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-left: 6rpx solid var(--accent);
-  border-radius: var(--radius-control);
-}
+/* ------------------------------------------------------------ 区块 */
 
-.monogram {
-  flex: 0 0 auto;
-  width: 64rpx;
-  height: 64rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--text);
-  color: var(--text);
-  font-family: var(--font-brand);
-  font-size: var(--fs-control);
-  line-height: 1;
-}
-
-.me-main {
-  flex: 1 1 auto;
+.settings-section {
   display: flex;
   flex-direction: column;
-  min-width: 0;
-}
-
-.me-name {
-  color: var(--text);
-  font-family: var(--font-brand);
-  font-size: var(--fs-section);
-  letter-spacing: 0.03em;
-  line-height: 1.1;
-}
-
-.me-sub {
-  margin-top: 6rpx;
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-}
-
-/* ------------------------------------------------------------ 分组 */
-
-/* 每个分组一张独立卡：纸底 + 1px 边线来自 .paper，这里只管外边距与裁切 */
-.group {
-  margin: 0 var(--gap-md) var(--gap-sm);
-  overflow: hidden;
-}
-
-/* 分组标题行铺一道浅底：与纸面拉开一档，读起来是一段小标题栏 */
-.group-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 10rpx var(--gap-md) 8rpx;
-  background: var(--surface-sunken);
-}
-
-.group-title {
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  letter-spacing: 0.2em;
-}
-
-.group-note {
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-}
-
-.rows {
-  border-top: 1px solid var(--rule);
-}
-
-.row {
-  min-height: 84rpx;
-  padding: 12rpx var(--gap-md);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gap-md);
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-4);
   border-bottom: 1px solid var(--rule);
 }
 
-.rows .row:last-child {
-  border-bottom: 0;
-}
-
-.row:active {
-  background: var(--surface-sunken);
-}
-
-.row.is-static:active {
-  background: transparent;
-}
-
-/* 危险动作只把字染红，不再铺整行底色 */
-.row.is-danger {
-  background: transparent;
-}
-
-.row-main {
+.settings-label {
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
-  min-width: 0;
+  gap: 6px;
 }
 
-.row-title {
-  color: var(--text);
-  font-size: var(--fs-control);
-  line-height: 1.3;
+.label-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.row-title.is-danger {
+/* 区块标题左侧 3px 强调色竖条 */
+.label-mark {
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.label-mark.is-danger {
+  background: var(--danger);
+}
+
+.label-title {
+  font-size: var(--fs-subhead);
+  font-weight: 600;
+}
+
+/* 标题行右侧的动作（排序 / 完成 / 取消） */
+.label-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.sort-action {
+  padding: 4px 2px;
   color: var(--accent);
-}
-
-.row-sub {
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  line-height: 1.3;
-}
-
-.row-arrow {
-  flex: 0 0 auto;
-  color: var(--control);
-  font-size: var(--fs-control);
+  font-size: var(--fs-small);
   line-height: 1;
 }
 
-.row-value {
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
+.sort-action.is-quiet {
+  color: var(--muted);
 }
 
-/* ------------------------------------------------------------ 抽屉
- * 本人 / 薪资：底部全宽，遮罩同其他二级页；字段直接铺在纸上，不再套卡片 */
+.settings-p {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1.65;
+}
 
-.backdrop {
+.settings-meta {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.settings-hint {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------ 班序 */
+
+.pattern-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.pattern-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.pattern-group-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.pattern-group-note {
+  color: var(--faint);
+  font-size: var(--fs-micro);
+}
+
+/* 内置 13 条：手机一行 2 条 */
+.pattern-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pattern-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.pattern-chip.is-on {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.pattern-chip.is-on .pattern-chip-name {
+  color: var(--accent);
+}
+
+.pattern-chip-name {
+  color: var(--text);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 24 格缩略色条：浅灰轨道 + 2px 缝隙的小段胶囊 */
+.pattern-bar {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  padding: 2px;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--raised);
+}
+
+.pattern-bar-seg {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 2px;
+}
+
+.pattern-preview {
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.pattern-preview-inline {
+  border-color: var(--control);
+  background: var(--surface-tint);
+}
+
+.pattern-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+
+.pattern-preview-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.pattern-empty {
+  padding: 16px 12px;
+  border-radius: var(--radius-panel);
+  background: var(--surface-sunken);
+  color: var(--muted);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+.pattern-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pattern-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pattern-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.pattern-row.is-open {
+  border-color: var(--control);
+}
+
+.pattern-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.pattern-row-name {
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--fs-control);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pattern-row-usage {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.pattern-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+/* ------------------------------------------------------------ 成员
+ *
+ * 每人一张卡：第一行姓名 + 操作，第二行班序 + 岗位。
+ * 卡片之间的 8px 间距和 1px 描边把「一个人」圈出来，13 个人不会再连成一张大表单。
+ */
+
+.member-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.member-empty {
+  padding: 8px 2px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.member-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+/* 本人卡：整张浅灰，和可编辑卡一眼分开 */
+.member-card.is-self {
+  background: var(--surface-sunken);
+}
+
+.member-card.is-invalid {
+  border-color: var(--danger-border);
+}
+
+.member-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 姓名是卡里最重的一行：14px / 600，只留一条底线当可编辑提示 */
+.member-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.member-self-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-card-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.member-card-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-2);
+}
+
+.member-card-error {
+  color: var(--danger);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1;
+}
+
+.btn-icon.is-disabled {
+  color: var(--icon-disabled);
+  opacity: 1;
+}
+
+.member-remove {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 4px;
+  color: var(--danger);
+  font-size: var(--fs-small);
+}
+
+/* 只读格子：白底 + 浅灰内描边，与输入框同形状 */
+.member-locked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: var(--control-height);
+  padding: 0 8px;
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--control-soft);
+  color: var(--muted);
+  font-size: var(--fs-control);
+}
+
+/* 本人姓名旁的「本人」徽章保持贴住文字 */
+.member-card.is-self .member-card-head .badge-self {
+  margin-left: -2px;
+}
+
+/* ------------------------------------------------------------ 排序模式
+ *
+ * 卡片压成 44px 紧凑行，只有左侧把手能拖；行高 44 + 间距 8 = 52，
+ * 与脚本里的 SORT_STEP 对齐，让其余行按一个固定行距让位。
+ */
+
+.sort-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.sort-hint {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+.sort-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.sort-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.sort-row.is-self {
+  background: var(--surface-sunken);
+}
+
+/* 被拖行：抬起一层、描边强调，跟手时不要过渡 */
+.sort-row.is-dragging {
+  z-index: 2;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+  transition: none;
+}
+
+.sort-handle {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 44px;
+  color: var(--faint);
+  font-size: var(--fs-body);
+  touch-action: none;
+}
+
+.sort-name {
+  flex: 0 0 auto;
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.sort-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 班序选择：输入框外观，点按弹班序名单 */
+.input.is-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.select-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-caret {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-size: var(--fs-small);
+}
+
+.error-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--danger-weak);
+}
+
+.error-item {
+  color: var(--danger);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------ 个人资料 */
+
+.profile-form,
+.salary-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.money-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.money-field {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.money-field.is-locked {
+  color: var(--faint);
+}
+
+.money-unit {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-size: var(--fs-small);
+}
+
+.danger-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.danger-input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------ 底部抽屉 */
+
+.sheet-backdrop {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 30;
+  z-index: 50;
   display: flex;
   align-items: flex-end;
   background: rgba(15, 20, 24, 0.26);
 }
 
 .sheet {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-height: 88vh;
-  padding: var(--gap-md);
-  padding-bottom: calc(var(--gap-md) + 14px);
-  box-sizing: border-box;
+  overflow: hidden;
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--surface);
   box-shadow: var(--shadow-sheet);
-  overflow-y: auto;
 }
 
 .sheet-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding-bottom: var(--gap-sm);
+  gap: var(--sp-3);
+  padding: var(--sp-3);
   border-bottom: 1px solid var(--rule);
+}
+
+.sheet-head-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .sheet-title {
   color: var(--text);
-  font-family: var(--font-brand);
   font-size: var(--fs-section);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.sheet-sub {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
 }
 
 .sheet-close {
-  padding: 4rpx 8rpx;
+  flex: 0 0 auto;
+  padding: 4px 6px;
   color: var(--muted);
-  font-size: var(--fs-meta);
+  font-size: var(--fs-small);
 }
 
-.field {
-  margin-top: var(--gap-md);
+.sheet-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 0;
+  padding: var(--sp-3);
+  overflow-y: auto;
 }
 
-.field-label {
-  display: block;
-  margin-bottom: var(--gap-xs);
-  color: var(--muted);
-  font-size: var(--fs-meta);
+.sheet-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-3) calc(var(--sp-3) + env(safe-area-inset-bottom));
 }
 
-.input {
-  width: 100%;
-  height: 80rpx;
-  padding: 0 var(--gap-sm);
-  box-sizing: border-box;
+.sheet-foot.is-end {
+  justify-content: flex-end;
+}
+
+.foot-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ------------------------------------------------------------ 班序选择 */
+
+.picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.picker-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
-  font-size: var(--fs-body);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-control);
 }
 
-/* 班序胶囊：13 条内置 + 自定义，横向滚动 */
-.chips {
-  white-space: nowrap;
-}
-
-.chip {
-  display: inline-block;
-  height: 64rpx;
-  line-height: 60rpx;
-  padding: 0 var(--gap-md);
-  margin-right: var(--gap-xs);
-  box-sizing: border-box;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sub);
-  color: var(--muted);
-  font-size: var(--fs-meta);
-}
-
-.chip.is-on {
+.picker-chip.is-on {
   border-color: var(--accent);
   background: var(--accent-weak);
   color: var(--accent);
   font-weight: 600;
 }
 
-.field-warn {
-  display: block;
-  margin-top: var(--gap-sm);
-  padding: 12rpx var(--gap-sm);
-  border-radius: var(--radius-control);
-  background: var(--warning-bg);
-  color: var(--warning-ink);
-  font-size: var(--fs-micro);
-  line-height: 1.5;
+/* ------------------------------------------------------------ 班序编辑 */
+
+.editor-active {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
 }
 
-.field-note {
-  display: block;
-  margin-top: var(--gap-sm);
-  color: var(--faint);
-  font-size: var(--fs-micro);
+.shift-palette {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
-.sheet-foot {
-  margin-top: var(--gap-lg);
-}
-
-.foot-actions {
-  display: flex;
-  gap: var(--gap-xs);
-}
-
-.foot-actions.is-end {
-  justify-content: flex-end;
-}
-
-.btn {
-  height: 88rpx;
-  padding: 0 var(--gap-md);
+.palette-option {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
-  border: 1px solid var(--control);
+  height: 34px;
+  border: 1px solid transparent;
   border-radius: var(--radius-control);
-  background: var(--surface);
-  color: var(--text);
   font-size: var(--fs-control);
+  font-weight: 500;
+}
+
+.palette-option.is-on {
   font-weight: 600;
 }
 
-.btn-primary {
-  border-color: var(--text);
-  background: var(--text);
-  color: var(--text-inverse);
+.editor-hint {
+  color: var(--muted);
+  font-size: var(--fs-small);
 }
+
+.confirm-names {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-control);
+  background: var(--danger-weak);
+  color: var(--danger);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------ 换人确认 */
+
+.impact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.impact-item {
+  color: var(--muted);
+  font-size: var(--fs-control);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------ 吸附保存栏 */
+
+.save-bar {
+  position: fixed;
+  right: var(--sp-3);
+  left: var(--sp-3);
+  z-index: 16;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+}
+
+.save-bar-hint {
+  color: var(--warning-ink);
+  font-size: var(--fs-small);
+}
+
+.save-bar-btn {
+  height: 36px;
+  padding: 0 14px;
+}
+
+/* ------------------------------------------------------------ 禁用态 */
 
 .is-disabled {
   opacity: 0.45;

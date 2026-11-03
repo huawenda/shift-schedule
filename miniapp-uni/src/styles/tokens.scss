@@ -1,65 +1,76 @@
 /*
- * 小程序端令牌（rpx）。750rpx = 屏宽。
+ * 小程序端令牌 —— 与桌面端 `src/styles/tokens.scss` 的移动档 1:1 同源。
  *
- * 「历书」语言：暖纸 + 墨黑 + 朱红。
- * 数字一律等宽，标题与品牌用衬线；圆角收紧、投影去掉，层级靠 1px 发丝线与留白。
+ * 为什么全用 px、不用 rpx：
+ * 桌面小屏 UI 的字号/间距/圆角都是固定 px，不随屏宽缩放；
+ * rpx 会按屏宽等比放大，在 375/430 上就和桌面不一致了。
+ * 这里用 px 才能在任意机型上复现同一套视觉（1px 发丝线也保持 1px）。
  *
- * 规范见 miniapp-uni/DESIGN.md §3。
+ * `.page` 的左右内边距、卡片间距取桌面 ≤639 档：12px。
  */
 page {
-  /* ---------------------------------------------------------- 外壳（墨黑） */
-  --chrome: #171512;
-  --chrome-raised: #211d18;
-  --chrome-line: #2c2822;
-  --chrome-text: #f4efe5;
-  --chrome-muted: #a69c8a;
-  --chrome-faint: #7d766a;
-  --chrome-accent: #e8c58b;
-  --chrome-weak: rgba(232, 197, 139, 0.16);
+  color-scheme: light;
 
-  /* ---------------------------------------------------------- 纸面（暖米） */
-  --surface: #faf7f0;
-  --surface-tint: #fcfaf5;
-  --surface-sunken: #f1ebdf;
-  --canvas: #ede8de;
-  --active: #e6dfd1;
+  /* ---------------------------------------------------------- 外壳（深青） */
+  --chrome: #0e2228;
+  --chrome-raised: #16333b;
+  --chrome-line: #27444d;
+  --chrome-text: #e9f2f4;
+  --chrome-muted: #a3b7bc;
+  --chrome-faint: #7f979d;
+  --chrome-accent: #7fd2e2;
+  --chrome-hover: #1d3d46;
+  --chrome-weak: rgba(127, 210, 226, 0.14);
+
+  /* ---------------------------------------------------------- 纸面 */
+  --ground: #f9fbfc;
+  --surface: #ffffff;
+  --surface-tint: #fbfcfd;
+  --surface-sunken: #f6f8f9;
+  --canvas: #f2f4f6;
+  --surface-dim: #f1f3f5;
+  --raised: #f4f6f8;
+  --active: #ebedee;
 
   /* ---------------------------------------------------------- 线条三级 */
-  --border-strong: #b9af9e;
-  --border: #d6cdbc;
-  --rule: #e3dccd;
-  --control: #8c8579;
-  --control-soft: #c9c0af;
+  --border-strong: #c2c9ce;
+  --border: #d9dee2;
+  --rule: #e8ebee;
+  --control: #8f969b;
+  --control-hover: #727b80;
+  --control-soft: #c2c9cd;
+  --icon-disabled: #c9cdd1;
 
-  /* ---------------------------------------------------------- 文字两级 */
-  --text: #191713;
-  --muted: #4a453c;
-  --faint: #7d766a;
-  --text-inverse: #faf7f0;
+  /* ---------------------------------------------------------- 文字 */
+  --text: #131416;
+  --muted: #4c5256;
+  --faint: #5d6468;
+  --text-inverse: #ffffff;
+  --text-strong: #000000;
 
-  --accent: #b0392b;
-  --accent-weak: #f4e4de;
+  --accent: #1b6c80;
+  --accent-weak: #eaf2f4;
 
-  /* ---------------------------------------------------------- 六种班次（印刷色） */
-  --shift-day-bg: #d9e5ea;
-  --shift-day-ink: #234a5a;
-  --shift-night-bg: #20262e;
-  --shift-night-ink: #f2efe8;
-  --shift-rest-bg: #dce4d6;
-  --shift-rest-ink: #33503a;
-  --shift-dayx-bg: #efdfc1;
-  --shift-dayx-ink: #6b4a1b;
-  --shift-nightx-bg: #e7cdc1;
-  --shift-nightx-ink: #6b3524;
-  --shift-leave-bg: #e4dfd4;
-  --shift-leave-ink: #514c42;
+  /* ---------------------------------------------------------- 品牌 */
+  --brand-ink: #143f4b;
+  --brand-night: #0b2c36;
+  --brand-day: #ffd9a0;
+  --brand-star: #eaf6f8;
+  --font-brand: "Noto Serif SC", "STZhongsong", "Songti SC", "SimSun", serif;
 
-  /* 「与模板不同」的描边：浅底用墨、深底用纸色 */
-  --shift-mark: rgba(25, 23, 19, 0.55);
-  --shift-mark-inverse: rgba(242, 239, 232, 0.7);
+  /* ---------------------------------------------------------- 功能色 */
+  --danger: #b42318;
+  --danger-weak: #fdecea;
+  --danger-border: #e3b5b0;
+  --warning-ink: #92400e;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
 
-  /* ---------------------------------------------------------- 待办便笺六色
-   * 与桌面端同一套：颜色只用来区分条目，不承载语义。 */
+  --overtime-bg: #ffc98f;
+  --overtime-ink: #7a3f0a;
+  --todo-ink: #c1712a;
+
+  /* ---------------------------------------------------------- 待办便笺六色 */
   --todo-tone-1-bg: #fff3cf;
   --todo-tone-1-ink: #7a4b00;
   --todo-tone-2-bg: #ffe4e6;
@@ -73,49 +84,93 @@ page {
   --todo-tone-6-bg: #ffe8d6;
   --todo-tone-6-ink: #9a3412;
 
-  /* ---------------------------------------------------------- 功能色 */
-  --warning-bg: #f4e6c9;
-  --warning-ink: #6b4a1b;
-  --warning-border: #dcc08c;
-  --overtime-bg: #b0392b;
-  --overtime-ink: #f8f3e8;
-  --danger: #93261c;
-  --danger-weak: #f6e1dc;
+  /* ---------------------------------------------------------- 加班费胶囊三档 */
+  --pay-1-bg: #e9eff2;
+  --pay-1-ink: #4e6470;
+  --pay-2-bg: #ddf3e4;
+  --pay-2-ink: #2c6a41;
+  --pay-3-bg: #ffe0a8;
+  --pay-3-ink: #7a4400;
 
-  /* ---------------------------------------------------------- 字号七档 */
-  --fs-kpi: 72rpx;
-  --fs-title: 44rpx;
-  --fs-section: 36rpx;
-  --fs-body: 30rpx;
-  --fs-control: 28rpx;
-  --fs-meta: 24rpx;
-  --fs-micro: 20rpx;
+  /* ---------------------------------------------------------- 班次六色 */
+  --shift-day-bg: #dff3ff;
+  --shift-day-ink: #02689f;
+  --shift-night-bg: #1e3a5f;
+  --shift-night-ink: #eef4fb;
+  --shift-rest-bg: #dcfce7;
+  --shift-rest-ink: #047857;
+  --shift-dayx-bg: #fff0c2;
+  --shift-dayx-ink: #b45309;
+  --shift-nightx-bg: #fde7c7;
+  --shift-nightx-ink: #9a3412;
+  --shift-leave-bg: #e5e7eb;
+  --shift-leave-ink: #475467;
 
-  /* ---------------------------------------------------------- 间距五档 */
-  --gap-xs: 8rpx;
-  --gap-sm: 16rpx;
-  --gap-md: 24rpx;
-  --gap-lg: 32rpx;
-  --gap-xl: 48rpx;
+  /* 深底上的班次色：值班牌节奏条专用 */
+  --shift-day-on-dark: #7cc7ea;
+  --shift-night-on-dark: #7e9fe0;
+  --shift-rest-on-dark: #6fae8a;
+  --shift-dayx-on-dark: #ffd27a;
+  --shift-nightx-on-dark: #f0a56a;
+  --shift-leave-on-dark: #9aa6b0;
 
-  /* ---------------------------------------------------------- 圆角五档（收紧） */
-  --radius-sub: 4rpx;
-  --radius-control: 8rpx;
-  --radius-block: 12rpx;
-  --radius-card: 12rpx;
-  --radius-sheet: 16rpx;
+  /* 与模板不同的描边 */
+  --shift-mark: rgba(19, 20, 22, 0.45);
+  --shift-mark-inverse: rgba(238, 244, 251, 0.55);
 
-  /* ---------------------------------------------------------- 投影
-   * 只剩抽屉还需要浮起来；纸面靠底色差与发丝线，不再叠投影。 */
-  --shadow-card: none;
-  --shadow-sheet: 0 -4px 16px rgba(25, 23, 19, 0.14);
+  /* ---------------------------------------------------------- 圆角 */
+  --radius-mark: 3px;
+  --radius-sub: 4px;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-dialog: 12px;
+  --radius-panel: 12px;
+  --radius-sheet: 16px;
+  --radius-pill: 999px;
 
-  /* ---------------------------------------------------------- 字体
-   * 品牌与标题：宋体衬线；数字：等宽；正文：系统黑体。 */
-  --font-brand: "Songti SC", "Noto Serif SC", "STZhongsong", "SimSun", serif;
+  /* ---------------------------------------------------------- 投影（桌面四层） */
+  --shadow-raised: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 24px rgba(19, 20, 22, 0.06);
+  --shadow-floating: 0 2px 6px rgba(19, 20, 22, 0.05), 0 10px 24px rgba(19, 20, 22, 0.09);
+  --shadow-overlay: 0 18px 48px rgba(6, 14, 18, 0.28);
+  --shadow-sheet: 0 10px 34px rgba(2, 10, 13, 0.26);
+
+  /* ---------------------------------------------------------- 间距阶梯 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* 移动档：画布左右 12、块间距 12 */
+  --pad: 12px;
+  --gap: 12px;
+  --topbar-height: 48px;
+  --row-height: 36px;
+  --control-height: 36px;
+  --matrix-name-width: 88px;
+  --matrix-name-cell: 48px;
+  --matrix-pill-gap: 3px;
+
+  /* ---------------------------------------------------------- 字号阶梯 */
+  --fs-micro: 10px;
+  --fs-label: 11px;
+  --fs-small: 12px;
+  --fs-control: 13px;
+  --fs-body: 14px;
+  --fs-subhead: 16px;
+  --fs-section: 17px;
+  --fs-metric-sm: 18px;
+  --fs-metric-md: 20px;
+  --fs-metric-lg: 22px;
+  --fs-title: 26px;
+  --fs-kpi: 28px;
+
+  --font-body: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Menlo", "Consolas", "Courier New", monospace;
 
-  --dur-fast: 120ms;
-  --dur-base: 220ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
 }
