@@ -31,6 +31,9 @@ import { backupText, parseBackup, type ImportResult } from '../data/backup'
 import { currentMonthKey, shiftMonth, type MonthKey } from '../data/period'
 import { seedRoster } from '../data/seed'
 import type { ShiftType } from '../data/shifts'
+import { diffRoster, isEmptyChangeSet } from '../cloud/diff'
+import { noteLocalChanges } from '../cloud/meta'
+import { enqueue, startCloudSync } from '../cloud/sync'
 
 const ROSTER_KEY = 'shift-schedule:local:roster:v2'
 
@@ -61,8 +64,15 @@ function persist() {
 }
 
 function commit(next: Roster) {
+  const prev = state.roster
+  const changes = diffRoster(prev, next)
   state.roster = next
   persist()
+  // 本地写成功后再记时间戳并排队推送：断网/云函数失败都不影响本次操作
+  if (!isEmptyChangeSet(changes)) {
+    noteLocalChanges(changes)
+    enqueue(changes)
+  }
 }
 
 /* ------------------------------------------------------------ 记录 */
@@ -194,3 +204,16 @@ export const rosterStore = {
   exportBackup,
   importBackup
 }
+
+/* ------------------------------------------------------------ 云端同步
+ *
+ * 本地优先：启动只在「本地为空」时用云端数据兜底，其余情况把本地现状
+ * 作为一批增量推上去。之后每次写操作由 commit 里的 diff 增量推送。
+ */
+startCloudSync({
+  snapshot: () => state.roster,
+  adopt: roster => {
+    state.roster = roster
+    persist()
+  }
+})
