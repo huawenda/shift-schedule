@@ -18,7 +18,7 @@
         </view>
       </view>
 
-      <view class="dialog-body">
+      <view class="dialog-body" :class="{ 'is-tab-page': mode === 'day' && tab === 'todo' }">
         <!-- 待办页：改动立即生效 -->
         <template v-if="mode === 'day' && tab === 'todo'">
           <view class="todo-add">
@@ -542,8 +542,13 @@ function onRemoveTodo(id: string) {
   line-height: 1.6;
 }
 
-/* 三张卡：浅底 + 1px 边，手机上高度随内容 */
+/* 三张卡：浅底 + 1px 边。
+ * 高度固定 —— 桌面端 `.dialog-section { height: 83px }` 的移动版：
+ * 89 = 上下 padding 24 + 边框 2 + 标题行 27（18 + 9）+ 最高内容 36（加班输入框）。
+ * 加班卡本身就是 89，法定卡 81、事假说明卡 71 都拉到同一高度，
+ * 三种班次状态下班次页总高才有可能一致（也是切 tab 不抖的前提）。 */
 .section {
+  height: 89px;
   padding: var(--sp-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
@@ -646,6 +651,32 @@ function onRemoveTodo(id: string) {
 .todo-add .input {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/*
+ * 待办页与班次页同高 —— 桌面端 `.dialog-day .dialog-page { height: var(--day-content-height) }`
+ * 的移动版：内容区写死高度，切 tab 时抽屉不伸缩。
+ * 316 = 上下 padding 24 + 选项区 90（42×2 + 6）+ 两处卡间距 24 + 两张卡 178（89×2）。
+ * ⚠️ 改选项行高、卡片高度或卡片数量时这个值要同步重算，差 1px 切 tab 就会抖。
+ */
+.dialog-body.is-tab-page {
+  height: 316px;
+}
+
+/* 空态吃满剩余高度并垂直居中，留白才像有意的画布 */
+.dialog-body.is-tab-page .empty-note {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* 待办多了只在列表内部滚，不把抽屉顶高 */
+.dialog-body.is-tab-page .todo-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .empty-note {

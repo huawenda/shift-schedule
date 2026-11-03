@@ -102,7 +102,7 @@ function go(item: { index: number; path: string }) {
 }
 
 .tab.is-on {
-  background: var(--accent-weak);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 

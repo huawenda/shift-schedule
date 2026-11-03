@@ -236,6 +236,9 @@
 
       <!-- ------------------------------------------------------------ 个人资料 -->
       <template v-else>
+        <!-- 还没设本人：用品牌卡做首次引导，有本人时同款卡落到页尾「关于」 -->
+        <brand-card v-if="!self" hint="先设置本人，日历才会显示你的班次" />
+
         <view class="settings-section">
           <view class="settings-label">
             <view class="label-head">
@@ -378,6 +381,9 @@
             </view>
           </view>
         </view>
+
+        <!-- 关于：品牌卡落到页尾，不占首屏功能位 -->
+        <brand-card v-if="self" />
       </template>
     </view>
   </view>
@@ -564,11 +570,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { onPageScroll } from '@dcloudio/uni-app'
+import { onPageScroll, onShareAppMessage } from '@dcloudio/uni-app'
 import { frame } from '../../utils/app-frame'
 import NavBar from '../../components/nav-bar.vue'
 import TabBar from '../../components/tab-bar.vue'
 import PatternGrid from '../../components/pattern-grid.vue'
+import BrandCard from '../../components/brand-card.vue'
 import { rosterStore } from '../../store/roster'
 import {
   countOverrides,
@@ -848,6 +855,13 @@ let autoDir = 0
 onPageScroll(({ scrollTop }) => {
   sortScroll = scrollTop
 })
+
+/** 转发统一用品牌封面，不用页面截图 */
+onShareAppMessage(() => ({
+  title: '昼夜 · 个人倒班记录本',
+  path: '/pages/settings/index',
+  imageUrl: '/static/share-card.png'
+}))
 
 function sortMeta(row: Row): string {
   const position = row.position.trim()

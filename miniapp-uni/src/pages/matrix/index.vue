@@ -197,6 +197,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { onShareAppMessage } from '@dcloudio/uni-app'
 import { frame } from '../../utils/app-frame'
 import NavBar from '../../components/nav-bar.vue'
 import TabBar from '../../components/tab-bar.vue'
@@ -220,6 +221,14 @@ const NAME_COL_WIDTH = 48
 
 const store = rosterStore
 const roster = computed<Roster>(() => store.state.roster)
+
+/** 转发统一用品牌封面，不用页面截图 */
+onShareAppMessage(() => ({
+  title: '昼夜 · 个人倒班记录本',
+  path: '/pages/matrix/index',
+  imageUrl: '/static/share-card.png'
+}))
+
 const period = computed(() => getPeriod(store.state.month))
 const today = todayKey()
 

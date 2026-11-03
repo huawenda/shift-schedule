@@ -60,6 +60,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { onShareAppMessage } from '@dcloudio/uni-app'
 import { frame } from '../../utils/app-frame'
 import NavBar from '../../components/nav-bar.vue'
 import TabBar from '../../components/tab-bar.vue'
@@ -87,6 +88,13 @@ import { SHIFT_META, type ShiftType } from '../../data/shifts'
 
 const store = rosterStore
 const today = todayKey()
+
+/** 转发统一用品牌封面，不用页面截图 */
+onShareAppMessage(() => ({
+  title: '昼夜 · 个人倒班记录本',
+  path: '/pages/overview/index',
+  imageUrl: '/static/share-card.png'
+}))
 
 /** 改班弹层：打开的那一天；null = 关着 */
 const editorDate = ref<string | null>(null)
