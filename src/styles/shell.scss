@@ -2,11 +2,20 @@
  * 画布是缩进 8px 的白色卡片 —— 靠明度台阶分层，深框把纸面托起来。
  */
 
+/*
+ * 外壳钉在视口上，而不是 `height: 100vh`。
+ *
+ * 移动浏览器的 `100vh` 是「地址栏收起后的最大高度」，地址栏展开时它比可视区高，
+ * 页面于是能向下滚几十像素 —— 顶栏被滚出屏幕、底栏跟着错位（手机上实测）。
+ * `fixed + inset: 0` 拿到的始终是可视视口，滚动只发生在画布内部。
+ * 首导向导不经过这层外壳，仍走文档滚动，不受影响。
+ */
 .app {
+  position: fixed;
+  inset: 0;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   grid-template-rows: var(--topbar-height) minmax(0, 1fr);
-  height: 100vh;
   background: var(--chrome);
 }
 
@@ -183,16 +192,32 @@
   color: var(--chrome-text);
 }
 
+/* 触屏按下时同样给一档反馈（hover 在手机上不会发生） */
+.rail-item:active:not(:disabled) {
+  background: var(--chrome-hover);
+}
+
 .rail-item:hover:not(:disabled) .rail-icon {
   color: var(--chrome-muted);
 }
 
-.rail-item.is-active {
-  background: rgba(127, 210, 226, 0.14);
+/*
+ * 选中态必须压过 hover / :active。
+ * `.rail-item:hover:not(:disabled)` 是 (0,3,0)，而 `.rail-item.is-active` 只有 (0,2,0)；
+ * 触屏点完后 hover 会一直粘在那一项上，选中底与选中图标色会被 hover 的灰底盖掉。
+ * 这里用同等或更高的组合选择器写，保证选中项在悬停 / 按下时仍然是强调色。
+ */
+.rail-item.is-active,
+.rail-item.is-active:hover:not(:disabled),
+.rail-item.is-active:active:not(:disabled) {
+  /* 深框上比原来的 .14 再压深一档，选中块更容易扫到 */
+  background: rgba(127, 210, 226, 0.22);
   color: var(--chrome-accent);
 }
 
-.rail-item.is-active .rail-icon {
+.rail-item.is-active .rail-icon,
+.rail-item.is-active:hover:not(:disabled) .rail-icon,
+.rail-item.is-active:active:not(:disabled) .rail-icon {
   color: var(--chrome-accent);
 }
 
@@ -579,9 +604,17 @@
   background: var(--raised);
 }
 
+.segmented-item:active {
+  background: var(--active);
+}
+
 .segmented-item.is-on {
   background: var(--text);
   color: var(--text-inverse);
+}
+
+.segmented-item.is-on:active {
+  background: var(--text-strong);
 }
 
 /* 切页：只淡入 + 抬 2px，不缩放。停留态不再有动效。 */
@@ -613,13 +646,12 @@
  */
 @media (max-width: 1023px) {
   .app {
+    /* 高度由 fixed + inset: 0 决定；这里只改网格行列，不再写 100vh/100dvh */
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows:
       calc(var(--topbar-height) + env(safe-area-inset-top))
       minmax(0, 1fr)
       auto;
-    height: 100vh;
-    height: 100dvh;
   }
 
   .topbar {
@@ -661,7 +693,47 @@
     align-items: stretch;
     gap: 2px;
     padding: var(--sp-1) var(--sp-2) calc(var(--sp-1) + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--chrome-line);
+    /* 手机底栏取系统导航栏浅灰：底栏与手势条区域同色，不再有一条深青接缝；
+     * manifest.background_color 同值，弹层底部也不会露深青。 */
+    border-top: 1px solid var(--rule);
+    background: var(--surface-nav);
+    color: var(--muted);
+  }
+
+  /* 底栏在浅色底上：文字退回正文灰，选中项用浅青底 + 深青字（与小程序一致） */
+  .rail-item {
+    color: var(--muted);
+  }
+
+  .rail-item .rail-icon {
+    color: var(--faint);
+  }
+
+  .rail-item:hover:not(:disabled) {
+    background: var(--raised);
+    color: var(--text);
+  }
+
+  .rail-item:hover:not(:disabled) .rail-icon {
+    color: var(--muted);
+  }
+
+  .rail-item:active:not(:disabled) {
+    background: var(--active);
+  }
+
+  /* 同上：选中项在 hover / 按下时也保持浅青底 + 深青字 */
+  .rail-item.is-active,
+  .rail-item.is-active:hover:not(:disabled),
+  .rail-item.is-active:active:not(:disabled) {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .rail-item.is-active .rail-icon,
+  .rail-item.is-active:hover:not(:disabled) .rail-icon,
+  .rail-item.is-active:active:not(:disabled) .rail-icon {
+    color: var(--accent);
   }
 
   .rail-brand,
@@ -674,8 +746,9 @@
     display: contents;
   }
 
-  /* 概览是默认页，手机底栏把它放第一格；桌面侧栏顺序不动 */
-  .rail-nav a[href="#/overview"] {
+  /* 概览是默认页，手机底栏把它放第一格；桌面侧栏顺序不动。
+   * 用 data-view 而不是 href：href 会带月份前缀（#/2026-09/overview）。 */
+  .rail-nav a[data-view="overview"] {
     order: -1;
   }
 
@@ -709,6 +782,17 @@
 @media (hover: none) {
   .scroll-overlay {
     display: none;
+  }
+
+  /* 触屏上 :hover 会在最后一次点按后「粘住」，点过的 tab 会一直留一层灰底，
+   * 看起来像第二个选中项。触摸没有悬停语义，这里直接撤掉底色，
+   * 只保留 :active 按下反馈与 .is-active 选中态（它们的特异性更高）。 */
+  .rail-item:hover:not(:disabled) {
+    background: transparent;
+  }
+
+  .rail-item:hover:not(:disabled) .rail-icon {
+    color: inherit;
   }
 }
 

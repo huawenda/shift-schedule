@@ -222,7 +222,7 @@ async function runScenario(name, url, downloadDir) {
     })()`)
     check(
       `${name}: 侧栏每项都有图标，选中项是半透明青底 + 亮青字（深框上可读）`,
-      railLook.icons === 3 && railLook.activeBg === 'rgba(127, 210, 226, 0.14)' &&
+      railLook.icons === 3 && railLook.activeBg === 'rgba(127, 210, 226, 0.22)' &&
         railLook.activeColor === 'rgb(127, 210, 226)' &&
         railLook.activeIcon === 'rgb(127, 210, 226)' && railLook.itemH === 34,
       JSON.stringify(railLook)
@@ -1852,8 +1852,9 @@ async function runScenario(name, url, downloadDir) {
         return true
       })()`)
       await sleep(200)
+      // 错误改成逐行标注：取所有行内错误文案拼起来，断言口径不变
       const sameNameError = await client.evaluate(
-        `document.querySelector('.error-list')?.textContent.trim() ?? ''`
+        `[...document.querySelectorAll('.member-row-error')].map(node => node.textContent.trim()).join(' ')`
       )
       check(
         `${name}: 与本人同名被拦下`,
@@ -2558,10 +2559,13 @@ async function runScenario(name, url, downloadDir) {
         // 输入框正文从 1px 边框 + 8px 内边距 = 9px 处开始，表头文字要跟着缩进
         padLeft: Math.round(parseFloat(getComputedStyle(el).paddingLeft))
       }))
-      const fields = Array.from(row.children).map(el => ({
-        left: Math.round(el.getBoundingClientRect().left),
-        width: Math.round(el.getBoundingClientRect().width)
-      }))
+      // 班序 / 岗位包在 .member-fields 里（桌面 display: contents），这里摊平后再比列
+      const fields = Array.from(row.children)
+        .flatMap(el => el.classList.contains('member-fields') ? Array.from(el.children) : [el])
+        .map(el => ({
+          left: Math.round(el.getBoundingClientRect().left),
+          width: Math.round(el.getBoundingClientRect().width)
+        }))
       return { labels, fields }
     })()`)
     check(

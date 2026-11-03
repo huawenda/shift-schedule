@@ -31,6 +31,9 @@
   --surface-dim: #f1f3f5;
   --raised: #f4f6f8;
   --active: #ebedee;
+  /* 系统底部导航栏（手势条区域）的浅灰：手机底栏取同色，二者之间没有接缝。
+   * manifest 的 background_color 必须同值，否则弹层/底栏与系统栏还会差一档。 */
+  --surface-nav: #f7f7f7;
   /* 线条分三级：结构线（卡片外沿 / 表格外框）> 分隔线（卡内分组）> 发丝线（密集表格）。
    * 原先前两级几乎同色（1.2:1 与 1.1:1），眼睛分不出「卡边」和「格子线」，
    * 每条都要多费一次判断，看着就「若隐若现」、发累。 */
@@ -59,6 +62,8 @@
 
   --accent: #1b6c80;
   --accent-weak: #eaf2f4;
+  /* 命中/选中底再深一档：浅灰底栏上 accent-weak 几乎看不出，用这一档才立得住 */
+  --accent-soft: #d4e0e4;
 
   /* 应用标识「昼夜分割」：深青盘当夜，暖沙当昼，夜里留一点星。
    * 只服务侧栏字标与文档示意图，不参与界面语义配色。
@@ -171,6 +176,9 @@
    *   overlay  盖住整页的弹层（改班、班序编辑、确认框）
    * sheet 是第四种情况：深色外框上的白色画布，背景更暗，需要更重的一层。 */
   --shadow-raised: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 24px rgba(19, 20, 22, 0.06);
+  /* 单列堆叠的卡片（概览页统计 / 待办）：24px 模糊的第二层会把 16px 间距填满，
+   * 相邻卡片之间看起来连成一条灰带；窄屏只留贴边的一层极浅投影。 */
+  --shadow-raised-flat: 0 1px 2px rgba(19, 20, 22, 0.04);
   --shadow-floating: 0 2px 6px rgba(19, 20, 22, 0.05), 0 10px 24px rgba(19, 20, 22, 0.09);
   --shadow-overlay: 0 18px 48px rgba(6, 14, 18, 0.28);
   --shadow-sheet: 0 10px 34px rgba(2, 10, 13, 0.26);
@@ -195,6 +203,9 @@
   /* 矩阵姓名列宽：两行字（姓名 13px / 班序·岗位 11px）实测 88px 就够，
    * 原 148px 里空了 60px，白占横向空间、挤压日期列。 */
   --matrix-name-width: 120px;
+  /* 矩阵日期列的弹性下限：桌面 22px 刚好放得下「白 / 夜 / 休」单字与 4px 药丸留白。
+   * 手机屏幕更小、手指也要能点准，小屏档（≤1023）会把下限抬到 28px。 */
+  --matrix-day-min: 22px;
   /* 「按姓名」视图的日期列宽：格子里要放下 3–4 个汉字，22px 的弹性列塞不进，
    * 所以这一视图改成固定列宽 + 横向滚动。 */
   --matrix-name-cell: 56px;
@@ -263,6 +274,8 @@
 *::before,
 *::after {
   box-sizing: border-box;
+  /* 移动浏览器点按元素时会默认闪一层系统蓝高亮；反馈统一交给 :active / hover */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -435,6 +448,11 @@ p {
   background: var(--raised);
 }
 
+/* 触屏没有 hover：按下时必须有一档可见反馈，否则去掉系统蓝高亮后会像没响应 */
+.btn:active:not(:disabled) {
+  background: var(--active);
+}
+
 .btn:disabled {
   border-color: var(--border);
   background: var(--raised);
@@ -458,7 +476,8 @@ p {
   color: var(--text-inverse);
 }
 
-.btn-primary:hover:not(:disabled) {
+.btn-primary:hover:not(:disabled),
+.btn-primary:active:not(:disabled) {
   background: var(--text-strong);
 }
 

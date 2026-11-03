@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDismissOnBack } from '../hooks/useDismissOnBack'
 import type { DayOverride, Member } from '../data/roster'
 import { useDialogFocus } from '../hooks/useDialogFocus'
 import { canRecordOvertime, formatOvertimeHours } from '../data/overtime'
@@ -32,6 +33,7 @@ export function ShiftEditor({
   onClose
 }: ShiftEditorProps) {
   const dialogRef = useDialogFocus<HTMLElement>()
+  useDismissOnBack(true, requestClose)
   const [selected, setSelected] = useState<ShiftType | null>(currentShift)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const edited = Boolean(record)

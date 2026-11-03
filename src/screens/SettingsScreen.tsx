@@ -38,8 +38,9 @@ interface SettingsScreenProps {
   roster: Roster
   /** 页内操作反馈统一走全局底部提示 */
   onNotify: (text: string) => void
-  /** 进入时落在哪个 tab（由调用方决定；不传就是人员配置） */
-  initialTab?: SettingsTab
+  /** 当前页签由路由决定（#/settings/roster | #/settings/profile），组件本身不持状态 */
+  tab: SettingsTab
+  onTabChange: (tab: SettingsTab) => void
   onSaveMembers: (members: Member[]) => void
   onSaveSelf: (input: SelfIdentity) => void
   onSaveSalary: (salary: SalaryInput) => void
@@ -60,7 +61,8 @@ interface SettingsScreenProps {
 export function SettingsScreen({
   roster,
   onNotify,
-  initialTab = 'roster',
+  tab,
+  onTabChange,
   onSaveMembers,
   onSaveSelf,
   onSaveSalary,
@@ -71,10 +73,13 @@ export function SettingsScreen({
   onClearAll,
   onStartWizard
 }: SettingsScreenProps) {
-  const [tab, setTab] = useState<SettingsTab>(initialTab)
   const fileRef = useRef<HTMLInputElement>(null)
   const [rows, setRows] = useState<MemberRow[]>(() => toRows(roster.members))
   const [dirty, setDirty] = useState(false)
+  /** 排序模式：卡片压成紧凑行，只有把手能拖；完成才回到编辑态，取消回滚快照 */
+  const [sorting, setSorting] = useState(false)
+  const sortSnapshot = useRef<MemberRow[] | null>(null)
+  const dirtyBeforeSort = useRef(false)
   const [confirmText, setConfirmText] = useState('')
   const [backupDir, setBackupDirState] = useState<string | null>(() => getBackupDir())
   const [closeBehavior, setCloseBehaviorState] = useState<CloseBehavior>(() => getCloseBehavior())
@@ -160,6 +165,28 @@ export function SettingsScreen({
     setDirty(true)
   }
 
+  function enterSorting() {
+    if (rows.length < 2) {
+      onNotify('至少两位成员才能排序')
+      return
+    }
+    sortSnapshot.current = rows.map(row => ({ ...row }))
+    dirtyBeforeSort.current = dirty
+    setSorting(true)
+  }
+
+  function finishSorting() {
+    setSorting(false)
+  }
+
+  function cancelSorting() {
+    if (sortSnapshot.current) {
+      setRows(sortSnapshot.current.map(row => ({ ...row })))
+    }
+    setDirty(dirtyBeforeSort.current)
+    setSorting(false)
+  }
+
   function save() {
     if (errors.length > 0) return
 
@@ -195,7 +222,7 @@ export function SettingsScreen({
               aria-pressed={tab === 'roster'}
               className={`segmented-item${tab === 'roster' ? ' is-on' : ''}`}
               type="button"
-              onClick={() => setTab('roster')}
+              onClick={() => onTabChange('roster')}
             >
               人员配置
             </button>
@@ -203,7 +230,7 @@ export function SettingsScreen({
               aria-pressed={tab === 'profile'}
               className={`segmented-item${tab === 'profile' ? ' is-on' : ''}`}
               type="button"
-              onClick={() => setTab('profile')}
+              onClick={() => onTabChange('profile')}
             >
               个人资料
             </button>
@@ -234,35 +261,51 @@ export function SettingsScreen({
 
             <section className="settings-section">
               <div className="settings-label">
-                <h2>成员</h2>
+                <div className="label-head">
+                  <h2>成员</h2>
+                  {/* 排序入口与小程序一致：卡片压成紧凑行后才可拖，完成 / 取消在标题行 */}
+                  <div className="label-actions">
+                    {sorting ? (
+                      <>
+                        <button className="sort-action" type="button" onClick={finishSorting}>完成</button>
+                        <button className="sort-action is-quiet" type="button" onClick={cancelSorting}>取消</button>
+                      </>
+                    ) : (
+                      <button className="sort-action" type="button" onClick={enterSorting}>排序</button>
+                    )}
+                  </div>
+                </div>
                 <p>姓名自定，人数不限。</p>
                 <p>本人行为只读，请在「个人资料」页修改。</p>
                 <p className="settings-meta">当前 {roster.members.length} 位成员</p>
               </div>
 
               <div className="settings-panel">
+                {/* 错误已逐行标在对应成员卡上，这里不再重复整段汇总 */}
                 <MemberRowsEditor
                   patterns={patternOptions}
                   rows={rows}
                   selfId={self?.id}
                   sortable
+                  sorting={sorting}
                   onChange={update}
                 />
 
-                {errors.length > 0 ? (
-                  <ul className="error-list" role="alert">
-                    {errors.map(error => <li key={error}>{error}</li>)}
-                  </ul>
+                {/* 与小程序一致：只有存在未保存改动时才出现吸底保存条；排序页不出现 */}
+                {dirty && !sorting ? (
+                  <div className="settings-actions is-sticky">
+                    <span className="save-hint">有未保存的修改</span>
+                    <button className="btn btn-primary" disabled={errors.length > 0} type="button" onClick={save}>
+                      保存成员设置
+                    </button>
+                  </div>
                 ) : null}
 
-                <div className="settings-actions">
-                  <button className="btn btn-primary" disabled={!dirty || errors.length > 0} type="button" onClick={save}>
-                    保存成员设置
-                  </button>
-                  {rows.length === 0 ? (
+                {rows.length === 0 ? (
+                  <div className="settings-actions">
                     <button className="btn" type="button" onClick={onStartWizard}>用向导重新配置</button>
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
               </div>
             </section>
           </>

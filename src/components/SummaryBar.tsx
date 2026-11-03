@@ -178,9 +178,10 @@ export function SummaryBar({ roster, period }: SummaryBarProps) {
                             {entry.member.name}
                             <SpecialBadge special={entry.special} />
                           </span>
-                          {entry.member.position ? (
-                            <span className="summary-popover-position">{entry.member.position}</span>
-                          ) : null}
+                          {/* 岗位始终占位：没填就显示一条短横线，名单右侧不会空一截 */}
+                          <span className={`summary-popover-position${entry.member.position ? '' : ' is-empty'}`}>
+                            {entry.member.position || '-'}
+                          </span>
                         </li>
                       ))}
                     </ul>

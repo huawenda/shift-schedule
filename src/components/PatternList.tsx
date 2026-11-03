@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDismissOnBack } from '../hooks/useDismissOnBack'
 import {
   MAX_CUSTOM_PATTERNS,
   type CustomPattern,
@@ -65,6 +66,7 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
   const [customPreviewId, setCustomPreviewId] = useState<string | null>(null)
   const [editing, setEditing] = useState<{ pattern?: CustomPattern } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<CustomPattern | null>(null)
+  useDismissOnBack(Boolean(pendingDelete), () => setPendingDelete(null))
   const [confirmText, setConfirmText] = useState('')
 
   useEffect(() => {

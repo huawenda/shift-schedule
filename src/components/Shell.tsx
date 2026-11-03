@@ -78,6 +78,8 @@ function IconChevron({ dir }: { dir: 'left' | 'right' }) {
 
 interface ShellProps {
   route: Route
+  /** 三个入口的 href：由 App 生成，带上当前结算月，修饰键开新标签也能落到同一个月份 */
+  hrefs: Record<Route, string>
   monthTitle: string
   /** 当前看的结算月就是本月 —— 「回到本期」这时没有可做的事，置灰 */
   atCurrentMonth: boolean
@@ -96,6 +98,7 @@ interface ShellProps {
  */
 export function Shell({
   route,
+  hrefs,
   monthTitle,
   atCurrentMonth,
   memberCount,
@@ -150,7 +153,8 @@ export function Shell({
           <a
             aria-current={route === 'matrix' ? 'page' : undefined}
             className={`rail-item${route === 'matrix' ? ' is-active' : ''}`}
-            href="#/matrix"
+            data-view="matrix"
+            href={hrefs.matrix}
             onClick={event => {
               if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
               event.preventDefault()
@@ -163,7 +167,8 @@ export function Shell({
           <a
             aria-current={route === 'overview' ? 'page' : undefined}
             className={`rail-item${route === 'overview' ? ' is-active' : ''}`}
-            href="#/overview"
+            data-view="overview"
+            href={hrefs.overview}
             onClick={event => {
               if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
               event.preventDefault()
@@ -179,7 +184,8 @@ export function Shell({
           <a
             aria-current={route === 'settings' ? 'page' : undefined}
             className={`rail-item${route === 'settings' ? ' is-active' : ''}`}
-            href="#/settings"
+            data-view="settings"
+            href={hrefs.settings}
             onClick={event => {
               if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
               event.preventDefault()

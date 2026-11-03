@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Shell, type Route } from './components/Shell'
 import { DayEditor } from './components/DayEditor'
 import { ScrollOverlay } from './components/ScrollOverlay'
@@ -8,7 +8,15 @@ import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
 import { Wizard } from './screens/Wizard'
-import { formatMonthTitle } from './data/period'
+import {
+  compareMonth,
+  currentMonthKey,
+  formatMonthTitle,
+  monthKeyToString,
+  parseMonthKey,
+  shiftMonth,
+  type MonthKey
+} from './data/period'
 import {
   createMemberId,
   emptyRoster,
@@ -30,16 +38,60 @@ import { useToasts } from './hooks/useToasts'
 /** 从哪儿点开的格子：矩阵只能改班次，概览页的日历能记加班 */
 type EditSource = 'matrix' | 'calendar'
 
-function readRoute(): Route {
-  if (window.location.hash.startsWith('#/settings')) return 'settings'
-  if (window.location.hash.startsWith('#/matrix')) return 'matrix'
-  return 'overview'
+/**
+ * 应用内的完整位置：视图 + 结算月 + 设置页签，全部来自 hash。
+ *
+ * hash 格式（当前结算月省略月份前缀）：
+ *   #/overview                #/2026-10/overview
+ *   #/matrix                  #/2026-10/matrix
+ *   #/settings/roster         #/2026-10/settings/profile
+ *
+ * 月份放在最前面而不是挂在某个视图上，是为了「切到设置再切回来」也保得住；
+ * 当前月不写进 URL，默认地址保持干净，翻到别的月份才多出一段。
+ */
+interface AppLocation {
+  route: Route
+  /** null = 当前结算月（URL 里省略） */
+  month: MonthKey | null
+  settingsTab: SettingsTab
 }
 
-function routeHash(route: Route): string {
-  if (route === 'settings') return '#/settings'
-  if (route === 'matrix') return '#/matrix'
-  return '#/overview'
+const DEFAULT_LOCATION: AppLocation = { route: 'overview', month: null, settingsTab: 'roster' }
+
+/** 解析 hash；未知视图回落到概览，未知参数按「当前月 / 人员配置」处理 */
+function parseLocation(hash: string): AppLocation {
+  const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean)
+  let month: MonthKey | null = null
+
+  const head = parseMonthKey(parts[0] ?? '')
+  if (head) {
+    month = head
+    parts.shift()
+  }
+
+  const [view, param] = parts
+
+  if (view === 'matrix' || view === 'overview') {
+    // 兼容旧式 `#/matrix/2026-10`：月份写在视图后面
+    const trailing = param ? parseMonthKey(param) : null
+    return { route: view, month: trailing ?? month, settingsTab: 'roster' }
+  }
+
+  if (view === 'settings') {
+    return { route: 'settings', month, settingsTab: param === 'profile' ? 'profile' : 'roster' }
+  }
+
+  return { ...DEFAULT_LOCATION, month }
+}
+
+/** 生成规范 hash：当前月省略月份；设置页总是带页签 */
+function buildHash(location: AppLocation): string {
+  const prefix = location.month && compareMonth(location.month, currentMonthKey()) !== 0
+    ? `/${monthKeyToString(location.month)}`
+    : ''
+
+  if (location.route === 'settings') return `#${prefix}/settings/${location.settingsTab}`
+  return `#${prefix}/${location.route}`
 }
 
 /** 任务栏 / 原生标题栏：品牌 + 当前视图，避免和页面 H1 重复成两行同名 */
@@ -51,24 +103,39 @@ const ROUTE_TITLE: Record<Route, string> = {
 
 export function App() {
   const api = useRoster()
-  const [route, setRoute] = useState<Route>(readRoute)
-  /** 进设置页时落在哪个 tab：从「月度概览」的薪资空态点进去时直接到个人资料 */
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('roster')
+  const [location, setLocation] = useState<AppLocation>(() => parseLocation(window.location.hash))
+  const route = location.route
+  const settingsTab = location.settingsTab
   const [wizardSkipped, setWizardSkipped] = useState(false)
   const [editor, setEditor] = useState<{ memberId: string; date: string; source: EditSource } | null>(null)
 
-  const { monthKey, period, goMonth, goToday, atCurrentMonth } = useMonthNavigation()
+  /** 当前结算月固定到挂载时刻：跨过午夜不会自己翻月，刷新才更新，和原来的行为一致 */
+  const currentMonth = useMemo(() => currentMonthKey(), [])
+  const monthKey = useMemo(() => location.month ?? currentMonth, [location.month, currentMonth])
+  const { period, atCurrentMonth } = useMonthNavigation(monthKey)
   const toast = useToasts()
   const { backup, restore } = useBackupFlow(api, toast)
   /** 存储不可写时那条常驻提示的 id，可写后撤掉 */
   const persistenceToast = useRef<number | null>(null)
 
+  /**
+   * hash 是唯一真相：路由、结算月、设置页签都从它解析。
+   * 未知视图（如 #/foo）或旧格式（#/matrix/2026-10）会被原地改写成规范形式 ——
+   * 用 replaceState 而不是赋值 hash，避免规范化本身多出一条历史。
+   */
   useEffect(() => {
-    function onHashChange() {
-      setRoute(readRoute())
+    function syncFromHash() {
+      const next = parseLocation(window.location.hash)
+      setLocation(next)
+      const normalized = buildHash(next)
+      if (window.location.hash && window.location.hash !== normalized) {
+        window.history.replaceState(null, '', normalized)
+      }
     }
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
+
+    syncFromHash()
+    window.addEventListener('hashchange', syncFromHash)
+    return () => window.removeEventListener('hashchange', syncFromHash)
   }, [])
 
   // 标题跟随当前视图：浏览器标签页用 document.title，
@@ -99,17 +166,47 @@ export function App() {
     }
   }, [api.persisted, toast])
 
-  const navigate = useCallback((next: Route) => {
-    setRoute(next)
-    const target = routeHash(next)
-    if (window.location.hash !== target) window.location.hash = target
-  }, [])
+  /**
+   * 唯一的路由入口：把新位置写进 hash，再同步 state。
+   *
+   * **应用内导航一律 replaceState，不压历史**：底部 tab、月份、设置页签
+   * 都只是「当前应用内的位置变化」，不是一次页面跳转。系统返回键应当直接离开应用，
+   * 而不是在浏览过的几个页面之间来回切（Android / iOS 的原生 app 都是这个行为）。
+   * `month` 不传时沿用当前结算月；显式传 null 表示回到当前月。
+   */
+  const navigate = useCallback((nextRoute: Route, options: { month?: MonthKey | null; settingsTab?: SettingsTab } = {}) => {
+    const next: AppLocation = {
+      route: nextRoute,
+      month: 'month' in options ? (options.month ?? null) : (location.month ?? currentMonth),
+      settingsTab: options.settingsTab ?? location.settingsTab
+    }
+    const hash = buildHash(next)
+
+    if (window.location.hash !== hash) window.history.replaceState(null, '', hash)
+    setLocation(next)
+  }, [location.month, location.settingsTab, currentMonth])
+
+  function goMonth(delta: number) {
+    navigate(location.route, { month: shiftMonth(monthKey, delta) })
+  }
+
+  function goToday() {
+    navigate(location.route, { month: null })
+  }
+
+  function changeSettingsTab(tab: SettingsTab) {
+    navigate('settings', { month: location.month, settingsTab: tab })
+  }
 
   /** 直达「个人资料」页（侧栏点「设置」时用默认 tab，这里是显式指定） */
-  const openProfileTab = useCallback(() => {
-    setSettingsTab('profile')
-    navigate('settings')
-  }, [navigate])
+  const openProfileTab = useCallback(() => navigate('settings', { settingsTab: 'profile' }), [navigate])
+
+  /** 侧栏链接带上当前月份，Cmd/Ctrl+点击开新标签也能落到同一个结算月 */
+  const hrefs = useMemo<Record<Route, string>>(() => ({
+    matrix: buildHash({ route: 'matrix', month: monthKey, settingsTab: 'roster' }),
+    overview: buildHash({ route: 'overview', month: monthKey, settingsTab: 'roster' }),
+    settings: buildHash({ route: 'settings', month: monthKey, settingsTab: 'roster' })
+  }), [monthKey])
 
   function clearAll() {
     api.replaceRoster({ ...emptyRoster })
@@ -137,7 +234,8 @@ export function App() {
 
     setWizardSkipped(true)
     toast.info(`配置完成：本人 ${self.name} · 另有 ${members.length} 位同事`, { duration: 4000 })
-    navigate('overview')
+    // 保留用户原本要去的页面：从 #/matrix 进来完成向导，仍落到矩阵
+    navigate(location.route, { month: location.month })
   }
 
   function openEditor(member: Member, date: string, source: EditSource) {
@@ -233,10 +331,11 @@ export function App() {
         monthTitle={formatMonthTitle(monthKey)}
         atCurrentMonth={atCurrentMonth}
         route={route}
+        hrefs={hrefs}
         onBackup={backup}
         onNavigate={next => {
-          if (next === 'settings') setSettingsTab('roster')
-          navigate(next)
+          if (next === 'settings') navigate('settings', { settingsTab: 'roster' })
+          else navigate(next)
         }}
         onRestore={file => void restore(file)}
         onShiftMonth={goMonth}
@@ -244,7 +343,8 @@ export function App() {
       >
         {route === 'settings' ? (
           <SettingsScreen
-            initialTab={settingsTab}
+            tab={settingsTab}
+            onTabChange={changeSettingsTab}
             roster={api.roster}
             onNotify={toast.info}
             onBackup={backup}

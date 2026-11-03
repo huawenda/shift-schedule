@@ -22,7 +22,9 @@
  *      直接 `node scripts/dev.mjs --open` 也行。
  */
 
+import fs from 'node:fs'
 import net from 'node:net'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
@@ -30,6 +32,8 @@ import { createServer } from 'vite'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_PORT = 6180
 const DEFAULT_HOST = '127.0.0.1'
+const CERT_FILE = path.join(ROOT, 'certs', 'dev.pem')
+const KEY_FILE = path.join(ROOT, 'certs', 'dev-key.pem')
 
 /* ------------------------------ 参数解析 ------------------------------ */
 
@@ -51,7 +55,12 @@ function readOption(name) {
 const wantsHelp = argv.includes('--help') || argv.includes('-h')
 
 const lanFlag = argv.includes('--lan')
-const host = readOption('host') ?? (lanFlag ? '0.0.0.0' : DEFAULT_HOST)
+/** HTTPS 必然要给别的设备看，所以它隐含 --lan */
+const httpsFlag = argv.includes('--https')
+const host = readOption('host') ?? (lanFlag || httpsFlag ? '0.0.0.0' : DEFAULT_HOST)
+
+const certFile = readOption('cert') ?? CERT_FILE
+const keyFile = readOption('key') ?? KEY_FILE
 
 const portRaw = readOption('port')
 const port = portRaw === undefined ? DEFAULT_PORT : Number(portRaw)
@@ -80,6 +89,9 @@ ${bold('选项')}
   --port <n>       监听端口，默认 ${DEFAULT_PORT}；传 0 让系统挑一个空闲端口
   --host <addr>    监听地址，默认 ${DEFAULT_HOST}
   --lan            等价于 --host 0.0.0.0，同局域网可访问
+  --https          启用 HTTPS（隐含 --lan）；证书默认读 certs/dev.pem 与 certs/dev-key.pem
+  --cert <file>    HTTPS 证书路径
+  --key <file>     HTTPS 私钥路径
   --open, -o       启动后自动打开默认浏览器
   --strict-port    端口被占用时报错退出，不自动顺延
   --help, -h       显示这段说明
@@ -87,8 +99,35 @@ ${bold('选项')}
 ${bold('例子')}
   pnpm dev -- --open
   pnpm dev -- --lan
+  pnpm dev -- --https
   pnpm dev -- --port 7000
 `)
+}
+
+/** 本机的局域网 IPv4：证书 SAN 必须把它们写进去，否则手机报「证书名称不匹配」 */
+function lanAddresses() {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter(Boolean)
+    .filter(item => item.family === 'IPv4' && !item.internal)
+    .map(item => item.address)
+}
+
+function printCertificateHelp() {
+  const hosts = ['localhost', '127.0.0.1', ...lanAddresses()]
+  console.log('')
+  console.log(`  ${bold('缺少 HTTPS 证书')}`)
+  console.log(`  证书 ${dim(CERT_FILE)}`)
+  console.log(`  私钥 ${dim(KEY_FILE)}`)
+  console.log('')
+  console.log(`  用 ${bold('mkcert')} 生成（根证书装一次手机即可长期有效）：`)
+  console.log(dim('    mkcert -install'))
+  console.log(dim(`    mkcert -cert-file "${CERT_FILE}" -key-file "${KEY_FILE}" ${hosts.join(' ')}`))
+  console.log('')
+  console.log(dim('  然后把 mkcert -CAROOT 目录里的 rootCA.pem 装到手机并设为受信任的 CA。'))
+  console.log(dim('  iPhone：设置 → 通用 → 关于本机 → 证书信任设置，开启完全信任。'))
+  console.log(dim('  Android：设置 → 安全 → 加密与凭据 → 安装证书 → CA 证书。'))
+  console.log('')
 }
 
 /* ------------------------------ 端口探测 ------------------------------ */
@@ -126,6 +165,16 @@ async function main() {
   console.log(`  ${bold('昼夜 · 个人倒班记录本')}`)
   console.log('')
 
+  // 证书缺失时直接讲清楚怎么生成，而不是让 vite 抛一段 TLS 报错
+  let https
+  if (httpsFlag) {
+    if (!fs.existsSync(certFile) || !fs.existsSync(keyFile)) {
+      printCertificateHelp()
+      process.exit(1)
+    }
+    https = { cert: fs.readFileSync(certFile), key: fs.readFileSync(keyFile) }
+  }
+
   // 端口被占用时先讲清楚原因，再交给 vite 顺延
   if (port !== 0 && !(await isPortFree(port, host))) {
     if (strictPort) {
@@ -149,7 +198,8 @@ async function main() {
       host,
       port,
       strictPort,
-      open: shouldOpen
+      open: shouldOpen,
+      ...(https ? { https } : {})
     }
   })
 

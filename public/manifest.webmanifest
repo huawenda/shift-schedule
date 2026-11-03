@@ -2,12 +2,28 @@
   "name": "昼夜 · 个人倒班记录本",
   "short_name": "昼夜",
   "description": "个人倒班记录工具：班序固定，成员自定义",
-  "start_url": "./",
+  "id": "./",
+  "start_url": "./#/overview",
   "scope": "./",
   "display": "standalone",
+  "lang": "zh-CN",
   "orientation": "any",
-  "background_color": "#f9fbfc",
-  "theme_color": "#f9fbfc",
+  "background_color": "#f7f7f7",
+  "theme_color": "#0e2228",
+  "shortcuts": [
+    {
+      "name": "全员矩阵",
+      "short_name": "全员矩阵",
+      "description": "查看全组整月排班",
+      "url": "./#/matrix"
+    },
+    {
+      "name": "设置",
+      "short_name": "设置",
+      "description": "人员配置与个人资料",
+      "url": "./#/settings/roster"
+    }
+  ],
   "icons": [
     {
       "src": "./icons/icon-192.png",

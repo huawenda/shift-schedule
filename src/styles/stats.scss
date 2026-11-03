@@ -990,6 +990,12 @@ button.plaque-shift:focus-visible {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* 卡片改成上下堆叠后，第二层 24px 模糊阴影会把 16px 间距连成灰带 */
+  .stat-card,
+  .plaque {
+    box-shadow: var(--shadow-raised-flat);
+  }
+
   .stat-card-detail,
   .stat-card-ot {
     position: static;

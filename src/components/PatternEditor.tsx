@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDismissOnBack } from '../hooks/useDismissOnBack'
 import {
   PATTERN_ANCHOR_DATE,
   PATTERN_CYCLE_LENGTH,
@@ -26,6 +27,7 @@ interface PatternEditorProps {
  * 而矩阵里靠单字区分、编辑时用户需要看清全称，所以拆成两行各 12 格。
  */
 export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEditorProps) {
+  useDismissOnBack(true, onClose)
   const [draft, setDraft] = useState<CustomPattern>(() => pattern ?? createBlankCustomPattern())
   const [active, setActive] = useState(0)
   const [showErrors, setShowErrors] = useState(false)

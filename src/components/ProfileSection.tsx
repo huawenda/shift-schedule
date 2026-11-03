@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDismissOnBack } from '../hooks/useDismissOnBack'
 import type { PatternOption } from './MemberRowsEditor'
 import {
   SALARY_FIELDS,
@@ -40,6 +41,7 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
   const [position, setPosition] = useState(self?.position ?? '')
   const [errors, setErrors] = useState<string[]>([])
   const [pending, setPending] = useState<SelfImpact | null>(null)
+  useDismissOnBack(Boolean(pending), () => setPending(null))
   const [salary, setSalary] = useState<SalaryInput>(roster.profile?.salary ?? { ...emptySalary })
   const [salaryDirty, setSalaryDirty] = useState(false)
 

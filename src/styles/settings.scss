@@ -121,6 +121,11 @@
   gap: var(--sp-2);
 }
 
+/* 桌面：班序 / 岗位的容器在网格里“消失”，两个字段仍是 .member-row 的直接列 */
+.member-fields {
+  display: contents;
+}
+
 /* 姓名 / 班序 / 岗位 / 删除 —— 四列。班序列宽一点（名字可能较长），岗位列稍窄 */
 .member-editor-head,
 .member-row {
@@ -153,6 +158,8 @@
   line-height: 1;
   cursor: grab;
   user-select: none;
+  /* 手指按住把手时不要被浏览器的滚动接管，否则 Pointer Events 刚开始就断了 */
+  touch-action: none;
 }
 
 .member-handle:hover {
@@ -199,6 +206,21 @@
 /* 拖到哪一行就在那一行上沿画一条线：不占布局，不会让整表跳动 */
 .member-row.is-drop-target {
   box-shadow: 0 -2px 0 var(--accent);
+}
+
+/* 有问题的那一行：浅红描边 + 行内提示，不用滚到列表底部看汇总 */
+.member-row.is-invalid {
+  border-radius: var(--radius-control);
+  box-shadow: inset 0 0 0 1px var(--danger-border);
+}
+
+.member-row-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-left: 2px;
+  color: var(--danger);
+  font-size: var(--fs-small);
+  line-height: 1.5;
 }
 
 .member-editor-head {
@@ -255,6 +277,132 @@
   color: var(--danger);
   font-size: var(--fs-small);
   line-height: 1.6;
+}
+
+/* ── 成员标题行：标题 + 右侧「排序 / 完成 / 取消」 ─────── */
+
+.label-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.label-head h2 {
+  margin-bottom: 0;
+}
+
+.label-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-left: auto;
+}
+
+.sort-action {
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--fs-small);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sort-action:hover {
+  color: var(--text);
+}
+
+.sort-action.is-quiet {
+  color: var(--muted);
+}
+
+/* ── 排序模式：44px 紧凑行（与小程序 .sort-row 同一套） ── */
+
+.sort-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.sort-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+.sort-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.sort-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.sort-row.is-self {
+  background: var(--surface-sunken);
+}
+
+/* 被拖行：抬起一层、描边强调；跟手时不要过渡 */
+.sort-row.is-dragging {
+  z-index: 2;
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+  transition: none;
+}
+
+.sort-handle {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 44px;
+  color: var(--faint);
+  font-size: var(--fs-body);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.sort-handle:active {
+  cursor: grabbing;
+}
+
+.sort-name {
+  flex: 0 0 auto;
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.sort-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 保存条左侧的提示，与小程序 .save-bar-hint 同口径 */
+.save-hint {
+  color: var(--warning-ink);
+  font-size: var(--fs-small);
 }
 
 /* ── 危险区 ───────────────────────────────────────────── */
@@ -729,6 +877,11 @@ button.shift-cell:hover {
     padding-bottom: var(--sp-4);
   }
 
+  /* 单列后各区块面板上下相邻，投影同样收成贴边一层 */
+  .settings-panel {
+    box-shadow: var(--shadow-raised-flat);
+  }
+
   .pattern-row {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
@@ -756,47 +909,125 @@ button.shift-cell:hover {
     justify-content: flex-end;
   }
 
-  /* 表头在手机上隐藏：字段已经有 placeholder，留着只会占一行高度 */
+  /* 成员表：每人一张卡，与小程序 .member-card 同一套语言。
+   * 头行 = 把手 + 姓名 + 操作，第二行 = 班序 / 岗位各半；
+   * 13 个人不再连成一张大表单。 */
   .member-editor-head {
     display: none;
   }
 
-  .member-editor.is-sortable .member-row {
-    grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr) auto;
-    grid-template-areas:
-      "handle name name actions"
-      "handle pattern position actions";
+  .member-row {
     row-gap: var(--sp-2);
+    column-gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-card);
+    background: var(--surface);
   }
 
+  /* 手机上的卡片不显示拖动把手 —— 排序要先进「排序」模式（与小程序一致）。
+   * 列模板必须带 .member-editor 前缀：桌面那条
+   * `.member-editor.is-sortable .member-row` 是 (0,3,0)，只写 `.member-row` 会被它压住。 */
+  .member-editor .member-handle {
+    display: none;
+  }
+
+  .member-editor.is-sortable .member-row,
   .member-editor:not(.is-sortable) .member-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      "name name actions"
-      "pattern position actions";
-    row-gap: var(--sp-2);
+      "name actions"
+      "fields fields";
+  }
+
+  /* 卡片自带底色，悬停不再整行变灰 */
+  .member-row:hover {
+    background: var(--surface);
+  }
+
+  .member-row.is-self,
+  .member-row.is-self:hover {
+    background: var(--surface-sunken);
+  }
+
+  /* 卡片的错误用描边表达，桌面那条 inset 阴影收掉 */
+  .member-row.is-invalid {
+    border-color: var(--danger-border);
+    box-shadow: none;
   }
 
   .member-handle {
     grid-area: handle;
     align-self: center;
+    height: 32px;
   }
 
+  /* 排序模式行：与卡片同宽，44px 固定高 */
+  .sort-row {
+    margin: 0;
+  }
+
+  /* 姓名是卡里最重的一行：去掉输入框外框，只留一条底线当可编辑提示 */
   .member-field-name {
     grid-area: name;
+    height: 32px;
+    padding: 0 2px;
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    border-radius: 0;
+    background: transparent;
+    font-size: var(--fs-body);
+    font-weight: 600;
   }
 
-  .member-field-pattern {
-    grid-area: pattern;
+  .member-field-name:focus {
+    border-bottom-color: var(--accent);
+    box-shadow: none;
   }
 
-  .member-field-position {
-    grid-area: position;
+  /* 本人姓名是纯文本，不要变成输入框形状 */
+  .member-row.is-self .member-field-name {
+    height: 32px;
+    padding: 0 2px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text);
+    font-size: var(--fs-body);
+    font-weight: 600;
+  }
+
+  .member-fields {
+    grid-area: fields;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--sp-2);
   }
 
   .member-row-actions {
     grid-area: actions;
     align-self: center;
+    gap: 2px;
+  }
+
+  /* 操作改成无框图标按钮：删除只染红字，与小程序 .member-remove 一致 */
+  .member-row-actions .btn-icon {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+  }
+
+  .member-row-actions .btn-quiet {
+    height: 28px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--danger);
+    font-size: var(--fs-small);
+  }
+
+  .member-row-error {
+    grid-column: 1 / -1;
   }
 
   .danger-row {
@@ -819,6 +1050,23 @@ button.shift-cell:hover {
 
   .backup-dir-path {
     flex: 1 1 140px;
+  }
+
+  /* 成员保存条吸底：成员一多时不用滚到列表末尾才找得到「保存」。
+   * 做成四角圆角的浮卡（与小程序 .save-bar 同一套），不是贴着面板的通栏矩形；
+   * sticky 相对滚动容器 .canvas-flow，底边留 8px，不盖住底部标签栏。 */
+  .settings-actions.is-sticky {
+    position: sticky;
+    bottom: var(--sp-2);
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow-floating);
   }
 }
 
@@ -860,5 +1108,10 @@ button.shift-cell:hover {
   .profile-form,
   .salary-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* 639 档面板内边距收到 12，浮卡的内边距跟紧一点 */
+  .settings-actions.is-sticky {
+    padding: var(--sp-2) var(--sp-3);
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDismissOnBack } from '../hooks/useDismissOnBack'
 import type { DayOverride, DayRecordInput, Member } from '../data/roster'
 import { useDialogFocus } from '../hooks/useDialogFocus'
 import {
@@ -74,6 +75,8 @@ export function DayEditor({
   onClose
 }: DayEditorProps) {
   const dialogRef = useDialogFocus<HTMLElement>()
+  // 系统返回键：先关弹层（等同点遮罩，有未保存改动时仍会拦一下）
+  useDismissOnBack(true, requestClose)
   const [tab, setTab] = useState<DayEditorTab>('shift')
   /** 改过但没保存时关闭弹层：先就地确认，别静默丢改动 */
   const [confirmDiscard, setConfirmDiscard] = useState(false)

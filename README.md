@@ -251,7 +251,9 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
   **表里的顺序就是全员矩阵的行顺序** —— 拖动行首把手可一次到位，↑ ↓ 给键盘与微调用，
   保存后矩阵同步；顺序只是 `members` 数组次序，没有额外的排序字段。
 - **首开向导**：仅在成员为 0 时出现，三步——填你自己 → 加同事（可跳过）→ 确认进入。
-- **概览页的页头不再有视图切换**：入口上移到侧栏，`#/matrix`、`#/overview`、`#/settings` 三个 hash 各对应一页。
+- **概览页的页头不再有视图切换**：入口上移到侧栏。路由是手写 hash：
+  `#/overview`、`#/matrix`（当前结算月省略月份）、`#/2026-10/overview`（非当前月带月份前缀）、
+  `#/settings/roster`、`#/settings/profile`；未知 hash 会被原地改写成规范形式。
 
 矩阵与日历**不能并排**：340（日历）+ 148（姓名列）+ 30×24（天列）+ 228（侧栏）+ 48 ≈ 1484px，
 超过 1466 基准屏宽，并排必然把列压到 20px 以下，而那样「特」字放不下。所以做成视图切换。
@@ -379,7 +381,7 @@ src/
 │   ├── OverviewScreen.tsx   月度概览页（日历 + 统计，日历锁本人）
 │   └── SettingsScreen.tsx   设置：人员配置 / 个人资料 两个 tab
 ├── styles/                  tokens → shell → schedule → stats → todos → settings → wizard → toasts
-├── App.tsx                  三个 hash 路由、弹层与提示（备份与月份已抽成 hook）
+├── App.tsx                  hash 路由（视图 / 结算月 / 设置页签）、弹层与提示
 └── main.tsx
 
 fixtures/

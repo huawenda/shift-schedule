@@ -390,6 +390,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* 待办卡与统计卡上下堆叠，投影也收成贴边一层，避免卡片之间出现连接灰带 */
+  .todo-card {
+    box-shadow: var(--shadow-raised-flat);
+  }
+
   .calendar-weekdays,
   .calendar-grid,
   .calendar-legend {

@@ -115,7 +115,8 @@
   left: 0;
   z-index: 5;
   width: 50%;
-  padding: var(--sp-3);
+  /* 底部比顶部少 4px：列表最后一项没有分隔线，等值内边距会显得下方空一截 */
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   /* 浮层是白纸，必须把深底上的亮字重新压回正文色，否则白底白字 */
@@ -164,7 +165,7 @@
   display: flex;
   flex-direction: column;
   max-height: 300px;
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   padding: 0;
   overflow-y: auto;
   list-style: none;
@@ -172,12 +173,14 @@
 
 .summary-popover-item {
   display: flex;
-  align-items: baseline;
+  /* 垂直居中而不是基线对齐：短横线「-」放在基线上会显得偏上 */
+  align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
-  padding: 5px 0;
+  padding: 4px 0;
   border-bottom: 1px solid var(--rule);
   font-size: var(--fs-control);
+  line-height: 1.35;
 }
 
 .summary-popover-name {
@@ -189,8 +192,17 @@
 }
 
 .summary-popover-position {
+  /* 岗位列留固定最小宽度并居中：短横线与 PNP 在同一列里对齐，不再各贴各的右缘 */
+  flex: 0 0 auto;
+  min-width: 56px;
   color: var(--muted);
   font-size: var(--fs-small);
+  text-align: center;
+}
+
+/* 未填岗位：位保留、字退一档，一眼能分出「没填」和「没渲染」 */
+.summary-popover-position.is-empty {
+  color: var(--faint);
 }
 
 /* 浮层内部滚动条：与自绘下拉同一档，避免原生深灰条在小面板里抢眼 */
@@ -372,7 +384,7 @@
 
 .matrix-days {
   display: grid;
-  grid-template-columns: repeat(var(--days, 30), minmax(22px, 1fr));
+  grid-template-columns: repeat(var(--days, 30), minmax(var(--matrix-day-min), 1fr));
 }
 
 .matrix-day {
@@ -1205,10 +1217,20 @@
     max-height: 220px;
   }
 
-  /* 矩阵：姓名列 120 → 88、行高 40 → 36；30 天仍然横滚，不压缩字号到读不了 */
+  /* 窄屏单列堆叠：概览条 / 矩阵白板 / 日历都只留贴边一层阴影，
+   * 避免 24px 模糊的第二层把相邻卡片的间距填成一条灰带。 */
+  .summary,
+  .matrix-scroll,
+  .calendar-grid {
+    box-shadow: var(--shadow-raised-flat);
+  }
+
+  /* 矩阵：姓名列 120 → 88、行高 40 → 36；30 天仍然横滚，不压缩字号到读不了。
+   * 日期列下限 22 → 28：手机上一列太窄既看不清日期，手指也点不准。 */
   .matrix {
     --matrix-name-width: 88px;
     --row-height: 36px;
+    --matrix-day-min: 28px;
     --matrix-name-cell: 48px;
     --matrix-pill-gap: 3px;
   }
@@ -1237,22 +1259,23 @@
     gap: var(--sp-3);
   }
 
-  /* 弹层内容现在跟着 36px 的控件走：原来写死的 83px 卡片会装不下 */
+  /* 弹层内容跟着 36px 的控件走，但**仍然锁高** —— 否则切 tab 时抽屉伸缩、
+   * 文字重新栅格化。两个值随控件高度重算：
+   *   卡片 89 = 上下 padding 24 + 边框 2 + 标题行 27 + 内容 36（桌面 83 的移动版）；
+   *   页高 318 = 选项区 116（padding 12 + 42×2 + gap 6 + 14）+ 两张卡 202（89 + 12，×2）。
+   * ⚠️ 改选项行高、卡片高度或卡片数量时，这两个值必须同步重算，差 1px 就会抖。 */
   .dialog-section {
-    height: auto;
-    min-height: 83px;
+    height: 89px;
   }
 
   .dialog-day {
-    --day-content-height: auto;
+    --day-content-height: 318px;
   }
 
-  .dialog-day .dialog-page {
-    height: auto;
-  }
-
+  /* 待办列表吃满页高、只在内部滚（桌面规则已给 flex / overflow，
+   * 这里只要解除原先 45dvh 的限制，免得列表先被截短再滚）。 */
   .dialog-day .todo-list {
-    max-height: 45dvh;
+    max-height: none;
   }
 }
 
