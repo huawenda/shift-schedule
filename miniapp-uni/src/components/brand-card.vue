@@ -41,27 +41,29 @@ withDefaults(defineProps<{ hint?: string }>(), {
   background: var(--chrome);
 }
 
-/* ------------------------------------------------------------ 应用标识 44px */
+/* ------------------------------------------------------------ 应用标识 52px
+ * 52 与右侧文字块等高（20×1.2 + 2 + 12×1.5 + 2 + 暖沙线 7 ≈ 53），
+ * 标识不再比字标矮一头。 */
 
 .brand-mark {
   position: relative;
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--brand-ink);
   /* 深框上给标识留一圈极淡石光线，深青盘不至于和背景糊成一块 */
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
-/* 夜：直径 58×2/192×44 = 26.58 */
+/* 夜：直径 58×2/192×52 = 31.42 */
 .mark-night {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 26.58px;
-  height: 26.58px;
+  width: 31.42px;
+  height: 31.42px;
   border-radius: 50%;
   background: var(--brand-night);
   transform: translate(-50%, -50%);
@@ -70,23 +72,22 @@ withDefaults(defineProps<{ hint?: string }>(), {
 /* 昼：上半圆，与夜圆同心 */
 .mark-day {
   position: absolute;
-  top: calc(50% - 13.29px);
+  top: calc(50% - 15.71px);
   left: 50%;
-  width: 26.58px;
-  height: 13.29px;
-  border-radius: 13.29px 13.29px 0 0;
+  width: 31.42px;
+  height: 15.71px;
+  border-radius: 15.71px 15.71px 0 0;
   background: var(--brand-day);
   transform: translateX(-50%);
 }
 
-/* 星：四角星，中心在原图 y=124（中心线下方 28），缩到 44px 是下移 6.4。
- * 缩到再小也要留着 —— 它是「夜」的识别锚点。 */
+/* 星：四角星，中心在原图 y=124（中心线下方 28），缩到 52px 是下移 7.58 */
 .mark-star {
   position: absolute;
-  top: calc(50% + 2.29px);
+  top: calc(50% + 2.71px);
   left: 50%;
-  width: 8.25px;
-  height: 8.25px;
+  width: 9.75px;
+  height: 9.75px;
   transform: translateX(-50%);
 }
 
@@ -102,34 +103,34 @@ withDefaults(defineProps<{ hint?: string }>(), {
 
 .star-up {
   top: 0;
-  left: 2.06px;
-  border-right: 2.06px solid transparent;
-  border-bottom: 4.12px solid var(--brand-star);
-  border-left: 2.06px solid transparent;
+  left: 2.43px;
+  border-right: 2.43px solid transparent;
+  border-bottom: 4.87px solid var(--brand-star);
+  border-left: 2.43px solid transparent;
 }
 
 .star-down {
   bottom: 0;
-  left: 2.06px;
-  border-top: 4.12px solid var(--brand-star);
-  border-right: 2.06px solid transparent;
-  border-left: 2.06px solid transparent;
+  left: 2.43px;
+  border-top: 4.87px solid var(--brand-star);
+  border-right: 2.43px solid transparent;
+  border-left: 2.43px solid transparent;
 }
 
 .star-left {
-  top: 2.06px;
+  top: 2.43px;
   left: 0;
-  border-top: 2.06px solid transparent;
-  border-right: 4.12px solid var(--brand-star);
-  border-bottom: 2.06px solid transparent;
+  border-top: 2.43px solid transparent;
+  border-right: 4.87px solid var(--brand-star);
+  border-bottom: 2.43px solid transparent;
 }
 
 .star-right {
-  top: 2.06px;
+  top: 2.43px;
   right: 0;
-  border-top: 2.06px solid transparent;
-  border-bottom: 2.06px solid transparent;
-  border-left: 4.12px solid var(--brand-star);
+  border-top: 2.43px solid transparent;
+  border-bottom: 2.43px solid transparent;
+  border-left: 4.87px solid var(--brand-star);
 }
 
 /* ------------------------------------------------------------ 字标 */
