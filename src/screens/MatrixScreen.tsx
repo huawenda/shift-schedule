@@ -23,7 +23,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
   const [mode, setMode] = useState<MatrixMode>('shift')
 
   return (
-    <div className="canvas is-pinned">
+    <div className="canvas is-matrix is-pinned">
       <div className="canvas-head">
         <div>
           <h1 className="canvas-title">全员矩阵</h1>

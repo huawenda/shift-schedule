@@ -209,7 +209,7 @@ export function SettingsScreen({
      * 页头之下的内容收进 `.canvas-flow` 单独滚 —— 于是「设置 / 人员配置 / 分页切换」
      * 这条页头在翻成员表、翻备份说明时始终留在原位，分隔线就是滚动区的上边界。
      */
-    <div className="canvas is-pinned">
+    <div className="canvas is-settings is-pinned">
       <div className="canvas-head">
         <div>
           <h1 className="canvas-title">设置</h1>

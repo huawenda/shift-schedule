@@ -385,6 +385,7 @@ export function MemberRowsEditor({
         const isSelfRow = Boolean(selfId && row.id === selfId)
         const rowError = errorOf(row, index)
         return (
+        <div className="member-row-wrap" key={row.key}>
         <div
           className={[
             'member-row',
@@ -394,7 +395,6 @@ export function MemberRowsEditor({
             overIndex === index && dragIndex !== null && dragIndex !== index ? 'is-drop-target' : ''
           ].filter(Boolean).join(' ')}
           data-row-index={index}
-          key={row.key}
           onDragLeave={sortable ? () => setOverIndex(current => (current === index ? null : current)) : undefined}
           onDragOver={sortable
             ? event => {
@@ -525,8 +525,11 @@ export function MemberRowsEditor({
               删除
             </button>
           </div>
+        </div>
 
-          {rowError ? <p className="member-row-error" role="alert">{rowError}</p> : null}
+        {/* 错误提示挂在字段行外面：红边只描字段，文案不会跟着被框住，
+            两个错误行也不会连成一块 */}
+        {rowError ? <p className="member-row-error" role="alert">{rowError}</p> : null}
         </div>
         )
       })}

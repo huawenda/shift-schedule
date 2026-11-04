@@ -59,9 +59,13 @@
   box-shadow: var(--shadow-raised);
 }
 
+/* 操作条：说明文字 + 按钮同一行。
+ * `align-items: center` 不能省 —— flex 默认 stretch 会把文字那一格拉成按钮高（30px），
+ * 文字贴着格子上沿，看起来就比按钮「高了一截」。 */
 .settings-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--sp-2);
 }
 
@@ -118,7 +122,20 @@
 .member-editor {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
+  /* 行与行之间不再靠 gap：每行自带上下内边距 + 底部发丝线，
+   * 大屏上 13 个人才读得出「一行一个人」，而不是一叠贴着的输入框。 */
+  gap: 0;
+}
+
+/* 一行 = 字段行 + 行内错误提示。
+ * 错误提示放在字段行**外面**：红框（现在只描在字段上）不会把文案一起圈进去，
+ * 两行错误也不会连成一大块红。 */
+.member-row-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
 }
 
 /* 桌面：班序 / 岗位的容器在网格里“消失”，两个字段仍是 .member-row 的直接列 */
@@ -208,19 +225,30 @@
   box-shadow: 0 -2px 0 var(--accent);
 }
 
-/* 有问题的那一行：浅红描边 + 行内提示，不用滚到列表底部看汇总 */
-.member-row.is-invalid {
-  border-radius: var(--radius-control);
-  box-shadow: inset 0 0 0 1px var(--danger-border);
+/* 有问题的那一行：红边只画在**姓名**字段上。
+ * 行内校验（空名 / 与本人同名 / 与前一条重名）说的都是姓名，
+ * 把整行框红或把班序、岗位也染红，会让人以为那两栏也填错了。
+ * 原来用 inset 阴影框住整行，文案也在框里，两个错误行会连成一大块红。 */
+.member-row.is-invalid .member-field-name {
+  border-color: var(--danger-border);
 }
 
+.member-row.is-invalid .member-field-name:focus {
+  border-color: var(--danger-border);
+}
+
+/* 提示文字缩进到姓名输入框正文的位置：
+ * 1px 边框 + 8px 内边距 = 9px；可排序时前面还差一个把手列（16px + 8px 间距）。 */
 .member-row-error {
-  grid-column: 1 / -1;
   margin: 0;
-  padding-left: 2px;
+  padding-left: 9px;
   color: var(--danger);
   font-size: var(--fs-small);
   line-height: 1.5;
+}
+
+.member-editor.is-sortable .member-row-error {
+  padding-left: calc(16px + var(--sp-2) + 9px);
 }
 
 .member-editor-head {
@@ -238,6 +266,25 @@
   background: var(--surface-tint);
 }
 
+/* 本人行：整行浅灰底 + 三个只读字段。和其它可编辑行一眼分得开，
+ * 不用再靠阅读「本人」那枚小徽章才知道这行改不了。 */
+.member-row.is-self,
+.member-row.is-self:hover {
+  background: var(--surface-sunken);
+}
+
+/* 行内「删除」：与 ↑ ↓ 同高一档的无框按钮。
+ * 禁用态（本人行）也保持透明 —— 否则它是一块灰底方块，比旁边两个图标重得多。 */
+.member-row .btn-quiet {
+  height: 28px;
+  padding: 0 6px;
+}
+
+.member-row .btn-quiet:disabled {
+  border-color: transparent;
+  background: transparent;
+}
+
 /* 表头文字再右移 9px，去对齐输入框**里面**的文字：
  * 输入框是 1px 边框 + 8px 内边距，正文从第 9px 开始；表头贴在列边界上会显得偏左。 */
 .member-head-label {
@@ -246,6 +293,11 @@
 
 .member-row .input {
   min-width: 0;
+}
+
+/* 添加成员：最后一行有底线，按钮与表格拉开 8px，不再贴着错误提示 */
+.member-editor .btn-add {
+  margin-top: var(--sp-2);
 }
 
 .member-editor-empty {
@@ -916,6 +968,17 @@ button.shift-cell:hover {
     display: none;
   }
 
+  /* 卡片之间恢复 8px 间距：桌面那套「发丝线 + 内边距」属于表格，不是卡片 */
+  .member-editor {
+    gap: var(--sp-2);
+  }
+
+  .member-row-wrap {
+    gap: 4px;
+    padding: 0;
+    border-bottom: 0;
+  }
+
   .member-row {
     row-gap: var(--sp-2);
     column-gap: 6px;
@@ -1026,8 +1089,10 @@ button.shift-cell:hover {
     font-size: var(--fs-small);
   }
 
-  .member-row-error {
-    grid-column: 1 / -1;
+  /* 提示在卡片外，与卡片左缘对齐即可（卡片内部已缩进 10px，外加 4px 视觉呼吸） */
+  .member-row-error,
+  .member-editor.is-sortable .member-row-error {
+    padding-left: 4px;
   }
 
   .danger-row {

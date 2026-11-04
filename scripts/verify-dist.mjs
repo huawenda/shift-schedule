@@ -1902,6 +1902,48 @@ async function runScenario(name, url, downloadDir) {
         sameNameError.includes('与本人同名'),
         sameNameError
       )
+      // 错误只描姓名框（不整行套红框把文案一起框住），提示缩进到输入框正文
+      const errorLook = await client.evaluate(`(() => {
+        const row = document.querySelector('.member-row.is-invalid')
+        const input = row?.querySelector('.member-field-name')
+        const error = row?.parentElement?.querySelector('.member-row-error')
+        if (!row || !input || !error) return null
+        const textLeft = input.getBoundingClientRect().left + 9
+        return {
+          rowShadow: getComputedStyle(row).boxShadow,
+          inputBorder: getComputedStyle(input).borderTopColor,
+          errorLeftGap: Math.round(
+            error.getBoundingClientRect().left +
+            parseFloat(getComputedStyle(error).paddingLeft) - textLeft
+          )
+        }
+      })()`)
+      check(
+        `${name}: 成员行错误只描姓名框，提示与输入框正文左对齐`,
+        errorLook !== null && errorLook.rowShadow === 'none' &&
+          errorLook.inputBorder === 'rgb(227, 181, 176)' &&
+          Math.abs(errorLook.errorLeftGap) <= 1,
+        JSON.stringify(errorLook)
+      )
+      // 保存条上「有未保存的修改」与保存按钮要垂直居中（不是贴到文字格的上沿）
+      const saveBarAlign = await client.evaluate(`(() => {
+        const actions = document.querySelector('.settings-actions.is-sticky')
+        const hint = actions?.querySelector('.save-hint')
+        const btn = actions?.querySelector('.btn-primary')
+        if (!actions || !hint || !btn) return null
+        const h = hint.getBoundingClientRect()
+        const b = btn.getBoundingClientRect()
+        return {
+          alignItems: getComputedStyle(actions).alignItems,
+          delta: +(((h.top + h.bottom) - (b.top + b.bottom)) / 2).toFixed(2)
+        }
+      })()`)
+      check(
+        `${name}: 保存条的提示文字与按钮垂直居中`,
+        saveBarAlign !== null && saveBarAlign.alignItems === 'center' &&
+          Math.abs(saveBarAlign.delta) <= 1,
+        JSON.stringify(saveBarAlign)
+      )
 
       await goOverview(client)
 
@@ -2766,6 +2808,35 @@ async function runScenario(name, url, downloadDir) {
       `${name}: 矩阵行顺序跟随设置`,
       JSON.stringify(matrixOrder) === JSON.stringify(['张舒棋', '华文达', '陈泳智']),
       JSON.stringify(matrixOrder)
+    )
+
+    // --- 15. 宽屏防拉伸：三页共用同一档版心（1228 居中）---
+    await client.send('Emulation.setDeviceMetricsOverride', {
+      width: 2560,
+      height: 1440,
+      deviceScaleFactor: 1,
+      mobile: false
+    })
+    const wideGaps = []
+    for (const route of ['#/overview', '#/matrix', '#/settings/roster']) {
+      await client.send('Page.navigate', { url: `${url}${route}` })
+      await waitFor(client, 'Boolean(document.querySelector(".canvas"))', `宽屏 ${route}`)
+      await sleep(240)
+      wideGaps.push(await client.evaluate(`(() => {
+        const canvas = document.querySelector('.canvas').getBoundingClientRect()
+        const sheet = document.querySelector('.sheet').getBoundingClientRect()
+        return {
+          w: Math.round(canvas.width),
+          l: Math.round(canvas.left - sheet.left),
+          r: Math.round(sheet.right - canvas.right)
+        }
+      })()`))
+    }
+    check(
+      `${name}: 2560 宽屏下三页限宽 1228、左右留白对称`,
+      wideGaps.length === 3 &&
+        wideGaps.every(gap => gap.w >= 1226 && gap.w <= 1230 && Math.abs(gap.l - gap.r) <= 1),
+      JSON.stringify(wideGaps)
     )
   } catch (error) {
     check(`${name}: 场景执行`, false, error.message)
