@@ -146,7 +146,7 @@ export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEdi
         </div>
 
         <footer className="dialog-foot">
-          <span className="editor-hint">自建班序第一天对应锚点日 2026-06-07 的班次</span>
+          <span className="editor-hint">第一天对应锚点日 2026-06-07 的班次</span>
           <div className="dialog-actions">
             <button className="btn" type="button" onClick={onClose}>取消</button>
             <button className="btn btn-primary" type="button" onClick={commit}>
