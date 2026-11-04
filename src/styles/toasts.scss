@@ -1,9 +1,12 @@
 /* --------------------------------------------------------------------------
  * 底部提示（toast）
  *
- * 位置：窗口底部居中，距底 24px；多条向上堆叠，最多 3 条（由 useToasts 控制）。
+ * 位置：窗口底部居中，距底 24px；手机（≤1023）改停在底部标签栏上方 ——
+ *       底栏是常驻的，压在上面会挡住「设置 / 全员矩阵」的点击热区。
+ *       多条向上堆叠，最多 3 条（由 useToasts 控制）。
  * 形态：白卡 + 1px 边 + 左侧 3px 语义色条，沿用画布内的卡片语言。
  *       深色外框已经足够压住背景，提示不再叠一层深底。
+ *       竖向内边距压到 8px：它是一句话的提示，不需要卡片的宽松留白。
  * 动效：上移 8px + 淡入 180ms；退出淡出 150ms（与 useToasts 的 EXIT_MS 对齐）。
  * -------------------------------------------------------------------------- */
 
@@ -22,6 +25,14 @@
   pointer-events: none;
 }
 
+/* 手机：底栏高 57 + 安全区，再留 8px 缝。
+ * 不改桌面那条 24px —— 桌面没有底栏，停太低反而远离视线落点。 */
+@media (max-width: 1023px) {
+  .toast-layer {
+    bottom: calc(var(--rail-bar-height) + env(safe-area-inset-bottom) + var(--sp-2));
+  }
+}
+
 .toast {
   position: relative;
   display: flex;
@@ -29,14 +40,14 @@
   gap: var(--sp-2);
   width: max-content;
   max-width: 100%;
-  padding: var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-4);
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
   box-shadow: var(--shadow-floating);
   color: var(--text);
   font-size: var(--fs-control);
-  line-height: 1.5;
+  line-height: 1.4;
   pointer-events: auto;
   animation: toast-in 180ms ease-out;
 }
@@ -44,8 +55,8 @@
 /* 语义色只放在左侧竖条里，不铺底色 —— 颜色是提示，不是新的一层背景 */
 .toast::before {
   position: absolute;
-  top: 8px;
-  bottom: 8px;
+  top: 6px;
+  bottom: 6px;
   left: 0;
   width: 3px;
   border-radius: 0 2px 2px 0;

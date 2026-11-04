@@ -74,8 +74,19 @@
   font-weight: 600;
 }
 
-/* 抬头不再画强调竖条：概览页已经有一张主卡带了竖条，
- * 这一根再加上去，两个装置就互相抵消了。 */
+/* 与统计卡同一根 3px 强调竖条：概览页的每张卡都用同一个「抬头锚点」，
+ * 待办卡不再是唯一一张光秃秃的标题。inline-block + baseline 对齐，不改标题行高。 */
+.todo-card-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 12px;
+  margin-right: 7px;
+  border-radius: 2px;
+  background: var(--accent);
+  vertical-align: -1px;
+}
+
 .todo-card-stat {
   font-size: var(--fs-small);
   color: var(--muted);

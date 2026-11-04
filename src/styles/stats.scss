@@ -341,10 +341,11 @@ button.plaque-shift:focus-visible {
   font-weight: 600;
 }
 
-/* 强调竖条只留给首卡：四张卡都画一根，等于四张卡都说了同一句「我是卡片」。
+/* 概览页每张统计卡的标题都带一根 3px 强调竖条：
+ * 它是「这张卡开了」的锚点，四块统计并排时视线先落在标题，而不是四个同样重的数字。
  * 用 inline-block 而不是给 .stat-title 加 flex：标题行是 baseline 对齐的，
  * 一旦标题自己变成 flex 容器，它的基线会取到伪元素的基线，整行文字就歪了。 */
-.stat-card:first-child .stat-title::before {
+.stat-title::before {
   content: "";
   display: inline-block;
   width: 3px;
@@ -724,16 +725,26 @@ button.plaque-shift:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-/* 组标题左侧的小竖条：只做锚点，中性色不抢强调色 */
+/* 组标题左侧的小竖条：只做锚点，中性色不抢强调色。
+ *
+ * 用 flex 居中而不是 inline-block + `vertical-align`：后者的落点按**基线**算，
+ * 而 13px 中文的墨迹在基线上方占 9px、下方 1px，量出来竖条中心比文字中心低 2px，
+ * 三个组标题上都能看出来。flex 的 `align-items: center` 对齐的是文字行盒中心，
+ * 不依赖字体度量，换字体也不会再偏。
+ * 这里可以放心用 flex：外层是 grid 且没有 baseline 对齐，标题的基线不会被伪元素改掉。 */
+.money-group > span:first-child {
+  display: flex;
+  align-items: center;
+}
+
 .money-group > span:first-child::before {
   content: "";
-  display: inline-block;
+  flex: none;
   width: 2px;
   height: 10px;
   margin-right: 6px;
   border-radius: 1px;
   background: var(--control);
-  vertical-align: -1px;
 }
 
 /* 头一个组贴着列表顶部，不必再留间距，也不画分隔线 */

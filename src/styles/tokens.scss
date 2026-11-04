@@ -27,8 +27,6 @@
   --surface-sunken: #f6f8f9;
   /* 画布底：降一档，白色卡片才能靠色调台阶浮起来，而不必靠深边框勾出来 */
   --canvas: #f2f4f6;
-  /* 周期外日期的压暗底：比 --raised 深、比 --active 浅 */
-  --surface-dim: #f1f3f5;
   --raised: #f4f6f8;
   --active: #ebedee;
   /* 系统底部导航栏（手势条区域）的浅灰：手机底栏取同色，二者之间没有接缝。
@@ -252,6 +250,9 @@
     --gap: var(--sp-4);
     /* 触摸设备上 30px 的控件太薄，抬到 36px；输入框字号另见下方 coarse 规则。 */
     --control-height: 36px;
+    /* 底部标签栏总高：48 项 + 上下各 4 内边距 + 1px 上边线。
+     * 底部提示条（toast）要按这个值让开，别压在 tab 上。 */
+    --rail-bar-height: 57px;
   }
 }
 

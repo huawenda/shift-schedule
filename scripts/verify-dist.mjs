@@ -327,6 +327,23 @@ async function runScenario(name, url, downloadDir) {
         statLook.barBg === 'rgb(27, 108, 128)',
       JSON.stringify(statLook)
     )
+    // 竖条是概览页所有卡片的统一抬头锚点：四张统计卡 + 待办卡都要有
+    const cardBars = await client.evaluate(`(() => {
+      const titles = Array.from(document.querySelectorAll('.stat-title'))
+      const todo = document.querySelector('.todo-card-title')
+      const bar = node => getComputedStyle(node, '::before').backgroundColor
+      return {
+        statCount: titles.length,
+        statBars: titles.filter(node => bar(node) === 'rgb(27, 108, 128)').length,
+        todoBar: todo ? bar(todo) : ''
+      }
+    })()`)
+    check(
+      `${name}: 概览页统计卡与待办卡都带同一根竖条`,
+      cardBars.statCount >= 4 && cardBars.statBars === cardBars.statCount &&
+        cardBars.todoBar === 'rgb(27, 108, 128)',
+      JSON.stringify(cardBars)
+    )
     check(
       `${name}: 本月概览六格是班次色贴片（白班底 #dff3ff，格间不画分隔线）`,
       statLook.cells === 6 && statLook.cellBg === 'rgb(223, 243, 255)' &&
@@ -947,11 +964,14 @@ async function runScenario(name, url, downloadDir) {
         outsideShift: outside.filter(cell => (cell.querySelector('.cal-shift')?.textContent ?? '').trim().length > 0).length,
         outsideTag: outside[0]?.tagName ?? '',
         insideTag: inside[0]?.tagName ?? '',
-        // 样式区别：底色不同、整格更淡
+        // 样式区别：周期外「无边框 + 灰底」，文字保持原对比度，只有班次块退一档
         outsideBg: outside[0] ? bg(outside[0]) : '',
         insideBg: inside[0] ? bg(inside[0]) : '',
-        outsideOpacity: outside[0] ? getComputedStyle(outside[0].firstElementChild).opacity : '',
-        insideOpacity: inside[0] ? getComputedStyle(inside[0]).opacity : '',
+        outsideBorder: outside[0] ? getComputedStyle(outside[0]).borderTopColor : '',
+        insideBorder: inside[0] ? getComputedStyle(inside[0]).borderTopColor : '',
+        outsideShiftOpacity: outside[0]
+          ? getComputedStyle(outside[0].querySelector('.cal-shift')).opacity
+          : '',
         outsideTitles: outside.slice(0, 2).map(cell => cell.title)
       }
     })()`)
@@ -968,9 +988,11 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(gridFill)
     )
     check(
-      `${name}: 周期外只靠样式区分（底色更深、更淡）且不可点`,
+      `${name}: 周期外只靠样式区分（无边框 + 灰底 + 色块退一档）且不可点`,
       gridFill.outsideBg !== gridFill.insideBg &&
-        Number(gridFill.outsideOpacity) < Number(gridFill.insideOpacity) &&
+        gridFill.outsideBorder === 'rgba(0, 0, 0, 0)' &&
+        gridFill.insideBorder !== gridFill.outsideBorder &&
+        Number(gridFill.outsideShiftOpacity) < 1 &&
         gridFill.outsideTag === 'DIV' &&
         gridFill.insideTag === 'BUTTON',
       JSON.stringify(gridFill)
@@ -1284,9 +1306,10 @@ async function runScenario(name, url, downloadDir) {
         JSON.stringify(todoCard)
       )
       check(
-        `${name}: 待办卡抬头只有发丝线（强调竖条只留在首卡），日期分两级`,
+        `${name}: 待办卡抬头也带强调竖条（与统计卡同一个锚点），日期分两级`,
         todoCard.headBorder === '1px' &&
-          JSON.stringify(todoCard.headBar) === JSON.stringify([]) &&
+          Array.isArray(todoCard.headBar) &&
+          todoCard.headBar[0] === 3 && todoCard.headBar[1] === 'rgb(27, 108, 128)' &&
           JSON.stringify(todoCard.groupParts) ===
             JSON.stringify(['todo-group-day', 'todo-group-week']),
         JSON.stringify(todoCard)
@@ -1749,6 +1772,24 @@ async function runScenario(name, url, downloadDir) {
           polish.rateBg === 'rgb(244, 246, 248)' &&
           polish.summaryBorder === 'rgb(194, 201, 206)',
         JSON.stringify(polish)
+      )
+      // 组标题的小竖条按文字行盒居中（inline-block + vertical-align 会按基线落点，偏低 2px）
+      const groupBars = await client.evaluate(`(() => {
+        const titles = Array.from(document.querySelectorAll('.money-group > span:first-child'))
+        const one = prop => [...new Set(titles.map(node => prop(node)))][0]
+        return {
+          count: titles.length,
+          display: one(node => getComputedStyle(node).display),
+          align: one(node => getComputedStyle(node).alignItems),
+          barW: one(node => getComputedStyle(node, '::before').width),
+          barH: one(node => getComputedStyle(node, '::before').height)
+        }
+      })()`)
+      check(
+        `${name}: 组标题竖条与文字垂直居中（flex 居中，不按基线落点）`,
+        groupBars.count >= 2 && groupBars.display === 'flex' && groupBars.align === 'center' &&
+          groupBars.barW === '2px' && groupBars.barH === '10px',
+        JSON.stringify(groupBars)
       )
 
       // 每日明细的滚动条要彻底隐藏（卡片内部就几行，滑块反而抢眼）
@@ -2843,6 +2884,20 @@ async function runMobileChecks(url, downloadDir) {
       layout.railBottom >= layout.vh - 1 && layout.railH >= 46 && layout.railItemH >= 44,
       JSON.stringify({ bottom: layout.railBottom, vh: layout.vh, h: layout.railH, item: layout.railItemH })
     )
+    // 提示条层常驻在 DOM 里（aria-live 要求），即使没有提示也能量它的落脚点
+    const toastZone = await client.evaluate(`(() => {
+      const layer = document.querySelector('.toast-layer')
+      const rail = document.querySelector('.rail')
+      if (!layer || !rail) return null
+      const l = layer.getBoundingClientRect()
+      const r = rail.getBoundingClientRect()
+      return { layerBottom: Math.round(l.bottom), railTop: Math.round(r.top) }
+    })()`)
+    check(
+      `${name}: 提示条停在底部标签栏上方`,
+      toastZone !== null && toastZone.layerBottom <= toastZone.railTop - 4,
+      JSON.stringify(toastZone)
+    )
     check(
       `${name}: 顶栏不再放导出 / 导入`,
       layout.topbarRight === 'none',
@@ -2924,31 +2979,38 @@ async function runMobileChecks(url, downloadDir) {
       const day = document.querySelector('.cal-day.is-todo')
       if (!day) return null
       const cs = getComputedStyle(day)
-      const bar = getComputedStyle(day, '::before')
       const cell = day.closest('.cal-cell')
       const dayRect = day.getBoundingClientRect()
       const cellRect = cell.getBoundingClientRect()
       return {
         borderBottom: cs.borderBottomWidth,
-        barContent: bar.content,
-        barWidth: bar.width,
-        barHeight: bar.height,
-        barBg: bar.backgroundColor,
-        barLeft: bar.left,
+        borderColor: cs.borderBottomColor,
+        dayWidth: Math.round(dayRect.width),
+        cellWidth: Math.round(cellRect.width),
         dayLeftGap: Math.round(dayRect.left - cellRect.left)
       }
     })()`)
     check(
-      `${name}: 待办标记改成日期左侧的竖条`,
+      `${name}: 待办标记是日期下的一道 2px 短横（不横贯整格）`,
       todoMark !== null &&
-        todoMark.borderBottom === '0px' &&
-        todoMark.barContent !== 'none' &&
-        todoMark.barWidth === '3px' &&
-        todoMark.barHeight === '12px' &&
-        todoMark.barBg === 'rgb(193, 113, 42)' &&
-        todoMark.barLeft === '-4px' &&
+        todoMark.borderBottom === '2px' &&
+        todoMark.borderColor === 'rgb(193, 113, 42)' &&
+        todoMark.dayWidth < todoMark.cellWidth &&
         todoMark.dayLeftGap >= 3,
       JSON.stringify(todoMark)
+    )
+    // 待办短横占的 4px **所有日期都预留**：否则同一行里只有待办那格，农历与加班标会下移
+    const dayBoxes = await client.evaluate(`(() => {
+      const days = Array.from(document.querySelectorAll('.cal-cell .cal-day'))
+      return {
+        heights: [...new Set(days.map(node => Math.round(node.getBoundingClientRect().height)))],
+        todoCount: document.querySelectorAll('.cal-day.is-todo').length
+      }
+    })()`)
+    check(
+      `${name}: 待办日与普通日的日期框等高（下游的农历/加班标不在同一行里错位）`,
+      dayBoxes.heights.length === 1 && dayBoxes.heights[0] > 0 && dayBoxes.todoCount > 0,
+      JSON.stringify(dayBoxes)
     )
     check(
       `${name}: 统计卡单列且都没有塌成 0 高`,

@@ -593,11 +593,13 @@
   display: contents;
 }
 
+/* 星期行去掉横贯的分隔线：下面是 7 张独立圆角格，头顶压一道长线会让
+ * 整块日历又变回「一张表格」。与格子共用 4px 列间距，日期数字和它对齐。 */
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
+  gap: 4px;
+  padding-bottom: 4px;
   color: var(--muted);
   font-size: var(--fs-label);
   text-align: center;
@@ -608,58 +610,76 @@
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 1px;
-  overflow: hidden;
-  /* 与卡片同一套：无外框 + 极浅投影；格线仍靠 1px 缝隙的底色画出来。
-   * 缝隙取发丝线而不是结构线：31 格 × 2 个方向的线太多，用结构线整张日历会变「重」。 */
+  /* 圆角格子：每格独立成块，缝隙直接露出画布色，不再用 1px 底色画网格线 */
+  gap: 4px;
+  overflow: visible;
   border: 0;
-  border-radius: var(--radius-panel);
-  background: var(--rule);
-  box-shadow: var(--shadow-raised);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   grid-column: 1;
   grid-row: 2;
 }
 
+/* 圆角格：1px 细边 + 6px 圆角 + 白底，每格自成一张小卡（对齐 shadcn Calendar 的格子）。
+ * 边线不能省：画布是 #f2f4f6，只靠白底浮起来时，格与格之间只剩 4px 缝，
+ * 边界会糊成一整片；加一道细边，格子才「一格一格」立住。 */
 .cal-cell {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  min-height: 74px;
-  padding: 6px 7px;
-  border: 0;
-  border-radius: 0;
+  gap: 4px;
+  min-height: 72px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
   background: var(--surface);
   text-align: left;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease,
+    transform var(--dur-fast) ease;
 }
 
+/* 悬停：抬 1px + 边线转强调色 + 贴地一层投影。
+ * 只给周期内可点的格子 —— 外期格子点了什么都不会发生。 */
 .cal-cell:hover:not(.is-outside) {
-  background: var(--surface-tint);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-raised-flat);
+  transform: translateY(-1px);
 }
 
-/* 周期外的日期：内容和周期内完全一样（农历 + 班次 + 角标），
- * 只靠「底色微退 + 内容淡出 + 不可点」区分。
- * 不要用比画布更深的灰去填：那一块会比画布还重，看着像日历被挖了几个洞；
- * 现在是「同底的格子 + 淡掉的内容」，读起来是「这一段不属于本期」而不是「缺了一块」。 */
+@media (prefers-reduced-motion: reduce) {
+  .cal-cell {
+    transition: none;
+  }
+
+  .cal-cell:hover:not(.is-outside) {
+    transform: none;
+  }
+}
+
+/* 周期外：**无边框 + 灰底**，文字不再整格降透明度。
+ * 原来套 opacity .45，日号掉到 4.1:1、农历掉到 3.1:1，低于 WCAG AA 的 4.5；
+ * 现在靠「没有边线（不是卡片）+ 换灰底 + 班次色块退一档」表达「不属于这一期」，
+ * 文字保持原对比度，读得清、也知道它是邻期的。 */
 .cal-cell.is-outside {
+  border-color: transparent;
   background: var(--surface-sunken);
   cursor: default;
 }
 
-.cal-cell.is-outside > * {
-  opacity: 0.45;
+.cal-cell.is-outside .cal-shift {
+  opacity: 0.6;
 }
 
-/*
- * 「今天」：1px 强调色内描边。
- *
- * 原来是 2px 纯黑 —— 在满屏浅色格子里像被人用马克笔圈了一下，最跳的偏偏是个
- * 「你本来就知道」的信息。改用强调色（与侧栏选中态同色系）并降到 1px：
- * 看得见，但不会把今天变成全屏的视觉重心。
- */
+/* 今天：1px 强调色边 + 1px 外扩描边（视觉 2px，但不吃内边距、不改变格子尺寸）。
+ * 格子的四角已经圆了，描边必须跟着圆角走，所以用 border + 外阴影而不是内描边。 */
 .cal-cell.is-today {
-  background: var(--accent-weak);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cal-cell.is-today:hover {
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-raised-flat);
 }
 
 /*
@@ -676,10 +696,16 @@
 .cal-day {
   display: inline-block;
   align-self: flex-start;
-  color: var(--muted);
-  font-size: var(--fs-control);
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  line-height: 1.15;
+  line-height: 1;
+  /* 待办短横的位置**永远预留**（透明底边也算高度），有/没有待办的日期框一样高。
+   * 以前只在待办日加 4px，于是同一行里恰好有待办的那几格，农历、加班标整体下移 4px ——
+   * 旁边一格没有待办，两个「+2h」就不在同一水平线上。 */
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
 }
 
 /*
@@ -690,45 +716,51 @@
  * 短横贴着数字读，等于给这一天「加了个着重号」，不额外占横向空间。
  */
 .cal-day.is-todo {
-  padding-bottom: 2px;
-  border-bottom: 2px solid var(--todo-ink);
-}
-
-.cal-cell.is-today .cal-day {
-  color: var(--text);
-  font-weight: 600;
+  border-bottom-color: var(--todo-ink);
 }
 
 .cal-meta {
-  color: var(--faint);
+  overflow: hidden;
+  color: var(--muted);
   font-size: var(--fs-label);
   line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* 节日 / 节气：沿用法定那一支暖黄，与「法」角标同一族。
+ * 不跟着今天的强调色转青 —— 一个是「日子特殊」，一个是「就是今天」，两件事不能共色。 */
 .cal-meta.is-festival {
   color: var(--warning-ink);
 }
 
 .cal-shift {
+  width: 100%;
   margin-top: auto;
-  padding: 3px 0;
-  border-radius: var(--radius-mark);
-  font-size: var(--fs-small);
+  padding: 2px 0;
+  overflow: hidden;
+  border-radius: var(--radius-sub);
+  font-size: var(--fs-label);
   font-weight: 500;
+  line-height: 1.3;
   text-align: center;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 右上角：加班小时与「法」角标并排，不占班次那一行 */
+/* 右上角：加班小时 / 「法」/ 事假时长并排，不占班次那一行 */
 .cal-corner {
   position: absolute;
   top: 4px;
-  right: 5px;
+  right: 4px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
+/* 加班小时：暖橙小胶囊（本项目原有的标记）。
+ * 唯一一处主动「求注意」的亮色 —— 加班是要认出来的一天里最实在的信息；
+ * 深棕字而非白字，10px 落在橙底上仍然读得清。 */
 .cal-ot {
   height: 15px;
   padding: 0 4px;
@@ -744,25 +776,28 @@
 
 /* 4h 事假：中性底，和「法」「+3h」区分开（事假不会有那两者，所以不会撞） */
 .cal-leave {
-  height: 15px;
-  padding: 0 4px;
-  border-radius: var(--radius-mark);
-  background: var(--raised);
-  box-shadow: inset 0 0 0 1px var(--border);
-  color: var(--muted);
+  height: 13px;
+  padding: 0 2px;
+  border-radius: var(--radius-sub);
+  background: var(--shift-leave-bg);
+  color: var(--shift-leave-ink);
   font-size: var(--fs-micro);
   font-weight: 600;
-  line-height: 15px;
+  line-height: 13px;
   white-space: nowrap;
 }
 
+/* 「法」：沿用项目自己的法定暖黄（--warning-*），不走参考那份「借用白特底色」的做法 ——
+ * 日历里白特本身就有班次块，法定再拿同一支色，一格两处同色会分不清谁是谁。
+ * 13px 高、4px 圆角，与加班的小时数同一条基线。 */
 .cal-legal {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 15px;
-  height: 15px;
-  border-radius: var(--radius-mark);
+  min-width: 13px;
+  height: 13px;
+  padding: 0 2px;
+  border-radius: var(--radius-sub);
   background: var(--warning-bg);
   box-shadow: inset 0 0 0 1px var(--warning-border);
   color: var(--warning-ink);
@@ -771,6 +806,8 @@
   line-height: 1;
 }
 
+/* 图例沿用本项目的两段式（标记 + 说明），只讲日历里那两个角标：
+ * 格子里的 +2h 是纯文字，图例就跟着用纯文字，不为了「图例像色块」再引一支底色进来。 */
 .calendar-legend {
   display: flex;
   align-items: center;
@@ -1217,11 +1254,12 @@
     max-height: 220px;
   }
 
-  /* 窄屏单列堆叠：概览条 / 矩阵白板 / 日历都只留贴边一层阴影，
-   * 避免 24px 模糊的第二层把相邻卡片的间距填成一条灰带。 */
+  /* 窄屏单列堆叠：概览条 / 矩阵白板只留贴边一层阴影，
+   * 避免 24px 模糊的第二层把相邻卡片的间距填成一条灰带。
+   * 日历已是圆角格子（容器透明无投影），这里不再套阴影，否则会在整块矩形外沿
+   * 画出一圈没有对应实体的暗边。 */
   .summary,
-  .matrix-scroll,
-  .calendar-grid {
+  .matrix-scroll {
     box-shadow: var(--shadow-raised-flat);
   }
 
@@ -1308,34 +1346,12 @@
    * 节日与节气仍用强调色。格子高度随内容走，不强行拉齐。 */
   .cal-cell {
     min-height: 0;
-    padding: 4px 5px;
+    padding: 3px;
     gap: 2px;
   }
 
   .cal-day {
-    position: relative;
     font-size: var(--fs-small);
-  }
-
-  /* 待办标记从「日期下划线」改成「日期左侧的短竖条」。
-   * 下划线会和今天的 1px 内描边、格子底边挤在一起；竖条挂在数字左边更干净。
-   * 竖条画在格子的 5px 内边距里（left: -4px），不把日期挤宽，
-   * 所以它和右上角的法定标永远不会碰在一起。 */
-  .cal-day.is-todo {
-    padding-bottom: 0;
-    border-bottom: 0;
-  }
-
-  .cal-day.is-todo::before {
-    position: absolute;
-    top: 50%;
-    left: -4px;
-    width: 3px;
-    height: 12px;
-    transform: translateY(-50%);
-    border-radius: 2px;
-    background: var(--todo-ink);
-    content: "";
   }
 
   /* 10px 才能让「冬月廿五」这类标签在约 41px 的内容宽里不折行；
@@ -1363,10 +1379,7 @@
   .cal-corner > .cal-legal {
     position: absolute;
     top: 4px;
-    right: 5px;
-    width: 13px;
-    height: 13px;
-    font-size: var(--fs-micro);
+    right: 4px;
   }
 
   /* 普通流里的标记退回到内容宽度，不跟着 flex 列拉满整格 */
@@ -1375,7 +1388,6 @@
     align-self: flex-start;
     height: 14px;
     padding: 0 3px;
-    font-size: var(--fs-micro);
     line-height: 14px;
   }
 
