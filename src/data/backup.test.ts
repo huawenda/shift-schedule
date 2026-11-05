@@ -8,6 +8,7 @@ const roster: Roster = {
     { id: 'm1', name: '王磊', patternId: '4F' },
     { id: 'm2', name: '李静', patternId: '4J' }
   ],
+  groups: [],
   overrides: [{ memberId: 'm1', date: '2026-10-20', shift: '白特' }],
   patterns: [],
   todos: [],
@@ -167,6 +168,42 @@ describe('待办的备份往返', () => {
     const result = parseBackup(JSON.stringify(dirty))
     expect(result.roster.todos).toHaveLength(1)
     expect(result.roster.todos[0].text).toBe('正常待办')
+  })
+})
+
+describe('分组的备份往返', () => {
+  it('分组与成员归属原样还原', () => {
+    const withGroups: Roster = {
+      ...roster,
+      groups: [
+        { id: 'g1', name: '生产部' },
+        { id: 'g2', name: '工程部' }
+      ],
+      members: [
+        { id: 'm1', name: '王磊', patternId: '4F', groupId: 'g1' },
+        { id: 'm2', name: '李静', patternId: '4J', groupId: 'g2' }
+      ]
+    }
+
+    const result = parseBackup(JSON.stringify(createBackup(withGroups)))
+    expect(result.roster.groups).toEqual(withGroups.groups)
+    expect(result.roster.members.map(member => member.groupId)).toEqual(['g1', 'g2'])
+  })
+
+  it('没有 groups 字段的 v5 备份仍可导入，所有人未分组', () => {
+    const text = JSON.stringify({
+      app: 'shift-schedule-local',
+      version: 5,
+      roster: {
+        members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
+        overrides: [],
+        patterns: []
+      }
+    })
+
+    const result = parseBackup(text)
+    expect(result.roster.groups).toEqual([])
+    expect(result.roster.members[0].groupId).toBeUndefined()
   })
 })
 

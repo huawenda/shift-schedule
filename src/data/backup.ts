@@ -17,6 +17,7 @@ export interface BackupFile {
   exportedAt: string
   roster: {
     members: Roster['members']
+    groups: Roster['groups']
     overrides: Roster['overrides']
     patterns: Roster['patterns']
     todos: Roster['todos']
@@ -41,6 +42,7 @@ export function createBackup(roster: Roster): BackupFile {
     exportedAt: new Date().toISOString(),
     roster: {
       members: roster.members,
+      groups: roster.groups,
       overrides: roster.overrides,
       patterns: roster.patterns,
       todos: roster.todos,
@@ -57,7 +59,7 @@ export function backupText(roster: Roster): string {
 /**
  * 解析备份文本。格式不对时抛出可直接展示给用户的中文错误。
  *
- * 只认一种形状：`{ app, version: 5, roster: { members, overrides, patterns, todos, profile } }`。
+ * 只认一种形状：`{ app, version: 5, roster: { members, groups, overrides, patterns, todos, profile } }`。
  * 开发期不做旧格式迁移 —— 见到别的版本号、`dayRecords` 或顶层数组，直接报错。
  */
 export function parseBackup(text: string): ImportResult {

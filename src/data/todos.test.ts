@@ -14,6 +14,7 @@ import { addTodo, removeTodo, toggleTodo, type Roster } from './roster'
 
 const base: Roster = {
   members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
+  groups: [],
   overrides: [],
   patterns: [],
   todos: [],

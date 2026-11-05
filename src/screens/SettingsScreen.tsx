@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { fromRows, MemberRowsEditor, toRows, type MemberRow, type PatternOption } from '../components/MemberRowsEditor'
+import {
+  createRow,
+  fromRows,
+  MemberRowsEditor,
+  toRows,
+  UNGROUPED_MEMBERS,
+  type MemberRow,
+  type PatternOption
+} from '../components/MemberRowsEditor'
+import { MemberGroupsEditor } from '../components/MemberGroupsEditor'
+import { MemberGroupTabs } from '../components/MemberGroupTabs'
 import { PatternList } from '../components/PatternList'
 import { ProfileSection } from '../components/ProfileSection'
 import { isTauriShell } from '../platform/env'
@@ -19,7 +29,16 @@ import {
   type CustomPattern
 } from '../data/patterns'
 import type { SalaryInput, SelfIdentity } from '../data/profile'
-import { countOverrides, getSelf, validateMembers, type Member, type Roster } from '../data/roster'
+import {
+  countOverrides,
+  createGroupId,
+  getSelf,
+  orderByGroup,
+  validateMembers,
+  type Member,
+  type MemberGroup,
+  type Roster
+} from '../data/roster'
 import {
   getCloseBehavior,
   setCloseBehavior as saveCloseBehavior,
@@ -31,7 +50,7 @@ import {
 export type SettingsTab = 'roster' | 'profile'
 
 const TAB_SUB: Record<SettingsTab, string> = {
-  roster: `成员名单与矩阵行顺序`,
+  roster: `成员分组、名单与矩阵行顺序`,
   profile: '本人与薪资、备份、清空数据'
 }
 
@@ -42,7 +61,11 @@ interface SettingsScreenProps {
   /** 当前页签由路由决定（#/settings/roster | #/settings/profile），组件本身不持状态 */
   tab: SettingsTab
   onTabChange: (tab: SettingsTab) => void
-  onSaveMembers: (members: Member[]) => void
+  onSaveMembers: (members: Member[], groups?: MemberGroup[]) => void
+  /** 新建或改名分组（即时生效） */
+  onSaveGroup: (group: MemberGroup) => void
+  /** 删除分组：组内成员变未分组，不删人 */
+  onRemoveGroup: (groupId: string) => void
   onSaveSelf: (input: SelfIdentity) => void
   onSaveSalary: (salary: SalaryInput) => void
   onSavePattern: (pattern: CustomPattern) => void
@@ -65,6 +88,8 @@ export function SettingsScreen({
   tab,
   onTabChange,
   onSaveMembers,
+  onSaveGroup,
+  onRemoveGroup,
   onSaveSelf,
   onSaveSalary,
   onSavePattern,
@@ -77,8 +102,18 @@ export function SettingsScreen({
   const fileRef = useRef<HTMLInputElement>(null)
   /** Excel 批量导入：选文件 → 解析 → 追加 → 直接落盘（与排序「完成」同一套） */
   const importRef = useRef<HTMLInputElement>(null)
-  const [rows, setRows] = useState<MemberRow[]>(() => toRows(roster.members))
+  const [rows, setRows] = useState<MemberRow[]>(() => orderByGroup(toRows(roster.members), roster.groups))
   const [dirty, setDirty] = useState(false)
+  /** null = 全部；UNGROUPED_MEMBERS = 未分组；其余是分组 id */
+  const [activeTab, setActiveTab] = useState<string | null>(null)
+  /** 「分组管理」折叠区：改名/删除，收起时只留 tab */
+  const [managingGroups, setManagingGroups] = useState(false)
+  /**
+   * 删分组会连带把已保存成员的 groupId 清掉，`roster.members` 因此换引用。
+   * 这一轮同步要跳过 —— 否则下面那个「外部数据变了就重置草稿」的 effect
+   * 会把用户还没保存的姓名/班序改动一起丢掉。
+   */
+  const skipMemberSync = useRef(false)
   /** 排序模式：卡片压成紧凑行，只有把手能拖；「完成」直接落盘，「取消」回滚快照 */
   const [sorting, setSorting] = useState(false)
   const sortSnapshot = useRef<MemberRow[] | null>(null)
@@ -114,7 +149,11 @@ export function SettingsScreen({
   }, [tab])
 
   useEffect(() => {
-    setRows(toRows(roster.members))
+    if (skipMemberSync.current) {
+      skipMemberSync.current = false
+      return
+    }
+    setRows(orderByGroup(toRows(roster.members), roster.groups))
     setDirty(false)
   }, [roster.members])
 
@@ -138,6 +177,46 @@ export function SettingsScreen({
     ],
     [lookup]
   )
+
+  /** 分组 id → 草稿人数：tab 上的数字要跟着未保存的改动实时变 */
+  const groupCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    rows.forEach(row => {
+      if (row.groupId) counts[row.groupId] = (counts[row.groupId] ?? 0) + 1
+    })
+    return counts
+  }, [rows])
+
+  const ungroupedCount = useMemo(() => rows.filter(row => !row.groupId).length, [rows])
+  const visibleRows = useMemo(() => {
+    if (activeTab === null) return rows
+    if (activeTab === UNGROUPED_MEMBERS) return rows.filter(row => !row.groupId)
+    return rows.filter(row => row.groupId === activeTab)
+  }, [activeTab, rows])
+  const isGroupTab = activeTab !== null && activeTab !== UNGROUPED_MEMBERS
+  /** 有分组时只有具体分组 / 未分组可排序；没建分组时「全部」就是唯一的块，也可以排 */
+  const canSort = isGroupTab
+    || activeTab === UNGROUPED_MEMBERS
+    || (roster.groups.length === 0 && activeTab === null)
+  const activeGroup = isGroupTab ? roster.groups.find(group => group.id === activeTab) : undefined
+
+  // 分组被删、或「未分组」已经没人时，退回「全部」，不让页面停在一个不存在的 tab 上
+  useEffect(() => {
+    if (activeTab === null) return
+    if (activeTab === UNGROUPED_MEMBERS) {
+      // 分组全删光后「未分组」tab 不再出现，回到唯一的「全部」
+      if (ungroupedCount === 0 || roster.groups.length === 0) {
+        setActiveTab(null)
+        setSorting(false)
+      }
+      return
+    }
+    if (!roster.groups.some(group => group.id === activeTab)) {
+      setActiveTab(null)
+      setSorting(false)
+      sortSnapshot.current = null
+    }
+  }, [activeTab, roster.groups, ungroupedCount])
 
   async function chooseBackupDir() {
     try {
@@ -164,13 +243,54 @@ export function SettingsScreen({
   }
 
   function update(next: MemberRow[]) {
-    setRows(next)
+    // 在「全部」改分组时，把这一行放到输入末尾再按分组块排序 ——
+    // stable 排序会把它落在新分组块的末尾，而不是插到别人前面。
+    const currentGroup = new Map(rows.map(row => [row.key, row.groupId]))
+    const movedKeys = new Set(
+      next
+        .filter(row => currentGroup.has(row.key) && currentGroup.get(row.key) !== row.groupId)
+        .map(row => row.key)
+    )
+    const orderedInput = movedKeys.size === 0
+      ? next
+      : [
+        ...next.filter(row => !movedKeys.has(row.key)),
+        ...next.filter(row => movedKeys.has(row.key))
+      ]
+
+    setRows(orderByGroup(orderedInput, roster.groups))
     setDirty(true)
   }
 
+  /** 切换 tab：退出排序但保留当前顺序，不自动落盘 */
+  function selectTab(next: string | null) {
+    if (next === activeTab) return
+    if (sorting) {
+      setSorting(false)
+      sortSnapshot.current = null
+    }
+    setActiveTab(next)
+  }
+
+  /**
+   * 添加成员：落到当前 tab。
+   * 追加到完整草稿末尾后由 orderByGroup 放进对应分组块的末尾，
+   * 「全部 / 未分组」则落到未分组块最后。
+   */
+  function addMember() {
+    if (sorting) return
+    const nextPattern = patternOptions[rows.length % Math.max(patternOptions.length, 1)]?.id ?? '4F'
+    const groupId = isGroupTab && activeTab ? activeTab : ''
+    update([...rows, createRow(nextPattern, groupId)])
+  }
+
   function enterSorting() {
-    if (rows.length < 2) {
-      onNotify('至少两位成员才能排序')
+    if (!canSort) {
+      onNotify('排序请在具体分组里做，「全部」按分组顺序排列')
+      return
+    }
+    if (visibleRows.length < 2) {
+      onNotify('当前分组至少两位成员才能排序')
       return
     }
     sortSnapshot.current = rows.map(row => ({ ...row }))
@@ -220,6 +340,49 @@ export function SettingsScreen({
   }
 
   /**
+   * 删除分组：组内成员变未分组，不删人、不删改班记录。
+   *
+   * 先本地清掉草稿里的 groupId，再跳过下一轮「外部数据变了就重置草稿」的同步，
+   * 保证用户还没保存的其它改动不会因为删一个分组而丢。
+   */
+  function removeGroup(groupId: string) {
+    const group = roster.groups.find(item => item.id === groupId)
+    if (!group) return
+
+    // 人数按草稿算：还没保存的成员也算在组里，提示才不会少报
+    const affected = rows.filter(row => row.groupId === groupId).length
+    const remainingGroups = roster.groups.filter(item => item.id !== groupId)
+    if (remainingGroups.length === 0) setManagingGroups(false)
+
+    if (activeTab === groupId) {
+      setActiveTab(null)
+      setSorting(false)
+      sortSnapshot.current = null
+    }
+
+    skipMemberSync.current = true
+    setRows(current => orderByGroup(
+      current.map(row => (row.groupId === groupId ? { ...row, groupId: '' } : row)),
+      remainingGroups
+    ))
+    onRemoveGroup(groupId)
+    onNotify(
+      affected > 0
+        ? `已删除分组「${group.name}」，${affected} 位成员变为未分组。`
+        : `已删除分组「${group.name}」。`
+    )
+  }
+
+  function createGroup(name: string) {
+    const group: MemberGroup = { id: createGroupId(), name }
+    onSaveGroup(group)
+    // 新建立的组马上成为当前 tab，接着就能往里加人
+    setActiveTab(group.id)
+    setManagingGroups(false)
+    onNotify(`已新建分组「${name}」。`)
+  }
+
+  /**
    * 从 Excel 批量导入成员。
    *
    * 只在成员表通过校验时执行 —— 导入即保存，草稿里还有空姓名/重名的话，
@@ -235,7 +398,7 @@ export function SettingsScreen({
     try {
       const { people, blankRows } = readMemberSheet(await file.arrayBuffer())
       if (people.length === 0) {
-        onNotify('没读到成员：首行请写表头「姓名 / 班序 / 岗位」。')
+        onNotify('没读到成员：首行请写表头「姓名 / 分组 / 班序 / 岗位」。')
         return
       }
 
@@ -243,20 +406,33 @@ export function SettingsScreen({
         people,
         roster.members.map(member => member.name),
         patternOptions.map(option => ({ id: option.id, name: option.name })),
-        patternOptions[0]?.id ?? '4F'
+        patternOptions[0]?.id ?? '4F',
+        roster.groups,
+        // 在某个分组 tab 里导入时，分组列留空的人归到当前分组
+        isGroupTab && activeTab ? activeTab : undefined
       )
       const preview = { ...result, blankRows }
 
       if (result.members.length > 0) {
-        const next = [...rows, ...toRows(result.members)]
+        const allGroups = [...roster.groups, ...result.newGroups]
+        const next = orderByGroup([...rows, ...toRows(result.members)], allGroups)
         setRows(next)
-        onSaveMembers(fromRows(next))
+        // 新建的分组和成员同一次落盘，避免出现「人进来了、部门没建」的中间态
+        onSaveMembers(fromRows(next), allGroups)
+        // 批量导入可能跨多个分组，切回「全部」才能一次看到结果
+        setActiveTab(null)
       }
       onNotify(describeImport(preview))
     } catch {
       onNotify('读取失败：这个文件不是有效的 Excel / CSV。')
     }
   }
+
+  const memberEmptyText = activeTab === null
+    ? undefined
+    : activeTab === UNGROUPED_MEMBERS
+      ? '没有未分组的成员。'
+      : `「${activeGroup?.name ?? '这个分组'}」还没有成员，点下面的「添加成员」加人。`
 
   return (
     /*
@@ -318,31 +494,67 @@ export function SettingsScreen({
               <div className="settings-label">
                 <div className="label-head">
                   <h2>成员</h2>
-                  {/* 排序入口与小程序一致：卡片压成紧凑行后才可拖，完成 / 取消在标题行 */}
-                  <div className="label-actions">
-                    {sorting ? (
-                      <>
-                        <button className="sort-action" type="button" onClick={finishSorting}>完成</button>
-                        <button className="sort-action is-quiet" type="button" onClick={cancelSorting}>取消</button>
-                      </>
-                    ) : (
-                      <button className="sort-action" type="button" onClick={enterSorting}>排序</button>
-                    )}
-                  </div>
+                  {/* 有分组时排序只在具体分组里做；没建分组时「全部」就是唯一的块 */}
+                  {canSort ? (
+                    <div className="label-actions">
+                      {sorting ? (
+                        <>
+                          <button className="sort-action" type="button" onClick={finishSorting}>完成</button>
+                          <button className="sort-action is-quiet" type="button" onClick={cancelSorting}>取消</button>
+                        </>
+                      ) : (
+                        <button className="sort-action" type="button" onClick={enterSorting}>排序</button>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
-                <p>姓名自定，人数不限。</p>
-                <p>本人行为只读，请在「个人资料」页修改。</p>
-                <p className="settings-meta">当前 {roster.members.length} 位成员</p>
+                <p>按分组管理；每个成员最多归一个组。</p>
+                <p>有分组时，排序在具体分组里做；「全部」按分组顺序排列（没建分组时直接在「全部」里排）。</p>
+                <p>本人行只读，请在「个人资料」页改姓名 / 班序；分组可在「全部」里改。</p>
+                <p className="settings-meta">
+                  当前 {rows.length} 位成员 · {roster.groups.length} 个分组
+                </p>
               </div>
 
               <div className="settings-panel">
-                {/* 错误已逐行标在对应成员卡上，这里不再重复整段汇总 */}
+                <MemberGroupTabs
+                  activeTab={activeTab}
+                  allCount={rows.length}
+                  counts={groupCounts}
+                  groups={roster.groups}
+                  managing={managingGroups}
+                  ungroupedCount={ungroupedCount}
+                  onCreate={createGroup}
+                  onNotice={onNotify}
+                  onSelect={selectTab}
+                  onToggleManage={() => setManagingGroups(value => !value)}
+                />
+
+                {managingGroups && roster.groups.length > 0 ? (
+                  <div className="member-groups-manage">
+                    <MemberGroupsEditor
+                      counts={groupCounts}
+                      groups={roster.groups}
+                      showAdd={false}
+                      onNotice={onNotify}
+                      onRemoveGroup={removeGroup}
+                      onSaveGroup={onSaveGroup}
+                    />
+                  </div>
+                ) : null}
+
+                {/* 错误已逐行标在对应成员卡上；隐藏分组的错误在吸底条里给出提示 */}
                 <MemberRowsEditor
+                  emptyText={memberEmptyText}
+                  groups={roster.groups}
                   patterns={patternOptions}
                   rows={rows}
-                  selfId={self?.id}
-                  sortable
+                  showGroupField={activeTab === null && roster.groups.length > 0}
+                  sortable={canSort}
                   sorting={sorting}
+                  selfId={self?.id}
+                  visibleGroup={activeTab ?? undefined}
+                  onAdd={addMember}
                   onChange={update}
                   onImport={() => importRef.current?.click()}
                 />
@@ -366,7 +578,11 @@ export function SettingsScreen({
                 {/* 与小程序一致：只有存在未保存改动时才出现吸底保存条；排序页不出现 */}
                 {dirty && !sorting ? (
                   <div className="settings-actions is-sticky">
-                    <span className="save-hint">有未保存的修改</span>
+                    <span className={`save-hint${errors.length > 0 ? ' is-blocked' : ''}`}>
+                      {errors.length > 0
+                        ? `有 ${errors.length} 处待处理，切到对应分组查看`
+                        : '有未保存的修改'}
+                    </span>
                     <button className="btn btn-primary" disabled={errors.length > 0} type="button" onClick={save}>
                       保存成员设置
                     </button>

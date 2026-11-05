@@ -19,6 +19,7 @@ const member: Member = { id: 'm1', name: '华文达', patternId: '4F' }
 function makeRoster(overrides: Roster['overrides'] = [], salary = emptySalary): Roster {
   return {
     members: [member],
+    groups: [],
     overrides,
     patterns: [],
     todos: [],

@@ -225,6 +225,7 @@ export function App() {
 
     api.replaceRoster({
       members: [selfMember, ...members],
+      groups: [],
       overrides: [],
       patterns: [],
       todos: [],
@@ -353,6 +354,8 @@ export function App() {
             onRestore={file => void restore(file)}
             onSaveSalary={api.saveSalary}
             onSaveMembers={api.replaceMembers}
+            onSaveGroup={api.saveGroup}
+            onRemoveGroup={api.removeGroupById}
             onSavePattern={api.savePattern}
             onSaveSelf={api.saveSelf}
             onStartWizard={() => {

@@ -6,14 +6,18 @@ import {
   addTodo,
   findMember,
   isRosterEmpty,
+  orderByGroup,
+  removeGroup,
   removePattern,
   removeTodo,
   restoreDay,
   saveSalary as applySalary,
   toggleTodo,
+  upsertGroup,
   upsertPattern,
   type DayRecordInput,
   type Member,
+  type MemberGroup,
   type Roster
 } from '../data/roster'
 import type { CustomPattern } from '../data/patterns'
@@ -39,7 +43,12 @@ export interface RosterApi {
   /** 恢复默认：删掉这一天的整条记录 */
   resetDay: (memberId: string, date: string) => void
   replaceRoster: (roster: Roster) => void
-  replaceMembers: (members: Member[]) => void
+  /** 整表替换成员；`groups` 用于 Excel 导入时把新建的分组和成员一次写入 */
+  replaceMembers: (members: Member[], groups?: MemberGroup[]) => void
+  /** 新建或改名分组（改组名只动 groups，不碰成员） */
+  saveGroup: (group: MemberGroup) => void
+  /** 删除分组：组内成员变未分组，不删人 */
+  removeGroupById: (groupId: string) => void
   savePattern: (pattern: CustomPattern) => void
   removePatternById: (patternId: string) => void
   /** 设置 / 修改本人身份；改动时会清空该人的考勤与薪资（数据层保证） */
@@ -88,7 +97,7 @@ export function useRoster(): RosterApi {
    * 这里再兜一层，保证「改本人 = 换人 + 清空」只能走 `saveSelf` 那条路，
    * 不会因为将来某个界面漏了只读而静默改名、把清空逻辑绕过去。
    */
-  const replaceMembers = useCallback((members: Member[]) => {
+  const replaceMembers = useCallback((members: Member[], groups?: MemberGroup[]) => {
     setRoster(current => {
       const self = current.profile ? findMember(current, current.profile.memberId) : undefined
       const guarded = self
@@ -98,13 +107,26 @@ export function useRoster(): RosterApi {
         : members
 
       const ids = new Set(guarded.map(member => member.id))
+      const groupList = groups ?? current.groups
       return {
         ...current,
-        members: guarded,
+        // 保存时统一收敛成「分组块」顺序，矩阵与设置页「全部」共用这一份
+        members: orderByGroup(guarded, groupList),
+        groups: groupList,
         overrides: current.overrides.filter(override => ids.has(override.memberId)),
         updatedAt: Date.now()
       }
     })
+  }, [])
+
+  /** 新建或改名分组 */
+  const saveGroup = useCallback((group: MemberGroup) => {
+    setRoster(current => upsertGroup(current, group))
+  }, [])
+
+  /** 删除分组：组内成员变未分组，改班记录不动 */
+  const removeGroupById = useCallback((groupId: string) => {
+    setRoster(current => removeGroup(current, groupId).roster)
   }, [])
 
   /** 新建或更新一条自定义班序（按 id 判断） */
@@ -146,6 +168,8 @@ export function useRoster(): RosterApi {
     resetDay,
     replaceRoster,
     replaceMembers,
+    saveGroup,
+    removeGroupById,
     savePattern,
     removePatternById,
     saveSelf,

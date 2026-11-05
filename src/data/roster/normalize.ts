@@ -4,7 +4,20 @@ import { sanitizeOvertime } from '../overtime'
 import { sanitizeLeave } from '../leave'
 import { normalizeSalary } from '../profile'
 import { normalizeTodos } from '../todos'
-import { MAX_MEMBERS, emptyRoster, overrideKey, type DayOverride, type Member, type Profile, type Roster } from './model'
+import {
+  MAX_GROUP_NAME_LENGTH,
+  MAX_MEMBER_GROUPS,
+  MAX_MEMBERS,
+  emptyRoster,
+  groupNameKey,
+  orderByGroup,
+  overrideKey,
+  type DayOverride,
+  type Member,
+  type MemberGroup,
+  type Profile,
+  type Roster
+} from './model'
 
 /* ---------------------------------------------------------------- 校验 */
 
@@ -62,9 +75,65 @@ export function validateMembers(
   return errors
 }
 
+/* ------------------------------------------------------------ 分组 */
+
+/** 组名校验；返回中文错误文案，null 表示通过 */
+export function validateGroupName(
+  name: string,
+  groups: MemberGroup[],
+  editingId?: string
+): string | null {
+  const trimmed = name.trim()
+  if (!trimmed) return '请填写组名'
+  if (trimmed.length > MAX_GROUP_NAME_LENGTH) return `组名请控制在 ${MAX_GROUP_NAME_LENGTH} 个字以内`
+
+  const duplicate = groups.find(
+    group => group.id !== editingId && groupNameKey(group.name) === groupNameKey(trimmed)
+  )
+  if (duplicate) return `已经有叫「${duplicate.name}」的分组了`
+
+  if (!editingId && groups.length >= MAX_MEMBER_GROUPS) {
+    return `分组最多 ${MAX_MEMBER_GROUPS} 个，删掉一个再加`
+  }
+  return null
+}
+
+/** 分组归一化：去空、去重（id 与组名都不重复）、截断超长组名、收口到上限 */
+function normalizeGroups(value: unknown): MemberGroup[] {
+  if (!Array.isArray(value)) return []
+
+  const groups: MemberGroup[] = []
+  const ids = new Set<string>()
+  const names = new Set<string>()
+
+  value.forEach(item => {
+    if (groups.length >= MAX_MEMBER_GROUPS) return
+    if (typeof item !== 'object' || item === null) return
+    const record = item as Record<string, unknown>
+
+    const id = typeof record.id === 'string' ? record.id.trim() : ''
+    const name = typeof record.name === 'string'
+      ? record.name.trim().slice(0, MAX_GROUP_NAME_LENGTH)
+      : ''
+    if (!id || !name) return
+
+    const key = groupNameKey(name)
+    if (ids.has(id) || names.has(key)) return
+    ids.add(id)
+    names.add(key)
+    groups.push({ id, name })
+  })
+
+  return groups
+}
+
 /* ------------------------------------------------------------ 归一化 */
 
-function normalizeMember(value: unknown, knownPatternIds: Set<string>): Member | null {
+function normalizeMember(
+  value: unknown,
+  knownPatternIds: Set<string>,
+  knownGroupIds: Set<string>
+): Member | null {
   if (typeof value !== 'object' || value === null) return null
   const record = value as Record<string, unknown>
 
@@ -72,11 +141,19 @@ function normalizeMember(value: unknown, knownPatternIds: Set<string>): Member |
   const name = typeof record.name === 'string' ? record.name.trim() : ''
   const position = typeof record.position === 'string' ? record.position.trim() : ''
   const patternId = typeof record.patternId === 'string' ? record.patternId.trim() : ''
+  const groupId = typeof record.groupId === 'string' ? record.groupId.trim() : ''
 
   if (!id || !name || !knownPatternIds.has(patternId)) return null
 
-  // 岗位为空就不落字段（缺省即无岗位），旧数据没这个字段时也不会多出来
-  return { id, name, patternId, ...(position ? { position } : {}) }
+  return {
+    id,
+    name,
+    patternId,
+    // 岗位为空就不落字段（缺省即无岗位），旧数据没这个字段时也不会多出来
+    ...(position ? { position } : {}),
+    // 组不存在时只丢分组，不丢人 —— 少一个人比「部门暂时没归上」更难发现
+    ...(groupId && knownGroupIds.has(groupId) ? { groupId } : {})
+  }
 }
 
 function normalizeOverride(value: unknown, memberIds: Set<string>): DayOverride | null {
@@ -118,7 +195,7 @@ export interface NormalizeResult {
 /**
  * 把任意来源（旧文件、手改的 JSON、旧版备份）收敛成合法花名册，绝不抛异常。
  *
- * ⚠️ **顺序不能反**：必须先解析自定义班序、拿到合法 patternId 集合，
+ * ⚠️ **顺序不能反**：必须先解析分组与自定义班序、拿到合法 id 集合，
  * 再校验成员。反过来的话，引用了自定义班序的成员会被判成「班序不存在」
  * 而整条丢掉 —— 用户会看到自己建的人凭空消失，且没有任何提示。
  */
@@ -127,6 +204,9 @@ export function normalizeRosterDetailed(value: unknown): NormalizeResult {
     return { roster: { ...emptyRoster }, droppedMembers: [] }
   }
   const record = value as Record<string, unknown>
+
+  const groups = normalizeGroups(record.groups)
+  const knownGroupIds = new Set(groups.map(group => group.id))
 
   const patterns = normalizeCustomPatterns(record.patterns)
   const knownPatternIds = new Set<string>([...BUILTIN_PATTERN_IDS, ...patterns.map(pattern => pattern.id)])
@@ -143,7 +223,7 @@ export function normalizeRosterDetailed(value: unknown): NormalizeResult {
         ? ((item as Record<string, unknown>).name as string).trim()
         : ''
 
-    const member = normalizeMember(item, knownPatternIds)
+    const member = normalizeMember(item, knownPatternIds, knownGroupIds)
     if (!member) {
       if (rawName) droppedMembers.push(rawName)
       return
@@ -179,7 +259,9 @@ export function normalizeRosterDetailed(value: unknown): NormalizeResult {
 
   return {
     roster: {
-      members,
+      // 行序统一按「分组块」收敛：设置页「全部」与矩阵都依赖这个顺序
+      members: orderByGroup(members, groups),
+      groups,
       patterns,
       overrides: [...byKey.values()].sort((left, right) =>
         overrideKey(left.memberId, left.date).localeCompare(overrideKey(right.memberId, right.date))

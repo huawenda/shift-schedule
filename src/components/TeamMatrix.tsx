@@ -13,6 +13,8 @@ interface TeamMatrixProps {
   period: Period
   /** 视图。按姓名时行头让位给班序，姓名搬进格子 */
   mode: MatrixMode
+  /** 分组筛选的键；换组时清空聚焦行与键盘游标（行号已经换了含义） */
+  resetKey?: string
   onEdit: (member: Member, date: string) => void
 }
 
@@ -39,7 +41,7 @@ interface TeamMatrixProps {
  * 改为「鼠标在矩阵范围内滚滚轮 → 横滚」，见下面的 wheel 监听。
  * 行数多到矩阵纵向也溢出时，滚轮先归纵向，横向改用 Shift + 滚轮。
  */
-export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
+export function TeamMatrix({ roster, period, mode, resetKey, onEdit }: TeamMatrixProps) {
   const today = todayKey()
   const overrideMap = getOverrideMap(roster)
   const dayCount = period.dates.length
@@ -54,6 +56,12 @@ export function TeamMatrix({ roster, period, mode, onEdit }: TeamMatrixProps) {
   const [cursor, setCursor] = useState({ row: 0, col: 0 })
   /** 右侧是否还有没滚出来的日期列：决定边缘渐隐显不显示 */
   const [edgeVisible, setEdgeVisible] = useState(false)
+
+  // 换分组后行集合变了，原来的聚焦行/游标可能指向别人，直接回到第一格
+  useEffect(() => {
+    setFocusedId(null)
+    setCursor({ row: 0, col: 0 })
+  }, [resetKey])
 
   // 滚动条藏了，就得让滚轮能横滚：有横向溢出时把 deltaY 转成 scrollLeft。
   // 滚到两端就放行（不 preventDefault），页面继续纵向滚，不把人困在矩阵里。

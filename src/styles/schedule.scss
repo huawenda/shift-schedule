@@ -228,6 +228,67 @@
 
 /* ── 全员矩阵 ─────────────────────────────────────────── */
 
+/* 分组切换条：只在存在分组时出现，横向滚动不折行。
+ * 用现有的 accent-soft / accent 两枚令牌，不单独造一种「部门色」。 */
+.matrix-groups {
+  /* 胶囊条不能被矩阵的「吃掉剩余高度」挤扁：它是横向滚动容器，
+   * flex 的自动最小尺寸是 0，默认 shrink 会把它压成一条细缝（胶囊上下被裁）。 */
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding: 0 2px 2px;
+  scrollbar-width: none;
+}
+
+.matrix-groups::-webkit-scrollbar {
+  display: none;
+}
+
+.matrix-group-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.matrix-group-chip:hover {
+  border-color: var(--control-hover);
+  color: var(--text);
+}
+
+.matrix-group-chip.is-on {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.matrix-group-chip-count {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.matrix-group-chip.is-on .matrix-group-chip-count {
+  color: var(--accent);
+}
+
+/* 触屏上控件高一档，与 ≤1023 的其它按钮同一套 */
+@media (max-width: 1023px) {
+  .matrix-group-chip {
+    height: 34px;
+    padding: 0 12px;
+  }
+}
+
 .matrix {
   display: flex;
   flex-direction: column;

@@ -1,6 +1,6 @@
 import { resolvePatterns, type CustomPattern, type PatternLookup } from '../patterns'
 import type { ShiftType } from '../shifts'
-import { overrideKey, type DayOverride, type Member, type Roster } from './model'
+import { overrideKey, type DayOverride, type Member, type MemberGroup, type Roster } from './model'
 
 /* ------------------------------------------------------ 班序查询缓存 */
 
@@ -86,4 +86,26 @@ export function patternLabelOf(roster: Roster, member: Member): string {
 /** 按 id 取显示名，给设置页/下拉用 */
 export function patternNameOf(roster: Roster, patternId: string): string {
   return lookupOf(roster).labelOf(patternId)
+}
+
+/* ------------------------------------------------------------ 分组 */
+
+/** 分组；id 无效或未分组返回 undefined */
+export function findGroup(roster: Roster, groupId?: string | null): MemberGroup | undefined {
+  if (!groupId) return undefined
+  return roster.groups.find(group => group.id === groupId)
+}
+
+/** 分组显示名；未分组返回空串，界面自己决定显示「未分组」 */
+export function groupNameOf(roster: Roster, groupId?: string | null): string {
+  return findGroup(roster, groupId)?.name ?? ''
+}
+
+/**
+ * 某一组的成员；`null` 表示全部。
+ * 顺序沿用成员表，不重新排序 —— 矩阵的行顺序就是成员表顺序。
+ */
+export function membersOfGroup(roster: Roster, groupId: string | null): Member[] {
+  if (groupId === null) return roster.members
+  return roster.members.filter(member => member.groupId === groupId)
 }

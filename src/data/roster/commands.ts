@@ -3,7 +3,7 @@ import type { ShiftType } from '../shifts'
 import { canMarkLegal, canRecordOvertime, sanitizeOvertime } from '../overtime'
 import { sanitizeLeave } from '../leave'
 import { createTodoId, pickTodoTone, sortTodos, type Todo } from '../todos'
-import { overrideKey, type DayRecordInput, type Member, type Roster } from './model'
+import { orderByGroup, overrideKey, type DayRecordInput, type Member, type MemberGroup, type Roster } from './model'
 import { findMember, getDayRecord, getSelf, getTemplateShift } from './queries'
 
 /**
@@ -163,6 +163,64 @@ export function removeMember(roster: Roster, memberId: string): { roster: Roster
 /** 统计某人有多少条改班记录（删除前提示用） */
 export function countOverrides(roster: Roster, memberId: string): number {
   return roster.overrides.filter(override => override.memberId === memberId).length
+}
+
+/* ------------------------------------------------------------ 分组维护 */
+
+/** 新建或改名一个分组（按 id 判断是哪种）；改组名只动 groups，不碰成员 */
+export function upsertGroup(roster: Roster, group: MemberGroup): Roster {
+  const exists = roster.groups.some(item => item.id === group.id)
+  const groups = exists
+    ? roster.groups.map(item => (item.id === group.id ? group : item))
+    : [...roster.groups, group]
+
+  return { ...roster, groups, updatedAt: Date.now() }
+}
+
+export interface RemoveGroupResult {
+  roster: Roster
+  /** 被改成「未分组」的成员姓名，供界面提示 */
+  ungroupedMembers: string[]
+}
+
+/**
+ * 删除分组：组内成员变成未分组，**不删人、不删改班记录**。
+ *
+ * 与删班序的连带删除刻意不同 —— 部门只是一种展示归类，
+ * 删掉部门不应该把整个部门的人从花名册里抹掉。
+ */
+export function removeGroup(roster: Roster, groupId: string): RemoveGroupResult {
+  if (!roster.groups.some(group => group.id === groupId)) {
+    return { roster, ungroupedMembers: [] }
+  }
+
+  const ungroupedMembers = roster.members
+    .filter(member => member.groupId === groupId)
+    .map(member => member.name)
+
+  const members = roster.members.map(member => {
+    if (member.groupId !== groupId) return member
+    const rest: Member = { ...member }
+    delete rest.groupId
+    return rest
+  })
+  const groups = roster.groups.filter(group => group.id !== groupId)
+
+  return {
+    roster: {
+      ...roster,
+      groups,
+      // 被解散的成员落到「未分组」块，而不是留在原来的槽位
+      members: orderByGroup(members, groups),
+      updatedAt: Date.now()
+    },
+    ungroupedMembers
+  }
+}
+
+/** 分组里有多少人（删除确认用） */
+export function groupUsage(roster: Roster, groupId: string): string[] {
+  return roster.members.filter(member => member.groupId === groupId).map(member => member.name)
 }
 
 /* ------------------------------------------------------------ 班序维护 */

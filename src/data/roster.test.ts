@@ -3,18 +3,23 @@ import {
   applyDayRecord,
   applyShiftEdit,
   countOverrides,
+  groupUsage,
   getDayRecord,
   getEffectiveShift,
   getOverrideMap,
   normalizeRoster,
   normalizeRosterDetailed,
+  orderByGroup,
   overrideKey,
   patternLabelOf,
   patternUsage,
+  removeGroup,
   removeMember,
   removePattern,
   restoreDay,
+  upsertGroup,
   upsertPattern,
+  validateGroupName,
   validateMembers,
   type Roster
 } from './roster'
@@ -26,6 +31,7 @@ const roster: Roster = {
     { id: 'm2', name: '李静', patternId: '4F' },
     { id: 'm3', name: '周涛', patternId: '4J' }
   ],
+  groups: [],
   overrides: [],
   patterns: [],
   todos: [],
@@ -390,6 +396,136 @@ describe('班序维护', () => {
 
     const customMember = { id: 'm4', name: '孙强', patternId: 'cp-1' }
     expect(patternLabelOf(withPattern, customMember)).toBe('甲班')
+  })
+})
+
+describe('分组', () => {
+  it('归一化：去空、去重（组名不分大小写）、超长截断', () => {
+    const normalized = normalizeRoster({
+      members: [],
+      groups: [
+        { id: 'g1', name: '生产部' },
+        { id: 'g1', name: '重复 ID' },
+        { id: 'g2', name: '生产部' },
+        { id: 'g3', name: 'Engineering' },
+        { id: 'g4', name: 'engineering' },
+        { id: 'g5', name: '  ' },
+        { id: 'g6', name: '一二三四五六七八九十甲乙丙丁' }
+      ]
+    })
+
+    expect(normalized.groups.map(group => group.name)).toEqual(['生产部', 'Engineering', '一二三四五六七八九十甲乙'])
+  })
+
+  it('成员的 groupId 指向不存在的组时只丢分组，不丢人', () => {
+    const normalized = normalizeRoster({
+      members: [
+        { id: 'm1', name: '王磊', patternId: '4F', groupId: 'g1' },
+        { id: 'm2', name: '李静', patternId: '4J', groupId: 'ghost' }
+      ],
+      groups: [{ id: 'g1', name: '生产部' }]
+    })
+
+    expect(normalized.members.map(member => member.name)).toEqual(['王磊', '李静'])
+    expect(normalized.members[0].groupId).toBe('g1')
+    expect(normalized.members[1].groupId).toBeUndefined()
+  })
+
+  it('没有 groups 字段的旧数据：成员照常读，全部未分组', () => {
+    const normalized = normalizeRoster({
+      members: [{ id: 'm1', name: '王磊', patternId: '4F' }]
+    })
+    expect(normalized.groups).toEqual([])
+    expect(normalized.members[0].groupId).toBeUndefined()
+  })
+
+  it('组件校验：空名 / 重名（不分大小写）/ 超长 / 上限', () => {
+    const groups = [{ id: 'g1', name: '生产部' }, { id: 'g2', name: 'QA' }]
+
+    expect(validateGroupName('  ', groups)).toBe('请填写组名')
+    expect(validateGroupName('生产部', groups)).toBe('已经有叫「生产部」的分组了')
+    expect(validateGroupName('qa', groups)).toBe('已经有叫「QA」的分组了')
+    expect(validateGroupName('一二三四五六七八九十十一十二', groups)).toBe('组名请控制在 12 个字以内')
+    // 改自己时不跟自己比
+    expect(validateGroupName('生产部', groups, 'g1')).toBe(null)
+    expect(validateGroupName('工程部', groups)).toBe(null)
+  })
+
+  it('upsertGroup 新增与改名，都不碰成员', () => {
+    const added = upsertGroup(roster, { id: 'g1', name: '生产部' })
+    expect(added.groups).toEqual([{ id: 'g1', name: '生产部' }])
+    expect(added.members).toBe(roster.members)
+
+    const renamed = upsertGroup(added, { id: 'g1', name: '生产一部' })
+    expect(renamed.groups).toEqual([{ id: 'g1', name: '生产一部' }])
+    expect(renamed.members).toBe(roster.members)
+  })
+
+  it('removeGroup 只把成员变成未分组，改班记录原样保留', () => {
+    const withGroup: Roster = {
+      ...roster,
+      groups: [{ id: 'g1', name: '生产部' }],
+      members: [
+        { id: 'm1', name: '王磊', patternId: '4F', groupId: 'g1' },
+        { id: 'm2', name: '李静', patternId: '4F', groupId: 'g1' },
+        { id: 'm3', name: '周涛', patternId: '4J' }
+      ],
+      overrides: [{ memberId: 'm1', date: '2026-10-20', shift: '白特' }]
+    }
+
+    expect(groupUsage(withGroup, 'g1')).toEqual(['王磊', '李静'])
+
+    const result = removeGroup(withGroup, 'g1')
+    expect(result.ungroupedMembers).toEqual(['王磊', '李静'])
+    expect(result.roster.groups).toEqual([])
+    expect(result.roster.members.map(member => member.name)).toEqual(['王磊', '李静', '周涛'])
+    expect(result.roster.members.every(member => member.groupId === undefined)).toBe(true)
+    expect(result.roster.overrides).toEqual(withGroup.overrides)
+  })
+
+  it('删不存在的组：原样返回', () => {
+    const result = removeGroup(roster, 'ghost')
+    expect(result.roster).toBe(roster)
+    expect(result.ungroupedMembers).toEqual([])
+  })
+
+  it('orderByGroup：分组顺序 → 组内原顺序 → 未分组最后', () => {
+    const groups = [
+      { id: 'g1', name: '甲组' },
+      { id: 'g2', name: '乙组' }
+    ]
+    const members = [
+      { id: 'm3', name: '丙', patternId: '4F', groupId: 'g2' },
+      { id: 'm1', name: '甲一', patternId: '4F', groupId: 'g1' },
+      { id: 'm4', name: '丁', patternId: '4F' },
+      { id: 'm2', name: '甲二', patternId: '4F', groupId: 'g1' },
+      { id: 'm5', name: '戊', patternId: '4F', groupId: 'ghost' }
+    ]
+
+    expect(orderByGroup(members, groups).map(member => member.id)).toEqual([
+      'm1', 'm2', 'm3', 'm4', 'm5'
+    ])
+  })
+
+  it('orderByGroup：没有分组时保持原顺序', () => {
+    expect(orderByGroup(roster.members, []).map(member => member.id)).toEqual(['m1', 'm2', 'm3'])
+  })
+
+  it('归一化后行序已经按分组块收敛', () => {
+    const normalized = normalizeRoster({
+      members: [
+        { id: 'm3', name: '丙', patternId: '4F', groupId: 'g2' },
+        { id: 'm1', name: '甲一', patternId: '4F', groupId: 'g1' },
+        { id: 'm4', name: '丁', patternId: '4F' },
+        { id: 'm2', name: '甲二', patternId: '4F', groupId: 'g1' }
+      ],
+      groups: [
+        { id: 'g1', name: '甲组' },
+        { id: 'g2', name: '乙组' }
+      ]
+    })
+
+    expect(normalized.members.map(member => member.id)).toEqual(['m1', 'm2', 'm3', 'm4'])
   })
 })
 

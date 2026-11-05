@@ -115,7 +115,7 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
             <p className="wizard-lead">
               把同班组的同事加进来，矩阵里就能看到整组的班。这一步可以跳过，以后在设置里也能加。
             </p>
-            <MemberRowsEditor patterns={BUILTIN_OPTIONS} rows={rows} onChange={setRows} />
+            <MemberRowsEditor groups={[]} patterns={BUILTIN_OPTIONS} rows={rows} onChange={setRows} />
             {colleagueErrors.length > 0 ? (
               <ul className="error-list" role="alert">
                 {colleagueErrors.map(error => <li key={error}>{error}</li>)}

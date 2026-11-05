@@ -117,6 +117,116 @@
   color: var(--muted);
 }
 
+/* ── 成员分组 tab ─────────────────────────────────────── */
+
+/* 下划线 tab：分组之间的切换是「看哪一组」，不需要另造一种选中底色。
+ * 横向滚动，tab 与右侧「新建 / 管理」动作分开，动作永远可见。 */
+.member-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-bottom: 1px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.member-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: var(--sp-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.member-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.member-tab {
+  position: relative;
+  flex: 0 0 auto;
+  height: var(--control-height);
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-control);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.member-tab:hover {
+  color: var(--text);
+}
+
+.member-tab.is-on {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.member-tab.is-on::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.member-tab:focus-visible,
+.member-tab-action:focus-visible {
+  outline-offset: -2px;
+}
+
+.member-tab-count {
+  margin-left: 4px;
+  color: var(--faint);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+.member-tab.is-on .member-tab-count {
+  color: var(--muted);
+}
+
+.member-tabs-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.member-tab-action {
+  flex: 0 0 auto;
+  height: var(--control-height);
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.member-tab-action:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.member-tab-action:disabled {
+  color: var(--faint);
+  cursor: not-allowed;
+}
+
+/* 分组管理折叠区：内凹浅槽，与空态 / 待办卡同一套材质 */
+.member-groups-manage {
+  padding: var(--sp-3);
+  border-radius: var(--radius-panel);
+  background: var(--surface-sunken);
+}
+
 /* ── 成员表 ───────────────────────────────────────────── */
 
 .member-editor {
@@ -143,7 +253,8 @@
   display: contents;
 }
 
-/* 姓名 / 班序 / 岗位 / 删除 —— 四列。班序列宽一点（名字可能较长），岗位列稍窄 */
+/* 姓名 / 班序 / 岗位 / 删除 —— 四列。班序列宽一点（名字可能较长），岗位列稍窄。
+ * 没建过分组时保持原样；建了分组才多插一列（见 is-grouped）。 */
 .member-editor-head,
 .member-row {
   display: grid;
@@ -163,6 +274,17 @@
 .member-editor.is-sortable .member-editor-head,
 .member-editor.is-sortable .member-row {
   grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.8fr) 112px;
+}
+
+/* 建了分组：在姓名与班序之间插一列「分组」 */
+.member-editor.is-grouped .member-editor-head,
+.member-editor.is-grouped .member-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.8fr) 60px;
+}
+
+.member-editor.is-sortable.is-grouped .member-editor-head,
+.member-editor.is-sortable.is-grouped .member-row {
+  grid-template-columns: 16px minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.8fr) 112px;
 }
 
 .member-handle {
@@ -293,6 +415,60 @@
 
 .member-row .input {
   min-width: 0;
+}
+
+/* ── 分组 ───────────────────────────────────────────── */
+
+.group-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.group-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 组名 / 人数 / 删除：一行一组，与大屏成员表同一套发丝线节奏 */
+.group-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px 60px;
+  gap: var(--sp-2);
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.group-row:last-child {
+  border-bottom: 0;
+}
+
+.group-name-input {
+  min-width: 0;
+}
+
+.group-usage {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.group-usage.is-empty {
+  color: var(--faint);
+}
+
+.group-row .btn-quiet {
+  height: 28px;
+  padding: 0 6px;
+}
+
+/* 新建分组：输入框 + 添加 / 取消，回车也能提交 */
+.group-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--sp-2);
+  align-items: center;
 }
 
 /* 表格底部动作行：添加成员 / 从 Excel 导入并排。
@@ -468,6 +644,11 @@
 .save-hint {
   color: var(--warning-ink);
   font-size: var(--fs-small);
+}
+
+/* 有错误（可能在别的分组 tab 里）时把提示染成错误色，不能只灰着保存按钮 */
+.save-hint.is-blocked {
+  color: var(--danger);
 }
 
 /* ── 危险区 ───────────────────────────────────────────── */
@@ -1016,6 +1197,15 @@ button.shift-cell:hover {
       "fields fields";
   }
 
+  /* 有分组时姓名右边多一格分组，第二行仍放班序 / 岗位 */
+  .member-editor.is-grouped.is-sortable .member-row,
+  .member-editor.is-grouped:not(.is-sortable) .member-row {
+    grid-template-columns: minmax(0, 1fr) 96px auto;
+    grid-template-areas:
+      "name group actions"
+      "fields fields fields";
+  }
+
   /* 卡片自带底色，悬停不再整行变灰 */
   .member-row:hover {
     background: var(--surface);
@@ -1070,6 +1260,12 @@ button.shift-cell:hover {
     color: var(--text);
     font-size: var(--fs-body);
     font-weight: 600;
+  }
+
+  /* 分组跟着姓名走第一行，班序 / 岗位落到第二行 */
+  .member-field-group {
+    grid-area: group;
+    min-width: 0;
   }
 
   .member-fields {
@@ -1149,6 +1345,19 @@ button.shift-cell:hover {
 }
 
 @media (max-width: 639px) {
+  /* tab 条：tab 横向滚动，右侧动作收紧，保证「新建 / 管理」还在屏内 */
+  .member-tabs-row {
+    gap: var(--sp-1);
+  }
+
+  .member-tabs-actions {
+    gap: 0;
+  }
+
+  .member-tab-action {
+    padding: 0 4px;
+  }
+
   /* 两张宽度在 settings.scss 里定义、源顺序晚于 schedule.scss 的窄弹层 */
   .dialog-wide,
   .dialog-narrow {

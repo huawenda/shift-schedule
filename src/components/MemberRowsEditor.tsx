@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { createMemberId, type Member } from '../data/roster'
+import { createMemberId, type Member, type MemberGroup } from '../data/roster'
 import { Select } from './Select'
+
+/** 「未分组」不是真实分组，用哨兵值表达 tab/筛选条件 */
+export const UNGROUPED_MEMBERS = '__ungrouped__'
 
 export interface MemberRow {
   key: string
   id: string
   name: string
+  /** 空串 = 未分组 */
+  groupId: string
   patternId: string
   position: string
 }
@@ -23,13 +28,14 @@ export function toRows(members: Member[]): MemberRow[] {
     key: member.id,
     id: member.id,
     name: member.name,
+    groupId: member.groupId ?? '',
     patternId: member.patternId,
     position: member.position ?? ''
   }))
 }
 
-export function createRow(patternId = '4F'): MemberRow {
-  return { key: createMemberId(), id: createMemberId(), name: '', patternId, position: '' }
+export function createRow(patternId = '4F', groupId = ''): MemberRow {
+  return { key: createMemberId(), id: createMemberId(), name: '', groupId, patternId, position: '' }
 }
 
 export function fromRows(rows: MemberRow[]): Member[] {
@@ -41,7 +47,8 @@ export function fromRows(rows: MemberRow[]): Member[] {
         id: row.id,
         name: row.name.trim(),
         patternId: row.patternId,
-        ...(position ? { position } : {})
+        ...(position ? { position } : {}),
+        ...(row.groupId ? { groupId: row.groupId } : {})
       }
     })
 }
@@ -50,10 +57,26 @@ interface MemberRowsEditorProps {
   rows: MemberRow[]
   /** 可选班序，内置在前、自定义在后；决定下拉里能选什么 */
   patterns: PatternOption[]
+  /** 可选分组；未分组的人显示「未分组」 */
+  groups: MemberGroup[]
+  /**
+   * 只渲染这个分组的人；不传 = 全部。
+   * 传 `UNGROUPED_MEMBERS` 表示只看未分组的人。
+   */
+  visibleGroup?: string
+  /**
+   * 是否显示「分组」列。只在「全部」tab 为 true；
+   * 其它 tab 的归属由 tab 本身表达，再显示一列同组名是重复信息。
+   */
+  showGroupField?: boolean
+  /** 由调用方接管「添加成员」（设置页要按当前 tab 落组）；不传时保持内部追加（向导） */
+  onAdd?: () => void
+  /** 当前 tab 没有成员时的空态文案 */
+  emptyText?: string
   onChange: (rows: MemberRow[]) => void
   /**
-   * 允许调整顺序（设置页用）。
-   * 数组顺序就是全员矩阵的行顺序，所以这里不只是「看着舒服」。
+   * 允许调整顺序（设置页的分组 tab 用）。
+   * 组内顺序决定这些人在矩阵里的先后；「全部」按分组块顺序排列。
    */
   sortable?: boolean
   /** 本人的 memberId：这一行只读，改名/换班序要去「个人信息」 */
@@ -68,7 +91,7 @@ interface MemberRowsEditorProps {
 }
 
 /**
- * 成员表：姓名 + 班序（+ 排序）。
+ * 成员表：姓名 + 分组（只在「全部」显示）+ 班序 + 岗位（+ 组内排序）。
  *
  * 班序只能从已有的选（内置 13 条 + 用户自建的），不能在这里新建 ——
  * 新建班序要录 24 个格子，属于设置页「班序」区块的事。
@@ -79,6 +102,11 @@ interface MemberRowsEditorProps {
 export function MemberRowsEditor({
   rows,
   patterns,
+  groups,
+  visibleGroup,
+  showGroupField = groups.length > 0,
+  onAdd,
+  emptyText,
   onChange,
   sortable = false,
   selfId,
@@ -102,17 +130,39 @@ export function MemberRowsEditor({
   useEffect(() => stopAutoScroll, [])
 
   const patternNames = new Map(patterns.map(option => [option.id, option.name]))
+  const groupNames = new Map(groups.map(group => [group.id, group.name]))
 
-  function reorder(from: number, to: number) {
+  /** 当前 tab 可见的行；其余操作都以它们的 key 映射回完整草稿 */
+  const visibleRows = rows.filter(row => {
+    if (visibleGroup === undefined) return true
+    if (visibleGroup === UNGROUPED_MEMBERS) return !row.groupId
+    return row.groupId === visibleGroup
+  })
+  const fullIndexByKey = new Map(rows.map((row, index) => [row.key, index]))
+
+  /**
+   * 可见行内部换位：把新顺序回填到这些行在整张表里占的槽位。
+   * 组内排序因此不会把别的分组的人插进来，也不依赖「组一定连续」这个前提。
+   */
+  function reorderVisible(from: number, to: number) {
     if (from === to) return
-    const next = [...rows]
-    const [moved] = next.splice(from, 1)
-    next.splice(to, 0, moved)
-    onChange(next)
+    const moved = visibleRows[from]
+    if (!moved) return
+
+    const nextVisible = [...visibleRows]
+    nextVisible.splice(from, 1)
+    nextVisible.splice(to, 0, moved)
+
+    const slots = visibleRows.map(row => fullIndexByKey.get(row.key)!)
+    const nextRows = [...rows]
+    slots.forEach((slot, index) => {
+      nextRows[slot] = nextVisible[index]
+    })
+    onChange(nextRows)
   }
 
-  /** 行内校验（与小程序 rowError 同口径）：空名 / 与本人同名 / 与前面某行重名 */
-  function errorOf(row: MemberRow, index: number): string {
+  /** 行内校验：空名 / 与本人同名 / 与任意一行重名（可能藏在别的分组 tab 里） */
+  function errorOf(row: MemberRow): string {
     // 本人行只读、不参与成员表校验
     if (selfId && row.id === selfId) return ''
     const name = row.name.trim()
@@ -121,8 +171,13 @@ export function MemberRowsEditor({
     const selfName = rows.find(item => item.id === selfId)?.name.trim() ?? ''
     if (selfName && name === selfName) return '与本人同名，矩阵里会分不清'
 
-    const earlier = rows.findIndex((item, itemIndex) => itemIndex < index && item.name.trim() === name)
-    if (earlier >= 0) return `与第 ${earlier + 1} 行重名`
+    // 不只看「前面的行」：分组 tab 里同名的另一条可能在别的 tab，
+    // 也要在当前行给出错误，否则吸底保存条灰着却看不到原因。
+    const duplicate = rows.find(item => item.id !== row.id && item.name.trim() === name)
+    if (duplicate) {
+      const group = groupNames.get(duplicate.groupId) ?? '未分组'
+      return `与「${group}」的「${name}」重名`
+    }
     return ''
   }
 
@@ -193,24 +248,27 @@ export function MemberRowsEditor({
     stopAutoScroll()
     setDragIndex(null)
     setOverIndex(null)
-    reorder(state.from, state.over)
+    reorderVisible(state.from, state.over)
   }
 
+  /** 可见行下标 → 完整草稿下标；改完再交回整表 */
   function patch(index: number, next: Partial<MemberRow>) {
-    onChange(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...next } : row)))
+    const row = visibleRows[index]
+    const fullIndex = row ? fullIndexByKey.get(row.key) : undefined
+    if (fullIndex === undefined) return
+    onChange(rows.map((item, rowIndex) => (rowIndex === fullIndex ? { ...item, ...next } : item)))
   }
 
   function remove(index: number) {
-    onChange(rows.filter((_, rowIndex) => rowIndex !== index))
+    const row = visibleRows[index]
+    if (!row) return
+    onChange(rows.filter(item => item.key !== row.key))
   }
 
   function move(index: number, delta: number) {
     const target = index + delta
-    if (target < 0 || target >= rows.length) return
-    const next = [...rows]
-    const [moved] = next.splice(index, 1)
-    next.splice(target, 0, moved)
-    onChange(next)
+    if (target < 0 || target >= visibleRows.length) return
+    reorderVisible(index, target)
   }
 
   function drop(index: number) {
@@ -218,7 +276,7 @@ export function MemberRowsEditor({
     setDragIndex(null)
     setOverIndex(null)
     if (from === null) return
-    reorder(from, index)
+    reorderVisible(from, index)
   }
 
   function append() {
@@ -245,10 +303,10 @@ export function MemberRowsEditor({
     const scroll = flowScroller()?.scrollTop ?? 0
     const raw = clientY - state.startY + (scroll - state.startScroll)
     const min = -state.from * SORT_STEP
-    const max = (rows.length - 1 - state.from) * SORT_STEP
+    const max = (visibleRows.length - 1 - state.from) * SORT_STEP
     const offset = Math.min(max, Math.max(min, raw))
     const target = Math.min(
-      rows.length - 1,
+      visibleRows.length - 1,
       Math.max(0, Math.round((state.from * SORT_STEP + offset) / SORT_STEP))
     )
     state.target = target
@@ -299,7 +357,7 @@ export function MemberRowsEditor({
     sortRef.current = null
     setSortDrag(null)
     stopAutoScroll()
-    reorder(state.from, state.target)
+    reorderVisible(state.from, state.target)
   }
 
   function cancelSortDrag() {
@@ -323,17 +381,20 @@ export function MemberRowsEditor({
 
   function sortMeta(row: MemberRow): string {
     const position = row.position.trim()
+    const group = showGroupField ? groupNames.get(row.groupId) : ''
     const pattern = patternNames.get(row.patternId) ?? row.patternId
-    return position ? `${pattern} · ${position}` : pattern
+    return [group, pattern, position].filter(Boolean).join(' · ')
   }
 
   if (sorting) {
     return (
       <section className="sort-block" aria-label="成员排序">
-        <p className="sort-hint">按住左侧把手上下拖动；顺序就是全员矩阵的行顺序。</p>
+        <p className="sort-hint">
+          按住左侧把手上下拖动；组内顺序决定这些人在矩阵里的先后，「全部」按分组顺序排列。
+        </p>
 
         <div className="sort-list">
-          {rows.map((row, index) => (
+          {visibleRows.map((row, index) => (
             <div
               className={[
                 'sort-row',
@@ -364,6 +425,10 @@ export function MemberRowsEditor({
 
   const builtin = patterns.filter(option => option.builtin)
   const custom = patterns.filter(option => !option.builtin)
+  const groupOptions = [
+    { value: '', label: '未分组' },
+    ...groups.map(group => ({ value: group.id, label: group.name }))
+  ]
 
   // 有自建班序才分组：只有内置时多一行「内置」标题纯属噪音
   const patternGroups =
@@ -375,21 +440,24 @@ export function MemberRowsEditor({
       ]
 
   return (
-    <div className={`member-editor${sortable ? ' is-sortable' : ''}`}>
+    <div className={`member-editor${sortable ? ' is-sortable' : ''}${showGroupField ? ' is-grouped' : ''}`}>
       <div className="member-editor-head">
         {sortable ? <span aria-hidden="true" /> : null}
         <span className="member-head-label">姓名</span>
+        {showGroupField ? <span className="member-head-label">分组</span> : null}
         <span className="member-head-label">班序</span>
         <span className="member-head-label">岗位</span>
       </div>
 
-      {rows.length === 0 ? (
-        <p className="member-editor-empty">还没有人。点下面的「添加成员」开始。</p>
+      {visibleRows.length === 0 ? (
+        <p className="member-editor-empty">
+          {emptyText ?? '还没有人。点下面的「添加成员」开始。'}
+        </p>
       ) : null}
 
-      {rows.map((row, index) => {
+      {visibleRows.map((row, index) => {
         const isSelfRow = Boolean(selfId && row.id === selfId)
-        const rowError = errorOf(row, index)
+        const rowError = errorOf(row)
         return (
         <div className="member-row-wrap" key={row.key}>
         <div
@@ -459,7 +527,18 @@ export function MemberRowsEditor({
             />
           )}
 
-          {/* 班序与岗位包成一层：桌面 display: contents 继续按四列排，
+          {/* 分组是部门归属，不是身份：本人那一行也可以改 */}
+          {showGroupField ? (
+            <Select
+              ariaLabel={`${row.name || `第 ${index + 1} 位成员`} 的分组`}
+              className="member-field-group"
+              groups={[{ options: groupOptions }]}
+              value={row.groupId}
+              onChange={next => patch(index, { groupId: next })}
+            />
+          ) : null}
+
+          {/* 班序与岗位包成一层：桌面 display: contents 继续按列排，
               手机上则作为一个两列网格落到卡片的第二行 */}
           <div className="member-fields">
             {isSelfRow ? (
@@ -513,7 +592,7 @@ export function MemberRowsEditor({
                 <button
                   aria-label={`把 ${row.name || `第 ${index + 1} 位成员`} 下移一位`}
                   className="btn btn-icon"
-                  disabled={index === rows.length - 1}
+                  disabled={index === visibleRows.length - 1}
                   type="button"
                   onClick={() => move(index, 1)}
                 >
@@ -541,7 +620,7 @@ export function MemberRowsEditor({
       })}
 
       <div className="member-editor-actions">
-        <button className="btn btn-add" type="button" onClick={append}>添加成员</button>
+        <button className="btn btn-add" type="button" onClick={onAdd ?? append}>添加成员</button>
         {onImport ? (
           <button className="btn btn-add" type="button" onClick={onImport}>从 Excel 导入</button>
         ) : null}
@@ -549,7 +628,7 @@ export function MemberRowsEditor({
 
       {onImport ? (
         <p className="member-import-hint">
-          Excel 首行写表头「姓名 / 班序 / 岗位」（后两列可空）；与现有成员重名的跳过，导入后直接保存。
+          Excel 首行写表头「姓名 / 分组 / 班序 / 岗位」（后三列可空）；与现有成员重名的跳过，认不出的分组会自动新建，导入后直接保存。
         </p>
       ) : null}
     </div>

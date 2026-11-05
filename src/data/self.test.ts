@@ -25,6 +25,7 @@ const base: Roster = {
     { memberId: 'm1', date: '2026-10-21', shift: '夜班', overtimeHours: 2, isLegal: true },
     { memberId: 'm2', date: '2026-10-22', shift: '休息' }
   ],
+  groups: [],
   patterns: [],
   todos: [],
   profile: null,

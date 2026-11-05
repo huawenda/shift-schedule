@@ -14,6 +14,17 @@ import type { Todo } from '../todos'
  *    否则成员的 patternId 会指向不存在的班序，人会被归一化丢掉。
  */
 
+/**
+ * 成员分组（例如部门）。
+ *
+ * 独立成表而不是把组名写进成员：改组名只改一处，不会出现同一个部门两种写法；
+ * 也允许先建空组、再往里放人。成员只存 `groupId` 指针。
+ */
+export interface MemberGroup {
+  id: string
+  name: string
+}
+
 export interface Member {
   id: string
   name: string
@@ -21,6 +32,8 @@ export interface Member {
   position?: string
   /** 内置代号（4F…4X）或自定义班序的 id */
   patternId: string
+  /** 所属分组；缺省 = 未分组。指向不存在的组时归一化只丢这个字段，不丢人 */
+  groupId?: string
 }
 
 export interface DayOverride {
@@ -60,6 +73,8 @@ export interface Profile {
 
 export interface Roster {
   members: Member[]
+  /** 成员分组；顺序就是矩阵分组切换条的顺序（创建顺序，不另设排序字段） */
+  groups: MemberGroup[]
   overrides: DayOverride[]
   /** 用户自建的班序，上限 MAX_CUSTOM_PATTERNS */
   patterns: CustomPattern[]
@@ -76,6 +91,7 @@ export interface Roster {
 
 export const emptyRoster: Roster = {
   members: [],
+  groups: [],
   overrides: [],
   patterns: [],
   todos: [],
@@ -84,6 +100,10 @@ export const emptyRoster: Roster = {
 }
 
 export const MAX_MEMBERS = 200
+/** 分组上限：部门级别的划分，20 个足够；多到几十个时切换条也没法扫读了 */
+export const MAX_MEMBER_GROUPS = 20
+/** 组名长度：与姓名/岗位同一档，够写「生产一部」「Engineering」 */
+export const MAX_GROUP_NAME_LENGTH = 12
 
 export function overrideKey(memberId: string, date: string): string {
   return `${memberId}|${date}`
@@ -92,6 +112,44 @@ export function overrideKey(memberId: string, date: string): string {
 export function createMemberId(): string {
   const random = Math.random().toString(36).slice(2, 8)
   return `m-${Date.now().toString(36)}-${random}`
+}
+
+export function createGroupId(): string {
+  const random = Math.random().toString(36).slice(2, 8)
+  return `g-${Date.now().toString(36)}-${random}`
+}
+
+/** 组名比对用：去首尾空格 + 转小写（中文不受影响，英文部门名不分大小写） */
+export function groupNameKey(name: string): string {
+  return name.trim().toLowerCase()
+}
+
+/**
+ * 按分组块排序：分组顺序 → 组内原顺序 → 未分组（含悬空 groupId）最后。
+ *
+ * 设置页「全部」与全员矩阵的行顺序都靠这条不变量保持一致：
+ * 组内排序只改本块内的先后，不会把别的分组的人插进来。
+ */
+export function orderByGroup<T extends { groupId?: string }>(
+  items: T[],
+  groups: MemberGroup[]
+): T[] {
+  const rank = new Map(groups.map((group, index) => [group.id, index]))
+  const buckets = new Map<number, T[]>()
+
+  items.forEach(item => {
+    const index = item.groupId && rank.has(item.groupId) ? rank.get(item.groupId)! : groups.length
+    const bucket = buckets.get(index)
+    if (bucket) bucket.push(item)
+    else buckets.set(index, [item])
+  })
+
+  const ordered: T[] = []
+  for (let index = 0; index <= groups.length; index += 1) {
+    const bucket = buckets.get(index)
+    if (bucket) ordered.push(...bucket)
+  }
+  return ordered
 }
 
 export function isRosterEmpty(roster: Roster): boolean {
