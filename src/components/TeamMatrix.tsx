@@ -49,6 +49,10 @@ export function TeamMatrix({ roster, period, mode, resetKey, onEdit }: TeamMatri
   const scrollRef = useRef<HTMLDivElement>(null)
   /** 聚焦行：同一时间只高亮一行，再点同一个人取消 */
   const [focusedId, setFocusedId] = useState<string | null>(null)
+  /** 聚焦列：点日期表头切换，再点同一天取消；与行聚焦可以同时存在 */
+  const [focusedDate, setFocusedDate] = useState<string | null>(null)
+  /** 表头的 roving tab stop：整排日期只占一个 Tab 位，方向键在表头内移动 */
+  const [dayCursor, setDayCursor] = useState(0)
   /**
    * 键盘游标：整张矩阵只保留一个 tab stop，进入后用方向键在单元格间移动。
    * col = -1 表示行首「姓名 / 班序」单元格。
@@ -60,8 +64,16 @@ export function TeamMatrix({ roster, period, mode, resetKey, onEdit }: TeamMatri
   // 换分组后行集合变了，原来的聚焦行/游标可能指向别人，直接回到第一格
   useEffect(() => {
     setFocusedId(null)
+    setFocusedDate(null)
+    setDayCursor(0)
     setCursor({ row: 0, col: 0 })
   }, [resetKey])
+
+  // 翻月后日期集合变了，列聚焦的日期不一定还在，直接收掉
+  useEffect(() => {
+    setFocusedDate(null)
+    setDayCursor(0)
+  }, [period.key])
 
   // 滚动条藏了，就得让滚轮能横滚：有横向溢出时把 deltaY 转成 scrollLeft。
   // 滚到两端就放行（不 preventDefault），页面继续纵向滚，不把人困在矩阵里。
@@ -160,6 +172,29 @@ export function TeamMatrix({ roster, period, mode, resetKey, onEdit }: TeamMatri
   const cellTabIndex = (row: number, col: number) => (row === cursorRow && col === cursorCol ? 0 : -1)
   const syncCursor = (row: number, col: number) => setCursor({ row, col })
 
+  /** 表头方向键：整排日期只保留一个 Tab 位，左右键在表头内移动 */
+  function onDayKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement
+    const button = target.closest<HTMLElement>('[data-day-index]')
+    if (!button) return
+
+    const index = Number(button.dataset.dayIndex)
+    let next = index
+    switch (event.key) {
+      case 'ArrowRight': next = Math.min(lastCol, index + 1); break
+      case 'ArrowLeft': next = Math.max(0, index - 1); break
+      case 'Home': next = 0; break
+      case 'End': next = lastCol; break
+      default: return
+    }
+
+    event.preventDefault()
+    setDayCursor(next)
+    event.currentTarget
+      .querySelector<HTMLElement>(`[data-day-index="${next}"]`)
+      ?.focus()
+  }
+
   return (
     <section className={`matrix${byName ? ' is-by-name' : ''}`} aria-label="全员排班矩阵">
       <div className="matrix-frame">
@@ -167,15 +202,28 @@ export function TeamMatrix({ roster, period, mode, resetKey, onEdit }: TeamMatri
         <div className="matrix-head">
           {/* 按姓名视图的行头只剩班序，所以表头文案也跟着换 */}
           <div className="matrix-name-cell">{byName ? '班序' : '成员'}</div>
-          <div className="matrix-days">
-            {period.dates.map(date => (
-              <div
-                className={`matrix-day${isWeekend(date) ? ' is-weekend' : ''}${date === today ? ' is-today' : ''}`}
+          <div className="matrix-days" onKeyDown={onDayKeyDown}>
+            {period.dates.map((date, index) => (
+              <button
+                aria-label={`${date} 周${weekdayLabel(date)}，${focusedDate === date ? '取消聚焦整列' : '聚焦整列'}`}
+                aria-pressed={focusedDate === date}
+                className={[
+                  'matrix-day',
+                  isWeekend(date) ? 'is-weekend' : '',
+                  date === today ? 'is-today' : '',
+                  focusedDate === date ? 'is-focused-column' : ''
+                ].filter(Boolean).join(' ')}
+                data-day-index={index}
                 key={date}
+                tabIndex={dayCursor === index ? 0 : -1}
+                title={`${date} 周${weekdayLabel(date)}（${focusedDate === date ? '点击取消聚焦' : '点击聚焦整列'}）`}
+                type="button"
+                onClick={() => setFocusedDate(current => (current === date ? null : date))}
+                onFocus={() => setDayCursor(index)}
               >
                 <span className="matrix-day-num">{formatDayNumber(date)}</span>
                 <span className="matrix-day-week">{weekdayLabel(date)}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -231,7 +279,8 @@ export function TeamMatrix({ roster, period, mode, resetKey, onEdit }: TeamMatri
                       className={[
                         'matrix-cell',
                         shift ? shiftToneClass(shift) : 'is-blank',
-                        isToday ? 'is-today' : ''
+                        isToday ? 'is-today' : '',
+                        focusedDate === date ? 'is-column-focus' : ''
                       ].filter(Boolean).join(' ')}
                       data-cell={`${rowIndex}:${colIndex}`}
                       key={date}

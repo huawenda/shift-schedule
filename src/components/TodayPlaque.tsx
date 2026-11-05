@@ -77,7 +77,14 @@ export function TodayPlaque({
         ? '本月'
         : '下一班'
   const shiftName = !todayInPeriod || moment.kind === 'idle' ? '—' : moment.shift
-  const rangeText = todayInPeriod ? moment.rangeText : `本期 ${dates.length} 天 · 今天不在本期`
+  // 跨零点的夜班属于昨天：把日期带上，避免让人以为这是今天的班
+  const rangeText = todayInPeriod
+    ? moment.kind === 'active' && moment.dateKey !== today
+      ? `${formatMonthDay(moment.dateKey)} ${moment.rangeText}`
+      : moment.rangeText
+    : `本期 ${dates.length} 天 · 今天不在本期`
+  /** 跨零点的夜班可能属于昨天；昨天不在本期时只展示，不提供在这里改 */
+  const canEditMoment = todayInPeriod && moment.kind !== 'idle' && dates.includes(moment.dateKey)
 
   const todayLine = [
     `今天 ${formatMonthDay(today)} 周${weekdayLabel(today)}`,
@@ -90,7 +97,7 @@ export function TodayPlaque({
       <div className="plaque-top">
         <div className="plaque-cell">
           <span className="plaque-label">{shiftLabel}</span>
-          {todayInPeriod && moment.kind !== 'idle' ? (
+          {canEditMoment ? (
             <button
               aria-label={`修改 ${formatMonthDay(moment.dateKey)} 的班次`}
               className="plaque-shift"

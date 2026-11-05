@@ -696,6 +696,13 @@
     box-shadow: none;
   }
 
+  /* 内容滚动区一直铺到底栏上边缘：
+   * 画布底部内边距会在 `.canvas-flow` 的裁剪线和底栏之间留一条白边，
+   * 看起来像内容被截在底栏上方一截。移动端的 pinned 页统一去掉。 */
+  .canvas.is-pinned {
+    padding-bottom: 0;
+  }
+
   /* 侧栏 → 底部标签栏。
    * .rail-nav / .rail-foot 用 display: contents 把自己「展开」，
    * 三个入口于是直接成为 .rail 的 flex 项，才能等宽平分；
@@ -829,5 +836,57 @@
 
   .segmented-item {
     height: 32px;
+  }
+}
+
+/* ------------------------------------------------------------ 安装版 PWA 底栏
+ *
+ * Android 15 / Chrome 135+ 的 edge-to-edge 让系统手势条变透明，
+ * 安装版 PWA（WebAPK）没有 Chrome 浏览器那条白色 chin，
+ * 手势区直接透出壳层/主题背景（--chrome 深青），
+ * 于是浅灰底栏下面出现一条深青接缝。
+ *
+ * 这里只在 display-mode: standalone 下把底栏换成同一块深青：
+ * 浏览器模式仍由 Chrome 自己的白色工具条盖住系统区，保持原来的浅灰底栏。
+ */
+@media (display-mode: standalone) and (max-width: 1023px) {
+  .rail {
+    border-top-color: var(--chrome-line);
+    background: var(--chrome);
+    color: var(--chrome-muted);
+  }
+
+  .rail-item {
+    color: var(--chrome-muted);
+  }
+
+  .rail-item .rail-icon {
+    color: var(--chrome-faint);
+  }
+
+  /* 触屏上 hover 会粘住，保持透明；按下才给一档反馈 */
+  .rail-item:hover:not(:disabled) {
+    background: transparent;
+  }
+
+  .rail-item:hover:not(:disabled) .rail-icon {
+    color: var(--chrome-faint);
+  }
+
+  .rail-item:active:not(:disabled) {
+    background: var(--chrome-hover);
+  }
+
+  .rail-item.is-active,
+  .rail-item.is-active:hover:not(:disabled),
+  .rail-item.is-active:active:not(:disabled) {
+    background: var(--chrome-raised);
+    color: var(--chrome-accent);
+  }
+
+  .rail-item.is-active .rail-icon,
+  .rail-item.is-active:hover:not(:disabled) .rail-icon,
+  .rail-item.is-active:active:not(:disabled) .rail-icon {
+    color: var(--chrome-accent);
   }
 }

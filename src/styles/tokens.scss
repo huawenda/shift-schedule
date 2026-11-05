@@ -311,9 +311,10 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* 焦点框只给输入类控件：.input:focus 的边框 + 光晕、.select-trigger 的边框 + 光晕。
+ * 按钮 / 链接 / 导航 / 矩阵格一律不画 outline —— 鼠标点过再按 Shift 也不会突然冒外框。 */
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none !important;
 }
 
 /* 弹层关闭后把焦点还给触发元素，但不要立刻补一圈键盘焦点环（见 useDialogFocus） */

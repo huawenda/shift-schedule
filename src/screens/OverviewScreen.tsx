@@ -4,7 +4,7 @@ import { StatsPanels } from '../components/StatsPanels'
 import { TodoCard } from '../components/TodoCard'
 import { TodayPlaque } from '../components/TodayPlaque'
 import { getCalendarMeta } from '../data/calendarMeta'
-import { todayKey } from '../data/dateUtils'
+import { addDays, formatDateKey, parseDateKey, todayKey } from '../data/dateUtils'
 import { formatPeriodRange, type Period } from '../data/period'
 import {
   getRecordMap,
@@ -84,7 +84,28 @@ export function OverviewScreen({
     return period.dates.map(date => getTemplateShift(roster, self, date) ?? '休息')
   }, [period.dates, roster, self])
 
-  const moment = useCurrentShift(period.dates, selfShifts)
+  /**
+   * 夜班跨零点：昨天不在本期第一天时，也要把它算进「现在 / 下一班」。
+   * 例如本期从 20 日开始，19 日的夜班要到 20 日 08:00 才结束，
+   * 只拿本期 dates 会漏掉这段，误显示成「距下一班」。
+   */
+  const yesterday = formatDateKey(addDays(parseDateKey(today), -1))
+  const yesterdayInPeriod = period.dates.includes(yesterday)
+  const yesterdayShift = useMemo<ShiftType>(() => {
+    if (!self) return '休息'
+    const record = recordMap.get(overrideKey(self.id, yesterday))
+    return record?.shift ?? getTemplateShift(roster, self, yesterday) ?? '休息'
+  }, [recordMap, roster, self, yesterday])
+
+  const momentDates = useMemo(
+    () => (yesterdayInPeriod ? period.dates : [yesterday, ...period.dates]),
+    [period.dates, yesterday, yesterdayInPeriod]
+  )
+  const momentShifts = useMemo(
+    () => (yesterdayInPeriod ? selfShifts : [yesterdayShift, ...selfShifts]),
+    [selfShifts, yesterdayShift, yesterdayInPeriod]
+  )
+  const moment = useCurrentShift(momentDates, momentShifts)
 
   return (
     <div className="canvas is-overview is-pinned">

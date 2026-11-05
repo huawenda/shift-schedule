@@ -378,11 +378,11 @@
 /* 聚焦行：整行浅青底。姓名列是 sticky 且自带底色，必须一起改；
  * 写在 hover 之后，鼠标停在聚焦行上也不会把聚焦色盖掉。 */
 .matrix-row.is-focused {
-  background: var(--accent-weak);
+  background: var(--accent-soft);
 }
 
 .matrix-row.is-focused .matrix-name-cell {
-  background: var(--accent-weak);
+  background: var(--accent-soft);
   /* 左侧 2px 竖线跟着聚焦走：本人身份已经由徽章表达，不再重复占用这道线 */
   border-left-color: var(--accent);
 }
@@ -455,10 +455,20 @@
   justify-content: center;
   gap: 1px;
   height: var(--row-height);
+  padding: 0;
+  border: 0;
   border-right: 1px solid var(--rule);
+  background: transparent;
   color: var(--muted);
+  font-family: inherit;
   font-size: var(--fs-label);
   line-height: 1.1;
+  text-align: center;
+  cursor: pointer;
+}
+
+.matrix-day:hover {
+  color: var(--text);
 }
 
 .matrix-day:last-child {
@@ -476,6 +486,21 @@
   color: var(--text);
   font-weight: 600;
   box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/* 列聚焦：和行聚焦同一套语言（浅青底 + 2px 强调线）。
+ * 行聚焦的线在行首竖着，列聚焦的线在表头横着。 */
+.matrix-day.is-focused-column {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.matrix-day:focus-visible {
+  z-index: 5;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .matrix-day-num {
@@ -529,6 +554,11 @@
 
 .matrix-cell:last-child {
   border-right: 0;
+}
+
+/* 列聚焦铺在药丸后面：格子本底变浅青，药丸仍保留班次色 */
+.matrix-cell.is-column-focus {
+  background: var(--accent-soft);
 }
 
 /* 矩阵格子密集，焦点环往里收，避免被滚动容器裁掉 */
@@ -1481,8 +1511,62 @@
     padding: var(--sp-3);
   }
 
+  /* 抽屉底部按钮条和底栏同色：浏览器模式用浅灰（与 Chrome 底栏同一块），
+   * PWA standalone 用深青（与系统手势条同一块），底部不再出现白/青拼缝。
+   * 总高直接取底栏的 --rail-bar-height + 安全区：按钮条上缘和底栏上缘同高，
+   * 弹层开合时不会因为两条色带起点差几像素而抖动。 */
   .dialog-foot {
-    padding: 0 var(--sp-3) calc(var(--sp-3) + env(safe-area-inset-bottom));
+    height: calc(var(--rail-bar-height) + env(safe-area-inset-bottom));
+    padding: 0 var(--sp-3) env(safe-area-inset-bottom);
+    border-top: 1px solid var(--rule);
+    background: var(--surface-nav);
+  }
+
+  @media (display-mode: standalone) {
+    .dialog-foot {
+      border-top-color: var(--chrome-line);
+      background: var(--chrome);
+    }
+
+    .dialog-foot .btn-quiet {
+      color: var(--chrome-accent);
+    }
+
+    .dialog-foot .btn-quiet:hover:not(:disabled) {
+      background: var(--chrome-hover);
+      color: var(--chrome-text);
+    }
+
+    .dialog-foot .btn-quiet:disabled {
+      border-color: transparent;
+      background: transparent;
+      color: var(--chrome-faint);
+    }
+
+    /* 深底上主按钮换成浅青：继续用墨底会和抽屉底一个明度，几乎看不到 */
+    .dialog-foot .btn-primary {
+      border-color: var(--chrome-accent);
+      background: var(--chrome-accent);
+      color: var(--chrome);
+    }
+
+    .dialog-foot .btn-primary:hover:not(:disabled),
+    .dialog-foot .btn-primary:active:not(:disabled) {
+      border-color: var(--chrome-text);
+      background: var(--chrome-text);
+      color: var(--chrome);
+    }
+
+    .dialog-foot .btn-primary:disabled {
+      border-color: var(--chrome-line);
+      background: var(--chrome-raised);
+      color: var(--chrome-faint);
+    }
+
+    /* 未保存警告在深青底上用暖沙色，保留警示语义 */
+    .dialog-foot .dialog-discard {
+      color: var(--brand-day);
+    }
   }
 
   .dialog-options {
