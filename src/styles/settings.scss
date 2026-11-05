@@ -295,9 +295,22 @@
   min-width: 0;
 }
 
-/* 添加成员：最后一行有底线，按钮与表格拉开 8px，不再贴着错误提示 */
-.member-editor .btn-add {
+/* 表格底部动作行：添加成员 / 从 Excel 导入并排。
+ * 最后一行带底线，这一行与表格拉开 8px，不再贴着错误提示。 */
+.member-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
   margin-top: var(--sp-2);
+}
+
+/* 导入说明：只在设置页出现（向导里的成员表没有导入按钮） */
+.member-import-hint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1.5;
 }
 
 .member-editor-empty {

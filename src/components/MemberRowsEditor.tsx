@@ -60,6 +60,11 @@ interface MemberRowsEditorProps {
   selfId?: string
   /** 排序模式：卡片压成 44px 紧凑行，只有把手能拖（与小程序同一套） */
   sorting?: boolean
+  /**
+   * 提供时在「添加成员」旁多一个「从 Excel 导入」。
+   * 真正选文件、解析、落盘都在调用方（设置页），这里只出按钮。
+   */
+  onImport?: () => void
 }
 
 /**
@@ -77,7 +82,8 @@ export function MemberRowsEditor({
   onChange,
   sortable = false,
   selfId,
-  sorting = false
+  sorting = false,
+  onImport
 }: MemberRowsEditorProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [overIndex, setOverIndex] = useState<number | null>(null)
@@ -534,7 +540,18 @@ export function MemberRowsEditor({
         )
       })}
 
-      <button className="btn btn-add" type="button" onClick={append}>添加成员</button>
+      <div className="member-editor-actions">
+        <button className="btn btn-add" type="button" onClick={append}>添加成员</button>
+        {onImport ? (
+          <button className="btn btn-add" type="button" onClick={onImport}>从 Excel 导入</button>
+        ) : null}
+      </div>
+
+      {onImport ? (
+        <p className="member-import-hint">
+          Excel 首行写表头「姓名 / 班序 / 岗位」（后两列可空）；与现有成员重名的跳过，导入后直接保存。
+        </p>
+      ) : null}
     </div>
   )
 }

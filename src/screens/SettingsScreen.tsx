@@ -3,6 +3,7 @@ import { fromRows, MemberRowsEditor, toRows, type MemberRow, type PatternOption 
 import { PatternList } from '../components/PatternList'
 import { ProfileSection } from '../components/ProfileSection'
 import { isTauriShell } from '../platform/env'
+import { describeImport, mergeImportedMembers, readMemberSheet } from '../data/memberImport'
 import {
   canChooseBackupDir,
   getBackupDir,
@@ -74,9 +75,11 @@ export function SettingsScreen({
   onStartWizard
 }: SettingsScreenProps) {
   const fileRef = useRef<HTMLInputElement>(null)
+  /** Excel 批量导入：选文件 → 解析 → 追加 → 直接落盘（与排序「完成」同一套） */
+  const importRef = useRef<HTMLInputElement>(null)
   const [rows, setRows] = useState<MemberRow[]>(() => toRows(roster.members))
   const [dirty, setDirty] = useState(false)
-  /** 排序模式：卡片压成紧凑行，只有把手能拖；完成才回到编辑态，取消回滚快照 */
+  /** 排序模式：卡片压成紧凑行，只有把手能拖；「完成」直接落盘，「取消」回滚快照 */
   const [sorting, setSorting] = useState(false)
   const sortSnapshot = useRef<MemberRow[] | null>(null)
   const dirtyBeforeSort = useRef(false)
@@ -175,8 +178,21 @@ export function SettingsScreen({
     setSorting(true)
   }
 
+  /**
+   * 点「完成」即落盘。
+   *
+   * 排序只改成员数组顺序、不碰姓名与班序，没有校验风险 ——
+   * 再要求用户回到编辑态多点一次「保存成员设置」，只是把同一个动作做两遍。
+   * 只有「还有没填完的成员」时例外：那次保存会被校验拦住，此时保留草稿与吸底保存条，
+   * 并说明原因，避免让人以为顺序没生效。
+   */
   function finishSorting() {
     setSorting(false)
+    if (errors.length === 0) {
+      save()
+      return
+    }
+    onNotify('还有未填完的成员：顺序已保留，补齐后再保存。')
   }
 
   function cancelSorting() {
@@ -201,6 +217,45 @@ export function SettingsScreen({
         ? `已保存：删除 ${removed.length} 位成员，连带清理 ${removedOverrides} 条改班记录。`
         : `已保存：${drafts.length} 位成员。`
     )
+  }
+
+  /**
+   * 从 Excel 批量导入成员。
+   *
+   * 只在成员表通过校验时执行 —— 导入即保存，草稿里还有空姓名/重名的话，
+   * 会把半成品一起写进去。合并规则全在 data/memberImport：追加、重名跳过、
+   * 班序认不出来退回默认，界面只负责选文件与念结果。
+   */
+  async function importMembers(file: File) {
+    if (errors.length > 0) {
+      onNotify('成员表里还有没填完的行，先补齐后再导入。')
+      return
+    }
+
+    try {
+      const { people, blankRows } = readMemberSheet(await file.arrayBuffer())
+      if (people.length === 0) {
+        onNotify('没读到成员：首行请写表头「姓名 / 班序 / 岗位」。')
+        return
+      }
+
+      const result = mergeImportedMembers(
+        people,
+        roster.members.map(member => member.name),
+        patternOptions.map(option => ({ id: option.id, name: option.name })),
+        patternOptions[0]?.id ?? '4F'
+      )
+      const preview = { ...result, blankRows }
+
+      if (result.members.length > 0) {
+        const next = [...rows, ...toRows(result.members)]
+        setRows(next)
+        onSaveMembers(fromRows(next))
+      }
+      onNotify(describeImport(preview))
+    } catch {
+      onNotify('读取失败：这个文件不是有效的 Excel / CSV。')
+    }
   }
 
   return (
@@ -289,6 +344,23 @@ export function SettingsScreen({
                   sortable
                   sorting={sorting}
                   onChange={update}
+                  onImport={() => importRef.current?.click()}
+                />
+
+                {/* 从 Excel 导入：选完文件立即解析并落盘，不再走一次「保存成员设置」 */}
+                <input
+                  ref={importRef}
+                  accept=".xlsx,.xls,.csv"
+                  className="visually-hidden"
+                  name="member-import"
+                  tabIndex={-1}
+                  type="file"
+                  onChange={event => {
+                    const file = event.target.files?.[0]
+                    // 清空 value：同一个文件改完再导入也要能触发 change
+                    event.target.value = ''
+                    if (file) void importMembers(file)
+                  }}
                 />
 
                 {/* 与小程序一致：只有存在未保存改动时才出现吸底保存条；排序页不出现 */}
