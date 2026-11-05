@@ -508,9 +508,7 @@ export function SettingsScreen({
                     </div>
                   ) : null}
                 </div>
-                <p>按分组管理；每个成员最多归一个组。</p>
-                <p>有分组时，排序在具体分组里做；「全部」按分组顺序排列（没建分组时直接在「全部」里排）。</p>
-                <p>本人行只读，请在「个人资料」页改姓名 / 班序；分组可在「全部」里改。</p>
+                <p>本人行只读，请在「个人资料」页改姓名 / 班序；分组在「全部」里改。</p>
                 <p className="settings-meta">
                   当前 {rows.length} 位成员 · {roster.groups.length} 个分组
                 </p>

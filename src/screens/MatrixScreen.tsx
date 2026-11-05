@@ -68,8 +68,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
         <div>
           <h1 className="canvas-title">全员矩阵</h1>
           <p className="canvas-sub">
-            {formatPeriodRange(period)} · 共 {period.dates.length} 天 ·{' '}
-            {groupLabel ? `${groupLabel} · ${visibleMembers.length} 位成员` : `${roster.members.length} 位成员`}
+            {formatPeriodRange(period)} · 共 {period.dates.length} 天
           </p>
         </div>
 
