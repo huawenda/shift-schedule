@@ -68,66 +68,82 @@ function makeMoment(
   }
 }
 
+/** 「20:00 → 次日 08:00 · 12 小时」 */
+function rangeTextOf(dateKey: string, startHour: number, hours: number): string {
+  const start = atHour(dateKey, startHour)
+  const end = new Date(start.getTime() + hours * HOUR)
+  const crossesMidnight = startHour + hours >= 24
+  return `${clockText(start)} → ${crossesMidnight ? '次日 ' : ''}${clockText(end)} · ${hours} 小时`
+}
+
 /**
  * 当前 / 最近一班 —— 与桌面 `src/hooks/useCurrentShift.ts` 逐行同源。
  * 日期键用 'YYYY-MM-DD'；班次时段取 SHIFT_META 的 startHour / hours。
  * 夜班跨零点按「次日结束」算，每 30 秒刷新一次。
+ *
+ * **先把所有「正在进行的班次」找完，再找下一班。**
+ * 不能先看 today 的班次：11/5 的夜班要到 11/6 08:00 才结束，
+ * 过了零点时 today 已经是 11/6，先看 today 会跳到 11/6 的班次上，
+ * 把还在 11/5 夜班里的人误判成「距下一班 20 小时」。
  */
 export function buildMoment(dates: string[], shifts: ShiftType[], now: Date): ShiftMoment {
   const today = todayKey(now)
-  const todayIndex = dates.indexOf(today)
-  const todayShift = todayIndex >= 0 ? shifts[todayIndex] : undefined
-  const todayMeta = todayShift ? SHIFT_META[todayShift] : undefined
-
-  if (todayShift && todayMeta && todayMeta.startHour !== undefined && todayMeta.hours !== undefined) {
-    const start = atHour(today, todayMeta.startHour)
-    const end = new Date(start.getTime() + todayMeta.hours * HOUR)
-    const crossesMidnight = todayMeta.startHour + todayMeta.hours >= 24
-    const rangeText = `${clockText(start)} → ${crossesMidnight ? '次日 ' : ''}${clockText(end)} · ${todayMeta.hours} 小时`
-
-    if (now >= start && now < end) {
-      const span = splitSpan(end.getTime() - now.getTime())
-      return makeMoment('active', todayShift, today, {
-        rangeText,
-        countdownLabel: '距下班',
-        countdown: span.primary,
-        countdownTail: span.secondary,
-        progress: Math.min(1, Math.max(0, (now.getTime() - start.getTime()) / (end.getTime() - start.getTime())))
-      })
-    }
-
-    if (now < start) {
-      const span = splitSpan(start.getTime() - now.getTime())
-      return makeMoment('upcoming', todayShift, today, {
-        rangeText,
-        countdownLabel: '距上班',
-        countdown: span.primary,
-        countdownTail: span.secondary
-      })
-    }
-  }
 
   for (let index = 0; index < dates.length; index += 1) {
     const dateKey = dates[index]
-    if (dateKey <= today) continue
     const shift = shifts[index]
     const meta = SHIFT_META[shift]
     if (meta.startHour === undefined || meta.hours === undefined) continue
 
     const start = atHour(dateKey, meta.startHour)
-    const span = splitSpan(Math.max(0, start.getTime() - now.getTime()))
+    const end = new Date(start.getTime() + meta.hours * HOUR)
+    if (now < start || now >= end) continue
+
+    const span = splitSpan(end.getTime() - now.getTime())
+    return makeMoment('active', shift, dateKey, {
+      rangeText: rangeTextOf(dateKey, meta.startHour, meta.hours),
+      countdownLabel: '距下班',
+      countdown: span.primary,
+      countdownTail: span.secondary,
+      progress: Math.min(1, Math.max(0, (now.getTime() - start.getTime()) / (end.getTime() - start.getTime())))
+    })
+  }
+
+  for (let index = 0; index < dates.length; index += 1) {
+    const dateKey = dates[index]
+    if (dateKey < today) continue
+    const shift = shifts[index]
+    const meta = SHIFT_META[shift]
+    if (meta.startHour === undefined || meta.hours === undefined) continue
+
+    const start = atHour(dateKey, meta.startHour)
+    if (start <= now) continue
+
+    const span = splitSpan(start.getTime() - now.getTime())
     return makeMoment('upcoming', shift, dateKey, {
-      rangeText: `${formatMonthDay(dateKey)} · ${clockText(start)} 开始 · ${meta.hours} 小时`,
+      rangeText: dateKey === today
+        ? rangeTextOf(dateKey, meta.startHour, meta.hours)
+        : `${formatMonthDay(dateKey)} · ${clockText(start)} 开始 · ${meta.hours} 小时`,
       countdownLabel: '距上班',
       countdown: span.primary,
       countdownTail: span.secondary
     })
   }
 
+  const todayIndex = dates.indexOf(today)
+  const todayShift = todayIndex >= 0 ? shifts[todayIndex] : undefined
   return makeMoment('idle', todayShift ?? '休息', today, {
     rangeText: '本月没有更多排班',
     countdownLabel: '本月'
   })
+}
+
+/**
+ * 「今天」按工作日算：本人正在上夜班时，00:00–08:00 仍算夜班开始那天。
+ * 与桌面 `src/hooks/useWorkdayKey.ts` 的 `workdayKeyOf` 同源。
+ */
+export function workdayKeyOf(moment: ShiftMoment, now: Date = new Date()): string {
+  return moment.kind === 'active' ? moment.dateKey : todayKey(now)
 }
 
 export function useCurrentShift(dates: Ref<string[]>, shifts: Ref<ShiftType[]>) {

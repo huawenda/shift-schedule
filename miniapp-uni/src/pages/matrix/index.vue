@@ -80,92 +80,95 @@
         <view v-if="openKey !== null" class="summary-backdrop" @tap="openKey = null"></view>
       </view>
 
-      <!-- 矩阵：姓名列固定 + 日期区横向滚动 -->
-      <view v-if="rows.length > 0" class="matrix-card">
-        <view class="matrix">
-          <view class="names" :style="{ width: NAME_WIDTH + 'px' }">
-            <view class="name-head">
-              <text class="name-head-text">{{ byName ? '班序' : '成员' }}</text>
-            </view>
+      <!-- 矩阵：卡片高度固定；表头与姓名列用原生 sticky 固定，日期区横纵滚动 -->
+      <view v-if="rows.length > 0" class="matrix-card" :style="{ height: matrixHeight + 'px' }">
+        <scroll-view
+          scroll-x
+          scroll-y
+          :using-sticky="true"
+          :show-scrollbar="false"
+          class="matrix"
+          @scroll="onScroll"
+        >
+          <view class="matrix-inner" :style="{ width: NAME_WIDTH + daysWidth + 'px' }">
+            <!-- 表头 sticky top；姓名格 sticky left（横向滚动时列头不动） -->
+            <view class="matrix-head">
+              <view class="name-head" :style="{ width: NAME_WIDTH + 'px' }">
+                <text class="name-head-text">{{ byName ? '班序' : '成员' }}</text>
+              </view>
 
-            <view
-              v-for="(row, rowIndex) in rows"
-              :key="row.id"
-              class="name-row"
-              :class="{
-                'is-focused': focusId === row.id,
-                'is-last': rowIndex === rows.length - 1
-              }"
-              @tap="toggleFocus(row.id)"
-            >
-              <template v-if="byName">
-                <view class="name-line">
-                  <text class="pattern is-row-mode">{{ row.patternText }}</text>
-                  <text v-if="row.isSelf" class="badge-self">本人</text>
-                </view>
-              </template>
-              <template v-else>
-                <view class="name-line">
-                  <text class="name">{{ row.name }}</text>
-                  <text v-if="row.isSelf" class="badge-self">本人</text>
-                </view>
-                <text class="pattern">{{ row.patternText }}</text>
-              </template>
-            </view>
-          </view>
-
-          <view class="days-wrap">
-            <scroll-view
-              scroll-x
-              :show-scrollbar="false"
-              class="days"
-              @scroll="onScroll"
-            >
-              <view class="days-inner" :style="{ width: daysWidth + 'px' }">
-                <view class="day-head" :style="gridStyle">
-                  <view
-                    v-for="(day, dayIndex) in days"
-                    :key="day.key"
-                    class="matrix-day"
-                    :class="{
-                      'is-weekend': day.isWeekend,
-                      'is-today': day.isToday,
-                      'is-last': dayIndex === days.length - 1
-                    }"
-                  >
-                    <text class="matrix-day-num">{{ day.day }}</text>
-                    <text class="matrix-day-week">{{ day.weekday }}</text>
-                  </view>
-                </view>
-
+              <view class="day-head" :style="dayAreaStyle">
                 <view
-                  v-for="(row, rowIndex) in rows"
-                  :key="row.id"
-                  class="day-row"
+                  v-for="(day, dayIndex) in days"
+                  :key="day.key"
+                  class="matrix-day"
                   :class="{
-                    'is-focused': focusId === row.id,
-                    'is-last': rowIndex === rows.length - 1
+                    'is-weekend': day.isWeekend,
+                    'is-today': day.isToday,
+                    'is-focused-column': focusDate === day.date,
+                    'is-last': dayIndex === days.length - 1
                   }"
-                  :style="gridStyle"
+                  @tap="toggleColumnFocus(day.date)"
                 >
-                  <view
-                    v-for="(cell, cellIndex) in row.cells"
-                    :key="cell.key"
-                    class="matrix-cell"
-                    :class="{ 'is-last': cellIndex === row.cells.length - 1 }"
-                    @tap="openEditor(row.id, cell.date)"
-                  >
-                    <view class="matrix-pill" :class="cell.tone ? 't-' + cell.tone : 'is-blank'">
-                      {{ cell.text }}
-                    </view>
+                  <text class="matrix-day-num">{{ day.day }}</text>
+                  <text class="matrix-day-week">{{ day.weekday }}</text>
+                </view>
+              </view>
+            </view>
+
+            <view v-for="(row, rowIndex) in rows" :key="row.id" class="matrix-row">
+              <view
+                class="name-row"
+                :class="{
+                  'is-focused': focusId === row.id,
+                  'is-last': rowIndex === rows.length - 1
+                }"
+                :style="{ width: NAME_WIDTH + 'px' }"
+                @tap="toggleFocus(row.id)"
+              >
+                <template v-if="byName">
+                  <view class="name-line">
+                    <text class="pattern is-row-mode">{{ row.patternText }}</text>
+                    <text v-if="row.isSelf" class="badge-self">本人</text>
+                  </view>
+                </template>
+                <template v-else>
+                  <view class="name-line">
+                    <text class="name">{{ row.name }}</text>
+                    <text v-if="row.isSelf" class="badge-self">本人</text>
+                  </view>
+                  <text class="pattern">{{ row.patternText }}</text>
+                </template>
+              </view>
+
+              <view
+                class="day-row"
+                :class="{
+                  'is-focused': focusId === row.id,
+                  'is-last': rowIndex === rows.length - 1
+                }"
+                :style="dayAreaStyle"
+              >
+                <view
+                  v-for="(cell, cellIndex) in row.cells"
+                  :key="cell.key"
+                  class="matrix-cell"
+                  :class="{
+                    'is-last': cellIndex === row.cells.length - 1,
+                    'is-column-focus': cell.date === focusDate
+                  }"
+                  @tap="openEditor(row.id, cell.date)"
+                >
+                  <view class="matrix-pill" :class="cell.tone ? 't-' + cell.tone : 'is-blank'">
+                    {{ cell.text }}
                   </view>
                 </view>
               </view>
-            </scroll-view>
-
-            <view class="matrix-edge" :class="{ 'is-hidden': !edgeVisible }"></view>
+            </view>
           </view>
-        </view>
+        </scroll-view>
+
+        <view class="matrix-edge" :class="{ 'is-hidden': !edgeVisible }"></view>
       </view>
 
       <view v-else class="empty">
@@ -179,7 +182,6 @@
           <view class="legend-swatch" :class="'t-' + item.tone"></view>
           <text class="legend-text">{{ item.label }}</text>
         </view>
-        <text class="legend-hint">左右滑动查看整月</text>
       </view>
     </view>
   </view>
@@ -196,22 +198,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { onShareAppMessage } from '@dcloudio/uni-app'
+import { computed, nextTick, ref, watch } from 'vue'
+import { onReady, onShareAppMessage } from '@dcloudio/uni-app'
 import { frame } from '../../utils/app-frame'
 import NavBar from '../../components/nav-bar.vue'
 import TabBar from '../../components/tab-bar.vue'
 import DayEditor from '../../components/day-editor.vue'
+import { useCurrentShift, workdayKeyOf } from '../../composables/useCurrentShift'
 import { rosterStore } from '../../store/roster'
 import {
   getEffectiveShift,
   getOverrideMap,
+  getSelf,
   isSelf,
   patternLabelOf,
   type Roster
 } from '../../data/roster'
 import { formatPeriodRange, getPeriod } from '../../data/period'
-import { isWeekend, todayKey, weekdayLabel } from '../../data/dateUtils'
+import { addDays, formatDateKey, isWeekend, parseDateKey, todayKey, weekdayLabel } from '../../data/dateUtils'
 import { SHIFT_META, SHIFT_TYPES, type ShiftType } from '../../data/shifts'
 
 /** 姓名列宽 / 日期列宽：与桌面 ≤639 档同一套（日期列 22 → 手机上加宽到 30，色块接近方格） */
@@ -230,12 +234,61 @@ onShareAppMessage(() => ({
 }))
 
 const period = computed(() => getPeriod(store.state.month))
+
+/**
+ * 概览条与图例的实际高度：矩阵高度要把它们和底栏之间的空间全部扣掉，
+ * 才能保证图例始终落在底栏上方。二者高度由内容决定，挂载后量一次。
+ */
+const summaryHeight = ref(106)
+const legendHeight = ref(18)
+onReady(() => {
+  nextTick(() => {
+    const query = uni.createSelectorQuery()
+    query.select('.summary').boundingClientRect()
+    query.select('.legend').boundingClientRect()
+    query.exec(result => {
+      const summary = result[0] as { height?: number } | null
+      const legend = result[1] as { height?: number } | null
+      if (summary?.height) summaryHeight.value = summary.height
+      if (legend?.height) legendHeight.value = legend.height
+    })
+  })
+})
+
+/**
+ * 「今天」按本人的班次算：夜班跨零点时，00:00–08:00 仍标在夜班开始那天，
+ * 08:00 才切到新一天；概览条也按这一天统计。
+ *
+ * 只看最近两天（昨天 + 今天）的本人班次，找出正在进行的那个班次，
+ * 它的开始日期就是工作日；没有进行中的班次才回落到日历今天。
+ */
 const today = todayKey()
+const yesterday = formatDateKey(addDays(parseDateKey(today), -1))
+const workdayDates = computed(() => [yesterday, today])
+const workdayShifts = computed<ShiftType[]>(() => {
+  const current = roster.value
+  const self = getSelf(current)
+  if (!self) return ['休息', '休息']
+  const overrideMap = getOverrideMap(current)
+  return [yesterday, today].map(date => (
+    getEffectiveShift(current, self, date, overrideMap) ?? '休息'
+  ))
+})
+const workdayMoment = useCurrentShift(workdayDates, workdayShifts)
+const workday = computed(() => workdayKeyOf(workdayMoment.value, new Date()))
 
 const mode = ref<'shift' | 'name'>('shift')
 const byName = computed(() => mode.value === 'name')
+/** 聚焦行：同一时间只高亮一行，再点同一个人取消 */
 const focusId = ref<string | null>(null)
+/** 聚焦列：点日期表头切换，再点同一天取消；与行聚焦可以同时存在 */
+const focusDate = ref<string | null>(null)
 const openKey = ref<string | null>(null)
+
+// 翻月后日期集合变了，列聚焦的日期不一定还在，直接收掉
+watch(period, value => {
+  if (focusDate.value && !value.dates.includes(focusDate.value)) focusDate.value = null
+})
 
 /** 改班弹层：矩阵只改班次（加班在个人日历里录） */
 const editorTarget = ref<{ memberId: string; date: string } | null>(null)
@@ -244,7 +297,7 @@ const subText = computed(() => (
   `${formatPeriodRange(period.value)} · 共 ${period.value.dates.length} 天 · ${roster.value.members.length} 位成员`
 ))
 
-const inPeriod = computed(() => period.value.dates.includes(today))
+const inPeriod = computed(() => period.value.dates.includes(workday.value))
 
 /* ------------------------------------------------------------ 概览条
 
@@ -273,7 +326,7 @@ const summaryGroups = computed(() => {
   const currentRoster = roster.value
   const overrideMap = getOverrideMap(currentRoster)
   currentRoster.members.forEach(member => {
-    const shift = getEffectiveShift(currentRoster, member, today, overrideMap)
+    const shift = getEffectiveShift(currentRoster, member, workday.value, overrideMap)
     if (!shift) return
     const group = SHIFT_GROUP[shift]
     if (!group) return
@@ -316,7 +369,7 @@ const days = computed(() => period.value.dates.map(date => ({
   date,
   day: date.slice(8, 10),
   weekday: weekdayLabel(date),
-  isToday: date === today,
+  isToday: date === workday.value,
   isWeekend: isWeekend(date)
 })))
 
@@ -347,10 +400,37 @@ const rows = computed(() => {
 })
 
 const columnWidth = computed(() => (byName.value ? NAME_COL_WIDTH : SHIFT_COL_WIDTH))
-const gridStyle = computed(() => (
-  `grid-template-columns: repeat(${days.value.length}, minmax(${columnWidth.value}px, 1fr))`
-))
 const daysWidth = computed(() => days.value.length * columnWidth.value)
+/** 日期区（表头与每行）的宽度与列宽：必须显式给宽度，行才有和表头一样的横向尺寸 */
+const dayAreaStyle = computed(() => ({
+  width: `${daysWidth.value}px`,
+  gridTemplateColumns: `repeat(${days.value.length}, minmax(${columnWidth.value}px, 1fr))`
+}))
+
+/* 与 base.scss 的 `.canvas` 内边距、子块间距保持一致：
+ * 上 12 + 固定页头 56.4 + 下 12；summary / matrix / legend 之间各 12 */
+const CANVAS_TOP = 80.4
+const FLOW_GAP = 12
+const CANVAS_BOTTOM = 12
+
+/** 扣掉底栏、页头、概览条、图例与间距后，矩阵能占用的最大高度 */
+const matrixAvailable = computed(() => {
+  const available = uni.getWindowInfo().windowHeight
+    - frame.navHeight
+    - frame.tabBarHeight
+    - CANVAS_TOP
+    - summaryHeight.value
+    - FLOW_GAP * 2
+    - legendHeight.value
+    - CANVAS_BOTTOM
+  return Math.max(160, available - 2)
+})
+
+/**
+ * 卡片高度固定为「图例上方剩余空间」：不随成员数伸缩，行多时在卡片内部纵向滚动。
+ * 表头与姓名列的固定交给原生 sticky，不依赖 JS 滚动同步，滚动时不会抖。
+ */
+const matrixHeight = computed(() => matrixAvailable.value)
 
 /* 横向滚动条被藏了，右缘用一层渐隐提示「还有半个月」；滚到头就收掉 */
 const scrollLeft = ref(0)
@@ -366,6 +446,10 @@ function onScroll(event: { detail: { scrollLeft: number } }) {
 
 function toggleFocus(id: string) {
   focusId.value = focusId.value === id ? null : id
+}
+
+function toggleColumnFocus(date: string) {
+  focusDate.value = focusDate.value === date ? null : date
 }
 
 /* ------------------------------------------------------------ 交互 */

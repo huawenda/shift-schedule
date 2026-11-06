@@ -75,8 +75,8 @@ function onTap(cell: CalendarCellView) {
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
+  gap: 4px;
+  padding-bottom: 4px;
   color: var(--muted);
   font-size: var(--fs-label);
   text-align: center;
@@ -86,65 +86,63 @@ function onTap(cell: CalendarCellView) {
   text-align: center;
 }
 
+/* 圆角格子：每格独立成块，缝隙直接露出画布色，不再用 1px 底色画网格线。
+ * 与桌面 `.calendar-grid` 同一套：4px 缝、透明底、无外投影。 */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 1px;
-  overflow: hidden;
-  border-radius: var(--radius-panel);
-  background: var(--rule);
-  box-shadow: var(--shadow-raised);
+  gap: 4px;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
+/* 1px 细边 + 6px 圆角 + 白底，每格自成一张小卡。
+ * 边线不能省：画布是浅灰，只靠白底浮起来时格与格之间只剩 4px 缝，边界会糊成一片。 */
 .cal-cell {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 4px 5px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
   background: var(--surface);
 }
 
+/* 周期外：无边框 + 灰底，文字保持原对比度，靠「不是卡片」表达不属于本期 */
 .cal-cell.is-outside {
+  border-color: transparent;
   background: var(--surface-sunken);
 }
 
-/* WXSS 不支持通配选择器（`> *` 会编译失败），逐个子元素降透明度 */
-.cal-cell.is-outside .cal-day,
-.cal-cell.is-outside .cal-meta,
-.cal-cell.is-outside .cal-ot,
-.cal-cell.is-outside .cal-leave,
-.cal-cell.is-outside .cal-shift,
-.cal-cell.is-outside .cal-legal {
-  opacity: 0.45;
+.cal-cell.is-outside .cal-shift {
+  opacity: 0.6;
 }
 
+/* 今天：1px 强调色边 + 1px 外扩描边（视觉 2px，但不吃内边距、不改变格子尺寸） */
 .cal-cell.is-today {
-  background: var(--accent-weak);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .cal-day {
-  position: relative;
   display: block;
   align-self: flex-start;
-  color: var(--muted);
+  color: var(--text);
   font-size: var(--fs-small);
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
+  /* 待办短横的位置永远预留，有/没有待办的两格高度一致 */
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent;
 }
 
-/* 待办：日期左侧 3×12 竖条，画在格子的 5px 内边距里 */
-.cal-day.is-todo::before {
-  position: absolute;
-  top: 50%;
-  left: -4px;
-  width: 3px;
-  height: 12px;
-  transform: translateY(-50%);
-  border-radius: 2px;
-  background: var(--todo-ink);
-  content: "";
+/* 有待办：日期数字下面压一道 2px 短横，宽度跟着数字本身走（与桌面同一套） */
+.cal-day.is-todo {
+  border-bottom-color: var(--todo-ink);
 }
 
 .cal-cell.is-today .cal-day {
@@ -155,7 +153,7 @@ function onTap(cell: CalendarCellView) {
 .cal-meta {
   display: block;
   overflow: hidden;
-  color: var(--faint);
+  color: var(--muted);
   font-size: var(--fs-micro);
   line-height: 1.3;
 }
@@ -167,7 +165,7 @@ function onTap(cell: CalendarCellView) {
 .cal-shift {
   margin-top: auto;
   padding: 2px 0;
-  border-radius: var(--radius-mark);
+  border-radius: var(--radius-sub);
   font-size: var(--fs-label);
   font-weight: 500;
   text-align: center;

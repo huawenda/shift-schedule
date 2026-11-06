@@ -83,7 +83,7 @@ import { getCalendarMeta } from '../../data/calendarMeta'
 import { computeMonthStats } from '../../data/stats'
 import { formatLeaveDuration } from '../../data/leave'
 import { formatOvertimeHours } from '../../data/overtime'
-import { todayKey } from '../../data/dateUtils'
+import { addDays, formatDateKey, parseDateKey, todayKey } from '../../data/dateUtils'
 import { SHIFT_META, type ShiftType } from '../../data/shifts'
 
 const store = rosterStore
@@ -143,10 +143,28 @@ const todayTodoCount = computed(() => (
   roster.value.todos.filter(todo => todo.date === today).length
 ))
 
-const moment = useCurrentShift(
-  computed(() => period.value.dates),
-  computed(() => selfShifts.value)
-)
+/**
+ * 夜班跨零点：昨天不在本期第一天时，也要把它算进「现在 / 下一班」。
+ * 例如本期从 20 日开始，19 日的夜班要到 20 日 08:00 才结束，
+ * 只拿本期 dates 会漏掉这段，误显示成「距下一班」。
+ */
+const yesterday = formatDateKey(addDays(parseDateKey(today), -1))
+const yesterdayInPeriod = computed(() => period.value.dates.includes(yesterday))
+const yesterdayShift = computed<ShiftType>(() => {
+  const current = self.value
+  if (!current) return '休息'
+  const record = recordMap.value.get(overrideKey(current.id, yesterday))
+  return record?.shift ?? getTemplateShift(roster.value, current, yesterday) ?? '休息'
+})
+
+const momentDates = computed(() => (
+  yesterdayInPeriod.value ? period.value.dates : [yesterday, ...period.value.dates]
+))
+const momentShifts = computed(() => (
+  yesterdayInPeriod.value ? selfShifts.value : [yesterdayShift.value, ...selfShifts.value]
+))
+
+const moment = useCurrentShift(momentDates, momentShifts)
 
 /** 本月内的待办 */
 const periodTodos = computed(() => roster.value.todos.filter(todo => (

@@ -140,7 +140,7 @@
 
           <view class="settings-panel">
             <view v-if="sorting" class="sort-block">
-              <text class="sort-hint">按住左侧把手上下拖动；顺序就是全员矩阵的行顺序。</text>
+              <text class="sort-hint">按住左侧把手上下拖动；顺序就是全员矩阵的行顺序，点「完成」立即保存。</text>
               <view class="sort-list">
                 <view
                   v-for="(row, index) in rows"
@@ -832,7 +832,7 @@ const memberDirty = ref(false)
  *
  * 点「排序」后卡片压成 44px 紧凑行，只有左侧把手能拖；
  * 其余行按固定行距让位，松手即重排 rows（顺序 = 矩阵行顺序）。
- * 排序只改本地数组，仍走「保存成员设置」落盘；取消恢复进入排序前的快照。 */
+ * 点「完成」直接落盘；取消恢复进入排序前的快照。 */
 const sorting = ref(false)
 const sortSnapshot = ref<Row[] | null>(null)
 const dirtyBeforeSort = ref(false)
@@ -885,6 +885,14 @@ function finishSorting() {
   sorting.value = false
   stopAutoScroll()
   resetDrag()
+  // 排序只改成员数组顺序、不碰姓名与班序，没有校验风险 ——
+  // 直接落盘，不再要求用户回到编辑态再点一次「保存成员设置」。
+  if (memberErrors.value.length === 0) {
+    saveMembers()
+    return
+  }
+  // 还有没填完的成员：那次保存会被校验拦住，保留草稿与吸底保存条并说明原因
+  toast('还有未填完的成员：顺序已保留，补齐后再保存')
 }
 
 function cancelSorting() {

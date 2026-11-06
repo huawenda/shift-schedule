@@ -2,8 +2,8 @@
  * 全员矩阵 —— 与桌面 ≤639 档 1:1。
  *
  * 结构对齐桌面 `.matrix`：姓名列 88px 固定，日期区 30 天横滚；
- * 因为小程序 scroll-view 里 position: sticky 不可靠，这里把姓名列拆成独立一栏，
- * 与日期区共用同一套行高（36px），列线仍然逐行对齐。
+ * 整块内容放在一个 scroll-view 里，表头 `sticky top`、姓名列 `sticky left`（靠 using-sticky 生效），
+ * 姓名列与日期区共用同一套行高（37px），列线逐行对齐。
  */
 
 .page {
@@ -192,23 +192,36 @@
   box-shadow: var(--shadow-raised);
 }
 
+/* 卡片高度固定，滚动全交给这一个 scroll-view；表头/姓名列靠原生 sticky 固定 */
 .matrix {
+  width: 100%;
+  height: 100%;
+}
+
+.matrix-inner {
+  position: relative;
+}
+
+/* 冻结表头：纵向吸顶，横向随内容滚 */
+.matrix-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
-  min-width: 0;
+  background: var(--surface-tint);
 }
 
-/* 姓名列：固定 88px，背景自带底色（对应桌面 sticky 那种「不透明行头」） */
-.names {
-  flex: 0 0 auto;
-  border-right: 1px solid var(--border);
-  background: var(--surface);
-}
-
+/* 姓名列：固定 88px；横向滚动时用 sticky left 钉在左侧 */
 .name-head {
+  position: sticky;
+  left: 0;
+  z-index: 4;
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   height: 37px;
   padding: 0 6px;
+  border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   background: var(--surface-tint);
   color: var(--muted);
@@ -223,12 +236,17 @@
 }
 
 .name-row {
+  position: sticky;
+  left: 0;
+  z-index: 2;
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   justify-content: center;
   gap: 1px;
   height: 37px;
   padding: 0 6px;
+  border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--rule);
   border-left: 2px solid transparent;
   background: var(--surface);
@@ -236,7 +254,7 @@
 
 .name-row.is-focused {
   border-left-color: var(--accent);
-  background: var(--accent-weak);
+  background: var(--accent-soft);
 }
 
 .name-row.is-last {
@@ -276,22 +294,13 @@
   font-size: var(--fs-small);
 }
 
-.days-wrap {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.days {
-  width: 100%;
-}
-
-.days-inner {
-  overflow: hidden;
+.matrix-row {
+  display: flex;
 }
 
 .day-head {
   display: grid;
+  flex: 0 0 auto;
   height: 37px;
   border-bottom: 1px solid var(--border);
   background: var(--surface-tint);
@@ -322,6 +331,15 @@
   box-shadow: inset 0 -2px 0 var(--accent);
 }
 
+/* 列聚焦：和行聚焦同一套语言（浅青底 + 2px 强调线）。
+ * 行聚焦的线在行首竖着，列聚焦的线在表头横着。 */
+.matrix-day.is-focused-column {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
 .matrix-day.is-last {
   border-right: 0;
 }
@@ -338,13 +356,14 @@
 
 .day-row {
   display: grid;
+  flex: 0 0 auto;
   height: 37px;
   border-bottom: 1px solid var(--rule);
   background: var(--surface);
 }
 
 .day-row.is-focused {
-  background: var(--accent-weak);
+  background: var(--accent-soft);
 }
 
 .day-row.is-last {
@@ -365,6 +384,11 @@
 
 .matrix-cell.is-last {
   border-right: 0;
+}
+
+/* 列聚焦铺在药丸后面：格子本底变浅青，药丸仍保留班次色 */
+.matrix-cell.is-column-focus {
+  background: var(--accent-soft);
 }
 
 .matrix-pill {
@@ -393,6 +417,7 @@
   top: 0;
   right: 0;
   bottom: 0;
+  z-index: 5;
   width: 32px;
   background: linear-gradient(to left, var(--surface), rgba(255, 255, 255, 0));
   pointer-events: none;
@@ -451,11 +476,5 @@
 }
 
 .legend-text {
-  color: var(--muted);
-}
-
-/* 触屏没有滚轮可横滚，单独给一句「左右滑动」 */
-.legend-hint {
-  margin-left: auto;
   color: var(--muted);
 }
