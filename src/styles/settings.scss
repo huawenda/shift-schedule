@@ -8,7 +8,10 @@
   border-bottom: 1px solid var(--rule);
 }
 
+/* 最后一个区块不再留段间距：滚动到底时，卡片与底栏的距离只由画布/滚动容器的
+ * 底部内边距决定，与概览、矩阵两页保持同一档。 */
 .settings-section:last-of-type {
+  padding-bottom: 0;
   border-bottom: 0;
 }
 

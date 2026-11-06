@@ -1344,15 +1344,15 @@
   }
 
   /* 矩阵：姓名列 120 → 88、行高 40 → 36；30 天仍然横滚，不压缩字号到读不了。
-   * 日期列下限 22 → 28：手机上一列太窄既看不清日期，手指也点不准。 */
+   * 日期列下限 22 → 28：手机上一列太窄既看不清日期，手指也点不准。
+   * 图例与底栏的留白统一交给 `.canvas-flow` 的底部内边距，这里不再另加 8px —
+   * 否则矩阵页会比概览页多出这一档，三个页面滚到底的间距就不等了。 */
   .matrix {
     --matrix-name-width: 88px;
     --row-height: 36px;
     --matrix-day-min: 28px;
     --matrix-name-cell: 48px;
     --matrix-pill-gap: 3px;
-    /* 图例与底部标签栏之间留一点呼吸，矩阵高度随之收 8px */
-    padding-bottom: var(--sp-2);
   }
 
   .matrix-name-cell {

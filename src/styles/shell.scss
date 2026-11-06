@@ -703,6 +703,13 @@
     padding-bottom: 0;
   }
 
+  /* 滚动到底时，最后一张卡片与底栏之间留一格呼吸。
+   * 这段留白在滚动容器**内部**，不会像画布内边距那样在裁剪线和底栏之间形成白条；
+   * 没有它时「每日明细」的合计行会直接贴住底栏。 */
+  .canvas.is-pinned > .canvas-flow {
+    padding-bottom: var(--sp-4);
+  }
+
   /* 侧栏 → 底部标签栏。
    * .rail-nav / .rail-foot 用 display: contents 把自己「展开」，
    * 三个入口于是直接成为 .rail 的 flex 项，才能等宽平分；
