@@ -120,6 +120,42 @@
   gap: var(--sp-2);
 }
 
+/* 内置只读班序默认收起：一行 44px 入口，展开后才出现 13 条 chips */
+.pattern-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  min-height: 44px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-tint);
+}
+
+.pattern-collapsed-text {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.pattern-collapsed-more {
+  color: var(--accent);
+  font-size: var(--fs-small);
+}
+
+.pattern-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.pattern-group-toggle {
+  padding: 4px 0 4px var(--sp-2);
+  color: var(--accent);
+  font-size: var(--fs-small);
+}
+
 .pattern-group-label {
   display: flex;
   align-items: baseline;
@@ -772,8 +808,22 @@
 }
 
 .save-bar-hint {
+  flex: 1;
+  min-width: 0;
   color: var(--warning-ink);
   font-size: var(--fs-small);
+}
+
+/* 排序不是「未保存警告」，提示语回到中性色 */
+.save-bar-hint.is-sort {
+  color: var(--muted);
+}
+
+.save-bar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--sp-2);
 }
 
 .save-bar-btn {

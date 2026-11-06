@@ -177,6 +177,11 @@ function exportBackup(): string {
   return backupText(state.roster)
 }
 
+/** 只解析、不落盘：导入前先给用户看「将覆盖什么」 */
+function previewBackup(text: string): ImportResult {
+  return parseBackup(text)
+}
+
 function importBackup(text: string): ImportResult {
   const result = parseBackup(text)
   commit(result.roster)
@@ -202,6 +207,7 @@ export const rosterStore = {
   loadDemo,
   clearAll,
   exportBackup,
+  previewBackup,
   importBackup
 }
 

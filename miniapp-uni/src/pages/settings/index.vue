@@ -41,29 +41,39 @@
 
           <view class="settings-panel">
             <view class="pattern-group">
-              <text class="pattern-group-label">内置 {{ builtin.length }} 条 · 只读</text>
-              <view class="pattern-chips">
-                <view
-                  v-for="pattern in builtin"
-                  :key="pattern.id"
-                  class="pattern-chip"
-                  :class="{ 'is-on': builtinPreviewId === pattern.id }"
-                  @tap="toggleBuiltin(pattern.id)"
-                >
-                  <text class="pattern-chip-name">{{ pattern.name }}</text>
-                  <view class="pattern-bar">
-                    <view
-                      v-for="(tone, index) in pattern.tones"
-                      :key="index"
-                      class="pattern-bar-seg"
-                      :class="'t-' + tone"
-                    ></view>
+              <!-- 只读资料默认收起：首屏先给自建班序与成员，需要查内置时再展开 -->
+              <view v-if="!builtinOpen" class="pattern-collapsed" @tap="builtinOpen = true">
+                <text class="pattern-collapsed-text">内置 {{ builtin.length }} 条只读班序</text>
+                <text class="pattern-collapsed-more">展开 ›</text>
+              </view>
+              <template v-else>
+                <view class="pattern-group-head">
+                  <text class="pattern-group-label">内置 {{ builtin.length }} 条 · 只读</text>
+                  <text class="pattern-group-toggle" @tap="builtinOpen = false">收起</text>
+                </view>
+                <view class="pattern-chips">
+                  <view
+                    v-for="pattern in builtin"
+                    :key="pattern.id"
+                    class="pattern-chip"
+                    :class="{ 'is-on': builtinPreviewId === pattern.id }"
+                    @tap="toggleBuiltin(pattern.id)"
+                  >
+                    <text class="pattern-chip-name">{{ pattern.name }}</text>
+                    <view class="pattern-bar">
+                      <view
+                        v-for="(tone, index) in pattern.tones"
+                        :key="index"
+                        class="pattern-bar-seg"
+                        :class="'t-' + tone"
+                      ></view>
+                    </view>
                   </view>
                 </view>
-              </view>
+              </template>
             </view>
 
-            <view v-if="builtinPreview" class="pattern-preview">
+            <view v-if="builtinOpen && builtinPreview" class="pattern-preview">
               <view class="pattern-preview-head">
                 <text class="pattern-preview-title">{{ builtinPreview.name }}</text>
               </view>
@@ -127,10 +137,8 @@
             <view class="label-head">
               <view class="label-mark"></view>
               <text class="label-title">成员</text>
-              <view class="label-actions">
-                <view v-if="sorting" class="sort-action" @tap="finishSorting">完成</view>
-                <view v-else class="sort-action" @tap="enterSorting">排序</view>
-                <view v-if="sorting" class="sort-action is-quiet" @tap="cancelSorting">取消</view>
+              <view v-if="!sorting" class="label-actions">
+                <view class="sort-action" @tap="enterSorting">排序</view>
               </view>
             </view>
             <text class="settings-p">姓名自定，人数不限。</text>
@@ -388,14 +396,21 @@
     </view>
   </view>
 
-  <!-- 有未保存改动：吸附在 tabBar 上方，不用滚到页尾 -->
+  <!-- 排序 / 未保存改动：都吸附在 tabBar 上方，不随名单滚走 -->
   <view
-    v-if="tab === 'roster' && !sorting && memberDirty"
+    v-if="tab === 'roster' && (sorting || memberDirty)"
     class="save-bar"
     :style="{ bottom: frame.tabBarHeight + 'px' }"
   >
-    <text class="save-bar-hint">有未保存的修改</text>
+    <text class="save-bar-hint" :class="{ 'is-sort': sorting }">
+      {{ sorting ? '拖拽调整顺序，完成即保存' : '有未保存的修改' }}
+    </text>
+    <view v-if="sorting" class="save-bar-actions">
+      <view class="btn btn-quiet save-bar-btn" @tap="cancelSorting">取消</view>
+      <view class="btn btn-primary save-bar-btn" @tap="finishSorting">完成</view>
+    </view>
     <view
+      v-else
       class="btn btn-primary save-bar-btn"
       :class="{ 'is-disabled': memberErrors.length > 0 }"
       @tap="saveMembers"
@@ -660,6 +675,8 @@ const custom = computed(() => roster.value.patterns.map(item => {
 
 const atLimit = computed(() => roster.value.patterns.length >= MAX_CUSTOM_PATTERNS)
 
+/** 内置班序默认收起，避免 13 条只读资料把成员配置挤到第二屏 */
+const builtinOpen = ref(false)
 const builtinPreviewId = ref<string | null>(null)
 const customPreviewId = ref<string | null>(null)
 
@@ -1094,9 +1111,9 @@ function rowError(index: number): string {
   return ''
 }
 
-/** 有未保存改动时，页面底部为吸附保存栏多留出 64px */
+/** 排序态或未保存改动时，页面底部为吸附操作条多留出 64px */
 const pageBottom = computed(() => (
-  frame.tabBarHeight + (tab.value === 'roster' && !sorting.value && memberDirty.value ? 64 : 0)
+  frame.tabBarHeight + (tab.value === 'roster' && (sorting.value || memberDirty.value) ? 64 : 0)
 ))
 
 function onRowInput(index: number, field: 'name' | 'position', event: any) {
@@ -1324,12 +1341,34 @@ function onExport() {
 function onImport() {
   uni.getClipboardData({
     success: res => {
+      const text = String(res.data || '')
+      let preview: ReturnType<typeof store.previewBackup>
       try {
-        const result = store.importBackup(String(res.data || ''))
-        toast(`已恢复 ${result.memberCount} 人`)
+        preview = store.previewBackup(text)
       } catch (error) {
         toast((error as Error).message)
+        return
       }
+
+      const dropped = preview.droppedMembers.length > 0
+        ? `；${preview.droppedMembers.length} 位成员因班序不存在无法恢复`
+        : ''
+      uni.showModal({
+        title: '覆盖当前数据？',
+        content: `备份含 ${preview.memberCount} 位成员、${preview.overrideCount} 条改班记录、`
+          + `${preview.todoCount} 条待办${dropped}。导入后会覆盖当前 ${roster.value.members.length} 位成员与个人信息。`,
+        confirmText: '覆盖导入',
+        confirmColor: '#b42318',
+        success: modal => {
+          if (!modal.confirm) return
+          try {
+            const result = store.importBackup(text)
+            toast(`已恢复 ${result.memberCount} 人`)
+          } catch (error) {
+            toast((error as Error).message)
+          }
+        }
+      })
     },
     fail: () => toast('读不到剪贴板')
   })

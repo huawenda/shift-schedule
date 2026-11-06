@@ -138,7 +138,11 @@ const selfDefaultShifts = computed<ShiftType[]>(() => {
 })
 
 const todayInPeriod = computed(() => period.value.dates.includes(today))
-const todayMeta = computed(() => getCalendarMeta(today).label)
+const todayMeta = computed(() => {
+  const meta = getCalendarMeta(today)
+  // 节日/节气仍显示名字；普通日子显示带月份的农历，如「十月廿八」
+  return meta.isFestival ? meta.label : meta.lunarLabel
+})
 const todayTodoCount = computed(() => (
   roster.value.todos.filter(todo => todo.date === today).length
 ))
