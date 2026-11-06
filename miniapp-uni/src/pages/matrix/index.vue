@@ -82,13 +82,13 @@
 
       <!-- 矩阵：卡片高度固定；表头与姓名列用原生 sticky 固定，日期区横纵滚动 -->
       <view v-if="rows.length > 0" class="matrix-card" :style="{ height: matrixHeight + 'px' }">
-        <scroll-view
-          scroll-x
-          scroll-y
-          :using-sticky="true"
-          :show-scrollbar="false"
+        <view
           class="matrix"
-          @scroll="onScroll"
+          :class="{ 'is-lock-x': dragAxis === 'x', 'is-lock-y': dragAxis === 'y' }"
+          @touchstart="onDragStart"
+          @touchmove="onDragMove"
+          @touchend="onDragEnd"
+          @touchcancel="onDragEnd"
         >
           <view class="matrix-inner" :style="{ width: NAME_WIDTH + daysWidth + 'px' }">
             <!-- 表头 sticky top；姓名格 sticky left（横向滚动时列头不动） -->
@@ -166,9 +166,7 @@
               </view>
             </view>
           </view>
-        </scroll-view>
-
-        <view class="matrix-edge" :class="{ 'is-hidden': !edgeVisible }"></view>
+        </view>
       </view>
 
       <view v-else class="empty">
@@ -432,16 +430,37 @@ const matrixAvailable = computed(() => {
  */
 const matrixHeight = computed(() => matrixAvailable.value)
 
-/* 横向滚动条被藏了，右缘用一层渐隐提示「还有半个月」；滚到头就收掉 */
-const scrollLeft = ref(0)
-const edgeVisible = ref(true)
-const visibleWidth = computed(() => (
-  Math.max(0, uni.getWindowInfo().windowWidth - 24 - NAME_WIDTH)
-))
+/**
+ * 一次手势只允许滚一个方向：第一次明显位移时按主方向锁定另一轴。
+ * 做法是给滚动容器加上 `is-lock-x / is-lock-y`，把另一轴的 overflow 关掉，
+ * 原生滚动仍然由 WebView 处理，不需要 JS 逐帧跟手，因此不会抖。
+ */
+type DragAxis = 'x' | 'y' | null
+const DRAG_LOCK_THRESHOLD = 8
+const dragAxis = ref<DragAxis>(null)
+let dragStartX = 0
+let dragStartY = 0
 
-function onScroll(event: { detail: { scrollLeft: number } }) {
-  scrollLeft.value = event.detail.scrollLeft
-  edgeVisible.value = scrollLeft.value < daysWidth.value - visibleWidth.value - 1
+function onDragStart(event: any) {
+  const touch = event.touches?.[0]
+  if (!touch) return
+  dragStartX = touch.clientX
+  dragStartY = touch.clientY
+  dragAxis.value = null
+}
+
+function onDragMove(event: any) {
+  if (dragAxis.value) return
+  const touch = event.touches?.[0]
+  if (!touch) return
+  const dx = touch.clientX - dragStartX
+  const dy = touch.clientY - dragStartY
+  if (Math.abs(dx) < DRAG_LOCK_THRESHOLD && Math.abs(dy) < DRAG_LOCK_THRESHOLD) return
+  dragAxis.value = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y'
+}
+
+function onDragEnd() {
+  dragAxis.value = null
 }
 
 function toggleFocus(id: string) {

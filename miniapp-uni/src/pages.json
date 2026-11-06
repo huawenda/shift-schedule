@@ -1,7 +1,7 @@
 {
   "pages": [
     { "path": "pages/overview/index", "style": { "navigationStyle": "custom" } },
-    { "path": "pages/matrix/index", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/matrix/index", "style": { "navigationStyle": "custom", "disableScroll": true } },
     { "path": "pages/settings/index", "style": { "navigationStyle": "custom" } }
   ],
   "tabBar": {
