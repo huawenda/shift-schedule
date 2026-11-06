@@ -94,6 +94,13 @@ export function diffRoster(prev: Roster, next: Roster): SyncChangeSet {
   }
 }
 
+/**
+ * 按时间顺序合并两批变更：first 是旧的一批，second 是后发生的一批。
+ *
+ * 顺序很关键：后一批的写覆盖前一批的写，后一批的删除也要能撤销前一批的写。
+ * 之前写成「先收集两批写入，再删掉所有已写入的键」，导致「先改、后撤销」时
+ * 删除被旧写入吞掉，云端留着旧数据、下次合并还会把它复活。
+ */
 function mergeList<T>(
   firstUpserts: T[],
   firstRemoved: string[],
@@ -102,12 +109,23 @@ function mergeList<T>(
   keyOf: (item: T) => string
 ): { upserts: T[], removed: string[] } {
   const map = new Map<string, T>()
-  firstUpserts.forEach(item => map.set(keyOf(item), item))
-  secondUpserts.forEach(item => map.set(keyOf(item), item))
+  const removed = new Set<string>()
 
-  const removed = new Set<string>([...firstRemoved, ...secondRemoved])
-  // 后一批重新加回来的行，不能再删
-  map.forEach((_, key) => removed.delete(key))
+  firstUpserts.forEach(item => map.set(keyOf(item), item))
+  firstRemoved.forEach(key => {
+    map.delete(key)
+    removed.add(key)
+  })
+
+  secondUpserts.forEach(item => {
+    const key = keyOf(item)
+    map.set(key, item)
+    removed.delete(key)
+  })
+  secondRemoved.forEach(key => {
+    map.delete(key)
+    removed.add(key)
+  })
 
   return { upserts: [...map.values()], removed: [...removed] }
 }
