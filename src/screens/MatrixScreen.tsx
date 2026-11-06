@@ -1,12 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { SummaryBar } from '../components/SummaryBar'
 import { TeamMatrix, type MatrixMode } from '../components/TeamMatrix'
 import { formatPeriodRange, type Period } from '../data/period'
 import { groupNameOf, membersOfGroup, type Member, type Roster } from '../data/roster'
+import { useWorkdayKey } from '../hooks/useWorkdayKey'
 
 interface MatrixScreenProps {
   roster: Roster
   period: Period
+  /** 视图切换与分组筛选由 App 持有，切到别的页再回来仍是上次的选择 */
+  mode: MatrixMode
+  onModeChange: (mode: MatrixMode) => void
+  /** null = 全部；UNGROUPED = 未分组；其余是分组 id */
+  groupFilter: string | null
+  onGroupFilterChange: (groupFilter: string | null) => void
   onEdit: (member: Member, date: string) => void
 }
 
@@ -19,16 +26,25 @@ const UNGROUPED = '__ungrouped__'
  * 顶部那 3 格概览（今日白班/夜班/休息，白特与夜特并入对应班次）放在这一页而不是日历页 ——
  * 它统计的是全员出勤，与矩阵同源；日历页只讲本人。
  *
- * 视图切换（按班次 / 按姓名）只存在组件 state 里，**不落存储**：
- * 离开这一页再回来就是默认的「按班次」，与 web 端一致。
+ * 视图切换（按班次 / 按姓名）与分组筛选都由 App 持有：离开这一页再回来
+ * 保持上次的选择，但**不落存储** —— 刷新应用才回到默认。
  *
- * 分组筛选同理：默认「全部」，切组后概览条与矩阵一起收窄。
  * 分组筛选不是独立页面，也不改变行顺序 —— 只是把 roster.members 过滤成当前组。
  */
-export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
-  const [mode, setMode] = useState<MatrixMode>('shift')
-  /** null = 全部；UNGROUPED = 未分组；其余是分组 id */
-  const [groupFilter, setGroupFilter] = useState<string | null>(null)
+export function MatrixScreen({
+  roster,
+  period,
+  mode,
+  onModeChange,
+  groupFilter,
+  onGroupFilterChange,
+  onEdit
+}: MatrixScreenProps) {
+  /**
+   * 矩阵与概览条的「今天」跟本人的班走：夜班跨零点时，
+   * 00:00–08:00 仍标在夜班开始那天，08:00 才切到新一天。
+   */
+  const workday = useWorkdayKey(roster)
 
   const ungroupedCount = roster.members.filter(member => !member.groupId).length
 
@@ -36,11 +52,11 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
   useEffect(() => {
     if (!groupFilter) return
     if (groupFilter === UNGROUPED) {
-      if (ungroupedCount === 0) setGroupFilter(null)
+      if (ungroupedCount === 0) onGroupFilterChange(null)
       return
     }
-    if (!roster.groups.some(group => group.id === groupFilter)) setGroupFilter(null)
-  }, [groupFilter, roster.groups, ungroupedCount])
+    if (!roster.groups.some(group => group.id === groupFilter)) onGroupFilterChange(null)
+  }, [groupFilter, onGroupFilterChange, roster.groups, ungroupedCount])
 
   const visibleMembers = useMemo(
     () => (groupFilter === UNGROUPED
@@ -78,7 +94,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
               aria-pressed={mode === 'shift'}
               className={`segmented-item${mode === 'shift' ? ' is-on' : ''}`}
               type="button"
-              onClick={() => setMode('shift')}
+              onClick={() => onModeChange('shift')}
             >
               按班次
             </button>
@@ -86,7 +102,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
               aria-pressed={mode === 'name'}
               className={`segmented-item${mode === 'name' ? ' is-on' : ''}`}
               type="button"
-              onClick={() => setMode('name')}
+              onClick={() => onModeChange('name')}
             >
               按姓名
             </button>
@@ -102,7 +118,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
               aria-pressed={groupFilter === null}
               className={`matrix-group-chip${groupFilter === null ? ' is-on' : ''}`}
               type="button"
-              onClick={() => setGroupFilter(null)}
+              onClick={() => onGroupFilterChange(null)}
             >
               <span>全部</span>
               <span className="matrix-group-chip-count">{roster.members.length}</span>
@@ -115,7 +131,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
                   className={`matrix-group-chip${groupFilter === group.id ? ' is-on' : ''}`}
                   key={group.id}
                   type="button"
-                  onClick={() => setGroupFilter(group.id)}
+                  onClick={() => onGroupFilterChange(group.id)}
                 >
                   <span>{group.name}</span>
                   <span className="matrix-group-chip-count">{count}</span>
@@ -127,7 +143,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
                 aria-pressed={groupFilter === UNGROUPED}
                 className={`matrix-group-chip${groupFilter === UNGROUPED ? ' is-on' : ''}`}
                 type="button"
-                onClick={() => setGroupFilter(UNGROUPED)}
+                onClick={() => onGroupFilterChange(UNGROUPED)}
               >
                 <span>未分组</span>
                 <span className="matrix-group-chip-count">{ungroupedCount}</span>
@@ -136,7 +152,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
           </div>
         ) : null}
 
-        <SummaryBar period={period} roster={viewRoster} />
+        <SummaryBar date={workday} period={period} roster={viewRoster} />
 
         {groupEmpty ? (
           <div className="empty">
@@ -149,6 +165,7 @@ export function MatrixScreen({ roster, period, onEdit }: MatrixScreenProps) {
             period={period}
             resetKey={groupFilter ?? 'all'}
             roster={viewRoster}
+            today={workday}
             onEdit={onEdit}
           />
         )}

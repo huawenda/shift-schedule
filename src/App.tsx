@@ -3,6 +3,7 @@ import { Shell, type Route } from './components/Shell'
 import { DayEditor } from './components/DayEditor'
 import { ScrollOverlay } from './components/ScrollOverlay'
 import { ShiftEditor } from './components/ShiftEditor'
+import type { MatrixMode } from './components/TeamMatrix'
 import { ToastHost } from './components/ToastHost'
 import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
@@ -108,6 +109,13 @@ export function App() {
   const settingsTab = location.settingsTab
   const [wizardSkipped, setWizardSkipped] = useState(false)
   const [editor, setEditor] = useState<{ memberId: string; date: string; source: EditSource } | null>(null)
+  /**
+   * 矩阵页的视图（按班次 / 按姓名）与分组筛选提到 App 里：
+   * 矩阵组件在切页时会卸载，状态放这里才能「从其他页切回来保持上次选择」。
+   * 只在内存里，刷新应用回默认。
+   */
+  const [matrixMode, setMatrixMode] = useState<MatrixMode>('shift')
+  const [matrixGroup, setMatrixGroup] = useState<string | null>(null)
 
   /** 当前结算月固定到挂载时刻：跨过午夜不会自己翻月，刷新才更新，和原来的行为一致 */
   const currentMonth = useMemo(() => currentMonthKey(), [])
@@ -365,9 +373,13 @@ export function App() {
           />
         ) : route === 'matrix' ? (
           <MatrixScreen
+            groupFilter={matrixGroup}
+            mode={matrixMode}
             period={period}
             roster={api.roster}
             onEdit={(member, date) => openEditor(member, date, 'matrix')}
+            onGroupFilterChange={setMatrixGroup}
+            onModeChange={setMatrixMode}
           />
         ) : (
           <OverviewScreen

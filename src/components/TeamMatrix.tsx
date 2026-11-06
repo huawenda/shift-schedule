@@ -3,7 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { getEffectiveShift, getOverrideMap, isSelf, patternLabelOf, type Member, type Roster } from '../data/roster'
 import type { Period } from '../data/period'
 import { SHIFT_META, SHIFT_TYPES, shiftToneClass, type ShiftType } from '../data/shifts'
-import { formatDayNumber, isWeekend, todayKey, weekdayLabel } from '../data/dateUtils'
+import { formatDayNumber, isWeekend, weekdayLabel } from '../data/dateUtils'
 
 /** 矩阵视图：按班次（格子里一个班次字）/ 按姓名（格子里写人名，底色仍是班次色） */
 export type MatrixMode = 'shift' | 'name'
@@ -13,6 +13,8 @@ interface TeamMatrixProps {
   period: Period
   /** 视图。按姓名时行头让位给班序，姓名搬进格子 */
   mode: MatrixMode
+  /** 工作日：夜班跨零点时停在夜班开始那天，不按日历日 */
+  today: string
   /** 分组筛选的键；换组时清空聚焦行与键盘游标（行号已经换了含义） */
   resetKey?: string
   onEdit: (member: Member, date: string) => void
@@ -41,8 +43,7 @@ interface TeamMatrixProps {
  * 改为「鼠标在矩阵范围内滚滚轮 → 横滚」，见下面的 wheel 监听。
  * 行数多到矩阵纵向也溢出时，滚轮先归纵向，横向改用 Shift + 滚轮。
  */
-export function TeamMatrix({ roster, period, mode, resetKey, onEdit }: TeamMatrixProps) {
-  const today = todayKey()
+export function TeamMatrix({ roster, period, mode, today, resetKey, onEdit }: TeamMatrixProps) {
   const overrideMap = getOverrideMap(roster)
   const dayCount = period.dates.length
   const byName = mode === 'name'

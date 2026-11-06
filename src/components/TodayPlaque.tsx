@@ -20,16 +20,21 @@ interface TodayPlaqueProps {
   onEditDate: (date: string) => void
 }
 
-/** 本月色点的顺序与标签，与值班牌第三列一致 */
-type TallyKey = 'day' | 'night' | 'rest' | 'daySpecial' | 'nightSpecial' | 'leave'
+/**
+ * 本月色点的顺序与标签：固定六项，2 行 × 3 项。
+ *
+ * 这里**不分特勤**，白特 / 夜特各占一格；事假不显示（请假时长看下方「本月概览」）。
+ * 法定独立：标了法定的那天已从白/夜/白特/夜特/休息里扣掉。
+ */
+type TallyKey = 'day' | 'night' | 'rest' | 'daySpecial' | 'nightSpecial' | 'legal'
 
 const TALLY: Array<{ key: TallyKey; label: string; tone: string }> = [
   { key: 'day', label: '白班', tone: 'day' },
   { key: 'night', label: '夜班', tone: 'night' },
-  { key: 'rest', label: '休', tone: 'rest' },
+  { key: 'rest', label: '休息', tone: 'rest' },
   { key: 'daySpecial', label: '白特', tone: 'dayx' },
   { key: 'nightSpecial', label: '夜特', tone: 'nightx' },
-  { key: 'leave', label: '事假', tone: 'leave' }
+  { key: 'legal', label: '法定', tone: 'legal' }
 ]
 
 /**
@@ -53,7 +58,15 @@ export function TodayPlaque({
   todayInPeriod,
   onEditDate
 }: TodayPlaqueProps) {
-  const tallyItems = TALLY.filter(item => summary[item.key] > 0)
+  // 固定六项、0 天也显示：格位不随数据跳动，方便逐项对账
+  const tallyDays: Record<TallyKey, number> = {
+    day: summary.day,
+    night: summary.night,
+    rest: summary.rest,
+    daySpecial: summary.daySpecial,
+    nightSpecial: summary.nightSpecial,
+    legal: summary.legal
+  }
   const progress = `${Math.round(moment.progress * 100)}%`
 
   /** 节奏条按默认班次切成连续组：同组内 2px，组间 8px */
@@ -137,10 +150,10 @@ export function TodayPlaque({
         <div className="plaque-cell">
           <span className="plaque-label">本月</span>
           <div className="plaque-tally">
-            {tallyItems.map(item => (
+            {TALLY.map(item => (
               <div key={item.key}>
                 <i aria-hidden="true" className={`is-${item.tone}`} />
-                <b>{summary[item.key]}</b>
+                <b>{tallyDays[item.key]}</b>
                 <span>{item.label}</span>
               </div>
             ))}

@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { getEffectiveShift, getOverrideMap, type Member, type Roster } from '../data/roster'
 import type { ShiftType } from '../data/shifts'
 import type { Period } from '../data/period'
-import { todayKey } from '../data/dateUtils'
 
 interface SummaryBarProps {
   roster: Roster
   period: Period
+  /** 工作日：夜班跨零点时停在夜班开始那天，不按日历日 */
+  date: string
 }
 
 type CountKey = 'day' | 'night' | 'rest'
@@ -58,10 +59,9 @@ function SpecialBadge({ special }: { special: PersonEntry['special'] }) {
  * 卡片固定只放「班次 + 人数 + 一行姓名摘要 + 查看名单」，
  * 完整名单放进点击展开的浮层，不让姓名长度参与卡片宽度计算。
  */
-export function SummaryBar({ roster, period }: SummaryBarProps) {
+export function SummaryBar({ roster, period, date }: SummaryBarProps) {
   const [openLabel, setOpenLabel] = useState<string | null>(null)
-  const today = todayKey()
-  const inPeriod = period.dates.includes(today)
+  const inPeriod = period.dates.includes(date)
   const overrideMap = getOverrideMap(roster)
 
   const groups: Record<CountKey, PersonEntry[]> = {
@@ -72,7 +72,7 @@ export function SummaryBar({ roster, period }: SummaryBarProps) {
 
   if (inPeriod) {
     roster.members.forEach(member => {
-      const shift: ShiftType | null = getEffectiveShift(roster, member, today, overrideMap)
+      const shift: ShiftType | null = getEffectiveShift(roster, member, date, overrideMap)
       if (!shift) return
       const group = SHIFT_GROUP[shift]
       if (group) groups[group.key].push({ member, special: group.special })
