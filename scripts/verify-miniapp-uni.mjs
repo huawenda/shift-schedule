@@ -89,7 +89,8 @@ check('概览有改班抽屉', overview.includes('day-editor'))
 
 const matrix = read('pages/matrix/index.wxml')
 check('矩阵有姓名列', matrix.includes('name-row'))
-check('矩阵有横向滚动', matrix.includes('scroll-view'))
+check('矩阵有横纵滚动容器', matrix.includes('matrix-inner') && matrix.includes('matrix-pill'))
+check('矩阵关闭边界回弹', read('pages/matrix/index.wxss').includes('overscroll-behavior:none'))
 check('矩阵有药丸格', matrix.includes('matrix-pill'))
 check('矩阵有名单浮层', matrix.includes('summary-popover'))
 check('矩阵有改班抽屉', matrix.includes('day-editor'))
@@ -97,18 +98,49 @@ check('矩阵有改班抽屉', matrix.includes('day-editor'))
 const settings = read('pages/settings/index.wxml')
 check('设置页有两段分页', settings.includes('segmented-item'))
 check('设置页有班序区块', settings.includes('pattern-chip') && settings.includes('pattern-grid'))
-check('设置页有成员卡片', settings.includes('member-row'))
+check('设置页有成员卡片', settings.includes('member-card'))
 check('设置页有个人资料', settings.includes('salary-grid'))
 check('设置页有危险操作', settings.includes('btn-danger'))
-check('设置页有底部抽屉', settings.includes('sheet-backdrop'))
+check('设置页有底部抽屉组件', settings.includes('settings-sheet'))
 
 /* ------------------------------------------------------------ 组件与残留 */
 
-for (const name of ['nav-bar', 'tab-bar', 'day-editor', 'pattern-grid']) {
+for (const name of ['nav-bar', 'tab-bar', 'day-editor', 'pattern-grid', 'settings-sheet']) {
   // uni 把组件平铺在 components/ 下，文件名是 <组件名>.wxml
   const files = [`components/${name}.wxml`, `components/${name}.json`, `components/${name}.wxss`, `components/${name}.js`]
   check(`${name} 组件齐全`, files.every(file => existsSync(join(DIST, file))))
 }
+
+/* ------------------------------------------------------------ 样式纪律 */
+
+const SRC_DIR = 'miniapp-uni/src'
+const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\(/g
+const colorOffenders = []
+
+function scanStyleColors(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      scanStyleColors(full)
+      continue
+    }
+    if (!/\.(vue|scss)$/.test(entry.name)) continue
+    // 令牌文件本身就是颜色定义处；uni.scss 是 uni-app 模板，不参与页面样式
+    if (entry.name === 'tokens.scss' || entry.name === 'uni.scss') continue
+
+    const raw = readFileSync(full, 'utf8')
+    const content = entry.name.endsWith('.vue')
+      ? [...raw.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(match => match[1]).join('\n')
+      : raw
+    const found = content.match(COLOR_LITERAL)
+    if (found) {
+      colorOffenders.push(`${full.replace('miniapp-uni/src/', '')}: ${[...new Set(found)].join(', ')}`)
+    }
+  }
+}
+
+scanStyleColors(SRC_DIR)
+check('页面与组件样式无硬编码颜色', colorOffenders.length === 0, colorOffenders.join(' | ') || 'ok')
 
 const allFiles = readdirSync(DIST, { recursive: true }).map(String)
 check(

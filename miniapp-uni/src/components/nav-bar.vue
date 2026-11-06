@@ -140,7 +140,7 @@ function onBack() {
 }
 
 .is-pressed {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--chrome-wash);
 }
 
 /* CSS 画箭头：桌面用的是内联 SVG，字体里的 ‹ › 会随字体变形 */

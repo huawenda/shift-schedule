@@ -145,7 +145,8 @@ miniapp-uni/
 
 ### 4.4 抽屉（≤639 统一贴底）
 
-公共外观：遮罩 `rgba(15,20,24,.26)`、面板 `width 100%`、`max-height 88vh`、上圆角 16、`shadow-sheet`、底栏 `padding-bottom: 12 + env(safe-area-inset-bottom)`；关闭动作都在标题右侧。
+公共外观：遮罩 `var(--scrim)`、面板 `width 100%`、`max-height 88vh`、上圆角 16、`shadow-sheet`、底栏 `padding-bottom: 12 + env(safe-area-inset-bottom)`；关闭动作都在标题右侧。
+设置页的四个抽屉统一走 `components/settings-sheet.vue`（遮罩 / 标题行 / 内容 / 可选底栏），页面只提供内容。
 
 - **day-editor（个人日历）**：标题 = 成员名，副标 = `M月D日 · 周X · 默认 班次`。
   - `班次 / 待办` 两页签。班次页：六格班次（3×2、42px）+ 加班卡（预设胶囊 + 小时输入）+ 法定卡（是/否）+ 事假时长（4h/8h）；改班次时把不支持的值原地清掉；白特/夜特必须记加班才能保存。

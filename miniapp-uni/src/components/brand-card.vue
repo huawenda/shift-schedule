@@ -54,7 +54,7 @@ withDefaults(defineProps<{ hint?: string }>(), {
   border-radius: 12px;
   background: var(--brand-ink);
   /* 深框上给标识留一圈极淡石光线，深青盘不至于和背景糊成一块 */
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px var(--chrome-inset);
 }
 
 /* 夜：直径 58×2/192×52 = 31.42 */

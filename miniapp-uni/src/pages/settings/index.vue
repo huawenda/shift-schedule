@@ -35,8 +35,6 @@
               <view class="label-mark"></view>
               <text class="label-title">班序</text>
             </view>
-            <text class="settings-p">班序是 {{ CYCLE_LENGTH }} 天一轮的循环，锚点日 {{ ANCHOR_DATE }}。</text>
-            <text class="settings-p">内置 {{ builtin.length }} 条只读；自建的最多 {{ MAX_CUSTOM }} 条，可改可删。</text>
           </view>
 
           <view class="settings-panel">
@@ -141,8 +139,6 @@
                 <view class="sort-action" @tap="enterSorting">排序</view>
               </view>
             </view>
-            <text class="settings-p">姓名自定，人数不限。</text>
-            <text class="settings-p">本人行为只读，请在「个人资料」页修改。</text>
             <text class="settings-meta">当前 {{ roster.members.length }} 位成员</text>
           </view>
 
@@ -253,8 +249,6 @@
               <view class="label-mark"></view>
               <text class="label-title">本人</text>
             </view>
-            <text class="settings-p">这是你自己的记录本：日历只显示本人。</text>
-            <text class="settings-p">更改姓名或班序会清空本人名下的考勤记录与薪资。</text>
             <text class="settings-meta">{{ self ? `本人 ${self.name} · ${patternLabel(self.patternId)}` : '还没有设置本人' }}</text>
           </view>
 
@@ -312,7 +306,6 @@
               <view class="label-mark"></view>
               <text class="label-title">薪资</text>
             </view>
-            <text class="settings-p">每月固定的基线，用来算时薪、加班费与实发。</text>
           </view>
 
           <view class="settings-panel">
@@ -351,7 +344,6 @@
               <view class="label-mark"></view>
               <text class="label-title">备份</text>
             </view>
-            <text class="settings-p">数据只保存在这台手机的这个小程序里。换手机、清理小程序数据前，请先导出。</text>
             <text class="settings-meta">当前 {{ roster.members.length }} 位成员 · {{ roster.overrides.length }} 条改班记录</text>
           </view>
 
@@ -360,7 +352,6 @@
               <view class="btn" @tap="onExport">导出备份</view>
               <view class="btn" @tap="onImport">导入备份</view>
             </view>
-            <text class="settings-hint">导出的是一段 JSON 文本（复制到剪贴板）；导入会整体覆盖当前数据，含个人信息。</text>
           </view>
         </view>
 
@@ -370,7 +361,6 @@
               <view class="label-mark is-danger"></view>
               <text class="label-title">清空数据</text>
             </view>
-            <text class="settings-p">删除本机保存的全部成员与改班记录，回到首次配置状态。此操作不可撤销。</text>
           </view>
 
           <view class="settings-panel">
@@ -400,7 +390,7 @@
   <view
     v-if="tab === 'roster' && (sorting || memberDirty)"
     class="save-bar"
-    :style="{ bottom: frame.tabBarHeight + 'px' }"
+    :style="{ bottom: `${frame.tabBarHeight + 8}px` }"
   >
     <text class="save-bar-hint" :class="{ 'is-sort': sorting }">
       {{ sorting ? '拖拽调整顺序，完成即保存' : '有未保存的修改' }}
@@ -409,178 +399,156 @@
       <view class="btn btn-quiet save-bar-btn" @tap="cancelSorting">取消</view>
       <view class="btn btn-primary save-bar-btn" @tap="finishSorting">完成</view>
     </view>
-    <view
-      v-else
-      class="btn btn-primary save-bar-btn"
-      :class="{ 'is-disabled': memberErrors.length > 0 }"
-      @tap="saveMembers"
-    >保存成员设置</view>
+    <view v-else class="save-bar-actions">
+      <view class="btn btn-quiet save-bar-btn" @tap="discardMemberDraft">取消</view>
+      <view
+        class="btn btn-primary save-bar-btn"
+        :class="{ 'is-disabled': memberErrors.length > 0 }"
+        @tap="saveMembers"
+      >保存成员设置</view>
+    </view>
   </view>
 
   <tab-bar :current="2" />
 
   <!-- ------------------------------------------------------------ 班序选择抽屉 -->
-  <view v-if="picker" class="sheet-backdrop" @tap="picker = null">
-    <view class="sheet" @tap.stop>
-      <view class="sheet-head">
-        <text class="sheet-title">选择班序</text>
-        <view class="sheet-close" @tap="picker = null">关闭</view>
-      </view>
-      <view class="sheet-body">
-        <view class="picker-group">
-          <text class="pattern-group-label">内置 {{ builtin.length }} 条</text>
-          <view class="picker-grid">
-            <view
-              v-for="pattern in builtin"
-              :key="pattern.id"
-              class="picker-chip"
-              :class="{ 'is-on': picker.currentId === pattern.id }"
-              @tap="choosePattern(pattern.id)"
-            >{{ pattern.name }}</view>
-          </view>
-        </view>
-        <view v-if="custom.length > 0" class="picker-group">
-          <text class="pattern-group-label">自定义 {{ custom.length }} 条</text>
-          <view class="picker-grid">
-            <view
-              v-for="pattern in custom"
-              :key="pattern.id"
-              class="picker-chip"
-              :class="{ 'is-on': picker.currentId === pattern.id }"
-              @tap="choosePattern(pattern.id)"
-            >{{ pattern.name }}</view>
-          </view>
-        </view>
+  <settings-sheet v-if="picker" title="选择班序" @close="picker = null">
+    <view class="picker-group">
+      <text class="pattern-group-label">内置 {{ builtin.length }} 条</text>
+      <view class="picker-grid">
+        <view
+          v-for="pattern in builtin"
+          :key="pattern.id"
+          class="picker-chip"
+          :class="{ 'is-on': picker.currentId === pattern.id }"
+          @tap="choosePattern(pattern.id)"
+        >{{ pattern.name }}</view>
       </view>
     </view>
-  </view>
+    <view v-if="custom.length > 0" class="picker-group">
+      <text class="pattern-group-label">自定义 {{ custom.length }} 条</text>
+      <view class="picker-grid">
+        <view
+          v-for="pattern in custom"
+          :key="pattern.id"
+          class="picker-chip"
+          :class="{ 'is-on': picker.currentId === pattern.id }"
+          @tap="choosePattern(pattern.id)"
+        >{{ pattern.name }}</view>
+      </view>
+    </view>
+  </settings-sheet>
 
   <!-- ------------------------------------------------------------ 班序编辑抽屉 -->
-  <view v-if="editor" class="sheet-backdrop" @tap="closeEditor">
-    <view class="sheet" @tap.stop>
-      <view class="sheet-head">
-        <view class="sheet-head-main">
-          <text class="sheet-title">{{ editor.existingId ? '编辑班序' : '新建班序' }}</text>
-          <text class="sheet-sub">{{ CYCLE_LENGTH }} 天一轮 · 锚点日 {{ ANCHOR_DATE }}</text>
-        </view>
-        <view class="sheet-close" @tap="closeEditor">关闭</view>
-      </view>
-
-      <view class="sheet-body">
-        <view class="field">
-          <text class="field-label">班序名称</text>
-          <input
-            class="input"
-            :value="editor.name"
-            maxlength="12"
-            placeholder="比如：4A、4B、4C"
-            @input="onEditorName"
-          />
-        </view>
-
-        <pattern-grid :shifts="editor.shifts" :active="editor.active" @pick="pickCell" />
-
-        <text class="editor-active">
-          第 {{ editor.active + 1 }} 天 · 现在是「{{ SHIFT_META[editor.shifts[editor.active]].label }}」，点下面的班次填入，自动跳下一格
-        </text>
-
-        <view class="shift-palette">
-          <view
-            v-for="item in PALETTE"
-            :key="item.shift"
-            class="palette-option"
-            :class="['t-' + item.tone, { 'is-on': editor.shifts[editor.active] === item.shift }]"
-            @tap="assignShift(item.shift)"
-          >{{ item.label }}</view>
-        </view>
-
-        <view v-if="editor.errors.length > 0" class="error-list">
-          <text v-for="error in editor.errors" :key="error" class="error-item">{{ error }}</text>
-        </view>
-      </view>
-
-      <view class="sheet-foot">
-        <text class="editor-hint">自建班序第一天对应锚点日 {{ ANCHOR_DATE }} 的班次</text>
-        <view class="foot-actions">
-          <view class="btn" @tap="closeEditor">取消</view>
-          <view class="btn btn-primary" @tap="savePattern">{{ editor.existingId ? '保存班序' : '创建班序' }}</view>
-        </view>
-      </view>
+  <settings-sheet
+    v-if="editor"
+    :title="editor.existingId ? '编辑班序' : '新建班序'"
+    :sub="`${CYCLE_LENGTH} 天一轮 · 锚点日 ${ANCHOR_DATE}`"
+    :foot="true"
+    :foot-end="true"
+    @close="closeEditor"
+  >
+    <view class="field">
+      <text class="field-label">班序名称</text>
+      <input
+        class="input"
+        :value="editor.name"
+        maxlength="12"
+        placeholder="比如：4A、4B、4C"
+        @input="onEditorName"
+      />
     </view>
-  </view>
+
+    <pattern-grid :shifts="editor.shifts" :active="editor.active" @pick="pickCell" />
+
+    <text class="editor-note">自建班序第一天对应锚点日 {{ ANCHOR_DATE }} 的班次</text>
+
+    <view class="shift-palette">
+      <view
+        v-for="item in PALETTE"
+        :key="item.shift"
+        class="palette-option"
+        :class="['t-' + item.tone, { 'is-on': editor.shifts[editor.active] === item.shift }]"
+        @tap="assignShift(item.shift)"
+      >{{ item.label }}</view>
+    </view>
+
+    <view v-if="editor.errors.length > 0" class="error-list">
+      <text v-for="error in editor.errors" :key="error" class="error-item">{{ error }}</text>
+    </view>
+
+    <template #foot>
+      <view class="foot-actions">
+        <view class="btn" @tap="closeEditor">取消</view>
+        <view class="btn btn-primary" @tap="savePattern">{{ editor.existingId ? '保存班序' : '创建班序' }}</view>
+      </view>
+    </template>
+  </settings-sheet>
 
   <!-- ------------------------------------------------------------ 删除班序二次确认 -->
-  <view v-if="pendingDelete" class="sheet-backdrop" @tap="pendingDelete = null">
-    <view class="sheet" @tap.stop>
-      <view class="sheet-head">
-        <view class="sheet-head-main">
-          <text class="sheet-title">删除班序「{{ pendingDelete.name }}」？</text>
-          <text class="sheet-sub">此操作不可撤销</text>
-        </view>
-        <view class="sheet-close" @tap="pendingDelete = null">关闭</view>
-      </view>
+  <settings-sheet
+    v-if="pendingDelete"
+    :title="`删除班序「${pendingDelete.name}」？`"
+    sub="此操作不可撤销"
+    :foot="true"
+    :foot-end="true"
+    @close="pendingDelete = null"
+  >
+    <text v-if="deleteUsage.members.length === 0" class="settings-hint">目前没有成员挂在这条班序上，删除后只影响这条班序本身。</text>
+    <template v-else>
+      <text class="settings-hint">挂在这条班序上的 {{ deleteUsage.members.length }} 位成员会被一并删除：</text>
+      <text class="confirm-names">{{ deleteUsage.members.join('、') }}</text>
+      <text class="settings-hint">他们的 {{ deleteUsage.overrides }} 条改班记录也会被清理。</text>
+    </template>
+    <text class="settings-hint">如果只是想调整 24 格的规律，用「编辑」；只有确实不再需要这条班序时才删除。</text>
 
-      <view class="sheet-body">
-        <text v-if="deleteUsage.members.length === 0" class="settings-hint">目前没有成员挂在这条班序上，删除后只影响这条班序本身。</text>
-        <template v-else>
-          <text class="settings-hint">挂在这条班序上的 {{ deleteUsage.members.length }} 位成员会被一并删除：</text>
-          <text class="confirm-names">{{ deleteUsage.members.join('、') }}</text>
-          <text class="settings-hint">他们的 {{ deleteUsage.overrides }} 条改班记录也会被清理。</text>
-        </template>
-        <text class="settings-hint">如果只是想调整 24 格的规律，用「编辑」；只有确实不再需要这条班序时才删除。</text>
-
-        <view class="field">
-          <text class="field-label">输入「{{ pendingDelete.name }}」以确认</text>
-          <input
-            class="input"
-            :value="deleteConfirmText"
-            placeholder="班序名称"
-            @input="onDeleteConfirmInput"
-          />
-        </view>
-      </view>
-
-      <view class="sheet-foot is-end">
-        <view class="foot-actions">
-          <view class="btn" @tap="pendingDelete = null">取消</view>
-          <view
-            class="btn btn-danger"
-            :class="{ 'is-disabled': deleteConfirmText.trim() !== pendingDelete.name }"
-            @tap="confirmDelete"
-          >删除班序</view>
-        </view>
-      </view>
+    <view class="field">
+      <text class="field-label">输入「{{ pendingDelete.name }}」以确认</text>
+      <input
+        class="input"
+        :value="deleteConfirmText"
+        placeholder="班序名称"
+        @input="onDeleteConfirmInput"
+      />
     </view>
-  </view>
+
+    <template #foot>
+      <view class="foot-actions">
+        <view class="btn" @tap="pendingDelete = null">取消</view>
+        <view
+          class="btn btn-danger"
+          :class="{ 'is-disabled': deleteConfirmText.trim() !== pendingDelete.name }"
+          @tap="confirmDelete"
+        >删除班序</view>
+      </view>
+    </template>
+  </settings-sheet>
 
   <!-- ------------------------------------------------------------ 更换本人确认 -->
-  <view v-if="pendingImpact" class="sheet-backdrop" @tap="pendingImpact = null">
-    <view class="sheet" @tap.stop>
-      <view class="sheet-head">
-        <view class="sheet-head-main">
-          <text class="sheet-title">更换本人？</text>
-          <text class="sheet-sub">这会清空此前本人的数据，且不能撤销。</text>
-        </view>
-      </view>
-
-      <view class="sheet-body">
-        <view class="impact-list">
-          <text v-if="pendingImpact.overrides > 0" class="impact-item">
-            清空 {{ pendingImpact.overrides }} 条改班记录<text v-if="pendingImpact.overtime > 0 || pendingImpact.legal > 0">（含<text v-if="pendingImpact.overtime > 0"> {{ pendingImpact.overtime }} 条加班</text><text v-if="pendingImpact.legal > 0">{{ pendingImpact.overtime > 0 ? '、' : ' ' }}{{ pendingImpact.legal }} 条法定</text>）</text>
-          </text>
-          <text v-if="pendingImpact.salaryFilled > 0" class="impact-item">清空已填的 {{ pendingImpact.salaryFilled }} 项薪资</text>
-          <text class="impact-item">同事的排班与记录不受影响</text>
-        </view>
-      </view>
-
-      <view class="sheet-foot is-end">
-        <view class="foot-actions">
-          <view class="btn" @tap="pendingImpact = null">取消</view>
-          <view class="btn btn-danger" @tap="confirmSwap">确认更换</view>
-        </view>
-      </view>
+  <settings-sheet
+    v-if="pendingImpact"
+    title="更换本人？"
+    sub="这会清空此前本人的数据，且不能撤销。"
+    :closable="false"
+    :foot="true"
+    :foot-end="true"
+    @close="pendingImpact = null"
+  >
+    <view class="impact-list">
+      <text v-if="pendingImpact.overrides > 0" class="impact-item">
+        清空 {{ pendingImpact.overrides }} 条改班记录<text v-if="pendingImpact.overtime > 0 || pendingImpact.legal > 0">（含<text v-if="pendingImpact.overtime > 0"> {{ pendingImpact.overtime }} 条加班</text><text v-if="pendingImpact.legal > 0">{{ pendingImpact.overtime > 0 ? '、' : ' ' }}{{ pendingImpact.legal }} 条法定</text>）</text>
+      </text>
+      <text v-if="pendingImpact.salaryFilled > 0" class="impact-item">清空已填的 {{ pendingImpact.salaryFilled }} 项薪资</text>
+      <text class="impact-item">同事的排班与记录不受影响</text>
     </view>
-  </view>
+
+    <template #foot>
+      <view class="foot-actions">
+        <view class="btn" @tap="pendingImpact = null">取消</view>
+        <view class="btn btn-danger" @tap="confirmSwap">确认更换</view>
+      </view>
+    </template>
+  </settings-sheet>
 </template>
 
 <script setup lang="ts">
@@ -591,6 +559,7 @@ import NavBar from '../../components/nav-bar.vue'
 import TabBar from '../../components/tab-bar.vue'
 import PatternGrid from '../../components/pattern-grid.vue'
 import BrandCard from '../../components/brand-card.vue'
+import SettingsSheet from '../../components/settings-sheet.vue'
 import { rosterStore } from '../../store/roster'
 import {
   countOverrides,
@@ -625,6 +594,8 @@ import {
 const CYCLE_LENGTH = PATTERN_CYCLE_LENGTH
 const ANCHOR_DATE = PATTERN_ANCHOR_DATE
 const MAX_CUSTOM = MAX_CUSTOM_PATTERNS
+/** uni.showModal 只接收字面色值，不能读 CSS 变量；与 --danger 保持一致 */
+const DANGER_MODAL_COLOR = '#b42318'
 
 const store = rosterStore
 const roster = computed(() => store.state.roster)
@@ -1111,9 +1082,9 @@ function rowError(index: number): string {
   return ''
 }
 
-/** 排序态或未保存改动时，页面底部为吸附操作条多留出 64px */
+/** 排序态或未保存改动时，页面底部为吸附操作条多留出 72px（64 条高 + 底栏上方的 8px 间距） */
 const pageBottom = computed(() => (
-  frame.tabBarHeight + (tab.value === 'roster' && (sorting.value || memberDirty.value) ? 64 : 0)
+  frame.tabBarHeight + (tab.value === 'roster' && (sorting.value || memberDirty.value) ? 72 : 0)
 ))
 
 function onRowInput(index: number, field: 'name' | 'position', event: any) {
@@ -1151,6 +1122,12 @@ function addRow() {
     position: ''
   }]
   memberDirty.value = true
+}
+
+/** 取消未保存的成员改动：丢弃草稿，回到已保存的名单 */
+function discardMemberDraft() {
+  rows.value = toRows()
+  memberDirty.value = false
 }
 
 function saveMembers() {
@@ -1358,7 +1335,7 @@ function onImport() {
         content: `备份含 ${preview.memberCount} 位成员、${preview.overrideCount} 条改班记录、`
           + `${preview.todoCount} 条待办${dropped}。导入后会覆盖当前 ${roster.value.members.length} 位成员与个人信息。`,
         confirmText: '覆盖导入',
-        confirmColor: '#b42318',
+        confirmColor: DANGER_MODAL_COLOR,
         success: modal => {
           if (!modal.confirm) return
           try {
@@ -1385,7 +1362,7 @@ function onClearAll() {
   uni.showModal({
     title: '清空所有数据',
     content: '成员、班序、考勤与待办都会删除，且无法恢复。',
-    confirmColor: '#b42318',
+    confirmColor: DANGER_MODAL_COLOR,
     success: res => {
       if (!res.confirm) return
       store.clearAll()

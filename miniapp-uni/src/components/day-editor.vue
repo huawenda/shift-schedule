@@ -405,7 +405,7 @@ function onRemoveTodo(id: string) {
   z-index: 50;
   display: flex;
   align-items: flex-end;
-  background: rgba(15, 20, 24, 0.26);
+  background: var(--scrim);
 }
 
 .dialog {
@@ -480,7 +480,7 @@ function onRemoveTodo(id: string) {
   background: var(--surface);
   color: var(--text);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(19, 20, 22, 0.06);
+  box-shadow: var(--shadow-tight);
 }
 
 .tab-count {
