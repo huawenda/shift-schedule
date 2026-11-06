@@ -74,11 +74,6 @@ interface MemberRowsEditorProps {
   /** 当前 tab 没有成员时的空态文案 */
   emptyText?: string
   onChange: (rows: MemberRow[]) => void
-  /**
-   * 允许调整顺序（设置页的分组 tab 用）。
-   * 组内顺序决定这些人在矩阵里的先后；「全部」按分组块顺序排列。
-   */
-  sortable?: boolean
   /** 本人的 memberId：这一行只读，改名/换班序要去「个人信息」 */
   selfId?: string
   /** 排序模式：卡片压成 44px 紧凑行，只有把手能拖（与小程序同一套） */
@@ -96,8 +91,8 @@ interface MemberRowsEditorProps {
  * 班序只能从已有的选（内置 13 条 + 用户自建的），不能在这里新建 ——
  * 新建班序要录 24 个格子，属于设置页「班序」区块的事。
  *
- * 排序留两条路：拖行首的把手（快，一次到位）、点 ↑ ↓（键盘可达，微调一格）。
- * 只做拖拽的话键盘用户完全没法排序，所以两个都要。
+ * 排序只有一条路：先点「排序」进排序模式，再拖行首的把手。
+ * 普通行不放把手，避免让人以为随时能拖。
  */
 export function MemberRowsEditor({
   rows,
@@ -108,27 +103,10 @@ export function MemberRowsEditor({
   onAdd,
   emptyText,
   onChange,
-  sortable = false,
   selfId,
   sorting = false,
   onImport
 }: MemberRowsEditorProps) {
-  const [dragIndex, setDragIndex] = useState<number | null>(null)
-  const [overIndex, setOverIndex] = useState<number | null>(null)
-
-  /**
-   * 触摸拖拽的现场。
-   *
-   * 桌面继续走 HTML5 原生拖拽（鼠标体验最好）；触屏上 `draggable` 基本不可用，
-   * 所以手指按住把手时改走 Pointer Events：跟手找目标行、贴边自动滚。
-   * 只跟手「目标行高亮」而不做整行让位动画 —— 行高在桌面/手机两套布局里不同，
-   * 按固定行距做 translate 会在折行卡上错位。
-   */
-  const touchState = useRef<{ from: number; over: number; x: number; y: number } | null>(null)
-  const autoScrollTimer = useRef<number | null>(null)
-
-  useEffect(() => stopAutoScroll, [])
-
   const patternNames = new Map(patterns.map(option => [option.id, option.name]))
   const groupNames = new Map(groups.map(group => [group.id, group.name]))
 
@@ -181,76 +159,6 @@ export function MemberRowsEditor({
     return ''
   }
 
-  /** 指针落在哪一行：用 data-row-index，不依赖行高与滚动位置 */
-  function rowIndexAt(x: number, y: number): number | null {
-    const hit = document.elementFromPoint(x, y)
-    const rowEl = hit?.closest<HTMLElement>('.member-row[data-row-index]')
-    const parsed = rowEl ? Number(rowEl.dataset.rowIndex) : NaN
-    return Number.isInteger(parsed) ? parsed : null
-  }
-
-  /** 拖到滚动区上下缘时手动滚：设置页的滚动容器是 .canvas-flow，不是 window */
-  function autoScrollStep() {
-    const state = touchState.current
-    if (!state) return
-    const scroller = document.querySelector<HTMLElement>('.canvas-flow')
-    if (!scroller) return
-    const rect = scroller.getBoundingClientRect()
-    const edge = 56
-    if (state.y < rect.top + edge) scroller.scrollTop -= 10
-    else if (state.y > rect.bottom - edge) scroller.scrollTop += 10
-    // 页面滚过之后同一坐标可能落到别的行，重新算一次目标
-    const next = rowIndexAt(state.x, state.y)
-    if (next !== null && next !== state.over) {
-      state.over = next
-      setOverIndex(next)
-    }
-  }
-
-  function stopAutoScroll() {
-    if (autoScrollTimer.current !== null) {
-      window.clearInterval(autoScrollTimer.current)
-      autoScrollTimer.current = null
-    }
-  }
-
-  function onHandlePointerDown(index: number, event: ReactPointerEvent<HTMLSpanElement>) {
-    if (!sortable || event.pointerType === 'mouse') return
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    touchState.current = { from: index, over: index, x: event.clientX, y: event.clientY }
-    setDragIndex(index)
-    setOverIndex(index)
-    stopAutoScroll()
-    autoScrollTimer.current = window.setInterval(autoScrollStep, 40)
-  }
-
-  function onHandlePointerMove(event: ReactPointerEvent<HTMLSpanElement>) {
-    const state = touchState.current
-    if (!state) return
-    event.preventDefault()
-    state.x = event.clientX
-    state.y = event.clientY
-    const next = rowIndexAt(event.clientX, event.clientY)
-    if (next !== null && next !== state.over) {
-      state.over = next
-      setOverIndex(next)
-    }
-  }
-
-  function onHandlePointerUp(event: ReactPointerEvent<HTMLSpanElement>) {
-    const state = touchState.current
-    if (!state) return
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-    touchState.current = null
-    stopAutoScroll()
-    setDragIndex(null)
-    setOverIndex(null)
-    reorderVisible(state.from, state.over)
-  }
-
   /** 可见行下标 → 完整草稿下标；改完再交回整表 */
   function patch(index: number, next: Partial<MemberRow>) {
     const row = visibleRows[index]
@@ -263,20 +171,6 @@ export function MemberRowsEditor({
     const row = visibleRows[index]
     if (!row) return
     onChange(rows.filter(item => item.key !== row.key))
-  }
-
-  function move(index: number, delta: number) {
-    const target = index + delta
-    if (target < 0 || target >= visibleRows.length) return
-    reorderVisible(index, target)
-  }
-
-  function drop(index: number) {
-    const from = dragIndex
-    setDragIndex(null)
-    setOverIndex(null)
-    if (from === null) return
-    reorderVisible(from, index)
   }
 
   function append() {
@@ -292,6 +186,17 @@ export function MemberRowsEditor({
   const SORT_STEP = 52
   const [sortDrag, setSortDrag] = useState<{ from: number; target: number; offset: number } | null>(null)
   const sortRef = useRef<{ from: number; target: number; startY: number; startScroll: number; y: number } | null>(null)
+  /** 排序拖拽贴边时的自动滚动计时器 */
+  const autoScrollTimer = useRef<number | null>(null)
+
+  function stopAutoScroll() {
+    if (autoScrollTimer.current !== null) {
+      window.clearInterval(autoScrollTimer.current)
+      autoScrollTimer.current = null
+    }
+  }
+
+  useEffect(() => stopAutoScroll, [])
 
   function flowScroller(): HTMLElement | null {
     return document.querySelector<HTMLElement>('.canvas-flow')
@@ -389,9 +294,6 @@ export function MemberRowsEditor({
   if (sorting) {
     return (
       <section className="sort-block" aria-label="成员排序">
-        <p className="sort-hint">
-          按住左侧把手上下拖动；组内顺序决定这些人在矩阵里的先后，「全部」按分组顺序排列。
-        </p>
 
         <div className="sort-list">
           {visibleRows.map((row, index) => (
@@ -440,9 +342,8 @@ export function MemberRowsEditor({
       ]
 
   return (
-    <div className={`member-editor${sortable ? ' is-sortable' : ''}${showGroupField ? ' is-grouped' : ''}`}>
+    <div className={`member-editor${showGroupField ? ' is-grouped' : ''}`}>
       <div className="member-editor-head">
-        {sortable ? <span aria-hidden="true" /> : null}
         <span className="member-head-label">姓名</span>
         {showGroupField ? <span className="member-head-label">分组</span> : null}
         <span className="member-head-label">班序</span>
@@ -464,49 +365,10 @@ export function MemberRowsEditor({
           className={[
             'member-row',
             isSelfRow ? 'is-self' : '',
-            rowError ? 'is-invalid' : '',
-            dragIndex === index ? 'is-dragging' : '',
-            overIndex === index && dragIndex !== null && dragIndex !== index ? 'is-drop-target' : ''
+            rowError ? 'is-invalid' : ''
           ].filter(Boolean).join(' ')}
           data-row-index={index}
-          onDragLeave={sortable ? () => setOverIndex(current => (current === index ? null : current)) : undefined}
-          onDragOver={sortable
-            ? event => {
-              event.preventDefault()
-              setOverIndex(index)
-            }
-            : undefined}
-          onDrop={sortable
-            ? event => {
-              event.preventDefault()
-              drop(index)
-            }
-            : undefined}
         >
-          {sortable ? (
-            <span
-              aria-hidden="true"
-              className="member-handle"
-              draggable
-              title="拖动调整顺序"
-              onDragEnd={() => {
-                setDragIndex(null)
-                setOverIndex(null)
-              }}
-              onDragStart={() => setDragIndex(index)}
-              onPointerDown={event => onHandlePointerDown(index, event)}
-              onPointerMove={onHandlePointerMove}
-              onPointerUp={onHandlePointerUp}
-              onPointerCancel={() => {
-                touchState.current = null
-                stopAutoScroll()
-                setDragIndex(null)
-                setOverIndex(null)
-              }}
-            >
-              ⠿
-            </span>
-          ) : null}
 
           {isSelfRow ? (
             <span className="member-locked member-field-name" title="本人的姓名与班序请在「个人信息」里改">
@@ -578,28 +440,6 @@ export function MemberRowsEditor({
           </div>
 
           <div className="member-row-actions">
-            {sortable ? (
-              <>
-                <button
-                  aria-label={`把 ${row.name || `第 ${index + 1} 位成员`} 上移一位`}
-                  className="btn btn-icon"
-                  disabled={index === 0}
-                  type="button"
-                  onClick={() => move(index, -1)}
-                >
-                  ↑
-                </button>
-                <button
-                  aria-label={`把 ${row.name || `第 ${index + 1} 位成员`} 下移一位`}
-                  className="btn btn-icon"
-                  disabled={index === visibleRows.length - 1}
-                  type="button"
-                  onClick={() => move(index, 1)}
-                >
-                  ↓
-                </button>
-              </>
-            ) : null}
             <button
               className="btn btn-quiet"
               disabled={isSelfRow}
@@ -625,12 +465,6 @@ export function MemberRowsEditor({
           <button className="btn btn-add" type="button" onClick={onImport}>从 Excel 导入</button>
         ) : null}
       </div>
-
-      {onImport ? (
-        <p className="member-import-hint">
-          Excel 首行写表头「姓名 / 分组 / 班序 / 岗位」（后三列可空）；与现有成员重名的跳过，认不出的分组会自动新建，导入后直接保存。
-        </p>
-      ) : null}
     </div>
   )
 }

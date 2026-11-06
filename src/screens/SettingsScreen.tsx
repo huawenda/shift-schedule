@@ -323,6 +323,12 @@ export function SettingsScreen({
     setSorting(false)
   }
 
+  /** 取消未保存的成员改动：丢弃草稿，回到已保存的名单 */
+  function discardMemberDraft() {
+    setRows(orderByGroup(toRows(roster.members), roster.groups))
+    setDirty(false)
+  }
+
   function save() {
     if (errors.length > 0) return
 
@@ -475,8 +481,6 @@ export function SettingsScreen({
             <section className="settings-section">
               <div className="settings-label">
                 <h2>班序</h2>
-                <p>班序是 {PATTERN_CYCLE_LENGTH} 天一轮的循环，锚点日 {PATTERN_ANCHOR_DATE}。</p>
-                <p>内置 {lookup.builtin.length} 条只读；自建的最多 {MAX_CUSTOM_PATTERNS} 条，可改可删。</p>
               </div>
 
               <div className="settings-panel">
@@ -494,21 +498,14 @@ export function SettingsScreen({
               <div className="settings-label">
                 <div className="label-head">
                   <h2>成员</h2>
-                  {/* 有分组时排序只在具体分组里做；没建分组时「全部」就是唯一的块 */}
-                  {canSort ? (
+                  {/* 有分组时排序只在具体分组里做；没建分组时「全部」就是唯一的块。
+                      进入排序后「完成 / 取消」移到吸底条上，标题行不再重复一遍 */}
+                  {canSort && !sorting ? (
                     <div className="label-actions">
-                      {sorting ? (
-                        <>
-                          <button className="sort-action" type="button" onClick={finishSorting}>完成</button>
-                          <button className="sort-action is-quiet" type="button" onClick={cancelSorting}>取消</button>
-                        </>
-                      ) : (
-                        <button className="sort-action" type="button" onClick={enterSorting}>排序</button>
-                      )}
+                      <button className="sort-action" type="button" onClick={enterSorting}>排序</button>
                     </div>
                   ) : null}
                 </div>
-                <p>本人行只读，请在「个人资料」页改姓名 / 班序；分组在「全部」里改。</p>
                 <p className="settings-meta">
                   当前 {rows.length} 位成员 · {roster.groups.length} 个分组
                 </p>
@@ -542,13 +539,15 @@ export function SettingsScreen({
                 ) : null}
 
                 {/* 错误已逐行标在对应成员卡上；隐藏分组的错误在吸底条里给出提示 */}
+                {/* 分组列在「全部」用来调组；在「未分组」里给一个归组入口，
+                    选完这行会立刻从当前列表消失（草稿仍要「保存成员设置」才落盘） */}
                 <MemberRowsEditor
                   emptyText={memberEmptyText}
                   groups={roster.groups}
                   patterns={patternOptions}
                   rows={rows}
-                  showGroupField={activeTab === null && roster.groups.length > 0}
-                  sortable={canSort}
+                  showGroupField={roster.groups.length > 0
+                    && (activeTab === null || activeTab === UNGROUPED_MEMBERS)}
                   sorting={sorting}
                   selfId={self?.id}
                   visibleGroup={activeTab ?? undefined}
@@ -573,17 +572,28 @@ export function SettingsScreen({
                   }}
                 />
 
-                {/* 与小程序一致：只有存在未保存改动时才出现吸底保存条；排序页不出现 */}
-                {dirty && !sorting ? (
+                {/* 排序态与未保存改动都用同一条吸底条：说明在左，取消 / 主操作在右 */}
+                {sorting ? (
+                  <div className="settings-actions is-sticky">
+                    <span className="save-hint is-sort">拖拽调整顺序，完成即保存</span>
+                    <div className="save-bar-actions">
+                      <button className="btn btn-quiet" type="button" onClick={cancelSorting}>取消</button>
+                      <button className="btn btn-primary" type="button" onClick={finishSorting}>完成</button>
+                    </div>
+                  </div>
+                ) : dirty ? (
                   <div className="settings-actions is-sticky">
                     <span className={`save-hint${errors.length > 0 ? ' is-blocked' : ''}`}>
                       {errors.length > 0
                         ? `有 ${errors.length} 处待处理，切到对应分组查看`
                         : '有未保存的修改'}
                     </span>
-                    <button className="btn btn-primary" disabled={errors.length > 0} type="button" onClick={save}>
-                      保存成员设置
-                    </button>
+                    <div className="save-bar-actions">
+                      <button className="btn btn-quiet" type="button" onClick={discardMemberDraft}>取消</button>
+                      <button className="btn btn-primary" disabled={errors.length > 0} type="button" onClick={save}>
+                        保存成员设置
+                      </button>
+                    </div>
                   </div>
                 ) : null}
 
@@ -646,23 +656,17 @@ export function SettingsScreen({
               <div className="settings-label">
                 <h2>备份</h2>
                 {/*
-                  存储位置随运行方式不同，文案必须分开写：
-                  - 壳里是 WebView2 自己的用户目录（%LOCALAPPDATA%\<bundle id>\EBWebView），
-                    跟用户平时用的浏览器毫无关系，清浏览器缓存动不到它；
-                  - 浏览器 / 静态版才是那个浏览器的 localStorage，按站点隔离。
-                  原来统一写「存在浏览器里、清缓存前请先导出」—— 在壳里两头都不对。
+                  只在桌面壳里提示：数据存于 WebView2 自己的用户目录
+                  （%LOCALAPPDATA%\<bundle id>\EBWebView），卸载 / 重装 /
+                  清理应用数据会连它一起清掉，所以要提醒先导出。
                 */}
-                <p>
-                  {isTauriShell()
-                    ? (
-                      <>
-                        数据只保存在电脑本地，不联网、不上传。
-                        <br />
-                        卸载、重装或清理应用数据前，请先导出备份。
-                      </>
-                    )
-                    : '数据只保存在这台电脑的这个浏览器里（按站点分开）。换电脑、换浏览器或清除站点数据前，请先导出。'}
-                </p>
+                {isTauriShell() ? (
+                  <p>
+                    数据只保存在电脑本地，不联网、不上传。
+                    <br />
+                    卸载、重装或清理应用数据前，请先导出备份。
+                  </p>
+                ) : null}
                 <p className="settings-meta">
                   当前 {roster.members.length} 位成员 · {roster.overrides.length} 条改班记录
                 </p>
@@ -709,7 +713,6 @@ export function SettingsScreen({
                     </button>
                   ) : null}
                 </div>
-                <p className="settings-hint">导入会整体覆盖当前数据（含个人信息）；只认当前版本导出的文件。</p>
 
               </div>
             </section>
@@ -717,7 +720,6 @@ export function SettingsScreen({
             <section className="settings-section">
               <div className="settings-label">
                 <h2>清空数据</h2>
-                <p>删除本机保存的全部成员与改班记录，回到首次配置状态。此操作不可撤销。</p>
               </div>
 
               <div className="settings-panel">

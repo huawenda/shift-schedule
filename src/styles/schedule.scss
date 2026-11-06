@@ -653,20 +653,9 @@
   color: var(--muted);
 }
 
-/* 触屏专用的横滑提示：默认不渲染，只在粗指针 / 无悬停的设备上出现 */
-.legend-hint-touch {
-  display: none;
-}
-
 @media (hover: none) and (max-width: 1023px) {
   .legend-hint {
     display: none;
-  }
-
-  .legend-hint-touch {
-    display: inline;
-    margin-left: auto;
-    color: var(--muted);
   }
 }
 
@@ -1362,6 +1351,8 @@
     --matrix-day-min: 28px;
     --matrix-name-cell: 48px;
     --matrix-pill-gap: 3px;
+    /* 图例与底部标签栏之间留一点呼吸，矩阵高度随之收 8px */
+    padding-bottom: var(--sp-2);
   }
 
   .matrix-name-cell {

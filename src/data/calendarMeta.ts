@@ -6,7 +6,10 @@ import { Solar } from 'lunar-javascript'
  */
 
 export interface CalendarMeta {
+  /** 日历格子里用的短标签：节日 / 节气 / 农历日 */
   label: string
+  /** 带月份的完整农历（如「十月廿八」），值班牌的今天行用 */
+  lunarLabel: string
   isFestival: boolean
 }
 
@@ -23,20 +26,27 @@ export function getCalendarMeta(dateKey: string): CalendarMeta {
     const solar = Solar.fromYmd(year, month, day)
     const lunar = solar.getLunar()
 
+    // 值班牌上的农历始终带月份；日历格子仍用短标签，避免撑破 3 字宽
+    const lunarDay = lunar.getDayInChinese()
+    const lunarMonth = `${lunar.getMonthInChinese()}月`
+    const lunarLabel = `${lunarMonth}${lunarDay}`
+
     const festival = [...solar.getFestivals(), ...lunar.getFestivals()]
       .find(name => name.length <= MAX_LABEL_LENGTH)
 
-    if (festival) return { label: formatFestival(festival), isFestival: true }
+    if (festival) {
+      return { label: formatFestival(festival), lunarLabel, isFestival: true }
+    }
 
     const jieQi = lunar.getJieQi()
-    if (jieQi) return { label: jieQi, isFestival: true }
+    if (jieQi) return { label: jieQi, lunarLabel, isFestival: true }
 
-    const lunarDay = lunar.getDayInChinese()
     return {
-      label: lunarDay === '初一' ? `${lunar.getMonthInChinese()}月` : lunarDay,
+      label: lunarDay === '初一' ? lunarMonth : lunarDay,
+      lunarLabel,
       isFestival: false
     }
   } catch {
-    return { label: '', isFestival: false }
+    return { label: '', lunarLabel: '', isFestival: false }
   }
 }

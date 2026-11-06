@@ -254,7 +254,8 @@
 }
 
 /* 姓名 / 班序 / 岗位 / 删除 —— 四列。班序列宽一点（名字可能较长），岗位列稍窄。
- * 没建过分组时保持原样；建了分组才多插一列（见 is-grouped）。 */
+ * 没建过分组时保持原样；建了分组才多插一列（见 is-grouped）。
+ * 顺序调整只在「排序」模式里做，普通行不放拖动把手。 */
 .member-editor-head,
 .member-row {
   display: grid;
@@ -263,50 +264,10 @@
   align-items: center;
 }
 
-/*
- * 可排序时多一列拖动把手，末列放「↑ ↓ 删除」。
- *
- * 末列必须写**固定宽度**，不能写 `auto`：行里是一排按钮，
- * 表头那边没有文字（这一列不设标题），两边 `auto` 算出来的宽度不同 → fr 列被分到的空间也不同，
- * 于是「姓名 / 班序 / 岗位」三个表头越往右偏得越多（实测偏 17px / 36px）。
- * 表头与行是两个独立的 grid，「列宽一致」只能靠同一套固定值来保证。
- */
-.member-editor.is-sortable .member-editor-head,
-.member-editor.is-sortable .member-row {
-  grid-template-columns: 16px minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 0.8fr) 112px;
-}
-
 /* 建了分组：在姓名与班序之间插一列「分组」 */
 .member-editor.is-grouped .member-editor-head,
 .member-editor.is-grouped .member-row {
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.8fr) 60px;
-}
-
-.member-editor.is-sortable.is-grouped .member-editor-head,
-.member-editor.is-sortable.is-grouped .member-row {
-  grid-template-columns: 16px minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.8fr) 112px;
-}
-
-.member-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 24px;
-  color: var(--faint);
-  font-size: var(--fs-control);
-  line-height: 1;
-  cursor: grab;
-  user-select: none;
-  /* 手指按住把手时不要被浏览器的滚动接管，否则 Pointer Events 刚开始就断了 */
-  touch-action: none;
-}
-
-.member-handle:hover {
-  color: var(--muted);
-}
-
-.member-handle:active {
-  cursor: grabbing;
 }
 
 .member-row-actions {
@@ -314,37 +275,6 @@
   align-items: center;
   justify-self: end;
   gap: 2px;
-}
-
-/* 方形图标按钮：上移 / 下移 */
-.btn-icon {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border-color: transparent;
-  background: transparent;
-  color: var(--muted);
-  font-size: var(--fs-small);
-  line-height: 1;
-}
-
-.btn-icon:hover:not(:disabled) {
-  background: var(--raised);
-  color: var(--text);
-}
-
-.btn-icon:disabled {
-  background: transparent;
-  color: var(--icon-disabled);
-}
-
-.member-row.is-dragging {
-  opacity: 0.45;
-}
-
-/* 拖到哪一行就在那一行上沿画一条线：不占布局，不会让整表跳动 */
-.member-row.is-drop-target {
-  box-shadow: 0 -2px 0 var(--accent);
 }
 
 /* 有问题的那一行：红边只画在**姓名**字段上。
@@ -359,18 +289,13 @@
   border-color: var(--danger-border);
 }
 
-/* 提示文字缩进到姓名输入框正文的位置：
- * 1px 边框 + 8px 内边距 = 9px；可排序时前面还差一个把手列（16px + 8px 间距）。 */
+/* 提示文字缩进到姓名输入框正文的位置：1px 边框 + 8px 内边距 = 9px */
 .member-row-error {
   margin: 0;
   padding-left: 9px;
   color: var(--danger);
   font-size: var(--fs-small);
   line-height: 1.5;
-}
-
-.member-editor.is-sortable .member-row-error {
-  padding-left: calc(16px + var(--sp-2) + 9px);
 }
 
 .member-editor-head {
@@ -395,8 +320,8 @@
   background: var(--surface-sunken);
 }
 
-/* 行内「删除」：与 ↑ ↓ 同高一档的无框按钮。
- * 禁用态（本人行）也保持透明 —— 否则它是一块灰底方块，比旁边两个图标重得多。 */
+/* 行内「删除」：与字段同一档高度的无框按钮。
+ * 禁用态（本人行）也保持透明 —— 否则它是一块灰底方块，比旁边的输入框重得多。 */
 .member-row .btn-quiet {
   height: 28px;
   padding: 0 6px;
@@ -651,6 +576,36 @@
   color: var(--danger);
 }
 
+/* 排序态没有错误，说明按普通次要文案走 */
+.save-hint.is-sort {
+  color: var(--muted);
+}
+
+/* 吸底条右侧的取消 + 主操作：按钮不参与伸缩，说明文字才让位 */
+.save-bar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* 排序态与未保存改动共用一条吸底条：成员一多也不用滚到列表末尾才找得到。
+ * 做成四角圆角的浮卡（与小程序 .save-bar 同一套），不是贴着面板的通栏矩形；
+ * sticky 相对滚动容器 .canvas-flow，底边留 8px，不盖住底部标签栏。 */
+.settings-actions.is-sticky {
+  position: sticky;
+  bottom: var(--sp-2);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+}
+
 /* ── 危险区 ───────────────────────────────────────────── */
 
 .danger-row {
@@ -669,6 +624,41 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
+}
+
+/* 内置 13 条默认收起：先让自建班序与成员占首屏，需要查内置时再展开 */
+.pattern-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-tint);
+  color: var(--muted);
+  font-size: var(--fs-small);
+  text-align: left;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.pattern-collapsed:hover {
+  border-color: var(--control);
+  color: var(--text);
+}
+
+.pattern-collapsed-more {
+  color: var(--accent);
+}
+
+.pattern-group-toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--fs-small);
 }
 
 .pattern-group {
@@ -1114,7 +1104,7 @@ button.shift-cell:hover {
  * 成员表原来的「姓名 / 班序 / 岗位 / 删除」四列在手机上每格不到 100px，
  * 这里折成两行卡片：第一行姓名 + 操作，第二行班序 + 岗位。
  * 字段类名在 MemberRowsEditor 里显式加上 —— 用 nth-child 排会随「本人行」
- * 少一个拖动把手而错位。
+ * 少一个输入框（换成只读文字）而错位。
  */
 @media (max-width: 1023px) {
   .settings-section {
@@ -1156,7 +1146,7 @@ button.shift-cell:hover {
   }
 
   /* 成员表：每人一张卡，与小程序 .member-card 同一套语言。
-   * 头行 = 把手 + 姓名 + 操作，第二行 = 班序 / 岗位各半；
+   * 头行 = 姓名（+ 分组）+ 操作，第二行 = 班序 / 岗位各半；
    * 13 个人不再连成一张大表单。 */
   .member-editor-head {
     display: none;
@@ -1182,15 +1172,7 @@ button.shift-cell:hover {
     background: var(--surface);
   }
 
-  /* 手机上的卡片不显示拖动把手 —— 排序要先进「排序」模式（与小程序一致）。
-   * 列模板必须带 .member-editor 前缀：桌面那条
-   * `.member-editor.is-sortable .member-row` 是 (0,3,0)，只写 `.member-row` 会被它压住。 */
-  .member-editor .member-handle {
-    display: none;
-  }
-
-  .member-editor.is-sortable .member-row,
-  .member-editor:not(.is-sortable) .member-row {
+  .member-editor .member-row {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "name actions"
@@ -1198,8 +1180,7 @@ button.shift-cell:hover {
   }
 
   /* 有分组时姓名右边多一格分组，第二行仍放班序 / 岗位 */
-  .member-editor.is-grouped.is-sortable .member-row,
-  .member-editor.is-grouped:not(.is-sortable) .member-row {
+  .member-editor.is-grouped .member-row {
     grid-template-columns: minmax(0, 1fr) 96px auto;
     grid-template-areas:
       "name group actions"
@@ -1220,12 +1201,6 @@ button.shift-cell:hover {
   .member-row.is-invalid {
     border-color: var(--danger-border);
     box-shadow: none;
-  }
-
-  .member-handle {
-    grid-area: handle;
-    align-self: center;
-    height: 32px;
   }
 
   /* 排序模式行：与卡片同宽，44px 固定高 */
@@ -1281,14 +1256,6 @@ button.shift-cell:hover {
     gap: 2px;
   }
 
-  /* 操作改成无框图标按钮：删除只染红字，与小程序 .member-remove 一致 */
-  .member-row-actions .btn-icon {
-    width: 28px;
-    height: 28px;
-    border: 0;
-    background: transparent;
-  }
-
   .member-row-actions .btn-quiet {
     height: 28px;
     padding: 0 4px;
@@ -1299,8 +1266,7 @@ button.shift-cell:hover {
   }
 
   /* 提示在卡片外，与卡片左缘对齐即可（卡片内部已缩进 10px，外加 4px 视觉呼吸） */
-  .member-row-error,
-  .member-editor.is-sortable .member-row-error {
+  .member-row-error {
     padding-left: 4px;
   }
 
@@ -1324,23 +1290,6 @@ button.shift-cell:hover {
 
   .backup-dir-path {
     flex: 1 1 140px;
-  }
-
-  /* 成员保存条吸底：成员一多时不用滚到列表末尾才找得到「保存」。
-   * 做成四角圆角的浮卡（与小程序 .save-bar 同一套），不是贴着面板的通栏矩形；
-   * sticky 相对滚动容器 .canvas-flow，底边留 8px，不盖住底部标签栏。 */
-  .settings-actions.is-sticky {
-    position: sticky;
-    bottom: var(--sp-2);
-    z-index: 6;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--sp-2) var(--sp-3);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-card);
-    background: var(--surface);
-    box-shadow: var(--shadow-floating);
   }
 }
 

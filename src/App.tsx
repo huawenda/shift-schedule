@@ -343,8 +343,8 @@ export function App() {
         hrefs={hrefs}
         onBackup={backup}
         onNavigate={next => {
-          if (next === 'settings') navigate('settings', { settingsTab: 'roster' })
-          else navigate(next)
+          // 设置页签沿用上次停留的那一页（与小程序页面缓存一致）；首次进入仍是人员配置
+          navigate(next)
         }}
         onRestore={file => void restore(file)}
         onShiftMonth={goMonth}

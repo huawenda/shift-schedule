@@ -130,8 +130,6 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
     <section className="settings-section profile-section">
       <div className="settings-label">
         <h2>本人</h2>
-        <p>这是你自己的记录本：日历只显示本人。</p>
-        <p>更改姓名或班序会清空本人名下的考勤记录与薪资。</p>
         <p className="settings-meta">
           {self ? `本人 ${self.name} · ${patternNameOf(roster, self.patternId)}` : '还没有设置本人'}
         </p>
@@ -210,7 +208,6 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
     <section className="settings-section profile-section">
       <div className="settings-label">
         <h2>薪资</h2>
-        <p>每月固定的基线，用来算时薪、加班费与实发。</p>
       </div>
 
       <div className="settings-panel">

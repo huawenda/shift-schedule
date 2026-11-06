@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type WheelEvent } from 'react'
 import {
   MAX_GROUP_NAME_LENGTH,
   MAX_MEMBER_GROUPS,
@@ -48,8 +48,36 @@ export function MemberGroupTabs({
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const nameRef = useRef<HTMLInputElement>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
   const dialogRef = useDialogFocus<HTMLElement>()
   useDismissOnBack(creating, () => setCreating(false))
+
+  /**
+   * 分组一多，tab 条横向溢出。触屏可以直接左右滑，鼠标没有这个手势 ——
+   * 把纵向滚轮转成横滚，滚到两端时把事件交还给页面，不劫持整页滚动。
+   */
+  function onTabWheel(event: WheelEvent<HTMLDivElement>) {
+    const strip = tabsRef.current
+    if (!strip) return
+    const max = strip.scrollWidth - strip.clientWidth
+    if (max <= 0) return
+    const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX
+    const next = strip.scrollLeft + delta
+    if ((next <= 0 && strip.scrollLeft <= 0) || (next >= max && strip.scrollLeft >= max)) return
+    event.preventDefault()
+    strip.scrollLeft = Math.min(max, Math.max(0, next))
+  }
+
+  /** 选中的分组若在可视区之外，自动滚进来，别让它被裁掉 */
+  useEffect(() => {
+    const strip = tabsRef.current
+    const active = strip?.querySelector<HTMLElement>('.member-tab.is-on')
+    if (!strip || !active) return
+    const stripRect = strip.getBoundingClientRect()
+    const tabRect = active.getBoundingClientRect()
+    if (tabRect.left < stripRect.left) strip.scrollLeft -= stripRect.left - tabRect.left
+    else if (tabRect.right > stripRect.right) strip.scrollLeft += tabRect.right - stripRect.right
+  }, [activeTab, groups.length])
 
   // useDialogFocus 会把焦点移到弹层容器；弹层里的输入框要抢回来
   useEffect(() => {
@@ -75,7 +103,7 @@ export function MemberGroupTabs({
   return (
     <>
       <div className="member-tabs-row">
-        <div className="member-tabs" role="group" aria-label="成员分组">
+        <div className="member-tabs" role="group" aria-label="成员分组" ref={tabsRef} onWheel={onTabWheel}>
           <button
             aria-pressed={activeTab === null}
             className={`member-tab${activeTab === null ? ' is-on' : ''}`}

@@ -675,6 +675,25 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(tabState)
     )
 
+    // 内置班序默认收起：先用一枚折叠条占位
+    const builtinCollapsed = await client.evaluate(`(() => ({
+      toggle: Boolean(document.querySelector('.pattern-collapsed')),
+      chips: document.querySelectorAll('.pattern-chip').length
+    }))()`)
+    check(
+      `${name}: 内置班序默认收起`,
+      builtinCollapsed.toggle === true && builtinCollapsed.chips === 0,
+      JSON.stringify(builtinCollapsed)
+    )
+
+    // 展开一次，后面的观感与预览断言都在展开态下做
+    await client.evaluate(`(() => {
+      const toggle = document.querySelector('.pattern-collapsed')
+      if (toggle) toggle.click()
+      return true
+    })()`)
+    await waitFor(client, 'document.querySelectorAll(".pattern-chip").length === 13', '展开内置班序')
+
     // 人员配置页观感：区块抬头竖条、面板有边界、班序卡是「轨道 + 色块」、成员表头有分隔线
     const settingsLook = await client.evaluate(`(() => {
       const title = document.querySelector('.settings-label h2')
@@ -730,7 +749,9 @@ async function runScenario(name, url, downloadDir) {
         borderColor: cs?.borderTopColor ?? '',
         headTop,
         headTopAfter,
-        scrolled
+        scrolled,
+        scrollH: flow?.scrollHeight ?? -1,
+        clientH: flow?.clientHeight ?? -1
       }
     })()`
     const pinnedRoster = await client.evaluate(pinnedState)
@@ -790,13 +811,14 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 个人资料页标出本人`, profileMeta.includes('张三'), profileMeta)
 
     // 个人资料页与人员配置页同一套：页头钉住 + 分隔线
+    // 内容高度随数据与文案变化：能滚时要求真的滚起来，装得下时只校验页头不动
     const pinnedProfile = await client.evaluate(pinnedState)
     check(
       `${name}: 个人资料页页头同样钉住（分隔线下滚，页头不动）`,
       pinnedProfile.canvasOverflow === 'hidden' &&
         pinnedProfile.flowOverflow === 'auto' &&
         pinnedProfile.borderTop === '1px solid' &&
-        pinnedProfile.scrolled > 0 &&
+        (pinnedProfile.scrollH <= pinnedProfile.clientH || pinnedProfile.scrolled > 0) &&
         pinnedProfile.headTop === pinnedProfile.headTopAfter,
       JSON.stringify(pinnedProfile)
     )
@@ -817,21 +839,7 @@ async function runScenario(name, url, downloadDir) {
     })()`)
     check(`${name}: 本人岗位写进 member`, selfPosition === '班长', JSON.stringify(selfPosition))
 
-    // 备份说明的存储位置文案：浏览器/静态版必须说「浏览器 / 站点数据」，
-    // 不能再说「清缓存」—— 壳里的数据在 WebView2 用户目录，清浏览器缓存动不到
-    const storageCopy = await client.evaluate(`(() => {
-      const section = Array.from(document.querySelectorAll('.settings-section'))
-        .find(node => node.querySelector('h2')?.textContent.trim() === '备份')
-      const text = (section?.querySelector('.settings-label p')?.textContent ?? '')
-        .replace(/\\s+/g, ' ').trim()
-      return { text, hasOldWording: text.includes('清缓存'), saysBrowser: text.includes('浏览器') }
-    })()`)
-    check(
-      `${name}: 备份说明按环境区分存储位置（浏览器版不提「清缓存」）`,
-      storageCopy.saysBrowser === true && storageCopy.hasOldWording === false &&
-        storageCopy.text.includes('清除站点数据'),
-      JSON.stringify(storageCopy)
-    )
+    // 备份说明在浏览器 / 静态版不再展示存储位置文案（只有桌面壳里才提示）
 
     check(`${name}: 填基本工资`, await client.evaluate(setInputBySelector('.salary-grid input', '8000')))
     await sleep(150)
@@ -2231,6 +2239,13 @@ async function runScenario(name, url, downloadDir) {
     const settingsRows = await client.evaluate('document.querySelectorAll(".member-row").length')
     check(`${name}: 设置页读到 3 位成员`, settingsRows === 3, String(settingsRows))
 
+    // 重新进入设置页后内置班序回到收起态，先展开再断言
+    await client.evaluate(`(() => {
+      const toggle = document.querySelector('.pattern-collapsed')
+      if (toggle) toggle.click()
+      return true
+    })()`)
+    await waitFor(client, 'document.querySelectorAll(".pattern-chip").length === 13', '展开内置班序')
     const builtinCount = await client.evaluate('document.querySelectorAll(".pattern-chip").length')
     check(`${name}: 设置页列出 13 条内置班序`, builtinCount === 13, String(builtinCount))
 
@@ -2771,23 +2786,35 @@ async function runScenario(name, url, downloadDir) {
     await client.evaluate(clickByText('.rail-item', '设置'))
     await waitFor(client, 'document.querySelectorAll(".member-row").length === 13', '回到成员表')
 
-    // 把第 1 行（华文达）下移一位
-    const moved = await client.evaluate(`(() => {
-      const row = document.querySelectorAll('.member-row')[0]
-      const buttons = row.querySelectorAll('.btn-icon')
-      if (buttons.length < 2) return false
-      buttons[1].click()
-      return true
+    // 拖动排序只在「排序」模式里：先点排序入口，再把第一行把手拖到第二行
+    check(`${name}: 点开排序模式`, await client.evaluate(clickByText('.sort-action', '排序')))
+    await waitFor(client, 'document.querySelectorAll(".sort-row").length === 13', '排序模式列表')
+    const handlePos = await client.evaluate(`(() => {
+      const handle = document.querySelectorAll('.sort-row .sort-handle')[0]
+      if (!handle) return null
+      const rect = handle.getBoundingClientRect()
+      return { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) }
     })()`)
-    check(`${name}: 成员行可以下移`, moved)
-    await sleep(150)
+    check(`${name}: 排序模式里有拖动把手`, Boolean(handlePos), JSON.stringify(handlePos))
+    if (handlePos) {
+      await client.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed', x: handlePos.x, y: handlePos.y, button: 'left', buttons: 1, clickCount: 1
+      })
+      await sleep(80)
+      await client.send('Input.dispatchMouseEvent', {
+        type: 'mouseMoved', x: handlePos.x, y: handlePos.y + 52, button: 'left', buttons: 1
+      })
+      await sleep(120)
+      await client.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased', x: handlePos.x, y: handlePos.y + 52, button: 'left', buttons: 0, clickCount: 1
+      })
+      await sleep(150)
+    }
 
     // 本人那一行没有 input，所以统一按「有 input 读 value，没 input 读锁定文本」取名字
     const orderAfterMove = await client.evaluate(`(() => {
-      return Array.from(document.querySelectorAll('.member-row')).slice(0, 3).map(row => {
-        const input = row.querySelector('input')
-        if (input) return input.value
-        return (row.querySelector('.member-locked-name')?.textContent ?? '').trim()
+      return Array.from(document.querySelectorAll('.sort-row')).slice(0, 3).map(row => {
+        return (row.querySelector('.sort-name')?.textContent ?? '').trim()
       })
     })()`)
     check(
@@ -2796,7 +2823,8 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(orderAfterMove)
     )
 
-    check(`${name}: 保存排序`, await client.evaluate(clickByText('.settings-actions button', '保存成员设置')))
+    // 排序模式点「完成」即落盘
+    check(`${name}: 排序模式点完成即保存`, await client.evaluate(clickByText('.settings-actions button', '完成')))
     await sleep(300)
 
     await client.evaluate(clickByText('.rail-item', '全员矩阵'))

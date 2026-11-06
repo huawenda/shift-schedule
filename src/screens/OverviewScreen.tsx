@@ -67,7 +67,11 @@ export function OverviewScreen({
   const today = todayKey()
   const todayInPeriod = period.dates.includes(today)
   const todayTodos = roster.todos.filter(todo => todo.date === today)
-  const todayMeta = getCalendarMeta(today).label
+  const todayMeta = useMemo(() => {
+    const meta = getCalendarMeta(today)
+    // 节日/节气仍显示名字；普通日子显示带月份的农历，如「十月廿八」
+    return meta.isFestival ? meta.label : meta.lunarLabel
+  }, [today])
 
   /** 本期逐日班次：模板 + 整天记录里的改写，供倒计时与节奏条使用 */
   const selfShifts = useMemo(() => {

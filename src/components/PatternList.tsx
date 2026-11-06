@@ -66,6 +66,8 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
   const [customPreviewId, setCustomPreviewId] = useState<string | null>(null)
   const [editing, setEditing] = useState<{ pattern?: CustomPattern } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<CustomPattern | null>(null)
+  // 内置 13 条只读默认收起：首屏先给自建班序与成员
+  const [builtinOpen, setBuiltinOpen] = useState(false)
   useDismissOnBack(Boolean(pendingDelete), () => setPendingDelete(null))
   const [confirmText, setConfirmText] = useState('')
 
@@ -114,27 +116,48 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
 
   return (
     <div className="pattern-block">
-      <div className="pattern-group">
-        <p className="pattern-group-label">
-          <span>内置 {lookup.builtin.length} 条 · 只读</span>
-        </p>
-        <div className="pattern-chips">
-          {lookup.builtin.map(pattern => (
+      {builtinOpen ? (
+        <div className="pattern-group">
+          <p className="pattern-group-label">
+            <span>内置 {lookup.builtin.length} 条 · 只读</span>
             <button
-              aria-pressed={builtinPreviewId === pattern.id}
-              className={`pattern-chip${builtinPreviewId === pattern.id ? ' is-on' : ''}`}
-              key={pattern.id}
+              className="pattern-group-toggle"
               type="button"
-              onClick={() => setBuiltinPreviewId(builtinPreviewId === pattern.id ? null : pattern.id)}
+              onClick={() => {
+                setBuiltinOpen(false)
+                setBuiltinPreviewId(null)
+              }}
             >
-              <span className="pattern-chip-name">{pattern.id}</span>
-              <ShiftBar shifts={pattern.shifts} />
+              收起
             </button>
-          ))}
+          </p>
+          <div className="pattern-chips">
+            {lookup.builtin.map(pattern => (
+              <button
+                aria-pressed={builtinPreviewId === pattern.id}
+                className={`pattern-chip${builtinPreviewId === pattern.id ? ' is-on' : ''}`}
+                key={pattern.id}
+                type="button"
+                onClick={() => setBuiltinPreviewId(builtinPreviewId === pattern.id ? null : pattern.id)}
+              >
+                <span className="pattern-chip-name">{pattern.id}</span>
+                <ShiftBar shifts={pattern.shifts} />
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <button
+          className="pattern-collapsed"
+          type="button"
+          onClick={() => setBuiltinOpen(true)}
+        >
+          <span>内置 {lookup.builtin.length} 条只读班序</span>
+          <span className="pattern-collapsed-more">展开 ›</span>
+        </button>
+      )}
 
-      {builtinPreview ? (
+      {builtinOpen && builtinPreview ? (
         <div className="pattern-preview">
           <div className="pattern-preview-head">
             <span className="pattern-preview-title">{lookup.labelOf(builtinPreview.id)}</span>
