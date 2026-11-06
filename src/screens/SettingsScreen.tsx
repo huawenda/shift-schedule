@@ -139,12 +139,16 @@ export function SettingsScreen({
 
   /**
    * 页头固定后，内容滚在 `.canvas-flow` 里。
-   * 这个容器在切 tab 时会被 React 复用，滚动位置会留着 ——
+   * 同一个页面内切 tab 时容器会被 React 复用，滚动位置会留着 ——
    * 从人员配置滚到一半切到个人资料，就会停在中间，所以切页统一回顶。
+   * 但首次挂载（例如从别的页面切回设置）不能回顶：App 会恢复上次的位置。
    */
   const flowRef = useRef<HTMLDivElement>(null)
+  const lastTab = useRef(tab)
 
   useEffect(() => {
+    if (lastTab.current === tab) return
+    lastTab.current = tab
     if (flowRef.current) flowRef.current.scrollTop = 0
   }, [tab])
 

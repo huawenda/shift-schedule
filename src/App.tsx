@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Shell, type Route } from './components/Shell'
 import { DayEditor } from './components/DayEditor'
 import { ScrollOverlay } from './components/ScrollOverlay'
@@ -116,6 +116,17 @@ export function App() {
    */
   const [matrixMode, setMatrixMode] = useState<MatrixMode>('shift')
   const [matrixGroup, setMatrixGroup] = useState<string | null>(null)
+  /**
+   * 三个一级页面各自的滚动位置。
+   * 切 tab 时页面整块卸载重挂，滚动容器随之归零；离开前把滚动位置记下来，
+   * 回来后再写回去，切页就不会把人从读到的位置弹回顶部。
+   * 矩阵的日期区是 `.matrix-scroll` 自己在滚（横向 + 纵向），所以另外记两条。
+   */
+  const scrollPositions = useRef<Record<Route, { flow: number; matrixLeft: number; matrixTop: number }>>({
+    overview: { flow: 0, matrixLeft: 0, matrixTop: 0 },
+    matrix: { flow: 0, matrixLeft: 0, matrixTop: 0 },
+    settings: { flow: 0, matrixLeft: 0, matrixTop: 0 }
+  })
 
   /** 当前结算月固定到挂载时刻：跨过午夜不会自己翻月，刷新才更新，和原来的行为一致 */
   const currentMonth = useMemo(() => currentMonthKey(), [])
@@ -145,6 +156,20 @@ export function App() {
     window.addEventListener('hashchange', syncFromHash)
     return () => window.removeEventListener('hashchange', syncFromHash)
   }, [])
+
+  // 切回某个一级页面时恢复它上次的滚动位置。放在 layout 阶段写入，
+  // 避免新页面先按顶部渲染一帧再跳回去。
+  useLayoutEffect(() => {
+    const saved = scrollPositions.current[route]
+    const flow = document.querySelector<HTMLElement>('.canvas-flow')
+    if (flow) flow.scrollTop = saved.flow
+
+    const matrix = document.querySelector<HTMLElement>('.matrix-scroll')
+    if (matrix) {
+      matrix.scrollLeft = saved.matrixLeft
+      matrix.scrollTop = saved.matrixTop
+    }
+  }, [route])
 
   // 标题跟随当前视图：浏览器标签页用 document.title，
   // 桌面壳用 Tauri 的窗口 API（任务栏显示的是原生标题，不会自动跟随 document.title）。
@@ -183,6 +208,15 @@ export function App() {
    * `month` 不传时沿用当前结算月；显式传 null 表示回到当前月。
    */
   const navigate = useCallback((nextRoute: Route, options: { month?: MonthKey | null; settingsTab?: SettingsTab } = {}) => {
+    // 先记下当前页的滚动位置，再换路由：切 tab 回来时能回到离开处
+    const flow = document.querySelector<HTMLElement>('.canvas-flow')
+    const matrix = document.querySelector<HTMLElement>('.matrix-scroll')
+    scrollPositions.current[location.route] = {
+      flow: flow?.scrollTop ?? 0,
+      matrixLeft: matrix?.scrollLeft ?? 0,
+      matrixTop: matrix?.scrollTop ?? 0
+    }
+
     const next: AppLocation = {
       route: nextRoute,
       month: 'month' in options ? (options.month ?? null) : (location.month ?? currentMonth),
@@ -192,7 +226,7 @@ export function App() {
 
     if (window.location.hash !== hash) window.history.replaceState(null, '', hash)
     setLocation(next)
-  }, [location.month, location.settingsTab, currentMonth])
+  }, [location.route, location.month, location.settingsTab, currentMonth])
 
   function goMonth(delta: number) {
     navigate(location.route, { month: shiftMonth(monthKey, delta) })
