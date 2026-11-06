@@ -148,10 +148,10 @@ describe('resolvePatterns', () => {
   it('内置在前、自定义在后，总数对得上', () => {
     const lookup = resolvePatterns([makePattern(), makePattern({ id: 'cp-2', name: '乙班' })])
     expect(lookup.all).toHaveLength(BUILTIN_PATTERNS.length + 2)
-    expect(lookup.builtin).toHaveLength(13)
+    expect(lookup.builtin).toHaveLength(20)
     expect(lookup.custom).toHaveLength(2)
-    expect(lookup.all[0].id).toBe('4F')
-    expect(lookup.all[13].id).toBe('cp-test-1')
+    expect(lookup.all[0].id).toBe('4A')
+    expect(lookup.all[20].id).toBe('cp-test-1')
   })
 
   it('显示名：内置用代号，自定义用用户起的名字', () => {

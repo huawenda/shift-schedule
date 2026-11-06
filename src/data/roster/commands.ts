@@ -259,7 +259,7 @@ export interface RemovePatternResult {
   removedOverrides: number
   /**
    * 拒绝删除的原因，null 表示删成功：
-   * - `builtin`：内置 13 条只读
+   * - `builtin`：内置 20 条只读
    * - `self`：本人正挂在这条班序上（删班序会连人一起删，不能顺手把本人删了）
    */
   blocked: 'builtin' | 'self' | null
@@ -268,7 +268,7 @@ export interface RemovePatternResult {
 /**
  * 删除一条自定义班序，**连带删除挂在上面的成员与其改班记录**。
  *
- * 两种情况拒绝：内置 13 条（只读）、本人所在的班序（要删先把本人换到别的班序）。
+ * 两种情况拒绝：内置 20 条（只读）、本人所在的班序（要删先把本人换到别的班序）。
  */
 export function removePattern(roster: Roster, patternId: string): RemovePatternResult {
   if (isBuiltinPatternId(patternId)) {

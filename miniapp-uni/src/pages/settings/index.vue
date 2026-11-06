@@ -646,7 +646,7 @@ const custom = computed(() => roster.value.patterns.map(item => {
 
 const atLimit = computed(() => roster.value.patterns.length >= MAX_CUSTOM_PATTERNS)
 
-/** 内置班序默认收起，避免 13 条只读资料把成员配置挤到第二屏 */
+/** 内置班序默认收起，避免 20 条只读资料把成员配置挤到第二屏 */
 const builtinOpen = ref(false)
 const builtinPreviewId = ref<string | null>(null)
 const customPreviewId = ref<string | null>(null)

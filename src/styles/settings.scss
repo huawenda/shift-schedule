@@ -629,7 +629,7 @@
   gap: var(--sp-4);
 }
 
-/* 内置 13 条默认收起：先让自建班序与成员占首屏，需要查内置时再展开 */
+/* 内置 20 条默认收起：先让自建班序与成员占首屏，需要查内置时再展开 */
 .pattern-collapsed {
   display: flex;
   align-items: center;
@@ -679,7 +679,7 @@
   color: var(--muted);
 }
 
-/* 内置 13 条：一行 4 条（含代号 + 24 格节奏条），整体约 3 行 */
+/* 内置 20 条：一行 4 条（含代号 + 24 格节奏条），整体约 5 行 */
 .pattern-chips {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

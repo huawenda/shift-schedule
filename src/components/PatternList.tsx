@@ -55,7 +55,7 @@ function PatternGrid({ shifts }: { shifts: ShiftType[] }) {
 /**
  * 设置页的「班序」区块。
  *
- * 内置 13 条只读（点开看 24 格，不改）；自建的可以改、可以删。
+ * 内置 20 条只读（点开看 24 格，不改）；自建的可以改、可以删。
  * 删除是不可逆操作，而且会连带删掉挂在上面的成员，所以要输入班序名字才放行。
  */
 export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, onNotice }: PatternListProps) {
@@ -66,7 +66,7 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
   const [customPreviewId, setCustomPreviewId] = useState<string | null>(null)
   const [editing, setEditing] = useState<{ pattern?: CustomPattern } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<CustomPattern | null>(null)
-  // 内置 13 条只读默认收起：首屏先给自建班序与成员
+  // 内置 20 条只读默认收起：首屏先给自建班序与成员
   const [builtinOpen, setBuiltinOpen] = useState(false)
   useDismissOnBack(Boolean(pendingDelete), () => setPendingDelete(null))
   const [confirmText, setConfirmText] = useState('')

@@ -10,10 +10,10 @@ import {
 } from './patterns'
 import { SHIFT_TYPES } from './shifts'
 
-describe('patterns（内置 13 条）', () => {
-  it('13 条班序，每条 24 天，班次合法', () => {
-    expect(BUILTIN_PATTERNS).toHaveLength(13)
-    expect(BUILTIN_PATTERN_IDS).toEqual(['4F', '4G', '4H', '4I', '4J', '4K', '4R', '4S', '4T', '4U', '4V', '4W', '4X'])
+describe('patterns（内置 20 条）', () => {
+  it('20 条班序，每条 24 天，班次合法', () => {
+    expect(BUILTIN_PATTERNS).toHaveLength(20)
+    expect(BUILTIN_PATTERN_IDS).toEqual(['4A', '4C', '4D', '4E', '4F', '4G', '4H', '4I', '4J', '4K', '4M', '4O', '4Q', '4R', '4S', '4T', '4U', '4V', '4W', '4X'])
 
     BUILTIN_PATTERNS.forEach(pattern => {
       expect(pattern.shifts).toHaveLength(PATTERN_CYCLE_LENGTH)

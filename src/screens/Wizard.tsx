@@ -5,7 +5,7 @@ import { BUILTIN_PATTERNS, PATTERN_ANCHOR_DATE } from '../data/patterns'
 import { validateMembers, type Member } from '../data/roster'
 import type { SelfIdentity } from '../data/profile'
 
-/** 首开时还没有自定义班序，下拉里只有内置 13 条 */
+/** 首开时还没有自定义班序，下拉里只有内置 20 条 */
 const BUILTIN_OPTIONS: PatternOption[] = BUILTIN_PATTERNS.map(pattern => ({
   id: pattern.id,
   name: pattern.id,
@@ -28,7 +28,7 @@ interface WizardProps {
 export function Wizard({ onFinish, onSkip }: WizardProps) {
   const [step, setStep] = useState(1)
   const [selfName, setSelfName] = useState('')
-  const [selfPattern, setSelfPattern] = useState(BUILTIN_OPTIONS[0]?.id ?? '4F')
+  const [selfPattern, setSelfPattern] = useState('4F')
   const [rows, setRows] = useState<MemberRow[]>(() => [createRow('4F')])
 
   const colleagues = useMemo(() => fromRows(rows), [rows])
@@ -64,7 +64,7 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
           <div className="wizard-body">
             <p className="wizard-lead">
               这是一个个人记录工具：排班、加班、薪资都记在你自己名下。
-              13 条常用班序（4F–4X）已经内置好，规律不用你填。
+              20 条常用班序（4A–4X）已经内置好，规律不用你填。
             </p>
 
             <div className="wizard-self">

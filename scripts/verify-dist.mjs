@@ -14,7 +14,7 @@
  *   5. 刷新后改动仍在（真持久化）
  *   6. 恢复默认 → 记录被删除
  *   6b. 个人日历记加班 3h → 落盘 → 格子显示 +3h → 恢复默认连加班清掉
- *   7. 设置页：13 条内置班序可预览 24 格
+ *   7. 设置页：20 条内置班序可预览 24 格
  *   8. 新建自建班序（24 格逐格填）→ 出现在列表 → 能挂到成员上
  *   9. 矩阵里显示自建班序名
  *  10. 导出备份是 v5，且带上自建班序
@@ -36,7 +36,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectDir = path.resolve(__dirname, '..')
 const distDir = path.join(projectDir, 'dist')
 const distIndex = path.join(distDir, 'index.html')
-/** 真实班组的样例备份：13 人挂在内置 4F–4X 上，用来验导入链路 */
+/** 真实班组的样例备份：13 人挂在内置班序 4A–4X 上，用来验导入链路 */
 const fixturePath = path.join(projectDir, 'fixtures', '班组13人.json')
 
 const ROSTER_KEY = 'shift-schedule:local:roster:v2'
@@ -692,7 +692,7 @@ async function runScenario(name, url, downloadDir) {
       if (toggle) toggle.click()
       return true
     })()`)
-    await waitFor(client, 'document.querySelectorAll(".pattern-chip").length === 13', '展开内置班序')
+    await waitFor(client, 'document.querySelectorAll(".pattern-chip").length === 20', '展开内置班序')
 
     // 人员配置页观感：区块抬头竖条、面板有边界、班序卡是「轨道 + 色块」、成员表头有分隔线
     const settingsLook = await client.evaluate(`(() => {
@@ -2245,9 +2245,9 @@ async function runScenario(name, url, downloadDir) {
       if (toggle) toggle.click()
       return true
     })()`)
-    await waitFor(client, 'document.querySelectorAll(".pattern-chip").length === 13', '展开内置班序')
+    await waitFor(client, 'document.querySelectorAll(".pattern-chip").length === 20', '展开内置班序')
     const builtinCount = await client.evaluate('document.querySelectorAll(".pattern-chip").length')
-    check(`${name}: 设置页列出 13 条内置班序`, builtinCount === 13, String(builtinCount))
+    check(`${name}: 设置页列出 20 条内置班序`, builtinCount === 20, String(builtinCount))
 
     // 内置班序可点开只读预览
     await client.evaluate(`document.querySelectorAll('.pattern-chip')[0].click(); true`)

@@ -120,7 +120,7 @@
   gap: var(--sp-2);
 }
 
-/* 内置只读班序默认收起：一行 44px 入口，展开后才出现 13 条 chips */
+/* 内置只读班序默认收起：一行 44px 入口，展开后才出现 20 条 chips */
 .pattern-collapsed {
   display: flex;
   align-items: center;
@@ -170,7 +170,7 @@
   font-size: var(--fs-micro);
 }
 
-/* 内置 13 条：手机一行 2 条 */
+/* 内置 20 条：手机一行 2 条 */
 .pattern-chips {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
