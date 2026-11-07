@@ -98,6 +98,16 @@ function onTap(cell: CalendarCellView) {
   box-shadow: none;
 }
 
+/* 今天格是「1px 边框 + 1px 外扩描边」，外面那 1px 会越出格子。
+ * 最左/最右列压在页面的裁剪边，描边会被切掉一条。三行（星期栏 / 网格 / 图例）
+ * 统一留 2px 横向余量，让描边落在裁剪线以内；三行余量相同，列宽仍一致，不会错位。 */
+.calendar-weekdays,
+.calendar-grid,
+.calendar-legend {
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
 /* 1px 细边 + 6px 圆角 + 白底，每格自成一张小卡。
  * 边线不能省：画布是浅灰，只靠白底浮起来时格与格之间只剩 4px 缝，边界会糊成一片。 */
 .cal-cell {
