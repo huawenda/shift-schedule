@@ -32,6 +32,9 @@ miniapp-uni/project.private.config.json
 certs/
 .DS_Store
 
+# 工具链本地缓存目录，不入库
+.workbuddy/
+
 # 日志
 *.log
 npm-debug.log*
