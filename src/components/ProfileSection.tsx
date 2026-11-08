@@ -10,8 +10,17 @@ import {
   type SelfIdentity
 } from '../data/profile'
 import { getSelf, patternNameOf, selfImpact, validateSelf, type Roster, type SelfImpact } from '../data/roster'
-import { useDialogFocus } from '../hooks/useDialogFocus'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { Select } from './Select'
+import { Input } from '@/components/ui/input'
 
 interface ProfileSectionProps {
   roster: Roster
@@ -32,7 +41,6 @@ interface ProfileSectionProps {
  * 成员表里那一行是只读的，避免出现两条编辑路径。
  */
 export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onNotice }: ProfileSectionProps) {
-  const dialogRef = useDialogFocus<HTMLElement>()
   const self = getSelf(roster)
   const fallbackPattern = patterns[0]?.id ?? '4F'
 
@@ -41,6 +49,8 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
   const [position, setPosition] = useState(self?.position ?? '')
   const [errors, setErrors] = useState<string[]>([])
   const [pending, setPending] = useState<SelfImpact | null>(null)
+  // 弹层开关由 pending 决定
+  const dialogOpen = Boolean(pending)
   useDismissOnBack(Boolean(pending), () => setPending(null))
   const [salary, setSalary] = useState<SalaryInput>(roster.profile?.salary ?? { ...emptySalary })
   const [salaryDirty, setSalaryDirty] = useState(false)
@@ -139,10 +149,9 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
           <div className="profile-form">
             <label className="field">
               <span className="field-label">姓名</span>
-              <input
+              <Input
                 aria-label="本人姓名"
                 autoComplete="off"
-                className="input"
                 maxLength={12}
                 name="self-name"
                 placeholder="你的姓名"
@@ -171,10 +180,9 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
 
             <label className="field">
               <span className="field-label">岗位</span>
-              <input
+              <Input
                 aria-label="本人岗位"
                 autoComplete="off"
-                className="input"
                 maxLength={12}
                 name="self-position"
                 placeholder="岗位（可选）"
@@ -221,10 +229,10 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
                   {field.note ? <span className="field-note">{field.note}</span> : null}
                 </span>
                 <div className="money-input">
-                  <input
+                  <Input
                     aria-label={field.label}
                     autoComplete="off"
-                    className="input"
+                    className="flex-1 text-right tabular-nums"
                     disabled={!self}
                     inputMode="decimal"
                     name={field.key}
@@ -252,22 +260,16 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
     </section>
 
       {pending ? (
-        <div className="sheet-backdrop" role="presentation" onMouseDown={() => setPending(null)}>
-          <section
-            aria-label="确认更换本人"
-            aria-modal="true"
-            className="dialog"
-            ref={dialogRef}
-            role="dialog"
-            tabIndex={-1}
-            onMouseDown={event => event.stopPropagation()}
-          >
-            <header className="dialog-head">
+        <Dialog open={dialogOpen} onOpenChange={next => { if (!next) setPending(null) }}>
+          <DialogContent aria-label="确认更换本人" className="gap-0 p-0 sm:max-w-[420px]">
+            <DialogHeader className="dialog-head p-4">
               <div>
-                <h2 className="dialog-title">更换本人？</h2>
-                <p className="dialog-sub">这会清空此前本人的数据，且不能撤销。</p>
+                <DialogTitle className="dialog-title">更换本人？</DialogTitle>
+                <DialogDescription className="dialog-sub">
+                  这会清空此前本人的数据，且不能撤销。
+                </DialogDescription>
               </div>
-            </header>
+            </DialogHeader>
 
             <ul className="impact-list">
               {pending.overrides > 0 ? (
@@ -282,14 +284,12 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
               <li>同事的排班与记录不受影响</li>
             </ul>
 
-            <footer className="dialog-foot">
-              <div className="dialog-actions">
-                <button className="btn" type="button" onClick={() => setPending(null)}>取消</button>
-                <button className="btn btn-danger" type="button" onClick={confirmSwap}>确认更换</button>
-              </div>
-            </footer>
-          </section>
-        </div>
+            <DialogFooter className="mx-0 mb-0">
+              <Button variant="outline" onClick={() => setPending(null)}>取消</Button>
+              <Button variant="destructive" onClick={confirmSwap}>确认更换</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </>
   )

@@ -107,8 +107,20 @@
   color: var(--shift-nightx-ink);
 }
 
-/* 「查看名单」浮层：与格子左对齐，宽度取格子的一半。
- * 最小窗口下格子约 392.7px，浮层约 196px；内容过长时在浮层内换行/滚动。 */
+/* 「查看名单」浮层有两套实现，按屏幕宽度切换（见 SummaryBar）：
+ *
+ * ① 手机（≤639）用自绘浮层 .summary-popover：绝对定位在概览条里，
+ *    能靠 left/right: 0 贴满整条概览条 —— 手机上三格只有约 120px，
+ *    按格子对齐的 320px 浮层会从第二格左缘伸出屏幕外。
+ * ② 桌面 / 平板（>639）用 shadcn Popover .summary-popover-panel：
+ *    定位、Esc、点外部关闭、焦点归位、碰撞避让都归 Radix 管。
+ *
+ * 宽度三档（沿用改造前的标准）：
+ *   桌面      格子的一半 —— Popover 挂在 body 上，百分比不再相对格子，
+ *             所以由 SummaryBar 打开时量一次格子宽度，写进 --summary-panel-w；
+ *   ≤1023    min(320px, 100vw - 24px)
+ *   ≤639     自绘版贴满整条概览条（width: auto）
+ */
 .summary-popover {
   position: absolute;
   top: calc(100% + 6px);
@@ -129,12 +141,33 @@
   outline: none;
 }
 
+/* 桌面 / 平板：Radix 浮层的外壳（定位由 Radix 负责，这里只定宽与配色） */
+.summary-popover-panel {
+  width: var(--summary-panel-w, 196px);
+  max-width: calc(100vw - 2 * var(--sp-4));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-floating);
+}
+
+@media (max-width: 1023px) {
+  .summary-popover-panel {
+    width: min(320px, calc(100vw - var(--sp-5)));
+  }
+}
 .summary-popover-head {
   display: flex;
   align-items: baseline;
   gap: 6px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--rule);
+}
+
+/* Radix 版浮层是 p-0，内边距自己补 */
+.summary-popover-panel .summary-popover-head {
+  padding: var(--sp-3) var(--sp-3) 6px;
 }
 
 .summary-popover-title {
@@ -147,6 +180,7 @@
   font-size: var(--fs-small);
 }
 
+/* 自绘浮层的关闭按钮（桌面用的是 Radix，不需要） */
 .summary-popover-close {
   margin-left: auto;
   padding: 0 4px;
@@ -165,10 +199,15 @@
   display: flex;
   flex-direction: column;
   max-height: 300px;
+  /* 高度沿用旧标准：桌面 300 / ≤1023 220 / ≤639 38dvh */
   margin: 2px 0 0;
   padding: 0;
   overflow-y: auto;
   list-style: none;
+}
+
+.summary-popover-panel .summary-popover-list {
+  padding: 0 var(--sp-3) var(--sp-2);
 }
 
 .summary-popover-item {
@@ -931,37 +970,6 @@
 
 /* ── 改班弹层 ─────────────────────────────────────────── */
 
-.sheet-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--sp-5);
-  background: rgba(15, 20, 24, 0.26);
-  animation: backdrop-in var(--dur-base) ease-out;
-}
-
-.dialog {
-  width: 420px;
-  max-width: 100%;
-  /* 兜底：窗口矮的时候弹层内部滚动，而不是把底部按钮顶出屏幕 */
-  max-height: calc(100vh - 48px);
-  overflow-y: auto;
-  border-radius: var(--radius-dialog);
-  background: var(--surface);
-  box-shadow: var(--shadow-overlay);
-  animation: dialog-in var(--dur-base) var(--ease-out);
-}
-
-/* 弹层容器靠脚本 focus 接管焦点（见 useDialogFocus），
- * 别让它自己冒出一圈强调色描边 —— 那看着就像残留的框线。 */
-.dialog:focus,
-.dialog:focus-visible {
-  outline: none;
-}
-
 .dialog-head {
   display: flex;
   align-items: flex-start;
@@ -1027,23 +1035,6 @@
  * 原来那圈 inset 2px 是从边框**里侧**开始画的，边看着厚一倍，还多出一圈缝。 */
 .option.is-on {
   border-color: var(--text);
-}
-
-.dialog-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  padding: 0 var(--sp-4) var(--sp-4);
-}
-
-.dialog {
-  overscroll-behavior: contain;
-}
-
-.dialog-actions {
-  display: flex;
-  gap: 8px;
 }
 
 /* 关闭弹层时拦住未保存的改动：和按钮同一行，不额外撑高弹层 */
@@ -1220,10 +1211,6 @@
   margin-left: auto;
 }
 
-.ot-input .input {
-  width: 84px;
-}
-
 .ot-unit {
   font-size: var(--fs-small);
   color: var(--muted);
@@ -1302,13 +1289,6 @@
   to {
     opacity: 1;
     transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sheet-backdrop,
-  .dialog {
-    animation: none;
   }
 }
 
@@ -1411,13 +1391,12 @@
 }
 
 @media (max-width: 639px) {
-  /* 名单浮层改成「贴着整条概览条」的整宽面板。
+  /* 名单浮层（手机自绘版）改成「贴着整条概览条」的整宽面板。
    *
    * 三格在手机上一格只有约 120px，按格子对齐的 320px 浮层会从第二格左缘
    * 伸出屏幕外（390 宽时左边界约 -36px，姓名被裁掉）。
    * 这里取消格子的定位上下文，让浮层改以 .summary 为基准：
-   * 左右各贴一条边，宽度正好等于概览条，也不会再遮住半屏。
-   */
+   * 左右各贴一条边，宽度正好等于概览条，也不会再遮住半屏。 */
   .summary-cell {
     position: static;
     min-height: 88px;
@@ -1493,20 +1472,10 @@
     margin-right: 0;
   }
 
-  /* 弹层改底部抽屉：贴住屏幕下缘，只留上圆角；
-   * 底部内边距加安全区，全面屏的手势条不会压住「保存」 */
-  .sheet-backdrop {
-    align-items: flex-end;
-    padding: 0;
-  }
-
-  .dialog,
-  .dialog-day,
-  .dialog-wide,
-  .dialog-narrow {
+  /* 弹层容器已换成 Radix Dialog（居中、自带遮罩与滚动），这里只保留日历弹层的宽度兜底 */
+  .dialog-day {
     width: 100%;
     max-height: 88dvh;
-    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   }
 
   .dialog-head {
@@ -1517,60 +1486,6 @@
    * PWA standalone 用深青（与系统手势条同一块），底部不再出现白/青拼缝。
    * 总高直接取底栏的 --rail-bar-height + 安全区：按钮条上缘和底栏上缘同高，
    * 弹层开合时不会因为两条色带起点差几像素而抖动。 */
-  .dialog-foot {
-    height: calc(var(--rail-bar-height) + env(safe-area-inset-bottom));
-    padding: 0 var(--sp-3) env(safe-area-inset-bottom);
-    border-top: 1px solid var(--rule);
-    background: var(--surface-nav);
-  }
-
-  @media (display-mode: standalone) {
-    .dialog-foot {
-      border-top-color: var(--chrome-line);
-      background: var(--chrome);
-    }
-
-    .dialog-foot .btn-quiet {
-      color: var(--chrome-accent);
-    }
-
-    .dialog-foot .btn-quiet:hover:not(:disabled) {
-      background: var(--chrome-hover);
-      color: var(--chrome-text);
-    }
-
-    .dialog-foot .btn-quiet:disabled {
-      border-color: transparent;
-      background: transparent;
-      color: var(--chrome-faint);
-    }
-
-    /* 深底上主按钮换成浅青：继续用墨底会和抽屉底一个明度，几乎看不到 */
-    .dialog-foot .btn-primary {
-      border-color: var(--chrome-accent);
-      background: var(--chrome-accent);
-      color: var(--chrome);
-    }
-
-    .dialog-foot .btn-primary:hover:not(:disabled),
-    .dialog-foot .btn-primary:active:not(:disabled) {
-      border-color: var(--chrome-text);
-      background: var(--chrome-text);
-      color: var(--chrome);
-    }
-
-    .dialog-foot .btn-primary:disabled {
-      border-color: var(--chrome-line);
-      background: var(--chrome-raised);
-      color: var(--chrome-faint);
-    }
-
-    /* 未保存警告在深青底上用暖沙色，保留警示语义 */
-    .dialog-foot .dialog-discard {
-      color: var(--brand-day);
-    }
-  }
-
   .dialog-options {
     padding: var(--sp-3);
     gap: 6px;

@@ -1,10 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useDismissOnBack } from '../hooks/useDismissOnBack'
 import type { DayOverride, Member } from '../data/roster'
-import { useDialogFocus } from '../hooks/useDialogFocus'
 import { canRecordOvertime, formatOvertimeHours } from '../data/overtime'
 import { SHIFT_META, SHIFT_TYPES, shiftToneClass, type ShiftType } from '../data/shifts'
 import { formatMonthDay, weekdayLabel } from '../data/dateUtils'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 interface ShiftEditorProps {
   member: Member
@@ -19,8 +27,12 @@ interface ShiftEditorProps {
 
 /**
  * 全员矩阵用的改班弹层：只能改班次，不能记加班（加班只在个人日历里录）。
- * 只有真的和模板不同才会落记录；改回模板值等于删除（由数据层保证）。
  *
+ * 外壳换成 shadcn `Dialog`（Radix）：焦点陷阱、Esc、遮罩点击、Portal、关闭后归还焦点
+ * 全部由它提供，原来那套 `useDialogFocus` + 手写 keydown 监听因此删掉。
+ * 内容区仍是自研：6 个班次色块（`.option` + 班次语义色）是业务视觉，通用控件拼不出来。
+ *
+ * 只有真的和模板不同才会落记录；改回模板值等于删除（由数据层保证）。
  * 例外：这天原本有加班/法定时，改成休息或事假会连带清掉它们，这里提前提示。
  */
 export function ShiftEditor({
@@ -32,12 +44,14 @@ export function ShiftEditor({
   onApply,
   onClose
 }: ShiftEditorProps) {
-  const dialogRef = useDialogFocus<HTMLElement>()
-  useDismissOnBack(true, requestClose)
+  const [open, setOpen] = useState(true)
   const [selected, setSelected] = useState<ShiftType | null>(currentShift)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const edited = Boolean(record)
   const dirty = selected !== currentShift
+
+  // Android 返回键：Radix 不管这个，仍用项目自己的历史栈拦截
+  useDismissOnBack(true, requestClose)
 
   /** 改了还没保存就关闭：先拦一下，别把改动静默丢掉 */
   function requestClose() {
@@ -45,6 +59,7 @@ export function ShiftEditor({
       setConfirmDiscard(true)
       return
     }
+    setOpen(false)
     onClose()
   }
 
@@ -60,36 +75,25 @@ export function ShiftEditor({
       (record?.overtimeHours || record?.isLegal)
   )
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') requestClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose, dirty, confirmDiscard])
-
   return (
-    <div className="sheet-backdrop" role="presentation" onMouseDown={requestClose}>
-      <section
-        aria-label="修改班次"
-        aria-modal="true"
-        className="dialog"
-        ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
-        onMouseDown={event => event.stopPropagation()}
-      >
-        <header className="dialog-head">
+    <Dialog
+      open={open}
+      onOpenChange={next => {
+        if (!next) requestClose()
+      }}
+    >
+      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto p-0 sm:max-w-[420px]">
+        <DialogHeader className="dialog-head p-4">
           <div>
-            <h2 className="dialog-title">{member.name}</h2>
-            <p className="dialog-sub">
-              {formatMonthDay(date)} · 周{weekdayLabel(date)} · 模板 {templateShift ? SHIFT_META[templateShift].label : '—'}
-            </p>
+            <DialogTitle className="dialog-title">{member.name}</DialogTitle>
+            <DialogDescription className="dialog-sub">
+              {formatMonthDay(date)} · 周{weekdayLabel(date)} · 模板{' '}
+              {templateShift ? SHIFT_META[templateShift].label : '—'}
+            </DialogDescription>
           </div>
-          <button className="btn btn-quiet" type="button" onClick={requestClose}>关闭</button>
-        </header>
+        </DialogHeader>
 
-        <div className="dialog-options" role="group" aria-label="选择班次">
+        <div aria-label="选择班次" className="dialog-options" role="group">
           {SHIFT_TYPES.map(shift => {
             // 模板是休息的日子不存在「请假」这回事，不允许改成事假
             const leaveBlocked = shift === '事假' && templateShift === '休息'
@@ -116,40 +120,37 @@ export function ShiftEditor({
           </p>
         ) : null}
 
-        <footer className="dialog-foot">
+        <DialogFooter className="mx-0 mb-0">
           {confirmDiscard ? (
             <>
-              <span className="dialog-discard">有未保存的修改</span>
-              <div className="dialog-actions">
-                <button className="btn" type="button" onClick={() => setConfirmDiscard(false)}>继续编辑</button>
-                <button className="btn btn-danger" type="button" onClick={onClose}>放弃修改</button>
-              </div>
+              <span className="dialog-discard mr-auto">有未保存的修改</span>
+              <Button variant="outline" onClick={() => setConfirmDiscard(false)}>
+                继续编辑
+              </Button>
+              <Button variant="destructive" onClick={onClose}>
+                放弃修改
+              </Button>
             </>
           ) : (
             <>
-              <button
-                className="btn btn-quiet"
+              <Button
+                className="mr-auto"
                 disabled={!edited}
-                type="button"
+                variant="ghost"
                 onClick={() => onApply(null)}
               >
                 恢复默认
-              </button>
-              <div className="dialog-actions">
-                <button className="btn" type="button" onClick={requestClose}>取消</button>
-                <button
-                  className="btn btn-primary"
-                  disabled={!selected}
-                  type="button"
-                  onClick={() => selected && onApply(selected)}
-                >
-                  保存
-                </button>
-              </div>
+              </Button>
+              <Button variant="outline" onClick={requestClose}>
+                取消
+              </Button>
+              <Button disabled={!selected} onClick={() => selected && onApply(selected)}>
+                保存
+              </Button>
             </>
           )}
-        </footer>
-      </section>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

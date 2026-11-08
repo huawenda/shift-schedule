@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, type Plugin } from 'vite'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -65,7 +66,14 @@ function serviceWorkerBuildIdPlugin(): Plugin {
 export default defineConfig({
   // 相对路径：dist 放到任意目录、任意子路径下都能用
   base: './',
-  plugins: [fileProtocolFriendlyPlugin(), serviceWorkerBuildIdPlugin()],
+  plugins: [tailwindcss(), fileProtocolFriendlyPlugin(), serviceWorkerBuildIdPlugin()],
+
+  // shadcn CLI 依赖 @ 别名生成组件；与 tsconfig 的 paths 保持一致
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }
+  },
 
   // dev server 默认监听整个项目目录，于是这些「产物目录」一有变动就触发整页 reload：
   //   - dist/       ：跑 `pnpm build` 时每个文件都会落盘，实测每次都会 `page reload`，
@@ -88,6 +96,13 @@ export default defineConfig({
     modulePreload: { polyfill: false },
     chunkSizeWarningLimit: 2048,
     rollupOptions: {
+      // Radix / lucide 的 ESM 产物第一行带 `"use client"`，打成 IIFE 时 Rollup 会为每个文件
+      // 各报一条「Module level directives cause errors when bundled」。这条指令对浏览器无意义，
+      // 但几十条同样的告警会把真正的警告淹掉 —— 过滤掉它，其它告警照常打印。
+      onwarn(warning, warn) {
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE' && warning.message?.includes('use client')) return
+        warn(warning)
+      },
       output: {
         format: 'iife',
         inlineDynamicImports: true,

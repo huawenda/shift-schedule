@@ -14,13 +14,13 @@ localStorage，Tauri 壳里存在 WebView2 自己的用户目录（与用户平�
 - **同事**加进来只为了在全员矩阵里看到整组班（谁今天和你一起上夜班），他们的日历不参与、也不记加班
 - 改本人姓名或班序＝换了一个人，会清空本人名下的考勤与薪资（动手前先问，并列出条数）
 
-> 界面按 1466×900 设计：1466 是「月度概览」能完整展开的最小窗口宽度
-> （侧栏 228 + 卡片留边 8 + 边框 2 + 版心 1228）。壳的最小窗口就设成这个值；
-> 浏览器版不限制，但窄于此宽度时待办卡会被压窄。
-> 默认浅色（根节点仍声明 `color-scheme: light`，避免系统暗色把原生控件染黑），
-> 但不再把浅色当硬约束：深青外框与夜班反相块都属于配色选择；完整暗色主题尚未做。
-> 桌面壳的原生标题栏由 DWM 染成同一块深青（`paint_caption`），窗口与内容连成一块；
-> 不做自绘标题栏，缩放、贴靠、阴影仍交给系统。
+> 界面按 1466×900 设计（1466 是「全员矩阵」横向铺满 30 列的参考宽度）。
+> 外壳已换成 shadcn `Sidebar`（256px，可折叠成图标条）+ 顶栏 + 平铺画布：
+> 不再有深青 L 形外框、白色画布浮层与那层低位投影，卡片靠 1px 细边与白底分层。
+> 默认浅色（根节点仍声明 `color-scheme: light`，避免系统暗色把原生控件染黑）；
+> 完整暗色主题尚未做。
+> 桌面壳（Tauri）本次未动：原生标题栏仍由 DWM 染成深青（`paint_caption`），
+> 与 web 端现在的浅色外壳并不一致 —— 这一项留给后续单独处理。
 
 ---
 
@@ -168,13 +168,15 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 
 ## 4. 界面结构
 
-外壳是 L 形：左侧 228px 侧栏与 48px 顶栏共用一块深青底，右下方嵌一块白色画布
-（inset 8px / 圆角 16 / 1px 深边 / 一层低位投影）。画布内部仍不用投影。
+外壳是 shadcn `Sidebar` + 顶栏 + 平铺画布：左侧 256px 侧栏（可折叠成 48px 图标条），
+顶栏之下直接是内容区，卡片靠 1px 细边分层、不用投影。
+窗口窄于 1024px 时侧栏整体换成**底部标签栏**（三个一级页面永远可见），与改造前老外壳的做法一致。
 
 | 区域 | 尺寸 | 内容 |
 |---|---|---|
-| 侧栏 | 228px | 顶部书脊式品牌区（3px 浅青竖条 + 45px 标识 + 衬线「昼夜」+ 副标 + 等宽暖沙短线）／**全员矩阵**／**月度概览**／底部**设置** |
-| 顶栏 | 48px | `‹` 月份标题 `›`「回到本期」，右侧：导出备份 · 导入备份 |
+| 侧栏 | 256px（可折叠成 48px 图标条） | 品牌标识 + **全员矩阵**／**月度概览**／**设置** |
+| 底部标签栏 | 56px + 安全区（窗口 <1024px 时替代侧栏） | **全员矩阵**／**月度概览**／**设置**，图标 + 文字，选中态高亮 |
+| 顶栏 | 56px | 折叠按钮 + `‹` 月份标题 `›`「回到本期」，右侧：导出备份 · 导入备份 |
 | 底部提示 | — | 操作反馈统一弹在窗口底部居中，2.6–8s 后自动消失；悬停暂停，常驻提示可手动关闭 |
 | 画布头部 | — | 页面标题 + 副标题（日期区间 · 天数 · 人数/本人） |
 | 概览条 | 3 格 | **只在全员矩阵页**：今日白班（含白特）/ 夜班（含夜特）/ 休息 |
@@ -183,7 +185,11 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 
 - **概览条**只数人不算工时：**白特并入白班、夜特并入夜班**，名单里特勤人员带「特」标记；
   每格显示人数 + 一行姓名摘要（最多三人，超出用「等」），
-  点「查看名单」会在卡片下方弹出浮层，按成员表顺序列出完整人名与岗位（不列班序）；
+  点「查看名单」会弹出浮层，按成员表顺序列出完整人名与岗位（不列班序）。
+  **桌面 / 平板**用 shadcn `Popover`（点外部或按 Esc 关闭），宽度取格子的一半，
+  ≤1023 取 `min(320px, 100vw−24px)`；**手机**保留旧的自绘浮层 —— 它绝对定位在概览条里，
+  能贴满整条概览条（手机上三格只有约 120px，按格子对齐会伸出屏幕外）；
+  列表超高时内部滚动；
   工作日不在本期范围内时显示 `—`；工作日按本人正在进行的班次算，夜班跨零点时 00:00–08:00 不切到新一天。
   它**只在矩阵页**：统计的是全员出勤，和矩阵同源；概览页只讲本人，不混入全员口径。
 - **值班牌**只讲本人：下一班/现在 + 倒计时，后半夜仍按**正在进行的夜班**算（11/5 夜班到 11/6 08:00
@@ -191,7 +197,7 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
   本月固定 2 行 × 3 项：白班 / 夜班 / 休息 / 白特 / 夜特 / 法定（白特、夜特各占一格，
   事假不在这里显示），**0 天也显示**，格位不随数据跳动；今天日期、农历（带月份，如「十月廿八」）与待办条数收在同一行。
 - **全员矩阵**：一行一人、一列一天，今天那列加深（按工作日，夜班跨零点时停在开始那天），
-  下方固定显示六色图例。视图（按班次 / 按姓名）与分组 tab 的选择会记住：
+  下方固定显示六色图例。视图（按班次 / 按姓名）与分组筛选的选择会记住：
   切到概览或设置再回来仍是上次的状态（刷新页面才回默认）。
   点成员列的姓名可给整行加聚焦底色，再点一次取消；只聚焦一行，点别人会换行。
   点日期表头可聚焦整列，再点取消；行聚焦与列聚焦都用加深后的底色。
@@ -279,7 +285,7 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
   `#/overview`、`#/matrix`（当前结算月省略月份）、`#/2026-10/overview`（非当前月带月份前缀）、
   `#/settings/roster`、`#/settings/profile`；未知 hash 会被原地改写成规范形式。
 
-矩阵与日历**不能并排**：340（日历）+ 148（姓名列）+ 30×24（天列）+ 228（侧栏）+ 48 ≈ 1484px，
+矩阵与日历**不能并排**：340（日历）+ 148（姓名列）+ 30×24（天列）+ 256（侧栏）+ 56 ≈ 1512px，
 超过 1466 基准屏宽，并排必然把列压到 20px 以下，而那样「特」字放不下。所以做成视图切换。
 
 ---
@@ -384,10 +390,11 @@ src/
 │   ├── useRoster.ts         花名册状态 + 自动落盘
 │   ├── useBackupFlow.ts     导出 / 导入流程
 │   ├── useMonthNavigation.ts 结算月导航（翻月 / 回本月 / 周期）
-│   ├── useToasts.ts         底部提示队列（合并、堆叠、倒计时、悬停暂停）
-│   └── useDialogFocus.ts    弹层打开时移入焦点，避免背景残留焦点环
+│   └── useToasts.ts         底部提示的 sonner 适配层（API 与旧实现一致）
 ├── components/
-│   ├── Shell.tsx            228 侧栏 + 48 顶栏 + 白色画布
+│   ├── AppShell.tsx         SidebarProvider + SidebarInset + 跳转链接
+│   ├── AppSidebar.tsx       侧栏导航（品牌 + 三个视图）
+│   ├── TopBar.tsx           顶栏（折叠按钮 + 月份导航 + 导出导入）
 │   ├── SummaryBar.tsx       3 格概览条（白特/夜特并入白班/夜班）
 │   ├── TeamMatrix.tsx       全员矩阵（表头 + 逐行 grid）
 │   ├── MonthCalendar.tsx    个人月历（班次 + 加班 + 法定角标）
@@ -401,15 +408,18 @@ src/
 │   ├── PatternEditor.tsx    24 格班序编辑器
 │   ├── StatsPanels.tsx      月度概览的四块统计（2 × 2）
 │   ├── TodoCard.tsx         待办卡片（本月待办，可在卡片里勾选）
-│   ├── Select.tsx           自绘下拉（替掉原生 select 的弹层）
+│   ├── Select.tsx           shadcn Select 的包装（对外 API 不变）
 │   ├── ScrollOverlay.tsx    自绘覆盖式滚动条（静止隐藏、滚动淡入）
-│   └── ToastHost.tsx        底部提示层（白卡 + 语义色竖条，向上堆叠）
+│   └── ui/                  shadcn 组件源码（CLI 复制进来，可直接改）
+│       ├── button / input / select / popover / tabs / table
+│       ├── dialog / sonner / sidebar / sheet / tooltip / separator / skeleton
 ├── screens/
 │   ├── Wizard.tsx           三步首次配置（本人 → 同事 → 确认）
 │   ├── MatrixScreen.tsx     全员矩阵页（含今日 3 格概览条）
 │   ├── OverviewScreen.tsx   月度概览页（日历 + 统计，日历锁本人）
 │   └── SettingsScreen.tsx   设置：人员配置 / 个人资料 两个 tab
-├── styles/                  tokens → shell → schedule → stats → todos → settings → wizard → toasts
+├── styles/                  tokens → shell → schedule → stats → todos → settings → wizard
+├── index.css                Tailwind v4 入口：主题变量层（--ui-*）+ 工具类层
 ├── App.tsx                  hash 路由（视图 / 结算月 / 设置页签）、弹层与提示
 └── main.tsx
 
@@ -427,15 +437,17 @@ fixtures/
 
 ## 7. 视觉体系
 
-方向是 **framed-sheet**：深青的 L 形外框 + 白色画布，靠明度台阶和 1px 边分层；
-画布浮起一层低位投影，画布内部不用阴影。全套令牌在 `src/styles/tokens.scss`。
+方向是 **shadcn 默认**：白底 + 1px 细线分层，靠边框而不是投影区分层级。
+深青只留给值班牌与矩阵概览条这两块数据元素。
+项目令牌在 `src/styles/tokens.scss`，shadcn 语义变量（`--ui-*`）在 `src/index.css`。
 
 | 项 | 值 |
 |---|---|
-| 外框 / 画布 / 面板 | `#0e2228` / `#ffffff` / `#f6f8f9` |
-| 表头与悬停 / 抬起 | `#fbfcfd` / `#f4f6f8` |
+| 卡片 / 面板 | `#ffffff` + `1px #d9dee2`（`.card-surface`） |
+| shadcn 边框 / 悬停底 | `#e5e5e5` / `#f5f5f5`（`--ui-border` / `--ui-muted`） |
 | 主文字 / 次要 / 最弱 | `#131416` / `#4c5256` / `#5d6468` |
 | 控件描边 | `#8f969b`（3:1） |
+| 深青（仅数据块） | `#0e2228`（值班牌、矩阵概览条） |
 | 强调色 | `#1b6c80`（深框里用亮青 `#7fd2e2`） |
 | 圆角 | 画布 16 / 卡片 8 / 控件 6 |
 | 侧栏 / 顶栏 | 228px / 48px |
@@ -520,7 +532,7 @@ pnpm dev:lan         # 同上 + 绑 0.0.0.0
 pnpm build           # tsc --noEmit + vite build → dist/
 pnpm preview         # 预览产物 6181
 pnpm typecheck       # tsc --noEmit
-pnpm test            # vitest run（223 个用例）
+pnpm test            # vitest run（271 个用例）
 pnpm verify:dist     # 无头浏览器真跑一遍产物（**412 项**）：向导（本人→同事）→默认落月度概览→四块统计空态→矩阵/日历锁本人→薪资落盘→改班→加班（统计与加班费同步）→半天事假（扣款）→换人确认→建班序→导出 v5→删班序→翻月→导入 13 人→排序
 pnpm verify:tauri    # 壳内验收（release exe + WebView2 调试口）：建人→改班→导出→重启读回→导入
 ```
@@ -535,8 +547,8 @@ pnpm verify:tauri    # 壳内验收（release exe + WebView2 调试口）：建�
 > 一次性界面测量探针在 `scripts/probe/`（内容密度、纵向溢出、滚动条），
 > 只用于偶发排查，不挂 `package.json` 命令，也不参与验收链路。
 
-`pnpm test` 覆盖 11 个数据层文件共 **223 个用例**
-（period 13 / patterns 8 / customPatterns 23 / overtime 15 / roster 45 / backup 19 / self 30 / stats 37 / leave 7 / todos 18 / backupDir 8），
+`pnpm test` 覆盖 14 个文件共 **271 个用例**
+（period 13 / patterns 8 / customPatterns 23 / overtime 15 / roster 55 / backup 21 / self 30 / stats 41 / leave 7 / todos 18 / memberImport 19 / backupDir 8 / useCurrentShift 8 / useWorkdayKey 5），
 断言的都是一旦改坏就会静默出错的规则：结算月天数与跨年、班序 24 天一循环、
 同一班序多人同班次、**「班次与模板相同但记了加班」的记录不能被删**、
 休息/事假上的加班要被拒绝、旧格式备份必须被明确拒绝、

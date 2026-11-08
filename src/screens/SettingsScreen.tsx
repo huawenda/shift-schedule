@@ -12,6 +12,7 @@ import { MemberGroupsEditor } from '../components/MemberGroupsEditor'
 import { MemberGroupTabs } from '../components/MemberGroupTabs'
 import { PatternList } from '../components/PatternList'
 import { ProfileSection } from '../components/ProfileSection'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { isTauriShell } from '../platform/env'
 import { describeImport, mergeImportedMembers, readMemberSheet } from '../data/memberImport'
 import {
@@ -45,6 +46,7 @@ import {
   syncCloseBehaviorToShell,
   type CloseBehavior
 } from '../platform/windowPrefs'
+import { Input } from '@/components/ui/input'
 
 /** 设置分两页：班序与成员占满屏，个人信息/备份/清空放另一页，各自不再互相挤压 */
 export type SettingsTab = 'roster' | 'profile'
@@ -458,24 +460,17 @@ export function SettingsScreen({
         </div>
 
         <div className="canvas-tools">
-          <div className="segmented" role="group" aria-label="设置分页">
-            <button
-              aria-pressed={tab === 'roster'}
-              className={`segmented-item${tab === 'roster' ? ' is-on' : ''}`}
-              type="button"
-              onClick={() => onTabChange('roster')}
-            >
-              人员配置
-            </button>
-            <button
-              aria-pressed={tab === 'profile'}
-              className={`segmented-item${tab === 'profile' ? ' is-on' : ''}`}
-              type="button"
-              onClick={() => onTabChange('profile')}
-            >
-              个人资料
-            </button>
-          </div>
+          {/*
+            分页换成 shadcn Tabs：value / onValueChange 直接接路由里的 settingsTab，
+            内容区仍在 Tabs 之外（`tab === 'roster' ? … : …`），所以不用 TabsContent ——
+            页签只负责「显示哪一个」，切换本身还是要写进 hash。
+          */}
+          <Tabs value={tab} onValueChange={next => onTabChange(next as SettingsTab)}>
+            <TabsList aria-label="设置分页">
+              <TabsTrigger value="roster">人员配置</TabsTrigger>
+              <TabsTrigger value="profile">个人资料</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
@@ -728,10 +723,10 @@ export function SettingsScreen({
 
               <div className="settings-panel">
                 <div className="danger-row">
-                  <input
+                  <Input
                     aria-label="输入清空以确认"
                     autoComplete="off"
-                    className="input"
+                    className="max-w-[220px] max-lg:max-w-none max-lg:flex-1 max-lg:basis-[140px]"
                     name="clear-confirm"
                     placeholder="输入「清空」以确认"
                     value={confirmText}

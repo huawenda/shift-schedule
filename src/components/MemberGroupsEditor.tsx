@@ -7,7 +7,16 @@ import {
   type MemberGroup
 } from '../data/roster'
 import { useDismissOnBack } from '../hooks/useDismissOnBack'
-import { useDialogFocus } from '../hooks/useDialogFocus'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface MemberGroupsEditorProps {
   groups: MemberGroup[]
@@ -42,7 +51,8 @@ export function MemberGroupsEditor({
   const pendingDelete = pendingDeleteId ? groups.find(group => group.id === pendingDeleteId) : undefined
   /** 回车失焦与 Esc 失焦走的是同一条 onBlur：Esc 要撤销，不能被当成提交 */
   const cancelledRef = useRef<string | null>(null)
-  const dialogRef = useDialogFocus<HTMLElement>()
+  // 弹层的开关完全由 pendingDelete 决定：有值就是打开，清空就是关闭
+  const dialogOpen = Boolean(pendingDelete)
   useDismissOnBack(Boolean(pendingDeleteId), () => setPendingDeleteId(null))
 
   const atLimit = groups.length >= MAX_MEMBER_GROUPS
@@ -115,10 +125,10 @@ export function MemberGroupsEditor({
             const usage = usageOf(group.id)
             return (
               <div className="group-row" key={group.id}>
-                <input
+                <Input
                   aria-label={`第 ${index + 1} 个分组的名称`}
                   autoComplete="off"
-                  className="input group-name-input"
+                  className="group-name-input"
                   maxLength={MAX_GROUP_NAME_LENGTH}
                   name={`group-name-${index}`}
                   placeholder="组名，例如部门名"
@@ -163,11 +173,10 @@ export function MemberGroupsEditor({
               addGroup()
             }}
           >
-            <input
+            <Input
               aria-label="新分组的名称"
               autoComplete="off"
               autoFocus
-              className="input"
               maxLength={MAX_GROUP_NAME_LENGTH}
               name="group-new-name"
               placeholder="组名，例如部门名"
@@ -212,25 +221,19 @@ export function MemberGroupsEditor({
       ) : null}
 
       {pendingDelete ? (
-        <div className="sheet-backdrop" role="presentation" onMouseDown={() => setPendingDeleteId(null)}>
-          <section
-            aria-label="删除分组"
-            aria-modal="true"
-            className="dialog dialog-narrow"
-            ref={dialogRef}
-            role="dialog"
-            tabIndex={-1}
-            onMouseDown={event => event.stopPropagation()}
-          >
-            <header className="dialog-head">
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={next => {
+            if (!next) setPendingDeleteId(null)
+          }}
+        >
+          <DialogContent aria-label="删除分组" className="gap-0 p-0 sm:max-w-[380px]">
+            <DialogHeader className="dialog-head p-4">
               <div>
-                <h2 className="dialog-title">删除分组「{pendingDelete.name}」？</h2>
-                <p className="dialog-sub">此操作不可撤销</p>
+                <DialogTitle className="dialog-title">删除分组「{pendingDelete.name}」？</DialogTitle>
+                <DialogDescription className="dialog-sub">此操作不可撤销</DialogDescription>
               </div>
-              <button className="btn btn-quiet" type="button" onClick={() => setPendingDeleteId(null)}>
-                关闭
-              </button>
-            </header>
+            </DialogHeader>
 
             <div className="dialog-body">
               {usageOf(pendingDelete.id) > 0 ? (
@@ -242,15 +245,12 @@ export function MemberGroupsEditor({
               )}
             </div>
 
-            <footer className="dialog-foot">
-              <span />
-              <div className="dialog-actions">
-                <button className="btn" type="button" onClick={() => setPendingDeleteId(null)}>取消</button>
-                <button className="btn btn-danger" type="button" onClick={confirmDelete}>删除分组</button>
-              </div>
-            </footer>
-          </section>
-        </div>
+            <DialogFooter className="mx-0 mb-0">
+              <Button variant="outline" onClick={() => setPendingDeleteId(null)}>取消</Button>
+              <Button variant="destructive" onClick={confirmDelete}>删除分组</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </div>
   )

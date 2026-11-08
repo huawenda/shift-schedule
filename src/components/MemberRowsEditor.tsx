@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createMemberId, type Member, type MemberGroup } from '../data/roster'
 import { Select } from './Select'
+import { Input } from '@/components/ui/input'
 
 /** 「未分组」不是真实分组，用哨兵值表达 tab/筛选条件 */
 export const UNGROUPED_MEMBERS = '__ungrouped__'
@@ -376,10 +377,10 @@ export function MemberRowsEditor({
               <span className="badge-self">本人</span>
             </span>
           ) : (
-            <input
+            <Input
               aria-label={`第 ${index + 1} 位成员的姓名`}
               autoComplete="off"
-              className="input member-field-name"
+              className="member-field-name"
               maxLength={12}
               name={`member-name-${index}`}
               placeholder="姓名"
@@ -425,10 +426,10 @@ export function MemberRowsEditor({
                 {row.position || '—'}
               </span>
             ) : (
-              <input
+              <Input
                 aria-label={`${row.name || `第 ${index + 1} 位成员`} 的岗位`}
                 autoComplete="off"
-                className="input member-field-position"
+                className="member-field-position"
                 maxLength={12}
                 name={`member-position-${index}`}
                 placeholder="岗位（可选）"

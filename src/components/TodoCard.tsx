@@ -20,7 +20,7 @@ export function TodoCard({ todos, onToggle }: TodoCardProps) {
   const summary = summarizeTodos(todos)
 
   return (
-    <section className="todo-card" aria-label="待办">
+    <section className="todo-card card-surface" aria-label="待办">
       <div className="todo-card-fill">
         <header className="todo-card-head">
           <h2 className="todo-card-title">待办</h2>
@@ -44,14 +44,16 @@ export function TodoCard({ todos, onToggle }: TodoCardProps) {
                 <ul className="todo-items">
                   {group.todos.map(todo => (
                     <li className={`todo-item todo-tone-${todo.tone}${todo.done ? ' is-done' : ''}`} key={todo.id}>
-                      <button
-                        aria-label={`${todo.done ? '取消完成' : '标记完成'}：${todo.text}`}
-                        aria-pressed={todo.done}
-                        className="todo-check"
-                        type="button"
-                        onClick={() => onToggle(todo.id)}
-                      />
-                      <span className="todo-text">{todo.text}</span>
+                      {/* 与沙盒一致：label 包住原生 checkbox + 文字，整行都能点 */}
+                      <label className="todo-row">
+                        <input
+                          checked={todo.done}
+                          className="todo-check"
+                          type="checkbox"
+                          onChange={() => onToggle(todo.id)}
+                        />
+                        <span className="todo-text">{todo.text}</span>
+                      </label>
                     </li>
                   ))}
                 </ul>

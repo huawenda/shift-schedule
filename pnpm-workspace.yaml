@@ -2,4 +2,5 @@
 # 本仓库没有 packages 工作区，这个文件只承载 allowBuilds 设置。
 allowBuilds:
   '@parcel/watcher': true
+  '@tailwindcss/oxide': true
   esbuild: true

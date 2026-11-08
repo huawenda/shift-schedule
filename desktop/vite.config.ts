@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, type Plugin } from 'vite'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -73,7 +74,14 @@ export default defineConfig({
   base: './',
   // public/ 也要显式指过去，否则 vite 会去 desktop/public 找，图标和说明就丢了。
   publicDir: path.resolve(appRoot, 'public'),
-  plugins: [stripPwaAssetsPlugin()],
+  // 与根配置保持一致：两条产物线共用同一份 src/，缺任一插件/别名都会构建失败
+  plugins: [tailwindcss(), stripPwaAssetsPlugin()],
+
+  resolve: {
+    alias: {
+      '@': path.resolve(appRoot, 'src')
+    }
+  },
 
   server: {
     // 与静态版 dev 端口错开：两个 dev server 同时开会互相抢占。

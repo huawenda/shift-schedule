@@ -1,6 +1,14 @@
 import { formatMoney } from '../data/profile'
 import { formatOvertimeHours } from '../data/overtime'
 import { formatMonthDay, weekdayLabel } from '../data/dateUtils'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table'
 import { SHIFT_META, shiftToneClass, type ShiftType } from '../data/shifts'
 import {
   OVERTIME_KIND_LABEL,
@@ -122,7 +130,7 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
 
   return (
     <div className="stats-grid">
-      <section className="stat-card" aria-label="本月概览">
+      <section className="stat-card card-surface" aria-label="本月概览">
         <header className="stat-head">
           <h2 className="stat-title">本月概览</h2>
           <span className="stat-note">共 {totalDays} 天</span>
@@ -156,7 +164,7 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
         随后 grid 的 stretch 把外壳拉成同高，绝对定位的内层跟着铺满。
         否则加班分布的图表一旦需要更多高度，反过来会把本月概览撑高、留出空白。
       */}
-      <section className="stat-card stat-card-ot" aria-label="加班分布">
+      <section className="stat-card card-surface stat-card-ot" aria-label="加班分布">
         <div className="stat-card-ot-fill">
           <header className="stat-head">
             <h2 className="stat-title">加班分布</h2>
@@ -206,7 +214,7 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
         </div>
       </section>
 
-      <section className="stat-card" aria-label="薪资计算">
+      <section className="stat-card card-surface" aria-label="薪资计算">
         <header className="stat-head">
           <h2 className="stat-title">薪资计算</h2>
           <span className="stat-note">时薪 {formatMoney(salary.hourlyWage)}</span>
@@ -293,7 +301,7 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
         所以它被 grid 拉成和左边「薪资计算」一样高。
         薪资项将来变多时这张卡自动跟着长高，不需要维护任何高度常量。
       */}
-      <section className="stat-card stat-card-detail" aria-label="每日明细">
+      <section className="stat-card card-surface stat-card-detail" aria-label="每日明细">
         <div className="stat-card-fill">
           <header className="stat-head">
             <h2 className="stat-title">每日明细</h2>
@@ -301,24 +309,24 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
           </header>
 
           {overtimeDays.length > 0 ? (
-            <div className="detail-scroll">
-              <table className="detail-table">
-                <thead>
-                  <tr>
-                    <th scope="col">日期</th>
-                    <th scope="col">班次</th>
-                    <th scope="col" className="is-num">加班</th>
-                    <th scope="col" className="is-num">加班费</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="detail-scroll [&_[data-slot=table-container]]:overflow-visible">
+              <Table className="detail-table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="sticky top-0 z-10 bg-card" scope="col">日期</TableHead>
+                    <TableHead className="sticky top-0 z-10 bg-card" scope="col">班次</TableHead>
+                    <TableHead className="is-num sticky top-0 z-10 bg-card" scope="col">加班</TableHead>
+                    <TableHead className="is-num sticky top-0 z-10 bg-card" scope="col">加班费</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {overtimeDays.map(day => (
-                    <tr key={day.date}>
-                      <td>
+                    <TableRow className="border-b-0" key={day.date}>
+                      <TableCell>
                         {formatMonthDay(day.date)}
                         <span className="detail-week">周{weekdayLabel(day.date)}</span>
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {/*
                           班次块外面套一层：『法』用绝对定位挂在它右侧，
                           不参与宽度 —— 否则带法定标的那一行整体被挤偏，
@@ -330,19 +338,19 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
                           </span>
                           {day.isLegal ? <span className="detail-legal">法</span> : null}
                         </span>
-                      </td>
-                      <td className="is-num">{formatOvertimeHours(day.hours)}</td>
-                      <td className="is-num">
+                      </TableCell>
+                      <TableCell className="is-num">{formatOvertimeHours(day.hours)}</TableCell>
+                      <TableCell className="is-num">
                         {salary.hasBase ? (
                           <span className={`pay-pill is-t${payTier(day.pay, maxPay, minPay)}`}>
                             {formatMoney(day.pay)}
                           </span>
                         ) : '—'}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <p className="stat-empty">这个月还没有加班记录。</p>

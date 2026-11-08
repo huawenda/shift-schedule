@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDismissOnBack } from '../hooks/useDismissOnBack'
 import type { DayOverride, DayRecordInput, Member } from '../data/roster'
-import { useDialogFocus } from '../hooks/useDialogFocus'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import {
   MAX_OVERTIME_HOURS,
   OVERTIME_STEP,
@@ -74,7 +83,7 @@ export function DayEditor({
   onRemoveTodo,
   onClose
 }: DayEditorProps) {
-  const dialogRef = useDialogFocus<HTMLElement>()
+  const [open, setOpen] = useState(true)
   // 系统返回键：先关弹层（等同点遮罩，有未保存改动时仍会拦一下）
   useDismissOnBack(true, requestClose)
   const [tab, setTab] = useState<DayEditorTab>('shift')
@@ -112,14 +121,6 @@ export function DayEditor({
     (leaveAllowed ? leaveDuration : DEFAULT_LEAVE_DURATION) !==
       (record?.leaveDuration ?? DEFAULT_LEAVE_DURATION)
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') requestClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose, dirty, tab, confirmDiscard])
-
   /** 换到不支持加班 / 法定的班次时，把对应的值原地清掉（避免切回去又冒出来） */
   function pickShift(next: ShiftType) {
     setShift(next)
@@ -148,6 +149,7 @@ export function DayEditor({
       setConfirmDiscard(true)
       return
     }
+    setOpen(false)
     onClose()
   }
 
@@ -160,26 +162,25 @@ export function DayEditor({
   }
 
   return (
-    <div className="sheet-backdrop" role="presentation" onMouseDown={requestClose}>
-      <section
+    <Dialog
+      open={open}
+      onOpenChange={next => {
+        if (!next) requestClose()
+      }}
+    >
+      <DialogContent
         aria-label="修改当天记录"
-        aria-modal="true"
-        className="dialog dialog-day"
-        ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
-        onMouseDown={event => event.stopPropagation()}
+        className="dialog-day max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto p-0 sm:max-w-[480px]"
       >
-        <header className="dialog-head">
+        <DialogHeader className="dialog-head p-4">
           <div>
-            <h2 className="dialog-title">{member.name}</h2>
-            <p className="dialog-sub">
+            <DialogTitle className="dialog-title">{member.name}</DialogTitle>
+            <DialogDescription className="dialog-sub">
               {formatMonthDay(date)} · 周{weekdayLabel(date)} · 默认{' '}
               {templateShift ? SHIFT_META[templateShift].label : '—'}
-            </p>
+            </DialogDescription>
           </div>
-          <button className="btn btn-quiet" type="button" onClick={requestClose}>关闭</button>
-        </header>
+        </DialogHeader>
 
         {/* 两个标签页：班次 / 待办 */}
         <div className="dialog-tabs" role="group" aria-label="当天记录">
@@ -211,10 +212,10 @@ export function DayEditor({
         {tab === 'todo' ? (
           <div className="dialog-page">
             <div className="todo-add">
-              <input
+              <Input
                 aria-label="新增待办"
                 autoComplete="off"
-                className="input"
+                className="flex-1"
                 maxLength={MAX_TODO_TEXT}
                 name="todo-text"
                 placeholder="写点什么…"
@@ -348,10 +349,10 @@ export function DayEditor({
                     </div>
 
                     <label className="ot-input">
-                      <input
+                      <Input
                         aria-label="加班小时数"
                         autoComplete="off"
-                        className="input input-compact"
+                        className="h-8 w-[84px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         disabled={!overtimeAllowed}
                         inputMode="decimal"
                         name="overtime-hours"
@@ -396,34 +397,28 @@ export function DayEditor({
           - 班次页：恢复默认 / 取消 / 保存（改动要显式保存）
           - 待办页：只有一个「完成」（待办改动立即生效，没有待保存的东西）
         */}
-        <footer className="dialog-foot">
+        <DialogFooter className="mx-0 mb-0">
           {confirmDiscard ? (
             <>
-              <span className="dialog-discard">有未保存的修改</span>
-              <div className="dialog-actions">
-                <button className="btn" type="button" onClick={() => setConfirmDiscard(false)}>继续编辑</button>
-                <button className="btn btn-danger" type="button" onClick={onClose}>放弃修改</button>
-              </div>
+              <span className="dialog-discard mr-auto">有未保存的修改</span>
+              <Button variant="outline" onClick={() => setConfirmDiscard(false)}>继续编辑</Button>
+              <Button variant="destructive" onClick={onClose}>放弃修改</Button>
             </>
           ) : tab === 'shift' ? (
             <>
-              <button className="btn btn-quiet" disabled={!hasRecord} type="button" onClick={onRestore}>
+              <Button className="mr-auto" disabled={!hasRecord} variant="ghost" onClick={onRestore}>
                 恢复默认
-              </button>
-              <div className="dialog-actions">
-                <button className="btn" type="button" onClick={requestClose}>取消</button>
-                <button className="btn btn-primary" disabled={!shift || !dirty || missingOvertime} type="button" onClick={commit}>
-                  保存
-                </button>
-              </div>
+              </Button>
+              <Button variant="outline" onClick={requestClose}>取消</Button>
+              <Button disabled={!shift || !dirty || missingOvertime} onClick={commit}>
+                保存
+              </Button>
             </>
           ) : (
-            <div className="dialog-actions dialog-actions-end">
-              <button className="btn" type="button" onClick={onClose}>完成</button>
-            </div>
+            <Button variant="outline" onClick={onClose}>完成</Button>
           )}
-        </footer>
-      </section>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

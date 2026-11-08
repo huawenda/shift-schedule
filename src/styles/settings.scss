@@ -32,7 +32,7 @@
   height: 13px;
   margin-right: 8px;
   border-radius: 2px;
-  background: var(--accent);
+  background: var(--ui-primary);
   vertical-align: -2px;
 }
 
@@ -40,11 +40,11 @@
   margin-bottom: 6px;
   font-size: var(--fs-small);
   line-height: 1.65;
-  color: var(--muted);
+  color: var(--ui-muted-foreground);
 }
 
 .settings-meta {
-  color: var(--muted) !important;
+  color: var(--ui-muted-foreground) !important;
   font-variant-numeric: tabular-nums;
 }
 
@@ -55,11 +55,10 @@
   flex-direction: column;
   gap: var(--sp-3);
   padding: var(--sp-4);
-  /* 与概览页卡片同一套：白卡 + 极浅投影，不再用内凹面板去和画布抢边界 */
-  border: 0;
+  /* 与概览页 .card-surface 同一套：白底 + 1px 线 + 圆角，无投影 */
+  border: 1px solid var(--ui-border);
   border-radius: var(--radius-panel);
-  background: var(--surface);
-  box-shadow: var(--shadow-raised);
+  background: var(--ui-card);
 }
 
 /* 操作条：说明文字 + 按钮同一行。
@@ -114,12 +113,6 @@
   color: var(--faint);
 }
 
-.settings-footnote {
-  padding-top: 4px;
-  font-size: var(--fs-small);
-  color: var(--muted);
-}
-
 /* ── 成员分组 tab ─────────────────────────────────────── */
 
 /* 下划线 tab：分组之间的切换是「看哪一组」，不需要另造一种选中底色。
@@ -128,15 +121,17 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding-bottom: 1px;
-  border-bottom: 1px solid var(--rule);
+  /* 胶囊式 tab 自带底色，不再需要底部那条分隔线 */
 }
 
 .member-tabs {
   display: flex;
   flex: 1 1 auto;
   min-width: 0;
-  gap: var(--sp-1);
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-lg);
+  background: var(--ui-muted);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -148,34 +143,27 @@
 .member-tab {
   position: relative;
   flex: 0 0 auto;
-  height: var(--control-height);
-  padding: 0 8px;
+  height: 28px;
+  padding: 0 10px;
   border: 0;
+  border-radius: calc(var(--radius-lg) - 2px);
   background: transparent;
-  color: var(--muted);
-  font-size: var(--fs-control);
+  color: var(--ui-muted-foreground);
+  font-size: 0.875rem;
   white-space: nowrap;
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
 .member-tab:hover {
-  color: var(--text);
+  color: var(--ui-foreground);
 }
 
 .member-tab.is-on {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.member-tab.is-on::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 0;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--accent);
+  background: var(--ui-card);
+  color: var(--ui-foreground);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
 }
 
 .member-tab:focus-visible,
@@ -185,14 +173,14 @@
 
 .member-tab-count {
   margin-left: 4px;
-  color: var(--faint);
+  color: var(--ui-muted-foreground);
   font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
   font-weight: 400;
 }
 
 .member-tab.is-on .member-tab-count {
-  color: var(--muted);
+  color: var(--ui-foreground);
 }
 
 .member-tabs-actions {
@@ -247,8 +235,9 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--rule);
+  /* 控件是 32px（shadcn Input 的 h-8），上下各 4px 使整行落在 40px —— 与 Table 的 h-10 同节奏 */
+  padding: 4px 0;
+  border-bottom: 1px solid var(--ui-border);
 }
 
 /* 桌面：班序 / 岗位的容器在网格里“消失”，两个字段仍是 .member-row 的直接列 */
@@ -295,7 +284,7 @@
 /* 提示文字缩进到姓名输入框正文的位置：1px 边框 + 8px 内边距 = 9px */
 .member-row-error {
   margin: 0;
-  padding-left: 9px;
+  padding-left: 10px;
   color: var(--danger);
   font-size: var(--fs-small);
   line-height: 1.5;
@@ -305,29 +294,48 @@
   /* 不要给这一行加**左右**内边距：它和下面的行是两套独立的 grid，
    * 只要多 1px 的 padding，表头文字就会比输入框的左边框往右偏 1px。
    * 纵向的 padding 与分隔线不影响列宽，可以加。 */
-  padding: 0 0 var(--sp-2);
-  border-bottom: 1px solid var(--rule);
-  color: var(--muted);
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-muted-foreground);
   font-size: var(--fs-small);
+  font-weight: 500;
 }
 
-/* 行悬停：整行淡淡抬起一层，扫描一列时知道自己在哪一行 */
-.member-row:hover {
-  background: var(--surface-tint);
+/* 行悬停：整行淡淡抬起一层，扫描一列时知道自己在哪一行。
+ *
+ * 底色用圆角，且**与字段的左边缘重合**：不再用负边距外扩，
+ * 行的盒子本身就从姓名输入框的左边框开始，圆角沿着这个边界收。 */
+.member-row {
+  border-radius: var(--radius-md);
 }
 
-/* 本人行：整行浅灰底 + 三个只读字段。和其它可编辑行一眼分得开，
- * 不用再靠阅读「本人」那枚小徽章才知道这行改不了。 */
+.member-row:not(.is-self):hover {
+  background: color-mix(in oklab, var(--ui-foreground) 3%, transparent);
+}
+
+/* 本人行：不给整行铺底色。
+ *
+ * 整行底色会把几个字段之间的空隙也填上，看起来像一条通栏灰带；
+ * 这里只让「只读字段」自己带底色（见 .member-locked），
+ * 空隙留在卡片白底上，仍是「三个格子里装着不可改的值」的观感。 */
 .member-row.is-self,
 .member-row.is-self:hover {
-  background: var(--surface-sunken);
+  background: transparent;
 }
 
 /* 行内「删除」：与字段同一档高度的无框按钮。
  * 禁用态（本人行）也保持透明 —— 否则它是一块灰底方块，比旁边的输入框重得多。 */
 .member-row .btn-quiet {
-  height: 28px;
-  padding: 0 6px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--radius-control);
+  color: var(--ui-muted-foreground);
+  font-size: 0.875rem;
+}
+
+.member-row .btn-quiet:hover:not(:disabled) {
+  background: var(--ui-accent);
+  color: var(--ui-accent-foreground);
 }
 
 .member-row .btn-quiet:disabled {
@@ -338,11 +346,7 @@
 /* 表头文字再右移 9px，去对齐输入框**里面**的文字：
  * 输入框是 1px 边框 + 8px 内边距，正文从第 9px 开始；表头贴在列边界上会显得偏左。 */
 .member-head-label {
-  padding-left: 9px;
-}
-
-.member-row .input {
-  min-width: 0;
+  padding-left: 10px;
 }
 
 /* ── 分组 ───────────────────────────────────────────── */
@@ -410,17 +414,10 @@
 }
 
 /* 导入说明：只在设置页出现（向导里的成员表没有导入按钮） */
-.member-import-hint {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: var(--fs-small);
-  line-height: 1.5;
-}
-
 .member-editor-empty {
   padding: 8px 2px;
   font-size: var(--fs-small);
-  color: var(--muted);
+  color: var(--ui-muted-foreground);
 }
 
 /* 自建班序为空：做成内凹浅槽，与待办卡的空态同一套语言。
@@ -493,13 +490,6 @@
   gap: var(--sp-2);
 }
 
-.sort-hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: var(--fs-small);
-  line-height: 1.6;
-}
-
 .sort-list {
   position: relative;
   display: flex;
@@ -514,22 +504,22 @@
   gap: var(--sp-2);
   height: 44px;
   padding: 0 10px;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--ui-border);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--ui-card);
   transition: transform var(--dur-fast) var(--ease-out);
 }
 
 .sort-row.is-self {
-  background: var(--surface-sunken);
+  background: color-mix(in oklab, var(--ui-foreground) 5%, transparent);
 }
 
 /* 被拖行：抬起一层、描边强调；跟手时不要过渡 */
 .sort-row.is-dragging {
   z-index: 2;
-  border-color: var(--accent);
-  background: var(--surface);
-  box-shadow: var(--shadow-floating);
+  border-color: var(--ui-ring);
+  background: var(--ui-card);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
   transition: none;
 }
 
@@ -540,7 +530,7 @@
   justify-content: center;
   width: 28px;
   height: 44px;
-  color: var(--faint);
+  color: var(--ui-muted-foreground);
   font-size: var(--fs-body);
   cursor: grab;
   touch-action: none;
@@ -615,10 +605,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.danger-row .input {
-  max-width: 220px;
 }
 
 /* ── 班序区块 ─────────────────────────────────────────── */
@@ -819,11 +805,6 @@
   font-weight: 600;
 }
 
-.pattern-preview-note {
-  font-size: var(--fs-label);
-  color: var(--muted);
-}
-
 .pattern-grid {
   display: flex;
   flex-direction: column;
@@ -910,10 +891,6 @@ button.shift-cell:hover {
   width: 560px;
 }
 
-.dialog-narrow {
-  width: 460px;
-}
-
 .dialog-body {
   display: flex;
   flex-direction: column;
@@ -952,16 +929,6 @@ button.shift-cell:hover {
   color: var(--muted);
 }
 
-.editor-warn {
-  padding: var(--sp-2) var(--sp-3);
-  border: 1px solid var(--warning-border);
-  border-radius: var(--radius-control);
-  background: var(--warning-bg);
-  color: var(--warning-ink);
-  font-size: var(--fs-small);
-  line-height: 1.6;
-}
-
 /* ── 删除班序的二次确认 ───────────────────────────────── */
 
 .confirm-names {
@@ -983,38 +950,9 @@ button.shift-cell:hover {
 
 /* ── 个人信息 ─────────────────────────────────────────── */
 
-.profile-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  padding: var(--sp-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-}
-
 /* 抬头下一条发丝线：两块（本人 / 薪资）都是「标题 + 一堆输入框」，
  * 没有这条线时标题像飘在表单上面，两块之间的分界全靠卡片边框。
  * 线画在标题盒子的下沿（含 8px 内边距），所以仍然贴着卡片左右内边距对齐。 */
-.profile-title {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding-bottom: var(--sp-2);
-  border-bottom: 1px solid var(--rule);
-  font-size: var(--fs-body);
-  font-weight: 600;
-}
-
-.profile-tag {
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  background: var(--raised);
-  color: var(--faint);
-  font-size: var(--fs-label);
-  font-weight: 400;
-}
-
 .profile-form,
 .salary-grid {
   display: grid;
@@ -1027,13 +965,6 @@ button.shift-cell:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.money-input .input {
-  flex: 1;
-  min-width: 0;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 .money-unit {
@@ -1071,13 +1002,14 @@ button.shift-cell:hover {
   align-items: center;
   gap: 6px;
   min-width: 0;
-  height: var(--control-height);
-  padding: 0 8px;
+  /* 与 shadcn Input 同高同边：h-8 + 1px border + 10px 内边距，同一行里不会差 2px */
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ui-border);
   border-radius: var(--radius-control);
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--control-soft);
-  color: var(--muted);
-  font-size: var(--fs-control);
+  background: color-mix(in oklab, var(--ui-muted) 75%, var(--ui-card));
+  color: var(--ui-muted-foreground);
+  font-size: 0.875rem;
 }
 
 .member-locked-name {
@@ -1195,11 +1127,6 @@ button.shift-cell:hover {
     background: var(--surface);
   }
 
-  .member-row.is-self,
-  .member-row.is-self:hover {
-    background: var(--surface-sunken);
-  }
-
   /* 卡片的错误用描边表达，桌面那条 inset 阴影收掉 */
   .member-row.is-invalid {
     border-color: var(--danger-border);
@@ -1275,11 +1202,6 @@ button.shift-cell:hover {
 
   .danger-row {
     flex-wrap: wrap;
-  }
-
-  .danger-row .input {
-    max-width: none;
-    flex: 1 1 140px;
   }
 
   /* 备份目录：标签独占一行，路径与按钮排第二行 */

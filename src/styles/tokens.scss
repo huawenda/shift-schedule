@@ -264,9 +264,10 @@
 }
 
 /* iOS Safari 在字号小于 16px 的输入框聚焦时会把整页放大。
- * 只在「窄屏 + 粗指针」同时成立时抬字号：桌面窄窗不受影响。 */
+ * 只在「窄屏 + 粗指针」同时成立时抬字号：桌面窄窗不受影响。
+ * 选择器换成 shadcn 的 input（带 data-slot）—— 旧的 .input 控件已全部替换。 */
 @media (max-width: 1023px) and (pointer: coarse) {
-  .input {
+  input[data-slot='input'] {
     font-size: 16px;
   }
 }
@@ -295,9 +296,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button,
-input,
-select {
+/*
+ * 只作用于自研控件：`:where(:not([data-slot]))` 把 shadcn 组件排除在外。
+ *
+ * 原因在**层叠顺序**：CSS 规范里「层（@layer）」排在「特异性」之前比较 ——
+ * 这条规则是未分层的普通规则，而 Tailwind 的 `text-primary-foreground` 在 `@layer utilities` 里，
+ * 所以未分层永远压过分层。
+ *
+ * 但特异性必须保持在 (0,0,1)，所以用 `:where()` 包住 `:not()`：
+ * `:not()` 会把参数的特异性算进来，写成 `button:not([data-slot])` 就变成 (0,1,1)，
+ * 反过来压过 `.t-night` / `.option` 这些 (0,1,0) 的色块类 —— 矩阵格子的文字会变成黑色。
+ * `:where()` 的优先级恒为 0，于是这条规则仍然只是最弱的那一档。
+ */
+button:where(:not([data-slot])),
+input:where(:not([data-slot])),
+select:where(:not([data-slot])) {
   font: inherit;
   color: inherit;
 }
@@ -311,25 +324,9 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* 焦点框只给输入类控件：.input:focus 的边框 + 光晕、.select-trigger 的边框 + 光晕。
- * 按钮 / 链接 / 导航 / 矩阵格一律不画 outline —— 鼠标点过再按 Shift 也不会突然冒外框。 */
-:focus-visible {
-  outline: none !important;
-}
-
-/* 弹层关闭后把焦点还给触发元素，但不要立刻补一圈键盘焦点环（见 useDialogFocus） */
-.is-focus-silent:focus-visible {
-  outline: none !important;
-}
-
 /* 微动效统一降级；toast 那套用动画实现，在 toasts.scss 里单独处理 */
 @media (prefers-reduced-motion: reduce) {
-  .rail-item,
-  .rail-icon,
-  .month-step,
-  .month-today,
   .segmented-item,
-  .select-arrow,
   .scroll-overlay-thumb {
     transition: none;
   }
@@ -430,18 +427,33 @@ p {
 
 /* ------------------------------------------------------------ 控件 */
 
+/* 卡片外壳：白底 + 1px 线 + 圆角，无投影 —— 与 shadcn Card 的观感一致，
+ * 但由项目自己实现（shadcn 的 ring 轮廓在本项目主题层下会解析成透明）。
+ * 统计卡 / 待办卡 / 成员卡都用这一个类，别再各写一遍。 */
+.card-surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  /* 10px = shadcn Card 的 rounded-xl（--radius-lg）。
+   * 不改全局 --radius-panel（12px）：值班牌 .plaque、矩阵 .matrix-edge 等
+   * 冻结组件也在用它，阶段 7 之前保持原值。 */
+  border-radius: var(--radius-lg);
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: var(--control-height);
+  /* 32px / 14px = shadcn Button 的 h-8 / text-sm。
+   * 写成具体值而不是 var(--control-height) / var(--fs-control)：
+   * 那两个全局变量被冻结组件（值班牌、矩阵）引用，改它们会动到阶段 7 才该动的地方。 */
+  height: 32px;
   padding: 0 var(--sp-3);
   border: 1px solid var(--control);
   border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--text);
-  font-size: var(--fs-control);
+  font-size: 0.875rem;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -494,169 +506,14 @@ p {
 
 .btn-add {
   align-self: flex-start;
-  border-style: dashed;
-  color: var(--muted);
+  /* 虚线改成实线：与 shadcn 的 outline 按钮一致，边框用卡片同一档中性色 */
+  border-color: var(--ui-border);
+  background: var(--ui-card);
+  color: var(--ui-foreground);
+  font-size: 0.875rem;
 }
 
-.input {
-  width: 100%;
-  height: var(--control-height);
-  padding: 0 var(--sp-2);
-  border: 1px solid var(--control);
-  border-radius: var(--radius-control);
-  background: var(--surface);
-  font-size: var(--fs-control);
-}
-
-.input:hover {
-  border-color: var(--control-hover);
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-weak);
-}
-
-.input-compact {
-  width: auto;
-  min-width: 132px;
-}
-
-/* ── 下拉框（自己画弹层，替掉原生 select）─────────────────
- * 原生弹层改不动：直角、零内边距、选中行一条系统死灰。这里只补两件事 ——
- * 触发按钮与 .input 完全同款（同高 / 同边 / 同圆角 / 同字号，连 hover 与 focus 也照抄），
- * 弹层沿用面板那套 1px 边 + 白底 + 6px 圆角，只多一层极淡投影说明「浮在上面」。
- * 不做强调色高亮条、不做大圆角气泡：成员表是密集表格，任何一处抢色都会被放大。
- */
-.select-trigger {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-  height: var(--control-height);
-  padding: 0 26px 0 8px;
-  border: 1px solid var(--control);
-  border-radius: var(--radius-control);
-  background: var(--surface);
-  font-size: var(--fs-control);
-  text-align: left;
-}
-
-.select-trigger:hover:not(:disabled) {
-  border-color: var(--control-hover);
-}
-
-.select-trigger[aria-expanded="true"] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-weak);
-}
-
-/* 焦点环与 .input:focus 同款，并去掉全局那道 2px outline ——
- * 否则键盘打开时是「outline + 自身光晕」两圈，比输入框厚一层。 */
-.select-trigger:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-weak);
-}
-
-.select-trigger:disabled {
-  background: var(--raised);
-  color: var(--muted);
-}
-
-.select-value {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.select-arrow {
-  position: absolute;
-  right: 8px;
-  width: 12px;
-  height: 12px;
-  color: var(--faint);
-  transition: transform 120ms ease;
-  pointer-events: none;
-}
-
-.select-trigger[aria-expanded="true"] .select-arrow {
-  color: var(--accent);
-  transform: rotate(180deg);
-}
-
-.select-popup {
-  overscroll-behavior: contain;
-  position: fixed;
-  z-index: 70;
-  padding: var(--sp-1);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--surface);
-  box-shadow: var(--shadow-floating);
-}
-
-/* 弹层自己的滚动条：原生那条 14px 深灰 + 两端箭头，在 260px 高的小面板里特别抢眼。
- * 收成 8px 轨道（2px 透明边只留 4px 滑块），颜色压到 0.14 灰 —— 只在悬停时加深到
- * 与覆盖式滚动条同一档（rgba(19,20,22,.24)）。轨道透明，箭头直接去掉。
- * 只写 ::-webkit-scrollbar，不写 scrollbar-width：两套同时写时 Chromium 会整套忽略伪元素。 */
-.select-popup::-webkit-scrollbar {
-  width: 8px;
-}
-
-.select-popup::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.select-popup::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: var(--radius-pill);
-  background: rgba(19, 20, 22, 0.14);
-  background-clip: content-box;
-}
-
-.select-popup::-webkit-scrollbar-thumb:hover {
-  background: rgba(19, 20, 22, 0.24);
-  background-clip: content-box;
-}
-
-.select-popup::-webkit-scrollbar-button {
-  display: none;
-}
-
-.select-group {
-  padding: 6px 8px 3px;
-  color: var(--muted);
-  font-size: var(--fs-label);
-  line-height: 1.4;
-}
-
-.select-option {
-  height: 28px;
-  padding: 0 var(--sp-2);
-  overflow: hidden;
-  border-radius: var(--radius-sub);
-  font-size: var(--fs-control);
-  line-height: 28px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-/* 悬停与键盘高亮同一档：浅灰抬起一层，不用强调色 —— 一列 13 行扫下来不刺眼 */
-.select-option.is-active {
-  background: var(--raised);
-}
-
-.select-option.is-selected {
-  color: var(--accent);
-  font-weight: 500;
-}
-
-.select-option.is-selected.is-active {
-  background: var(--accent-weak);
+.btn-add:hover:not(:disabled) {
+  background: var(--ui-accent);
+  color: var(--ui-accent-foreground);
 }

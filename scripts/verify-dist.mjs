@@ -80,12 +80,12 @@ function setInputBySelector(selector, value) {
 
 /** 侧栏跳转：三页各自等一个稳定标记 */
 async function goMatrix(client) {
-  await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+  await client.evaluate(clickByText('[data-view="matrix"]', '全员矩阵'))
   await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '全员矩阵页')
 }
 
 async function goOverview(client) {
-  await client.evaluate(clickByText('.rail-item', '月度概览'))
+  await client.evaluate(clickByText('[data-view="overview"]', '月度概览'))
   await waitFor(client, 'Boolean(document.querySelector(".stats-grid"))', '月度概览页')
 }
 
@@ -453,6 +453,39 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(summaryLook)
     )
 
+    // 名单浮层（桌面）：宽度取格子的一半，贴着「查看名单」按钮的左缘，不出屏
+    await client.evaluate(`document.querySelector('.summary-more')?.click(); true`)
+    await waitFor(client, 'Boolean(document.querySelector(".summary-popover-panel"))', '名单浮层')
+    await sleep(150)
+    const summaryPopover = await client.evaluate(`(() => {
+      const node = document.querySelector('.summary-popover-panel')
+      const trigger = document.querySelector('.summary-more')
+      const cell = trigger.parentElement
+      const rect = node.getBoundingClientRect()
+      const trigRect = trigger.getBoundingClientRect()
+      return {
+        left: Math.round(rect.left),
+        right: Math.round(rect.right),
+        top: Math.round(rect.top),
+        w: Math.round(rect.width),
+        trigLeft: Math.round(trigRect.left),
+        trigBottom: Math.round(trigRect.bottom),
+        cellW: Math.round(cell.getBoundingClientRect().width),
+        vw: window.innerWidth
+      }
+    })()`)
+    check(
+      `${name}: 名单浮层贴按钮、宽度=格子一半且不出屏`,
+      Math.abs(summaryPopover.left - summaryPopover.trigLeft) <= 1 &&
+        Math.abs(summaryPopover.w - Math.round(summaryPopover.cellW / 2)) <= 2 &&
+        summaryPopover.top > summaryPopover.trigBottom &&
+        summaryPopover.right <= summaryPopover.vw,
+      JSON.stringify(summaryPopover)
+    )
+    // 再点一次触发按钮即收起（Radix 的 toggle）
+    await client.evaluate(`document.querySelector('.summary-more')?.click(); true`)
+    await waitFor(client, '!document.querySelector(".summary-popover-panel")', '名单浮层关闭')
+
     // 矩阵里本人那一行带徽章，同事没有
     const selfBadges = await client.evaluate(`(() => {
       const badges = document.querySelectorAll('.matrix-row .badge-self').length
@@ -655,7 +688,7 @@ async function runScenario(name, url, downloadDir) {
     await goMatrix(client)
 
     // --- 2b. 设置分页 + 个人信息：区块到位，薪资能落盘 ---
-    await client.evaluate(clickByText('.rail-item', '设置'))
+    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
     await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
 
     const tabState = await client.evaluate(`(() => ({
@@ -860,7 +893,7 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(salaryStored)
     )
 
-    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+    await client.evaluate(clickByText('[data-view="matrix"]', '全员矩阵'))
     await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '回到矩阵')
 
     // 本人行只读：点本人的格子不弹层，改成提示去日历里改
@@ -1852,7 +1885,7 @@ async function runScenario(name, url, downloadDir) {
       )
 
       // 换人必须先问：有记录时改本人姓名 → 弹影响清单，取消则什么都不动
-      await client.evaluate(clickByText('.rail-item', '设置'))
+      await client.evaluate(clickByText('[data-view="settings"]', '设置'))
       await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
       await switchSettingsTab(client, '个人资料')
       await waitFor(client, 'Boolean(document.querySelector(".profile-section"))', '个人信息区块')
@@ -2234,7 +2267,7 @@ async function runScenario(name, url, downloadDir) {
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '切开矩阵')
 
     // --- 6. 设置页 ---
-    await client.evaluate(clickByText('.rail-item', '设置'))
+    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
     await waitFor(client, 'Boolean(document.querySelector(".settings-section"))', '设置页')
     const settingsRows = await client.evaluate('document.querySelectorAll(".member-row").length')
     check(`${name}: 设置页读到 3 位成员`, settingsRows === 3, String(settingsRows))
@@ -2387,7 +2420,7 @@ async function runScenario(name, url, downloadDir) {
     await sleep(350)
 
     // --- 9. 排班页用上了新班序 ---
-    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+    await client.evaluate(clickByText('[data-view="matrix"]', '全员矩阵'))
     await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '回到排班页')
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '矩阵 3 行')
     // 第一行现在是本人（4F），所以要看整列而不是只看第一行
@@ -2431,7 +2464,7 @@ async function runScenario(name, url, downloadDir) {
     }
 
     // --- 11. 删除自建班序：必须输入名字 ---
-    await client.evaluate(clickByText('.rail-item', '设置'))
+    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
     await waitFor(client, 'document.querySelectorAll(".pattern-row").length === 1', '回到设置页')
     check(`${name}: 打开删除确认`, await client.evaluate(clickByText('.pattern-row-actions button', '删除')))
     await waitFor(client, 'Boolean(document.querySelector(".dialog-narrow"))', '删除确认弹层')
@@ -2468,7 +2501,7 @@ async function runScenario(name, url, downloadDir) {
     )
 
     // --- 12. 翻月不崩 ---
-    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+    await client.evaluate(clickByText('[data-view="matrix"]', '全员矩阵'))
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 2', '矩阵剩 2 行')
     check(`${name}: 删除后矩阵同步更新`, true)
 
@@ -2570,7 +2603,7 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 排班页也没有文档层滚动条`, scheduleOverflow)
 
     // --- 13. 导入 fixtures/班组13人.json（真实班组数据的导入链路） ---
-    await client.evaluate(clickByText('.rail-item', '设置'))
+    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
     await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
     await switchSettingsTab(client, '个人资料')
     await waitFor(client, 'Boolean(document.querySelector(".settings-actions input[type=file]"))', '导入入口')
@@ -2774,7 +2807,7 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(fadedOverlay)
     )
 
-    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+    await client.evaluate(clickByText('[data-view="matrix"]', '全员矩阵'))
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 13', '矩阵 13 行')
     check(`${name}: 导入后矩阵 13 行`, true)
     const firstPattern = await client.evaluate(
@@ -2783,7 +2816,7 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 矩阵班序旁拼岗位（4F · PNP）`, firstPattern === '4F · PNP', firstPattern)
 
     // --- 14. 人员排序：设置里的行顺序必须映射成矩阵的行顺序 ---
-    await client.evaluate(clickByText('.rail-item', '设置'))
+    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
     await waitFor(client, 'document.querySelectorAll(".member-row").length === 13', '回到成员表')
 
     // 拖动排序只在「排序」模式里：先点排序入口，再把第一行把手拖到第二行
@@ -2827,7 +2860,7 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 排序模式点完成即保存`, await client.evaluate(clickByText('.settings-actions button', '完成')))
     await sleep(300)
 
-    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+    await client.evaluate(clickByText('[data-view="matrix"]', '全员矩阵'))
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 13', '矩阵 13 行')
     const matrixOrder = await client.evaluate(
       `Array.from(document.querySelectorAll('.matrix-name')).slice(0, 3).map(node => node.textContent.trim())`
@@ -3130,7 +3163,7 @@ async function runMobileChecks(url, downloadDir) {
     )
 
     // --- 矩阵：名单浮层 + 姓名列收窄、行高收紧、仍可横滑 ---
-    await client.evaluate(clickByText('.rail-item', '全员矩阵'))
+    await client.evaluate(clickByText('[data-view="matrix"]', '全员矩阵'))
     await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '全员矩阵页')
 
     // 第二格（今日夜班）最容易把按格子对齐的浮层顶出屏幕左缘
@@ -3152,6 +3185,7 @@ async function runMobileChecks(url, downloadDir) {
         barBottom: Math.round(barRect.bottom)
       }
     })()`)
+    /* 手机端保留旧的自绘浮层（绝对定位在概览条里），所以仍是「贴整条概览条的整宽面板」。 */
     check(
       `${name}: 名单浮层贴着概览条、整宽且不出屏`,
       popover.left === popover.barLeft &&
@@ -3204,7 +3238,7 @@ async function runMobileChecks(url, downloadDir) {
     )
 
     // --- 设置：标题与面板上下排、成员行折成两行 ---
-    await client.evaluate(clickByText('.rail-item', '设置'))
+    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
     await waitFor(client, 'Boolean(document.querySelector(".settings-section"))', '设置页')
     await sleep(200)
     const settings = await client.evaluate(`(() => {
@@ -3242,7 +3276,7 @@ async function runMobileChecks(url, downloadDir) {
     )
 
     // --- 弹层：贴底抽屉，整宽、不超出视口 ---
-    await client.evaluate(clickByText('.rail-item', '月度概览'))
+    await client.evaluate(clickByText('[data-view="overview"]', '月度概览'))
     await waitFor(client, 'Boolean(document.querySelector(".calendar-grid"))', '回到概览页')
     await client.evaluate(`document.querySelector('.cal-cell:not(.is-outside)')?.click(); true`)
     await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')

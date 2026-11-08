@@ -4,6 +4,7 @@ import { Select } from '../components/Select'
 import { BUILTIN_PATTERNS, PATTERN_ANCHOR_DATE } from '../data/patterns'
 import { validateMembers, type Member } from '../data/roster'
 import type { SelfIdentity } from '../data/profile'
+import { Input } from '@/components/ui/input'
 
 /** 首开时还没有自定义班序，下拉里只有内置 20 条 */
 const BUILTIN_OPTIONS: PatternOption[] = BUILTIN_PATTERNS.map(pattern => ({
@@ -70,11 +71,10 @@ export function Wizard({ onFinish, onSkip }: WizardProps) {
             <div className="wizard-self">
               <label className="field">
                 <span className="field-label">你的姓名</span>
-                <input
+                <Input
                   aria-label="本人姓名"
                   autoComplete="off"
                   autoFocus
-                  className="input"
                   maxLength={12}
                   name="self-name"
                   placeholder="比如：华文达"

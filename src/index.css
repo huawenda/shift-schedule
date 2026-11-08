@@ -1,0 +1,272 @@
+/* Tailwind v4 + shadcn 主题层（重构阶段 3 修订）
+ *
+ * 导入完整 `tailwindcss`（**含 preflight**），与沙盒 shadcn-lab 完全一致。
+ *
+ * 之前只导 theme + utilities、手动补边框两条 —— 实测不够，缺 preflight 会让 shadcn 组件直接变形：
+ *   · `<ul>` 保留浏览器默认 `list-style: disc` + `padding-inline-start: 40px`
+ *     → SidebarMenu 的每一行前面冒出小圆点、整块被推右 40px；
+ *   · `<button>` 保留 UA 的 ButtonFace（#f0f0f0）→ SidebarRail 变成一条 18px 灰带；
+ *   · 表单控件不继承字体、`<svg>` 不是块级元素 → 图标基线错位。
+ * 这些都不是组件写错，是浏览器默认样式没被重置。逐条打补丁会漏，直接对齐 preflight。
+ *
+ * preflight 落在 `@layer base`，而 legacy SCSS 是未分层的普通规则 ——
+ * 未分层永远压过分层，所以旧页面里凡是自己声明过的属性都不受影响，爆炸半径只限「依赖浏览器默认值」的部分。
+ *
+ * shadcn 语义变量统一加 `ui-` 前缀：
+ * tokens.scss 里的 --accent（深青）/ --muted（次要文字灰）/ --border 与 shadcn 同名但语义不同，
+ * 直接照抄会把这些值悄悄换掉。加前缀后两套变量互不干扰：
+ *   新组件 → bg-primary → --color-primary → --ui-primary → shadcn 默认值
+ *   旧组件 → var(--accent) → tokens.scss 原值
+ */
+@layer theme, base, legacy, components, utilities;
+
+/* 显式限定扫描范围：只扫前端源码，排除沙盒与两份产物目录 */
+@source "./**/*.{ts,tsx}";
+@source not "../shadcn-lab";
+@source not "../dist";
+@source not "../dist-tauri";
+
+@import "tailwindcss";
+/* Sheet / Dialog 的进出场动画（animate-in / slide-in-from-left 等）由这个包提供 */
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── shadcn 的 data-* 变体与 no-scrollbar ──────────────────────────────
+ *
+ * 摘自 shadcn@4.23.0 的 dist/tailwind.css（生成组件时用的就是同一个版本）。
+ * 沙盒靠 @import "shadcn/tailwind.css" 引入；主项目不把 CLI 装成运行时依赖，
+ * 所以只把用得到的部分抄进来，行为逐字一致。
+ *
+ * 为什么必须有：Tailwind 内置的 data-active: 只判断属性是否「存在」，
+ * 而 React 对 data-active={false} 会渲染成 data-active="false" —— 属性照样在，
+ * 于是侧栏三个菜单项会一起变灰（未选中项也命中）。
+ * 这里的写法改成 [data-active]:not([data-active="false"])，并与 Radix 的 [data-state="active"] 并列。
+ *
+ * 目前只抄了组件实际用到的：9 个 data-* 变体 + no-scrollbar。
+ * scroll-fade / shimmer 这些工具类当前用不到，没有引入。
+ */
+@custom-variant data-open {
+  &:where([data-state="open"]),
+  &:where([data-open]:not([data-open="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-closed {
+  &:where([data-state="closed"]),
+  &:where([data-closed]:not([data-closed="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-checked {
+  &:where([data-state="checked"]),
+  &:where([data-checked]:not([data-checked="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-unchecked {
+  &:where([data-state="unchecked"]),
+  &:where([data-unchecked]:not([data-unchecked="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-selected {
+  &:where([data-selected="true"]) {
+    @slot;
+  }
+}
+
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]),
+  &:where([data-disabled]:not([data-disabled="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-active {
+  &:where([data-state="active"]),
+  &:where([data-active]:not([data-active="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-horizontal {
+  &:where([data-orientation="horizontal"]) {
+    @slot;
+  }
+}
+
+@custom-variant data-vertical {
+  &:where([data-orientation="vertical"]) {
+    @slot;
+  }
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', sans-serif;
+    --color-sidebar-ring: var(--ui-sidebar-ring);
+    --color-sidebar-border: var(--ui-sidebar-border);
+    --color-sidebar-accent-foreground: var(--ui-sidebar-accent-foreground);
+    --color-sidebar-accent: var(--ui-sidebar-accent);
+    --color-sidebar-primary-foreground: var(--ui-sidebar-primary-foreground);
+    --color-sidebar-primary: var(--ui-sidebar-primary);
+    --color-sidebar-foreground: var(--ui-sidebar-foreground);
+    --color-sidebar: var(--ui-sidebar);
+    --color-chart-5: var(--ui-chart-5);
+    --color-chart-4: var(--ui-chart-4);
+    --color-chart-3: var(--ui-chart-3);
+    --color-chart-2: var(--ui-chart-2);
+    --color-chart-1: var(--ui-chart-1);
+    --color-ring: var(--ui-ring);
+    --color-input: var(--ui-input);
+    --color-border: var(--ui-border);
+    --color-destructive: var(--ui-destructive);
+    --color-accent-foreground: var(--ui-accent-foreground);
+    --color-accent: var(--ui-accent);
+    --color-muted-foreground: var(--ui-muted-foreground);
+    --color-muted: var(--ui-muted);
+    --color-secondary-foreground: var(--ui-secondary-foreground);
+    --color-secondary: var(--ui-secondary);
+    --color-primary-foreground: var(--ui-primary-foreground);
+    --color-primary: var(--ui-primary);
+    --color-popover-foreground: var(--ui-popover-foreground);
+    --color-popover: var(--ui-popover);
+    --color-card-foreground: var(--ui-card-foreground);
+    --color-card: var(--ui-card);
+    --color-foreground: var(--ui-foreground);
+    --color-background: var(--ui-background);
+    --radius-sm: calc(var(--ui-radius) * 0.6);
+    --radius-md: calc(var(--ui-radius) * 0.8);
+    --radius-lg: var(--ui-radius);
+    --radius-xl: calc(var(--ui-radius) * 1.4);
+    --radius-2xl: calc(var(--ui-radius) * 1.8);
+    --radius-3xl: calc(var(--ui-radius) * 2.2);
+    --radius-4xl: calc(var(--ui-radius) * 2.6);
+}
+
+:root {
+    --ui-background: oklch(1 0 0);
+    --ui-foreground: oklch(0.145 0 0);
+    --ui-card: oklch(1 0 0);
+    --ui-card-foreground: oklch(0.145 0 0);
+    --ui-popover: oklch(1 0 0);
+    --ui-popover-foreground: oklch(0.145 0 0);
+    --ui-primary: oklch(0.205 0 0);
+    --ui-primary-foreground: oklch(0.985 0 0);
+    --ui-secondary: oklch(0.97 0 0);
+    --ui-secondary-foreground: oklch(0.205 0 0);
+    --ui-muted: oklch(0.97 0 0);
+    --ui-muted-foreground: oklch(0.556 0 0);
+    --ui-accent: oklch(0.97 0 0);
+    --ui-accent-foreground: oklch(0.205 0 0);
+    --ui-destructive: oklch(0.577 0.245 27.325);
+    --ui-border: oklch(0.922 0 0);
+    --ui-input: oklch(0.922 0 0);
+    --ui-ring: oklch(0.708 0 0);
+    --ui-chart-1: oklch(0.87 0 0);
+    --ui-chart-2: oklch(0.556 0 0);
+    --ui-chart-3: oklch(0.439 0 0);
+    --ui-chart-4: oklch(0.371 0 0);
+    --ui-chart-5: oklch(0.269 0 0);
+    --ui-radius: 0.625rem;
+    --ui-sidebar: oklch(0.985 0 0);
+    --ui-sidebar-foreground: oklch(0.145 0 0);
+    --ui-sidebar-primary: oklch(0.205 0 0);
+    --ui-sidebar-primary-foreground: oklch(0.985 0 0);
+    --ui-sidebar-accent: oklch(0.97 0 0);
+    --ui-sidebar-accent-foreground: oklch(0.205 0 0);
+    --ui-sidebar-border: oklch(0.922 0 0);
+    --ui-sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+    --ui-background: oklch(0.145 0 0);
+    --ui-foreground: oklch(0.985 0 0);
+    --ui-card: oklch(0.205 0 0);
+    --ui-card-foreground: oklch(0.985 0 0);
+    --ui-popover: oklch(0.205 0 0);
+    --ui-popover-foreground: oklch(0.985 0 0);
+    --ui-primary: oklch(0.922 0 0);
+    --ui-primary-foreground: oklch(0.205 0 0);
+    --ui-secondary: oklch(0.269 0 0);
+    --ui-secondary-foreground: oklch(0.985 0 0);
+    --ui-muted: oklch(0.269 0 0);
+    --ui-muted-foreground: oklch(0.708 0 0);
+    --ui-accent: oklch(0.269 0 0);
+    --ui-accent-foreground: oklch(0.985 0 0);
+    --ui-destructive: oklch(0.704 0.191 22.216);
+    --ui-border: oklch(1 0 0 / 10%);
+    --ui-input: oklch(1 0 0 / 15%);
+    --ui-ring: oklch(0.556 0 0);
+    --ui-chart-1: oklch(0.87 0 0);
+    --ui-chart-2: oklch(0.556 0 0);
+    --ui-chart-3: oklch(0.439 0 0);
+    --ui-chart-4: oklch(0.371 0 0);
+    --ui-chart-5: oklch(0.269 0 0);
+    --ui-sidebar: oklch(0.205 0 0);
+    --ui-sidebar-foreground: oklch(0.985 0 0);
+    --ui-sidebar-primary: oklch(0.488 0.243 264.376);
+    --ui-sidebar-primary-foreground: oklch(0.985 0 0);
+    --ui-sidebar-accent: oklch(0.269 0 0);
+    --ui-sidebar-accent-foreground: oklch(0.985 0 0);
+    --ui-sidebar-border: oklch(1 0 0 / 10%);
+    --ui-sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  /* 与沙盒 shadcn-lab 的 base 层第一条对齐：`* { @apply border-border }`。
+   *
+   * Tailwind v4 里 `border` / `border-r` 这类工具类**只设宽度和样式，不设颜色**，
+   * 颜色的初始值是 `currentColor` —— 侧栏容器上是 `text-sidebar-foreground`（近黑），
+   * 于是 Sidebar 的 `border-r` 画出一条纯黑 1px 竖线。
+   * 沙盒靠这条 base 规则把所有元素的默认边框色统一成 `--border`（#e5e5e5），我也照做。
+   *
+   * 放在 @layer base：未分层的旧 SCSS 里凡是自己写了 `border: 1px solid var(--rule)` 的，
+   * 颜色仍以旧值为准，不会被这条覆盖。 */
+  * {
+    border-color: var(--ui-border);
+    outline-color: color-mix(in oklch, var(--ui-ring) 50%, transparent);
+  }
+
+  /* Geist：只取 latin 子集（29 KB），本地打包、零网络请求。
+   *
+   * 不用 `@import "@fontsource-variable/geist"`：那个入口会带进 cyrillic / greek / vietnamese
+   * 共 10 个 woff2，而本项目 assetsInlineLimit 设成了 MAX_SAFE_INTEGER（产物要能 file:// 双击打开），
+   * 全部 base64 内联会让 CSS 从 120 KB 涨到 227 KB，多出来的 100 KB 一个字都用不上。
+   * 中文本来就不在 Geist 的覆盖范围，会回落到系统字体 —— 和沙盒表现一致。 */
+  @font-face {
+    font-family: 'Geist Variable';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url('../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2')
+      format('woff2-variations');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+      U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+
+  /* shadcn 组件统一用 Geist。
+   *
+   * 不能改 body 的 font-family：那样全员矩阵 / 个人月历 / 值班牌的文字度量会跟着变，
+   * 违反「三个复杂组件阶段 7 之前不动」。这里只作用于带 data-slot 的 shadcn 组件
+   * （Sidebar / Dialog / Select / Toast 都有），旧的自研组件没有这个属性，字体保持不变。
+   * 阶段 4–5 把旧组件逐个换成 shadcn 之后，它们会自动跟上同一套字体。 */
+  [data-slot] {
+    font-family: var(--font-sans);
+  }
+}

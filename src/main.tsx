@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { App } from './App'
 import { isTauriShell } from './platform/env'
 import './styles.scss'
+// Tailwind v4 入口：只启用 theme + utilities（不含 preflight），另在 @layer base 里补了边框两条
+import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

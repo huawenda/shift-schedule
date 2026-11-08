@@ -7,9 +7,18 @@ import {
   type ShiftPattern
 } from '../data/patterns'
 import { getSelf, patternUsage, type Roster } from '../data/roster'
-import { useDialogFocus } from '../hooks/useDialogFocus'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { SHIFT_META, shiftToneClass, type ShiftType } from '../data/shifts'
 import { PatternEditor } from './PatternEditor'
+import { Input } from '@/components/ui/input'
 
 interface PatternListProps {
   roster: Roster
@@ -59,13 +68,14 @@ function PatternGrid({ shifts }: { shifts: ShiftType[] }) {
  * 删除是不可逆操作，而且会连带删掉挂在上面的成员，所以要输入班序名字才放行。
  */
 export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, onNotice }: PatternListProps) {
-  const dialogRef = useDialogFocus<HTMLElement>()
   // 内置与自建分开记：内置共用一个预览区（在色条卡片下方），
   // 自建的详情直接展开在**它自己那一行下面**，避免详情跑到别的分组里去。
   const [builtinPreviewId, setBuiltinPreviewId] = useState<string | null>(null)
   const [customPreviewId, setCustomPreviewId] = useState<string | null>(null)
   const [editing, setEditing] = useState<{ pattern?: CustomPattern } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<CustomPattern | null>(null)
+  // 弹层开关由 pendingDelete 决定：有值即打开
+  const dialogOpen = Boolean(pendingDelete)
   // 内置 20 条只读默认收起：首屏先给自建班序与成员
   const [builtinOpen, setBuiltinOpen] = useState(false)
   useDismissOnBack(Boolean(pendingDelete), () => setPendingDelete(null))
@@ -252,23 +262,14 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
       ) : null}
 
       {pendingDelete ? (
-        <div className="sheet-backdrop" role="presentation" onMouseDown={() => setPendingDelete(null)}>
-          <section
-            aria-label="删除班序"
-            aria-modal="true"
-            className="dialog dialog-narrow"
-            ref={dialogRef}
-            role="dialog"
-            tabIndex={-1}
-            onMouseDown={event => event.stopPropagation()}
-          >
-            <header className="dialog-head">
+        <Dialog open={dialogOpen} onOpenChange={next => { if (!next) setPendingDelete(null) }}>
+          <DialogContent aria-label="删除班序" className="gap-0 p-0 sm:max-w-[400px]">
+            <DialogHeader className="dialog-head p-4">
               <div>
-                <h2 className="dialog-title">删除班序「{pendingDelete.name}」？</h2>
-                <p className="dialog-sub">此操作不可撤销</p>
+                <DialogTitle className="dialog-title">删除班序「{pendingDelete.name}」？</DialogTitle>
+                <DialogDescription className="dialog-sub">此操作不可撤销</DialogDescription>
               </div>
-              <button className="btn btn-quiet" type="button" onClick={() => setPendingDelete(null)}>关闭</button>
-            </header>
+            </DialogHeader>
 
             <div className="dialog-body">
               {(() => {
@@ -291,10 +292,9 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
               </p>
               <label className="confirm-label">
                 <span>输入「{pendingDelete.name}」以确认</span>
-                <input
+                <Input
                   aria-label={`输入 ${pendingDelete.name} 以确认删除`}
                   autoComplete="off"
-                  className="input"
                   name="pattern-delete-confirm"
                   value={confirmText}
                   onChange={event => setConfirmText(event.target.value)}
@@ -302,22 +302,18 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
               </label>
             </div>
 
-            <footer className="dialog-foot">
-              <span />
-              <div className="dialog-actions">
-                <button className="btn" type="button" onClick={() => setPendingDelete(null)}>取消</button>
-                <button
-                  className="btn btn-danger"
-                  disabled={confirmText.trim() !== pendingDelete.name}
-                  type="button"
-                  onClick={confirmDelete}
-                >
-                  删除班序
-                </button>
-              </div>
-            </footer>
-          </section>
-        </div>
+            <DialogFooter className="mx-0 mb-0">
+              <Button variant="outline" onClick={() => setPendingDelete(null)}>取消</Button>
+              <Button
+                disabled={confirmText.trim() !== pendingDelete.name}
+                variant="destructive"
+                onClick={confirmDelete}
+              >
+                删除班序
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </div>
   )

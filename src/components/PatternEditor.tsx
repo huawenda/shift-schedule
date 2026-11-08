@@ -9,6 +9,16 @@ import {
   type CustomPattern
 } from '../data/patterns'
 import { SHIFT_META, shiftToneClass, type ShiftType } from '../data/shifts'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface PatternEditorProps {
   /** 传入 = 编辑已有；不传 = 新建 */
@@ -65,32 +75,27 @@ export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEdi
   }
 
   return (
-    <div className="sheet-backdrop" role="presentation" onMouseDown={onClose}>
-      <section
+    <Dialog open onOpenChange={next => { if (!next) onClose() }}>
+      <DialogContent
         aria-label={pattern ? '编辑班序' : '新建班序'}
-        aria-modal="true"
-        className="dialog dialog-wide"
-        role="dialog"
-        onMouseDown={event => event.stopPropagation()}
+        className="dialog-wide max-h-[calc(100dvh-2rem)] gap-0 overflow-y-auto p-0"
       >
-        <header className="dialog-head">
+        <DialogHeader className="dialog-head p-4">
           <div>
-            <h2 className="dialog-title">{pattern ? '编辑班序' : '新建班序'}</h2>
-            <p className="dialog-sub">
+            <DialogTitle className="dialog-title">{pattern ? '编辑班序' : '新建班序'}</DialogTitle>
+            <DialogDescription className="dialog-sub">
               {PATTERN_CYCLE_LENGTH} 天一轮 · 锚点日 {PATTERN_ANCHOR_DATE}
-            </p>
+            </DialogDescription>
           </div>
-          <button className="btn btn-quiet" type="button" onClick={onClose}>关闭</button>
-        </header>
+        </DialogHeader>
 
         <div className="dialog-body">
           <div className="field">
             <span className="field-label">班序名称</span>
-            <input
+            <Input
               aria-label="班序名称"
               autoComplete="off"
               autoFocus
-              className="input"
               name="pattern-name"
               placeholder="比如：4A、4B、4C"
               spellCheck={false}
@@ -145,16 +150,14 @@ export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEdi
 
         </div>
 
-        <footer className="dialog-foot">
-          <span className="editor-hint">第一天对应锚点日 2026-06-07 的班次</span>
-          <div className="dialog-actions">
-            <button className="btn" type="button" onClick={onClose}>取消</button>
-            <button className="btn btn-primary" type="button" onClick={commit}>
-              {pattern ? '保存班序' : '创建班序'}
-            </button>
-          </div>
-        </footer>
-      </section>
-    </div>
+        <DialogFooter className="mx-0 mb-0">
+          <span className="editor-hint mr-auto">第一天对应锚点日 2026-06-07 的班次</span>
+          <Button variant="outline" onClick={onClose}>取消</Button>
+          <Button onClick={commit}>
+            {pattern ? '保存班序' : '创建班序'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

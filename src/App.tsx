@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Shell, type Route } from './components/Shell'
+import { AppShell, type Route } from './components/AppShell'
 import { DayEditor } from './components/DayEditor'
 import { ScrollOverlay } from './components/ScrollOverlay'
 import { ShiftEditor } from './components/ShiftEditor'
 import type { MatrixMode } from './components/TeamMatrix'
-import { ToastHost } from './components/ToastHost'
+import { Toaster } from './components/ui/sonner'
 import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
@@ -369,12 +369,11 @@ export function App() {
   return (
     <>
       <ScrollOverlay />
-      <Shell
-        memberCount={api.roster.members.length}
-        monthTitle={formatMonthTitle(monthKey)}
+      <AppShell
         atCurrentMonth={atCurrentMonth}
-        route={route}
         hrefs={hrefs}
+        monthTitle={formatMonthTitle(monthKey)}
+        route={route}
         onBackup={backup}
         onNavigate={next => {
           // 设置页签沿用上次停留的那一页（与小程序页面缓存一致）；首次进入仍是人员配置
@@ -424,7 +423,7 @@ export function App() {
             onOpenProfile={openProfileTab}
           />
         )}
-      </Shell>
+      </AppShell>
 
       {editor && editorMember ? (
         editor.source === 'calendar' ? (
@@ -455,12 +454,8 @@ export function App() {
         )
       ) : null}
 
-      <ToastHost
-        toasts={toast.toasts}
-        onDismiss={toast.dismiss}
-        onPause={toast.pause}
-        onResume={toast.resume}
-      />
+      {/* sonner：堆叠、悬停暂停、aria-live 都是内建的，不再需要自研 ToastHost */}
+      <Toaster position="bottom-center" />
     </>
   )
 }

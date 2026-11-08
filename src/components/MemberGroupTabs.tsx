@@ -6,8 +6,17 @@ import {
   type MemberGroup
 } from '../data/roster'
 import { useDismissOnBack } from '../hooks/useDismissOnBack'
-import { useDialogFocus } from '../hooks/useDialogFocus'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { UNGROUPED_MEMBERS } from './MemberRowsEditor'
+import { Input } from '@/components/ui/input'
 
 interface MemberGroupTabsProps {
   groups: MemberGroup[]
@@ -49,7 +58,8 @@ export function MemberGroupTabs({
   const [name, setName] = useState('')
   const nameRef = useRef<HTMLInputElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
-  const dialogRef = useDialogFocus<HTMLElement>()
+  // 弹层开关就是 creating
+  const dialogOpen = creating
   useDismissOnBack(creating, () => setCreating(false))
 
   /**
@@ -79,7 +89,7 @@ export function MemberGroupTabs({
     else if (tabRect.right > stripRect.right) strip.scrollLeft += tabRect.right - stripRect.right
   }, [activeTab, groups.length])
 
-  // useDialogFocus 会把焦点移到弹层容器；弹层里的输入框要抢回来
+  // Radix 打开后会把焦点给第一个可聚焦元素，这里显式把它按在输入框上
   useEffect(() => {
     if (creating) nameRef.current?.focus()
   }, [creating])
@@ -164,34 +174,22 @@ export function MemberGroupTabs({
       </div>
 
       {creating ? (
-        <div className="sheet-backdrop" role="presentation" onMouseDown={() => setCreating(false)}>
-          <section
-            aria-label="新建分组"
-            aria-modal="true"
-            className="dialog dialog-narrow"
-            ref={dialogRef}
-            role="dialog"
-            tabIndex={-1}
-            onMouseDown={event => event.stopPropagation()}
-          >
-            <header className="dialog-head">
+        <Dialog open={dialogOpen} onOpenChange={next => { if (!next) setCreating(false) }}>
+          <DialogContent aria-label="新建分组" className="gap-0 p-0 sm:max-w-[380px]">
+            <DialogHeader className="dialog-head p-4">
               <div>
-                <h2 className="dialog-title">新建分组</h2>
-                <p className="dialog-sub">组名可自定，例如部门名</p>
+                <DialogTitle className="dialog-title">新建分组</DialogTitle>
+                <DialogDescription className="dialog-sub">组名可自定，例如部门名</DialogDescription>
               </div>
-              <button className="btn btn-quiet" type="button" onClick={() => setCreating(false)}>
-                关闭
-              </button>
-            </header>
+            </DialogHeader>
 
             <div className="dialog-body">
               <label className="confirm-label">
                 <span>组名</span>
-                <input
+                <Input
                   aria-label="新分组的名称"
                   autoComplete="off"
                   autoFocus
-                  className="input"
                   maxLength={MAX_GROUP_NAME_LENGTH}
                   name="group-new-name"
                   placeholder="例如：生产部"
@@ -215,15 +213,12 @@ export function MemberGroupTabs({
               </p>
             </div>
 
-            <footer className="dialog-foot">
-              <span />
-              <div className="dialog-actions">
-                <button className="btn" type="button" onClick={() => setCreating(false)}>取消</button>
-                <button className="btn btn-primary" type="button" onClick={submit}>创建</button>
-              </div>
-            </footer>
-          </section>
-        </div>
+            <DialogFooter className="mx-0 mb-0">
+              <Button variant="outline" onClick={() => setCreating(false)}>取消</Button>
+              <Button onClick={submit}>创建</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </>
   )

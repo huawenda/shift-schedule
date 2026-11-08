@@ -314,15 +314,19 @@ button.plaque-shift:focus-visible {
 }
 
 .stat-card {
+  /* 外壳交给 shadcn Card（rounded-xl + bg-card + ring-1，无投影）。
+   *
+   * ⚠️ 内边距必须自己写：shadcn 的 Card 只给 `py-6`，横向内边距在 CardHeader /
+   * CardContent 里（`px-6`）。这里的内容是直接塞进 Card 的（没有那两层），
+   * 一旦不给左右内边距，色块就会顶到卡片边缘、把那 1px ring 压在最外侧盖掉 ——
+   * 表现就是「上下有线、左右没线」。 */
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
   padding: var(--sp-4);
-  /* 卡片靠「白 + 极浅投影」浮在降了一档的画布上，不再用边框勾轮廓 */
-  border: 0;
-  border-radius: var(--radius-panel);
-  background: var(--surface);
-  box-shadow: var(--shadow-raised);
+  /* 轮廓用真实边框，不用 Card 的 ring-1：
+   * 实测 ring 在项目主题层下解析成 oklch(0.708 0 0 / 0)（alpha 0），四边全透明。
+   * 颜色取 --border，和内部分隔线同一档，卡片内外线条深浅一致；投影按既定方案去掉。 */
 }
 
 /*
@@ -382,11 +386,6 @@ button.plaque-shift:focus-visible {
 .stat-foot strong {
   color: var(--text);
   font-weight: 600;
-}
-
-.stat-hint {
-  font-size: var(--fs-label);
-  color: var(--muted);
 }
 
 .stat-empty {
@@ -894,6 +893,12 @@ button.plaque-shift:focus-visible {
 /* 表头随滚动冻结在滚动区上沿。border-collapse 的表格里 sticky 的边框会跟着滚，
  * 所以把 border 换成 inset 阴影，视觉上仍是那根 1px 线。
  * 底色用 --surface-tint 而不是纯白：和内容同色时，滚动的数据行会「融进」表头。 */
+/* shadcn 的 TableRow 自带 border-b，会和上面那条 inset 内阴影叠成 2px。
+ * 这里把表头行的边框彻底关掉，只留下 th 的内阴影那一条。 */
+.detail-table thead tr {
+  border-bottom: 0;
+}
+
 .detail-table thead th {
   position: sticky;
   top: 0;

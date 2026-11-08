@@ -13,7 +13,12 @@
  */
 .overview-top {
   display: grid;
-  grid-template-columns: 840px minmax(0, 1fr);
+  /* 日历列：最多 840（不把格子拉成 160px 一块），但**不锁死** —— 内容不够宽时
+   * 它自己缩，日历内部是 repeat(7, minmax(0, 1fr))，缩到每格约 80px 仍然放得下
+   * 日期数字、农历与班次块。
+   * 待办列至少 220，剩下的全给它。
+   * 这样「并排」这件事由实际可用宽度决定，而不是由一个写死的 840 决定。 */
+  grid-template-columns: minmax(0, 840px) minmax(220px, 1fr);
   grid-template-rows: auto auto auto;
   column-gap: var(--sp-4);
   row-gap: var(--sp-3);
@@ -39,11 +44,8 @@
   min-width: 0;
   min-height: 0;
   padding: 0;
-  /* 与统计卡同一套：无边框 + 极浅投影，浮在降了一档的画布上 */
-  border: 0;
-  border-radius: var(--radius-panel);
-  background: var(--surface);
-  box-shadow: var(--shadow-raised);
+  /* 与统计卡同一套外壳：白底 + 1px 线 + 圆角，不用投影 */
+
   overflow: hidden;
 }
 
@@ -194,15 +196,20 @@
  * margin-top 必须等于 (行盒高 − 勾选框高) / 2 —— 正文 13px × 1.5 行高 = 19.5px，
  * (19.5 − 14) / 2 = 2.75px。字号一变就要跟着重算，否则勾选框会整体偏上/偏下。
  * 用 align-items: center 不行：多行待办时勾选框会跑到整段文字的正中间。 */
+.todo-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* 原生 checkbox：用 accent-color 上色，和沙盒里 `accent-primary` 同一思路 */
 .todo-check {
   flex: 0 0 auto;
   width: 14px;
   height: 14px;
-  margin-top: 2.75px;
-  padding: 0;
-  border: 1px solid var(--control);
-  border-radius: var(--radius-mark);
-  background: var(--surface);
+  margin: 2.75px 0 0;
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
@@ -311,11 +318,6 @@
   background: var(--raised);
 }
 
-.todo-add .input {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
 /* 弹层里的空态也用虚线框，与卡片空态同一套语言（不影响统计卡里的 .stat-empty） */
 .dialog-page > .stat-empty {
   padding: var(--sp-4) var(--sp-3);
@@ -375,28 +377,24 @@
 }
 
 /* 弹层底部的说明文字 */
-.dialog-tip {
-  margin: 0;
-  font-size: var(--fs-label);
-  color: var(--muted);
-}
-
 /* 底栏按钮靠右（待办页只有一个「完成」） */
-.dialog-actions-end {
-  margin-left: auto;
-}
-
 /* ------------------------------------------------------------ 小屏：日历与待办上下排
  *
- * 840 的固定日历列 + 右侧待办，在 1399 以下就开始挤：
- * 1366 的笔记本上待办只剩不到 200px，再窄一点就只剩一条缝。
- * 所以这一档把两栏拆成单列：日历仍限宽 840（格子不会被拉成 160px 一块），
+ * 只有真的挤不下才拆成单列。
+ *
+ * 旧断点是 1399 —— 那是按「1466 基准窗口 + 228px 侧栏」倒推的，
+ * 前提是日历列写死 840px。现在侧栏换成 256px 的 shadcn Sidebar，
+ * 内容宽 = 窗口 − 304；而日历列已改成 minmax(0, 840px)（可缩），
+ * 所以并排的下限变成「日历至少 580 + 间隙 16 + 待办 220」= 816 内容宽
+ * = 窗口 1120。换行点因此下移到 1119。
+ *
+ * 换行后：日历仍限宽 840（格子不会被拉成 160px 一块），
  * 待办落到日历图例下方、通栏。
  *
  * 待办卡原来是「外壳不流内容 + 内容绝对定位铺满」来吃日历高度。
  * 单列后没有同一行的参照物，绝对定位会直接塌成 0 高 —— 必须改回普通流。
  */
-@media (max-width: 1399px) {
+@media (max-width: 1119px) {
   .overview-top {
     grid-template-columns: minmax(0, 1fr);
   }
