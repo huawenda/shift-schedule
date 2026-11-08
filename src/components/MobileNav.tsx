@@ -35,7 +35,7 @@ export function MobileNav({ route, hrefs, onNavigate }: MobileNavProps) {
   return (
     <nav
       aria-label="主导航"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-sidebar text-sidebar-foreground"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background text-foreground"
     >
       <div className="grid grid-cols-3 pb-[env(safe-area-inset-bottom)]">
         {items.map(item => {
@@ -45,17 +45,23 @@ export function MobileNav({ route, hrefs, onNavigate }: MobileNavProps) {
             <a
               aria-current={active ? 'page' : undefined}
               data-view={item.id}
-              className={`flex h-14 flex-col items-center justify-center gap-1 text-xs transition-colors ${
-                active
-                  ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
-                  : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
-              }`}
+              className="flex h-14 items-stretch justify-center px-1.5 py-1"
               href={hrefs[item.id]}
               key={item.id}
               onClick={event => intercept(event, item.id)}
             >
-              <Icon className="size-5" />
-              <span>{item.label}</span>
+              {/* 选中态是**内缩的圆角块**，不是整格铺满 —— 与 shadcn Tabs 的胶囊一致。
+                  外层 <a> 仍是整格可点，视觉块只是缩在中间。 */}
+              <span
+                className={`flex w-full flex-col items-center justify-center gap-1 rounded-lg text-xs transition-colors ${
+                  active
+                    ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+                    : 'text-muted-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground'
+                }`}
+              >
+                <Icon className="size-5" />
+                <span>{item.label}</span>
+              </span>
             </a>
           )
         })}

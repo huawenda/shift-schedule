@@ -367,11 +367,12 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  /* 矩阵是「一整块白板」：外沿无边框 + 极浅投影，内部格线保持发丝级 */
-  border: 0;
+  /* 矩阵是「一整块白板」：外沿走 1px 细线分层（与概览页卡片同一套），不用投影；
+     内部格线保持发丝级。投影在这里只会把相邻卡片的间距填成一条灰带。 */
+  border: 1px solid var(--border);
   border-radius: var(--radius-panel);
   background: var(--surface);
-  box-shadow: var(--shadow-raised);
+  box-shadow: none;
   /* 滚动条彻底隐藏（横向也不留）—— 30 天横滚改由「鼠标在矩阵上滚滚轮」驱动，
    * 见 TeamMatrix 里的 wheel 监听。原生滚动条在 Windows 上又粗又有箭头，
    * 而且横向那条永远压在最后一行格子下面，比留着更碍事。 */
@@ -484,7 +485,17 @@
 
 .matrix-days {
   display: grid;
-  grid-template-columns: repeat(var(--days, 30), minmax(var(--matrix-day-min), 1fr));
+  /* 日期列**固定宽度**（--matrix-day-width）：不随窗口伸缩。
+   * 原来写的是 `minmax(28px, 1fr)` —— `1fr` 让这列既会被压扁（窄窗）、
+   * 又会被拉宽（宽窗），同一份排班在 1280 和 1920 下是两套几何。
+   * 现在宽窄都是同一个值；窗口装不下 30 列时**不再压缩**，
+   * 由 `.matrix-scroll` 横向滚动（滚动条隐藏、滚轮驱动）。
+   *
+   * 不用 justify-content: space-between 去摊余量：桌面基准版心下余量只有
+   * 8px，摊到 29 个列缝里每个 0.28px —— 每条竖直列线都会落在不同的亚像素
+   * 位置上，深浅不一，看起来像虚线。余量宁可留在最右边（最多 8px），
+   * 换来每条列线都严丝合缝。 */
+  grid-template-columns: repeat(var(--days, 30), var(--matrix-day-width));
 }
 
 .matrix-day {
@@ -584,7 +595,15 @@
  * 看起来像没对齐。四条边必须共用一个令牌，格子宽窄怎么变都保持等宽留白。 */
 .matrix-cell::before {
   position: absolute;
-  inset: var(--matrix-pill-gap);
+  top: var(--matrix-pill-gap);
+  bottom: var(--matrix-pill-gap);
+  left: 50%;
+  /* 宽度 = 格子减去四边留白，并保底 18px：格子再窄也不会把药丸压成一条缝。
+     用 left:50% + translateX 居中，是为了让 min-width 生效时仍然居中
+     （左右都写 inset 时绝对定位会忽略右侧、块贴到左边）。 */
+  width: calc(100% - 2 * var(--matrix-pill-gap));
+  min-width: 18px;
+  transform: translateX(-50%);
   z-index: -1;
   border-radius: var(--radius-mark);
   background: var(--tone-bg, transparent);
@@ -636,10 +655,13 @@
  * 由 `.matrix-scroll` 横向滚动。
  */
 .matrix.is-by-name .matrix-days {
-  /* 下限 56px（放得下 3–4 个汉字），多余宽度平分给各列。
-   * 不能写成死值 `repeat(days, 56px)`：窗口很宽时行会被拉到容器宽，
-   * 而格子仍是固定 56px → 最后一列右边空出一大条白，看着像列错位。 */
-  grid-template-columns: repeat(var(--days, 30), minmax(var(--matrix-name-cell), 1fr));
+  /* 固定 56px（放得下 3–4 个汉字），同样是**死宽**，不随窗口伸缩。
+   * 容器装不下就由 `.matrix-scroll` 横向滚动（`.matrix-row / .matrix-head`
+   * 的 min-width: max-content 会把总宽撑出容器）。
+   * 装得下时多出来的宽度留在最后一列右边（最多几十 px）——
+   * 不摊到列间（space-between）：摊开会让每条竖直列线落在不同的亚像素位置上，
+   * 深浅不一，看着像虚线；留一条窄白边换来列线严丝合缝。 */
+  grid-template-columns: repeat(var(--days, 30), var(--matrix-name-cell));
 }
 
 .matrix.is-by-name .matrix-cell {
@@ -1329,19 +1351,18 @@
    * 避免 24px 模糊的第二层把相邻卡片的间距填成一条灰带。
    * 日历已是圆角格子（容器透明无投影），这里不再套阴影，否则会在整块矩形外沿
    * 画出一圈没有对应实体的暗边。 */
-  .summary,
-  .matrix-scroll {
+  .summary {
     box-shadow: var(--shadow-raised-flat);
   }
 
   /* 矩阵：姓名列 120 → 88、行高 40 → 36；30 天仍然横滚，不压缩字号到读不了。
-   * 日期列下限 22 → 28：手机上一列太窄既看不清日期，手指也点不准。
+   * 日期列宽：窄屏也用同一个 --matrix-day-width（35px），不为了塞进屏幕再压窄 ——
+   * 同一个排班在宽屏窄屏下是同一套几何，压窄会让药丸又挤成一条缝。
    * 图例与底栏的留白统一交给 `.canvas-flow` 的底部内边距，这里不再另加 8px —
    * 否则矩阵页会比概览页多出这一档，三个页面滚到底的间距就不等了。 */
   .matrix {
     --matrix-name-width: 88px;
     --row-height: 36px;
-    --matrix-day-min: 28px;
     --matrix-name-cell: 48px;
     --matrix-pill-gap: 3px;
   }

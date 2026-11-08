@@ -188,7 +188,9 @@
     --ui-sidebar-foreground: oklch(0.145 0 0);
     --ui-sidebar-primary: oklch(0.205 0 0);
     --ui-sidebar-primary-foreground: oklch(0.985 0 0);
-    --ui-sidebar-accent: oklch(0.97 0 0);
+    /* 选中态底色：shadcn 默认是 oklch(0.97)，只比侧栏底色（0.985）深一档，几乎看不出来。
+       加深到 0.92 —— 与 --ui-border 同档，选中项一眼可辨；侧栏与底部标签栏共用这一条。 */
+    --ui-sidebar-accent: oklch(0.92 0 0);
     --ui-sidebar-accent-foreground: oklch(0.205 0 0);
     --ui-sidebar-border: oklch(0.922 0 0);
     --ui-sidebar-ring: oklch(0.708 0 0);

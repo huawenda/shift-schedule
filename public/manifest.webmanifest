@@ -8,8 +8,8 @@
   "display": "standalone",
   "lang": "zh-CN",
   "orientation": "any",
-  "background_color": "#f7f7f7",
-  "theme_color": "#0e2228",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "shortcuts": [
     {
       "name": "全员矩阵",

@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0e2228" />
+    <!-- 状态栏色：取画布白（--ui-background = oklch(1 0 0) = #ffffff）。
+         原值 #0e2228 是**改造前**深青 L 形外壳的颜色，外壳换成 shadcn 浅色侧栏后
+         就该一起换掉 —— 否则手机 PWA 的状态栏还留着一道深青，与整页浅色对不上。
+         底部系统导航栏同样取这个值（Android 用 theme_color 画它）。 -->
+    <meta name="theme-color" content="#ffffff" />
     <meta name="color-scheme" content="light" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />

@@ -43,6 +43,18 @@ self.addEventListener('fetch', event => {
     return
   }
 
+  /* manifest 必须走**网络优先**，不能缓存优先：
+   * 里面的 theme_color / background_color 决定 PWA 的状态栏色与系统导航栏
+   * 上边界那条分隔线。缓存优先会让改过的 manifest 永远发不出去 ——
+   * 页面看着是新的（meta 是实时加载的），系统栏却还是旧值，
+   * 于是「顶部已经变白、底部还留一道旧色线」这种半新半旧的状态。
+   *
+   * manifest 本身也不该进缓存：它是安装期元数据，缓存它没有离线收益。 */
+  if (request.destination === 'manifest' || requestUrl.pathname.endsWith('.webmanifest')) {
+    event.respondWith(fetch(request))
+    return
+  }
+
   event.respondWith(
     caches.match(request).then(cachedResponse => {
       if (cachedResponse) return cachedResponse

@@ -73,9 +73,10 @@ export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
         {/*
           品牌区不用 `SidebarMenuButton`：它自带 `[&_svg]:size-4`（后代选择器，特异性高于 `.size-9`），
           会把 36px 的标识压成 16px 的小点。这里直接用普通链接 + 同样的 hover 反馈。
+          hover 用半透明（/40），与菜单项一致 —— 实色会和「当前选中项」撞脸。
         */}
         <a
-          className="flex items-center gap-3 rounded-md p-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+          className="flex items-center gap-3 rounded-md p-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
           href={hrefs.overview}
           onClick={event => intercept(event, 'overview')}
         >
@@ -91,7 +92,11 @@ export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupLabel>视图</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            {/*
+              gap-1：shadcn 默认是 gap-0 —— 选中项与相邻的 hover 项都是整块圆角底，
+              贴在一起会连成一片（看着像一块更大的选中块）。留 4px 缝，两块才分得开。
+            */}
+            <SidebarMenu className="gap-1">
               {items.map(item => {
                 const Icon = item.icon
                 return (

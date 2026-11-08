@@ -35,6 +35,10 @@ certs/
 # 工具链本地缓存目录，不入库
 .workbuddy/
 
+# shadcn/ui 学习沙盒：独立的示例工程（有自己的 package.json / vite 配置），
+# 只用来对照组件源码与默认样式，不属于产品代码，也不参与构建。
+shadcn-lab/
+
 # 日志
 *.log
 npm-debug.log*

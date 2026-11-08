@@ -27,7 +27,7 @@
 | 4 · 通用控件 | ✅ 完成 | 11-08 21:56 | **Select**（269 行自绘 → shadcn `Select`，对外 API 不变，空串哨兵值转换）、**Toast**（sonner 适配层，删 `ToastHost.tsx` + `toasts.scss` 约 450 行）、**Dialog**（7 个弹层全部换 Radix，删 `useDialogFocus` 与 `.sheet-backdrop`/`.dialog` 面板 CSS 约 190 行）、**Tabs**（设置页分页）、**Table**（每日明细，含 sticky 与关掉官方容器 overflow）、**Input**（全部 11 处，含弹层内 6 处；`type=number` 的步进箭头已用 `appearance` 去掉）、**Popover**（矩阵概览条「查看名单」：自绘浮层 → shadcn `Popover`，Esc / 点外部关闭 / 焦点归位交给 Radix） |
 | 5 · 自研简单组件 | ✅ 完成 | 11-08 22:30 | 四块统计与待办卡统一成**自研外壳**（`.card-surface`：白底 + `1px var(--border)` + `--radius-panel`，无投影）；**不引入 shadcn `Card`**——实测其 `ring-1 ring-foreground/10` 在本项目主题层下解析为 `oklch(0.708 0 0 / 0)`（alpha 0）；待办项改为 `label + input[type=checkbox]`（整行可点、`accent-color` 上色）；**死样式清理**：`.input*` / `.select-*` / `.dialog-actions*` / `.dialog-narrow` / `.profile-block|tag|title` 等约 25 条规则，CSS 181.4 → 179.0 kB；**成员表保留 grid、只调视觉**（用户 22:01 定）：行高 40px 对齐 h-8 控件、`--ui-border` 分隔线、表头 `font-weight:500` + muted、本人行与悬停用中性 `color-mix`、只读字段 30→32px 与 Input 齐平、分组 tab 改 shadcn 胶囊式、设置页卡片外壳统一为 1px 线 + 无投影 |
 | 6 · 文档与验收 | 🔄 进行中 | 11-08 22:45 | 文档已同步：README（外壳、目录树、测试数 223→271、视觉体系）与 DESIGN（视觉基调、结构、版心公式、路由表）；**待做**：`verify:dist` 412 项 CDP 断言实机跑一遍（Dialog Portal 后 DOM 定位需改，按规则需用户指令） |
-| 7 · 最后调三个复杂组件 | ⏳ | — | — |
+| 7 · 最后调三个复杂组件 | ⛔ 取消 | 11-08 23:05 | 用户 23:05 定：**三个复杂组件维持现状，不再改动**。矩阵白板只去掉投影、改成 1px 外框线（与卡片同一套分层），其余一律不动 |
 
 > 阶段 1 的两个实施决策（已并入 §3.5 / §7 R1）：
 > 1. **不导入 preflight** — 避免全局重置与 7 层 SCSS 叠加造成视觉回归，等组件迁移完再评估
@@ -184,7 +184,9 @@ SidebarProvider
 - 新组件：`bg-primary` → `--color-primary` → `--ui-primary` → shadcn 默认值
 - 旧组件：`var(--accent)` → `tokens.scss` 原值
 
-**阶段 7**：把 `tokens.scss` 的通用语义层改成 `var(--ui-*)` 别名，三个复杂组件零代码改动即跟随新值（§3.6）。
+**不再进行**：原计划的「阶段 7」——把 `tokens.scss` 的通用语义层改成 `var(--ui-*)` 别名 ——
+已取消（用户 23:05 定：三个复杂组件维持现状）。旧 `tokens.scss` 长期保留，
+两套 token 并存成为最终形态：新组件用 `--ui-*`，旧组件继续用旧变量。
 
 产物实测链路：`.bg-primary{background-color:var(--ui-primary)}`；
 项目变量保持原值 `--accent:#1b6c80` / `--muted:#4c5256` / `--border:#d9dee2`。
@@ -203,7 +205,7 @@ SidebarProvider
 src/
 ├── index.css               Tailwind 入口：@layer 顺序 + 两个 @import + 主题变量 + 边框重置
 ├── styles.scss             过渡期 legacy 入口（现有 7 层 @use），逐组件删除
-├── styles/tokens.scss      阶段 2–6 原样保留（三组件冻结层），阶段 7 改值后删除
+├── styles/tokens.scss      阶段 2 起原样保留（复杂组件的冻结层），最终不再删除
 ├── components/ui/          shadcn CLI 复制进来的组件源码（可直接改）
 ├── components/AppShell.tsx 外壳：SidebarProvider + SidebarInset + 顶栏容器（原 Shell.tsx）
 ├── components/AppSidebar.tsx 侧栏：品牌 + 三个一级页面入口
@@ -252,7 +254,7 @@ settings 1356 / todos 440 / toasts 176 / wizard 149），不可能一次迁成 u
 > 不采用「把 5715 行 SCSS 整体包进 `@layer legacy`」：`@use` 规则必须在文件顶层，
 > 无法包进 `@layer`；改造成本高于收益，且会打断 Vite 的 sass 编译链。
 
-### 3.6 三个复杂组件的 token 冻结（Q2-A 已定）
+### 3.6 三个复杂组件的 token 冻结（Q2-A 已定；阶段 7 取消后此策略长期生效）
 
 D5 要求矩阵 / 月历 / 值班牌「完全不动」，但它们的外观全由 `var(--…)` 撑起。阶段 2 重写 token 后，
 **代码不动、外观也会跟着变**（圆角 8→10、控件 30→32、间距重定、六色调色阶）。
@@ -261,14 +263,14 @@ D5 要求矩阵 / 月历 / 值班牌「完全不动」，但它们的外观全�
 
 | 阶段 | 旧 `tokens.scss` | 新 `index.css` | 三组件外观 |
 |---|---|---|---|
-| 2–6 | **原样保留**，作为三组件的冻结层 | 新增 shadcn 别名层，供新组件使用 | 不变 |
-| 7 | 各项值改成 `var(--新token)`，确认无人引用后删除 | 不变 | 一次性跟随新值 |
+| 2 起 | **原样保留**，作为三组件的冻结层 | 新增 shadcn 别名层，供新组件使用 | 不变 |
 
-关键点：三组件的 SCSS 与 TSX **一个字都不用改**，阶段 7 只是让旧 token 名指向新值，
-它们就自动完成对齐。这也是阶段 2 不能直接删掉旧 `tokens.scss` 的原因。
+关键点：三组件的 SCSS 与 TSX **一个字都不用改**。旧 `tokens.scss` 因此长期保留，
+两套 token 并存是**最终形态**而不是过渡态。
 
-> 代价：阶段 2–6 期间存在两套 token（旧值 + 新别名），需约定「新组件只引用新 token、
-> 旧组件只引用旧 token」，避免混用。阶段 7 清理旧层后只剩一套。
+> 代价：需长期约定「新组件只引用新 token、旧组件只引用旧 token」，避免混用。
+> 这也意味着项目里仍有两套颜色变量（`--accent` 深青 / `--ui-accent` 近白），
+> 换主题时两者不会联动 —— 当前项目只有浅色主题，暂不构成问题。
 
 ---
 
@@ -280,7 +282,7 @@ D5 要求矩阵 / 月历 / 值班牌「完全不动」，但它们的外观全�
 | D2 | 外壳整体替换为 Sidebar + 自研 TopBar + `bg-background` 平铺（方案 A，全默认） | 用户 18:22 |
 | D3 | 引入组件用默认 token；自研组件用项目 token；项目 token 重写以贴合整体风格 | 用户 18:11 |
 | D4 | 技术栈升级到匹配 shadcn **不是问题**，不列为阻碍 | 用户 17:52 |
-| D5 | **全员矩阵 / 个人月历 / 值班牌完全不动**，最后阶段才只调样式匹配风格，内部实现始终不碰 | 用户 18:28（要求记入日志） |
+| D5 | **全员矩阵 / 个人月历 / 值班牌完全不动**，内部实现始终不碰；最终**维持现状、不再调整样式**（用户 23:05 确认，阶段 7 取消） | 用户 18:28 确立、23:05 定稿 |
 | D6 | 只抄 shadcn 的**样式层**，行为自己写；抄来的基线集中放一个常量文件并注明来源版本 | 用户 17:52 / 沙盒 `surface.ts` 验证 |
 | D7 | 待办卡：Card 外壳 + 自研条目（B 结构 label 包裹 input），不引入 Label / Checkbox | 沙盒验证 |
 | D8 | 每日明细可用 Table；sticky 表头、合计行在滚动区外、卡片跟随左卡高度由页面自己实现 | 沙盒验证 |
@@ -290,7 +292,7 @@ D5 要求矩阵 / 月历 / 值班牌「完全不动」，但它们的外观全�
 | D12 | 三个弹层（矩阵改班 / 日历改班 / 新建班序）统一收拢到设置页的 `DialogShowcase`；业务页不再各自放 Dialog，内部业务表单仍是自研占位 | 用户 19:17 / 沙盒验证 |
 | D13 | SCSS 过渡采用「入口改 CSS + 新旧不混用同一元素 + 逐组件删除」，不整体包 `@layer` | 用户 19:25 采纳 §3.5 |
 | D14 | `desktop/vite.config.ts` 纳入本次范围，**只补** `@tailwindcss/vite` 与 `@` alias；Rust 壳 / 打包不动 | 用户 19:29 确认（原 Q1） |
-| D15 | 三个复杂组件的 token **冻结**：旧 `tokens.scss` 原样保留到阶段 7，再让旧 token 名指向新值 | 用户 19:29 确认（原 Q2，做法见 §3.6） |
+| D15 | 三个复杂组件的 token **冻结**：旧 `tokens.scss` 原样保留并长期保留（阶段 7 取消，不再切换到新值） | 用户 19:29 确认、23:05 随阶段 7 取消（做法见 §3.6） |
 | D16 | shadcn 语义变量统一加 **`ui-` 前缀**，用 `@theme inline` 映射；`tokens.scss` 阶段 2–6 完全不动 | 阶段 2 实施时发现 `--accent` / `--muted` / `--border` 同名不同义 |
 | D17 | ~~不导 preflight，单补边框两条~~ → **已被 D20 取代**（实测补丁不够，见 D20） | 阶段 3 首次实现 |
 | D20 | **导入完整 preflight**（`@import "tailwindcss"`），与沙盒 `shadcn-lab` 一致；字体只取 Geist 的 latin 子集并作用于 `[data-slot]` | 阶段 3 目视回归发现三处硬伤：`<ul>` 保留 UA 的 `list-style:disc` + `padding-inline-start:40px`（导航行冒圆点、整块右移 40px）；`<button>` 保留 ButtonFace `#f0f0f0`（SidebarRail 变成 18px 灰带）；`<svg>` 非块级导致图标基线错位。逐条补丁会漏，preflight 一次解决 |
@@ -313,8 +315,8 @@ D5 要求矩阵 / 月历 / 值班牌「完全不动」，但它们的外观全�
 | `MemberGroupTabs` / `MemberRowsEditor` | 同一张卡内联动：分组 tab + Table | D9 |
 | `PatternList` / `PatternEditor`（24 格） | 保持自研占位，最后视情况调整 | 高度定制 |
 | `ProfileSection` / 备份区 | 表单控件换 shadcn `Input` / `Label` / `Switch` | 标准控件 |
-| **全员矩阵 `TeamMatrix`** | **完全不动，最后只调样式** | D5 |
-| **个人月历 `MonthCalendar`** | **完全不动，最后只调样式** | D5 |
+| **全员矩阵 `TeamMatrix`** | **完全不动，最终维持现状**（仅白板去掉投影、改 1px 外框线） | D5 |
+| **个人月历 `MonthCalendar`** | **完全不动，最终维持现状** | D5 |
 | **值班牌** | **完全不动（连外壳都不换），最后只调样式** | D5、用户 17:22 |
 
 ---
@@ -325,16 +327,16 @@ D5 要求矩阵 / 月历 / 值班牌「完全不动」，但它们的外观全�
 |---|---|---|---|
 | 0 · 基线 | 记录 `build` / `test` 结果与产物哈希；`verify:dist` 属实机验收，按测试边界规则需用户明确指令后再跑 | 已授权的命令通过 | — |
 | 1 · 技术栈 | **升 Vite 4.5.14 → ^5.4.21、React 18.3.1 → ^19.3.1**（§2.1）；新增 Tailwind v4 插件、`@` alias、`components.json`；**根与 `desktop/` 两处同步补插件与 alias**（D14）；上调 `engines.node`、`allowBuilds` 加 `@tailwindcss/oxide`。TS / vitest 不动 | `pnpm build`、`pnpm test`（271 例）通过；`file://` 双击不白屏；`desktop/` 构建不报错 | 独立 commit，可单独 revert |
-| 2 · Token 与 SCSS 共存 | `index.css` 三层结构 + `@layer` 顺序落地（§3.5）；**新 token 写进 `index.css`**；旧 `tokens.scss` **原样保留**作为三组件冻结层（§3.6）；legacy SCSS 仍由 `styles/index.scss` 引入 | 浅/暗切换一致；271 单测通过；**三组件外观与基线一致**；旧页面无回归 | 旧 `tokens.scss` 未改动，无需备份 |
+| 2 · Token 与 SCSS 共存 | `index.css` 三层结构 + `@layer` 顺序落地（§3.5）；**新 token 写进 `index.css`**；旧 `tokens.scss` **原样保留**作为三组件冻结层（§3.6，长期保留）；legacy SCSS 仍由 `styles/index.scss` 引入 | 271 单测通过；**三组件外观与基线一致**；旧页面无回归 | 旧 `tokens.scss` 未改动，无需备份 |
 | 3 · 外壳 | 删 `Shell.tsx`，换成 `AppShell` + `AppSidebar` + `TopBar`（SidebarProvider / SidebarInset，画布平铺）；`shell.scss` 只留画布层 | 三视图可切换、折叠、窄屏 Sheet；`file://` 直接打开不白屏 | 组件级 commit（`Shell.tsx` 可从 git 恢复） |
 | 4 · 通用控件 | 按 §5 逐个替换 Dialog / Select / Popover / Tabs / Input / Switch / Toast / Table | 键盘与焦点行为可用；`verify:dist` DOM 断言同步修 | 每个组件一个 commit |
 | 5 · 自研简单组件 | 待办卡、统计卡、成员卡按沙盒验证的形态重写；**三个弹层收拢到设置页 `DialogShowcase`**；`surface.ts` 集中样式基线 | 静态假数据展示一致（重构后接真数据）；业务页无残留 Dialog | 每个组件一个 commit |
 | 6 · 文档与验收 | 同步 `AGENTS.md` / `DESIGN.md` / `README.md` 的过时条款；跑全套验收 | `build` / `test` / `verify:dist` 全绿 | — |
-| 7 · 最后调三个复杂组件 | 把冻结的旧 token 值改成 `var(--新token)`，让三组件跟随新体系；再按需微调样式。**不动结构 / 逻辑** | 三组件视觉与新体系一致；三组件 TSX diff 为空（仅样式值变化）；数据层 diff 为空 | 样式单独 commit |
+| 7 · 最后调三个复杂组件 | ⛔ **取消**（用户 23:05 定：三组件维持现状）。三组件的 token 冻结永久生效，旧 `tokens.scss` 长期保留 | 三组件 TSX / SCSS 与基线一致 | — |
 
 > 阶段 1–6 期间，全员矩阵 / 个人月历 / 值班牌**一行不改**（D5）。
-> 阶段 2 期间旧 `tokens.scss` 原样保留作为冻结层，三组件**外观也不变**（§3.6）；
-> 阶段 7 才让旧 token 指向新值，一次性完成对齐。
+> 旧 `tokens.scss` 原样保留作为冻结层，三组件**外观也不变**（§3.6）。
+> 阶段 7 已取消，这条冻结长期生效 —— 复杂组件不跟随新 token，最终维持现状。
 
 ---
 
@@ -343,7 +345,7 @@ D5 要求矩阵 / 月历 / 值班牌「完全不动」，但它们的外观全�
 | # | 风险 | 缓解 |
 |---|---|---|
 | R1 | **Tailwind preflight 与现有 7 层全局 SCSS 叠加**：`box-sizing`、`:focus-visible`、`.btn/.input` 基础层被重置；另外**未分层 SCSS 会覆盖 `@layer utilities`** | 阶段 3 起**导入完整 preflight**（D20，实证：缺它 shadcn 组件会变形）。preflight 在 `@layer base`，未分层 SCSS 优先，爆炸半径只限「依赖浏览器默认值」的属性；已知待观察项：`.settings-label h2` 未声明 `font-weight`（会从 bold 变 400）、`.error-list` 的 `disc` 圆点会被去掉。用 §3.5 的 layer 顺序 + 「新旧不混用同一元素」纪律；三档断点（≤1399 / ≤1023 / ≤639）全量视觉回归 |
-| R12 | **移动端导航形态改变**：旧外壳在 ≤1023px 把侧栏变成底部标签栏（三格等分），`Sidebar` 则在 <768px 变成左上角触发的 Sheet 抽屉 | 属方案 A 的既定取舍（D2）；若需要保留底栏，阶段 7 之后单独补一个移动端导航层，不影响本次结构 |
+| R12 | **移动端导航形态改变**：旧外壳在 ≤1023px 把侧栏变成底部标签栏（三格等分），`Sidebar` 则在窄屏变成左上角触发的 Sheet 抽屉 | **已处理**：新增 `MobileNav` 底部标签栏，≤1023px 替代侧栏（与旧外壳同一道线），Sheet 抽屉不再出现 |
 | R2 | **`file://` IIFE 产物链脆弱**：`fileProtocolFriendlyPlugin` 靠正则替换 `<script type="module" crossorigin src=`，Vite 4→5 的 HTML 输出格式变化会白屏 | 阶段 1 立刻双击验证；同样重验 SW 指纹注入与 `stripPwaAssetsPlugin` |
 | R3 | **`verify-dist.mjs` 412 项 DOM 断言**依赖 `.dialog` / `.cal-cell` / `.btn-primary` 等 class；Radix Portal 到 body 后大面积失效 | shadcn 组件透传 `className`，保留原类名作契约，把改动压到几十处；阶段 4 分批修 |
 | R4 | **两份 Vite 配置**：`desktop/vite.config.ts` 独立且共用 `src/`，漏配插件/别名导致桌面产物构建失败 | **已定（D14）**：两处同步补插件与 alias，Rust 侧不动；阶段 1 验收加 `desktop/` 构建不报错 |
@@ -381,8 +383,8 @@ pnpm verify:dist     # CDP 断言（README 记 412 项；脚本内 248 个调用
 |---|---|
 | 技术栈 | 阶段 1 独立 commit，`git revert` 即可 |
 | 组件 | 每个组件单独 commit，`git revert` 该 commit 即回到自绘实现；只移除 `ui/` + `components.json` 不能还原，因为调用方已被改写 |
-| 样式 | 阶段 2 保留旧 `tokens.scss` 备份至阶段 6；SCSS 从未强制删除 |
-| 冻结层 | 旧 `tokens.scss` 阶段 2–6 未改动；阶段 7 改值时单独 commit，可整条 revert |
+| 样式 | 旧 `tokens.scss` 长期保留（复杂组件的冻结层）；SCSS 从未强制删除 |
+| 冻结层 | 旧 `tokens.scss` 自阶段 2 起未改动，**长期保留**（阶段 7 已取消）；要换回新值只需改这一处变量 |
 | 数据 | `src/data/` / 备份 v5 / 271 单测全程零改动，不存在数据回滚成本 |
 
 ---
@@ -392,7 +394,7 @@ pnpm verify:dist     # CDP 断言（README 记 412 项；脚本内 248 个调用
 | # | 原问题 | 结论 |
 |---|---|---|
 | Q1 | `desktop/vite.config.ts` 是否算本次范围 | **算**，只补插件与 `@` alias，Rust 侧不动 → D14 / §1.4 |
-| Q2 | 三个复杂组件的 token 是否冻结 | **冻结**，旧 `tokens.scss` 原样保留到阶段 7 → D15 / §3.6 |
+| Q2 | 三个复杂组件的 token 是否冻结 | **冻结**，旧 `tokens.scss` 原样保留并长期保留 → D15 / §3.6 |
 
 > 至此方案内无未决项；实施中出现新的边界问题，按同样格式追加到本章。
 

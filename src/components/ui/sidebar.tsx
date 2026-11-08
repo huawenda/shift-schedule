@@ -464,11 +464,24 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+  /* hover 与选中态必须**分得开**：
+   * - hover 用 `bg-sidebar-accent/40`（半透明，浅一档）
+   * - 选中态用 `data-active:bg-sidebar-accent`（实色，深一档）
+   *
+   * ⚠️ 变体里**不能再写不透明的 `hover:bg-sidebar-accent`**：
+   * cva 把 base 与 variant 拼成一条 class 串，再交给 tailwind-merge 去重 ——
+   * 同组冲突时**后写的赢**，variant 在 base 之后，于是不透明的 hover 会把
+   * base 的半透明覆盖掉，hover 与选中态变成同一个实色（分不清谁是谁）。
+   *
+   * `data-active:hover:` 是刻意多写的一层：hover 与 data-active 特异性相同，
+   * 谁赢要看 Tailwind 变体在样式表里的先后，不可控；写成
+   * `data-active:hover:bg-sidebar-accent` 后特异性更高，选中项悬停时
+   * 保持实色，不会被 hover 的半透明冲淡。 */
+  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding,color,background-color] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:hover:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
   {
     variants: {
       variant: {
-        default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        default: "hover:text-sidebar-accent-foreground",
         outline:
           "bg-background shadow-[0_0_0_1px_var(--ui-sidebar-border)] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--ui-sidebar-accent)]",
       },
