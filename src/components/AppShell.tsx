@@ -22,6 +22,9 @@ interface AppShellProps {
   onToday: () => void
   onBackup: () => void
   onRestore: (file: File) => void
+  /** 当前生效的主题；顶栏主题按钮的图标与 aria-label 跟着它变 */
+  theme: 'light' | 'dark'
+  onToggleTheme: () => void
   children: ReactNode
 }
 
@@ -51,6 +54,8 @@ export function AppShell({
   onToday,
   onBackup,
   onRestore,
+  theme,
+  onToggleTheme,
   children
 }: AppShellProps) {
   const isCompact = useIsCompact()
@@ -86,6 +91,8 @@ export function AppShell({
             onRestore={onRestore}
             onShiftMonth={onShiftMonth}
             onToday={onToday}
+            onToggleTheme={onToggleTheme}
+            theme={theme}
           />
           {children}
         </SidebarInset>

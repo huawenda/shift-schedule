@@ -189,7 +189,7 @@
 /* 悬停：在便笺底色上叠一层极淡的暗色，而不是把底色替换成灰 */
 .todo-item:hover,
 .todo-list-item:hover {
-  background-image: linear-gradient(rgba(19, 20, 22, 0.035), rgba(19, 20, 22, 0.035));
+  background-image: linear-gradient(var(--hover-veil), var(--hover-veil));
 }
 
 /* 勾选框：用一个空心方块，已完成时打勾。
@@ -371,7 +371,7 @@
 }
 
 .todo-list-item .todo-remove:hover {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--hover-surface);
   color: var(--danger);
   opacity: 1;
 }

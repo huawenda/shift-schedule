@@ -471,11 +471,11 @@ const detailHeight = computed(() => Math.min(280, Math.max(0, props.stats.overti
   border-radius: var(--radius-mark) var(--radius-mark) 0 0;
 }
 
-.ot-bar.is-day { background: var(--shift-day-bg); }
-.ot-bar.is-night { background: var(--shift-night-bg); }
-.ot-bar.is-dayx { background: var(--shift-dayx-bg); }
-.ot-bar.is-nightx { background: var(--shift-nightx-bg); }
-.ot-bar.is-legal { background: var(--warning-border); }
+.ot-bar.is-day { background: var(--bar-day); }
+.ot-bar.is-night { background: var(--bar-night); }
+.ot-bar.is-dayx { background: var(--bar-dayx); }
+.ot-bar.is-nightx { background: var(--bar-nightx); }
+.ot-bar.is-legal { background: var(--warning-solid); }
 
 .ot-col-label {
   flex: 1 1 0;

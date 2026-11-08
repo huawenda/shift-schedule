@@ -46,6 +46,7 @@ import {
   syncCloseBehaviorToShell,
   type CloseBehavior
 } from '../platform/windowPrefs'
+import type { ThemePreference } from '../platform/theme'
 import { Input } from '@/components/ui/input'
 
 /** 设置分两页：班序与成员占满屏，个人信息/备份/清空放另一页，各自不再互相挤压 */
@@ -76,6 +77,9 @@ interface SettingsScreenProps {
   onRestore: (file: File) => void
   onClearAll: () => void
   onStartWizard: () => void
+  /** 当前的外观偏好（跟随系统 / 浅色 / 深色） */
+  theme: ThemePreference
+  onThemeChange: (preference: ThemePreference) => void
 }
 
 /**
@@ -99,7 +103,9 @@ export function SettingsScreen({
   onBackup,
   onRestore,
   onClearAll,
-  onStartWizard
+  onStartWizard,
+  theme,
+  onThemeChange
 }: SettingsScreenProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   /** Excel 批量导入：选文件 → 解析 → 追加 → 直接落盘（与排序「完成」同一套） */
@@ -613,6 +619,47 @@ export function SettingsScreen({
               onSaveSalary={onSaveSalary}
               onSaveSelf={onSaveSelf}
             />
+
+            <section className="settings-section">
+              <div className="settings-label">
+                <h2>外观</h2>
+                <p>界面配色。</p>
+              </div>
+
+              <div className="settings-panel">
+                <div className="settings-actions">
+                  <div className="segmented" role="group" aria-label="界面配色">
+                    <button
+                      aria-pressed={theme === 'system'}
+                      className={`segmented-item${theme === 'system' ? ' is-on' : ''}`}
+                      type="button"
+                      onClick={() => onThemeChange('system')}
+                    >
+                      跟随系统
+                    </button>
+                    <button
+                      aria-pressed={theme === 'light'}
+                      className={`segmented-item${theme === 'light' ? ' is-on' : ''}`}
+                      type="button"
+                      onClick={() => onThemeChange('light')}
+                    >
+                      浅色
+                    </button>
+                    <button
+                      aria-pressed={theme === 'dark'}
+                      className={`segmented-item${theme === 'dark' ? ' is-on' : ''}`}
+                      type="button"
+                      onClick={() => onThemeChange('dark')}
+                    >
+                      深色
+                    </button>
+                  </div>
+                </div>
+                <p className="settings-hint">
+                  选「跟随系统」时，系统在浅色与深色之间切换，本应用会立刻跟着变。
+                </p>
+              </div>
+            </section>
 
             {isTauriShell() ? (
               <section className="settings-section">

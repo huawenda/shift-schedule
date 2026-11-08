@@ -74,6 +74,8 @@ page {
   --warning-ink: #92400e;
   --warning-bg: #fffbeb;
   --warning-border: #fde68a;
+  /* 警示色块的实心填充（法定柱形图的柱身）：与桌面端 src/styles/tokens.scss 同值 */
+  --warning-solid: #fde68a;
 
   --overtime-bg: #ffc98f;
   --overtime-ink: #7a3f0a;
@@ -114,6 +116,12 @@ page {
   --shift-nightx-ink: #9a3412;
   --shift-leave-bg: #e5e7eb;
   --shift-leave-ink: #475467;
+
+  /* 加班分布柱形图的柱色：与桌面端 src/styles/tokens.scss 同值 */
+  --bar-day: #dff3ff;
+  --bar-night: #1e3a5f;
+  --bar-dayx: #fff0c2;
+  --bar-nightx: #fde7c7;
 
   /* 深底上的班次色：值班牌节奏条专用 */
   --shift-day-on-dark: #7cc7ea;

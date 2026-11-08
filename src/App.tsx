@@ -34,6 +34,7 @@ import { getCloseBehavior, syncCloseBehaviorToShell } from './platform/windowPre
 import { useBackupFlow } from './hooks/useBackupFlow'
 import { useMonthNavigation } from './hooks/useMonthNavigation'
 import { useRoster } from './hooks/useRoster'
+import { useTheme } from './hooks/useTheme'
 import { useToasts } from './hooks/useToasts'
 
 /** 从哪儿点开的格子：矩阵只能改班次，概览页的日历能记加班 */
@@ -133,6 +134,8 @@ export function App() {
   const monthKey = useMemo(() => location.month ?? currentMonth, [location.month, currentMonth])
   const { period, atCurrentMonth } = useMonthNavigation(monthKey)
   const toast = useToasts()
+  /** 主题：跟随系统 / 浅色 / 深色。解析结果同时喂给外壳与 Toast 容器。 */
+  const theme = useTheme()
   const { backup, restore } = useBackupFlow(api, toast)
   /** 存储不可写时那条常驻提示的 id，可写后撤掉 */
   const persistenceToast = useRef<number | null>(null)
@@ -382,6 +385,8 @@ export function App() {
         onRestore={file => void restore(file)}
         onShiftMonth={goMonth}
         onToday={goToday}
+        onToggleTheme={theme.toggle}
+        theme={theme.resolved}
       >
         {route === 'settings' ? (
           <SettingsScreen
@@ -399,6 +404,8 @@ export function App() {
             onRemoveGroup={api.removeGroupById}
             onSavePattern={api.savePattern}
             onSaveSelf={api.saveSelf}
+            theme={theme.preference}
+            onThemeChange={theme.change}
             onStartWizard={() => {
               setWizardSkipped(false)
               navigate('overview')
@@ -455,7 +462,7 @@ export function App() {
       ) : null}
 
       {/* sonner：堆叠、悬停暂停、aria-live 都是内建的，不再需要自研 ToastHost */}
-      <Toaster position="bottom-center" />
+      <Toaster position="bottom-center" theme={theme.resolved} />
     </>
   )
 }

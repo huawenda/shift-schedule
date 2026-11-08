@@ -196,38 +196,47 @@
     --ui-sidebar-ring: oklch(0.708 0 0);
 }
 
+/* 暗色主题：与 src/styles/tokens.scss 的 `[data-theme='dark']` 同一套色值。
+ *
+ * 两处必须一致：项目自己的令牌走 `data-theme`，shadcn 的 `--ui-*` 与
+ * Tailwind 的 `dark:` 变体走 `.dark` 类 —— 由 platform/theme.ts 一起切换。
+ *
+ * 色值不用 shadcn 默认的那套 oklch 灰阶：默认灰阶与项目令牌（冷调深色）
+ * 不是一个色温，侧栏、顶栏、弹层与画布会各走各的。 */
 .dark {
-    --ui-background: oklch(0.145 0 0);
-    --ui-foreground: oklch(0.985 0 0);
-    --ui-card: oklch(0.205 0 0);
-    --ui-card-foreground: oklch(0.985 0 0);
-    --ui-popover: oklch(0.205 0 0);
-    --ui-popover-foreground: oklch(0.985 0 0);
-    --ui-primary: oklch(0.922 0 0);
-    --ui-primary-foreground: oklch(0.205 0 0);
-    --ui-secondary: oklch(0.269 0 0);
-    --ui-secondary-foreground: oklch(0.985 0 0);
-    --ui-muted: oklch(0.269 0 0);
-    --ui-muted-foreground: oklch(0.708 0 0);
-    --ui-accent: oklch(0.269 0 0);
-    --ui-accent-foreground: oklch(0.985 0 0);
-    --ui-destructive: oklch(0.704 0.191 22.216);
-    --ui-border: oklch(1 0 0 / 10%);
-    --ui-input: oklch(1 0 0 / 15%);
-    --ui-ring: oklch(0.556 0 0);
-    --ui-chart-1: oklch(0.87 0 0);
-    --ui-chart-2: oklch(0.556 0 0);
-    --ui-chart-3: oklch(0.439 0 0);
-    --ui-chart-4: oklch(0.371 0 0);
-    --ui-chart-5: oklch(0.269 0 0);
-    --ui-sidebar: oklch(0.205 0 0);
-    --ui-sidebar-foreground: oklch(0.985 0 0);
-    --ui-sidebar-primary: oklch(0.488 0.243 264.376);
-    --ui-sidebar-primary-foreground: oklch(0.985 0 0);
-    --ui-sidebar-accent: oklch(0.269 0 0);
-    --ui-sidebar-accent-foreground: oklch(0.985 0 0);
-    --ui-sidebar-border: oklch(1 0 0 / 10%);
-    --ui-sidebar-ring: oklch(0.556 0 0);
+    --ui-background: #0f1318;
+    --ui-foreground: #e6edf3;
+    --ui-card: #161b22;
+    --ui-card-foreground: #e6edf3;
+    --ui-popover: #161b22;
+    --ui-popover-foreground: #e6edf3;
+    /* 主色反过来：浅色主题里主按钮是墨底白字，暗色里改成浅底深字，
+       否则深底按钮会跟画布糊在一起。 */
+    --ui-primary: #e6edf3;
+    --ui-primary-foreground: #0b0e12;
+    --ui-secondary: #1e242c;
+    --ui-secondary-foreground: #e6edf3;
+    --ui-muted: #1e242c;
+    --ui-muted-foreground: #9aa6b2;
+    --ui-accent: #262e37;
+    --ui-accent-foreground: #e6edf3;
+    --ui-destructive: #ef7a70;
+    --ui-border: #2b333b;
+    --ui-input: #2b333b;
+    --ui-ring: #58b8cf;
+    --ui-chart-1: #0f1318;
+    --ui-chart-2: #9aa6b2;
+    --ui-chart-3: #6e7983;
+    --ui-chart-4: #4c5661;
+    --ui-chart-5: #2b333b;
+    --ui-sidebar: #0b0e12;
+    --ui-sidebar-foreground: #e6edf3;
+    --ui-sidebar-primary: #e6edf3;
+    --ui-sidebar-primary-foreground: #0b0e12;
+    --ui-sidebar-accent: #1e242c;
+    --ui-sidebar-accent-foreground: #e6edf3;
+    --ui-sidebar-border: #2b333b;
+    --ui-sidebar-ring: #58b8cf;
 }
 
 @layer base {

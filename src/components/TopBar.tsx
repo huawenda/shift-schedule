@@ -1,5 +1,5 @@
 import { useRef, type ChangeEvent } from 'react'
-import { ChevronLeft, ChevronRight, Download, Upload } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Moon, Sun, Upload } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
@@ -13,6 +13,9 @@ interface TopBarProps {
   onToday: () => void
   onBackup: () => void
   onRestore: (file: File) => void
+  /** 当前生效的主题（浅色 / 深色）；按钮图标与 aria-label 都跟着它变 */
+  theme: 'light' | 'dark'
+  onToggleTheme: () => void
 }
 
 /**
@@ -27,7 +30,9 @@ export function TopBar({
   onShiftMonth,
   onToday,
   onBackup,
-  onRestore
+  onRestore,
+  theme,
+  onToggleTheme
 }: TopBarProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   /** 窄屏没有侧栏可折叠，导航在底部标签栏，这个开关不显示 */
@@ -80,16 +85,20 @@ export function TopBar({
         </Button>
       </div>
 
-      {/* 手机上放不下两个备份按钮；设置页里还有一份入口，这里只在 ≥640px 显示 */}
-      <div className="ml-auto hidden items-center gap-2 sm:flex">
-        <Button size="sm" type="button" variant="outline" onClick={onBackup}>
-          <Download data-icon="inline-start" />
-          导出备份
-        </Button>
-        <Button size="sm" type="button" variant="outline" onClick={() => fileRef.current?.click()}>
-          <Upload data-icon="inline-start" />
-          导入备份
-        </Button>
+      {/* 右列：备份按钮（<640px 隐藏，设置页里还有一份入口）+ 主题按钮（常驻）。
+          ml-auto 挂在这一整组上，不能给两个子元素各挂一个 —— 两个 ml-auto
+          会把剩余空间对半分，主题按钮被推到中间而不是贴右缘。 */}
+      <div className="ml-auto flex items-center gap-2">
+        <div className="hidden items-center gap-2 sm:flex">
+          <Button size="sm" type="button" variant="outline" onClick={onBackup}>
+            <Download data-icon="inline-start" />
+            导出备份
+          </Button>
+          <Button size="sm" type="button" variant="outline" onClick={() => fileRef.current?.click()}>
+            <Upload data-icon="inline-start" />
+            导入备份
+          </Button>
+        </div>
         <input
           ref={fileRef}
           accept="application/json,.json"
@@ -99,6 +108,18 @@ export function TopBar({
           type="file"
           onChange={handleFile}
         />
+
+        {/* 主题切换：图标按钮，跟随当前生效主题换图标（深色时显示太阳，
+            点一下回到浅色）。设置页另有「外观」三态，这里是快捷入口。 */}
+        <Button
+          aria-label={theme === 'dark' ? '切换到浅色主题' : '切换到深色主题'}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+          onClick={onToggleTheme}
+        >
+          {theme === 'dark' ? <Sun /> : <Moon />}
+        </Button>
       </div>
     </header>
   )

@@ -649,25 +649,25 @@ button.plaque-shift:focus-visible {
  * 日历上那个「白班」小块就是这个颜色，柱形图里看到柱子就能对上号。
  */
 .ot-bar.is-day {
-  background: var(--shift-day-bg);
+  background: var(--bar-day);
 }
 
 .ot-bar.is-night {
-  background: var(--shift-night-bg);
+  background: var(--bar-night);
 }
 
 .ot-bar.is-dayx {
-  background: var(--shift-dayx-bg);
+  background: var(--bar-dayx);
 }
 
 .ot-bar.is-nightx {
-  background: var(--shift-nightx-bg);
+  background: var(--bar-nightx);
 }
 
 /* 法定没有对应班次，用「法」角标那套警示色。
  * 比 --warning-bg（#fffbeb）深一档 —— 那个色在白底上几乎看不见。 */
 .ot-bar.is-legal {
-  background: var(--warning-border);
+  background: var(--warning-solid);
 }
 
 /* 横轴类目名 */

@@ -11,12 +11,13 @@ import {
  * Toast 容器（sonner）。
  *
  * 与 CLI 生成版本的差别只有两处，都是主项目的既定前提：
- * 1. 不接 `next-themes` —— 主项目没有暗色模式（tokens.scss 写死 `color-scheme: light`），
- *    为了一个 `theme` 值引入整套主题 Provider 不划算，直接固定 `light`。
+ * 1. 不接 `next-themes` —— 主项目的主题状态在 `platform/theme.ts` 里，
+ *    由 App 层通过 `theme` prop 传进来（浅色/深色/跟随系统三态的解析结果）。
+ *    为了一个 `theme` 值引入整套主题 Provider 不划算。
  * 2. CSS 变量名用 `--ui-*` —— 主题层给 shadcn 变量统一加了前缀（D16），
  *    原版里的 `var(--popover)` 在主项目是未定义的，会退回 sonner 的默认配色。
  */
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ theme = 'light', ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
@@ -35,7 +36,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           '--border-radius': 'var(--ui-radius)'
         } as React.CSSProperties
       }
-      theme="light"
+      theme={theme}
       toastOptions={{
         classNames: {
           toast: 'cn-toast'

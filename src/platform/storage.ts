@@ -29,7 +29,14 @@ export const STORAGE_KEYS = {
    *
    * 和备份目录一样属于「这台电脑」的偏好，不进备份文件，也不跟着换机器走。
    */
-  closeBehavior: 'shift-schedule:local:close-behavior:v1'
+  closeBehavior: 'shift-schedule:local:close-behavior:v1',
+  /**
+   * 外观偏好（`system` / `light` / `dark`）。
+   *
+   * 同样属于「这台电脑」的偏好，不进备份文件 —— 换台电脑时按系统走就行，
+   * 把某台机器的深色设定跟着数据搬过去反而别扭。
+   */
+  theme: 'shift-schedule:local:theme:v1'
 } as const
 
 function getBrowserStorage(): Storage | null {

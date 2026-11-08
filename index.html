@@ -3,12 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <!-- 状态栏色：取画布白（--ui-background = oklch(1 0 0) = #ffffff）。
+    <!-- 状态栏色：默认取画布白（--ui-background = #ffffff）。
          原值 #0e2228 是**改造前**深青 L 形外壳的颜色，外壳换成 shadcn 浅色侧栏后
          就该一起换掉 —— 否则手机 PWA 的状态栏还留着一道深青，与整页浅色对不上。
-         底部系统导航栏同样取这个值（Android 用 theme_color 画它）。 -->
+         底部系统导航栏同样取这个值（Android 用 theme_color 画它）。
+         切到深色主题时由 platform/theme.ts 改写这里的 content（画布深色）。 -->
     <meta name="theme-color" content="#ffffff" />
-    <meta name="color-scheme" content="light" />
+    <!-- color-scheme 交给 CSS 的 :root / [data-theme=dark] 决定：
+         浅色时写 light（原生控件不被系统暗色染黑），深色时写 dark。 -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="昼夜" />
@@ -17,6 +19,27 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
     <title>月度概览</title>
+    <script>
+      /*
+       * 首帧之前先把主题定下来，否则深色用户会先看到一帧白底再跳暗色。
+       * 这段脚本刻意写成不依赖任何模块的原生代码 —— 它跑在 React 挂载之前。
+       * 存储键与 platform/theme.ts 里的 STORAGE_KEYS.theme 一致。
+       */
+      (function () {
+        try {
+          var pref = localStorage.getItem('shift-schedule:local:theme:v1') || 'light';
+          var dark = pref === 'dark'
+            || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.setAttribute('data-theme', dark ? 'dark' : 'light');
+          if (dark) root.classList.add('dark');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', dark ? '#0f1318' : '#ffffff');
+        } catch (e) {
+          /* 隐私模式下 localStorage 可能抛异常：默认浅色，不影响后续 */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -118,7 +118,7 @@
   position: fixed;
   width: 8px;
   border-radius: var(--radius-sub);
-  background: rgba(19, 20, 22, 0.24);
+  background: var(--scroll-thumb-hover);
   pointer-events: auto;
   cursor: default;
   opacity: 0;
@@ -137,7 +137,7 @@
 
 .scroll-overlay-thumb:hover,
 .scroll-overlay-thumb.is-dragging {
-  background: rgba(19, 20, 22, 0.42);
+  background: var(--scroll-thumb-active);
 }
 
 .canvas-head {

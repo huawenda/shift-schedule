@@ -88,6 +88,9 @@
   --warning-ink: #92400e;
   --warning-bg: #fffbeb;
   --warning-border: #fde68a;
+  /* 警示色块的**实心填充**（法定柱形图的柱身）：
+   * 描边色在浅底上够亮，落到深底上就成了「深棕柱 + 深卡」，看不出是哪根。 */
+  --warning-solid: #fde68a;
 
   /* 加班：唯一一处主动「求注意」的亮色。用暖橙而不是灰或警示黄 ——
    * 灰底没人会多看一眼，警示黄又和「法」角标撞色。
@@ -150,6 +153,15 @@
   --shift-nightx-ink: #9a3412;
   --shift-leave-bg: #e5e7eb;
   --shift-leave-ink: #475467;
+
+  /* 加班分布柱形图的柱色：**色相与班次一致，明度另算一档**。
+   * 柱子是纯色块（不带文字），深色主题下班次底本身已压暗，
+   * 直接拿 --shift-*-bg 当柱色会变成「深底上的深柱」，看不出高低。
+   * 浅色主题下它就等于 --shift-*-bg（浅色块 + 同色系柱身）。 */
+  --bar-day: #dff3ff;
+  --bar-night: #1e3a5f;
+  --bar-dayx: #fff0c2;
+  --bar-nightx: #fde7c7;
 
   /* 深底上的班次色：值班牌的节奏条与色点用。
    * 日历那套「浅底 + 墨字」是为白纸设计的，深底上夜班墨蓝会直接糊进背景；
@@ -248,6 +260,167 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --dur-fast: 120ms;
   --dur-base: 180ms;
+
+  /* 半透明叠层：深浅两套都要能跟着主题走。
+   * 以前这些 rgba 直接写在各自的样式文件里（滚动条滑块、便笺悬停层、
+   * 班次块的「改过」描边），暗色下会变成「白底上的深灰」或「深底上的黑」——
+   * 前者太重、后者看不见。集中成令牌后，一处改两处生效。 */
+  --scroll-thumb: rgba(19, 20, 22, 0.14);
+  --scroll-thumb-hover: rgba(19, 20, 22, 0.24);
+  --scroll-thumb-active: rgba(19, 20, 22, 0.42);
+  /* 便笺悬停：在底色上叠一层极淡的暗色，不换底色 */
+  --hover-veil: rgba(19, 20, 22, 0.035);
+  /* 行内小按钮悬停：浅色底下压一层白，深色底下压一层白 */
+  --hover-surface: rgba(255, 255, 255, 0.6);
+  /* 班次块「与模板不同」的描边；夜班是反相块，描边换成浅色 */
+  --changed-stroke: rgba(19, 20, 22, 0.45);
+  --changed-stroke-inverse: rgba(238, 244, 251, 0.55);
+  /* 右缘渐隐：渐到与画布同色的透明，暗色下不能渐到纯白 */
+  --surface-fade: rgba(255, 255, 255, 0);
+}
+
+/* ------------------------------------------------------------ 暗色主题
+ *
+ * 触发方式：`<html data-theme="dark">`（由 platform/theme.ts 写）。
+ * shadcn 那套 `--ui-*` 走 `.dark` 类（见 index.css），两处由同一个开关驱动。
+ *
+ * 配色思路：**不把浅色值机械压暗**，而是按「层级」重新给一组冷调深色：
+ *   画布最暗 → 卡片抬一档 → 表头/悬停再抬一档 → 线条由暗到亮三级。
+ * 阴影在深底上几乎看不见，因此浮层的立体感改由「边框 + 更亮的底」承担。
+ *
+ * 班次六色在暗色下换成「深底 + 亮字」（浅底墨字是给白纸设计的）：
+ * 五个浅色底在深色画布上会像一排荧光块，矩阵里尤其刺眼。
+ * 代价是「夜班是唯一反相块」那条规则不再成立 —— 改为靠**色相**区分
+ * （夜班是唯一偏蓝的一块），六色图例本来就在矩阵下方常驻，不靠反相单独表意。
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* 外壳：仍是深青，但抬到比画布亮一档 —— 深色下「唯一的暗块」没有了，
+   * 值班牌与概览条要靠色调而不是明度来立住。 */
+  --chrome: #14313a;
+  --chrome-raised: #1b3d48;
+  --chrome-line: #2a5764;
+  --chrome-text: #e9f2f4;
+  --chrome-muted: #a3b7bc;
+  --chrome-faint: #7f979d;
+  --chrome-accent: #7fd2e2;
+  --chrome-hover: #1f4a57;
+
+  --ground: #0b0e12;
+  --surface: #161b22;
+  --surface-tint: #1b2129;
+  --surface-sunken: #11161c;
+  --canvas: #0f1318;
+  --raised: #1e242c;
+  --active: #262e37;
+  --surface-nav: #0f1318;
+
+  /* 线条在深底上「越重要越亮」：结构线最亮，发丝线最暗 */
+  --border-strong: #3d4750;
+  --border: #2b333b;
+  --rule: #222a31;
+  --control: #6e7983;
+  --control-hover: #8b959e;
+  --control-soft: #454e57;
+  --icon-disabled: #3f484f;
+
+  --text: #e6edf3;
+  --muted: #9aa6b2;
+  --faint: #7d8894;
+  /* 压在亮底上的字（墨底按钮在暗色下反过来变成浅底按钮） */
+  --text-inverse: #0b0e12;
+  --text-strong: #ccd6df;
+
+  --accent: #58b8cf;
+  --accent-weak: #123039;
+  --accent-soft: #1d3f4a;
+
+  --brand-ink: #143f4b;
+  --brand-night: #0b2c36;
+  --brand-day: #ffd9a0;
+  --brand-star: #eaf6f8;
+
+  --danger: #ef7a70;
+  --danger-weak: #2b1614;
+  --danger-border: #6b2c26;
+  --warning-ink: #f0c674;
+  --warning-bg: #241d0f;
+  --warning-border: #4a3a17;
+  --warning-solid: #c9a13c;
+
+  /* 加班标签保持「亮橙 + 深棕字」：它是全站唯一主动求注意的色，
+   * 暗色下更该亮，不该跟着压暗。 */
+  --overtime-bg: #ffc98f;
+  --overtime-ink: #6b3808;
+  --todo-ink: #d08a3f;
+
+  /* 便笺六色：深底 + 亮字，色相与浅色版一一对应 */
+  --todo-tone-1-bg: #33290f;
+  --todo-tone-1-ink: #e8c37a;
+  --todo-tone-2-bg: #351a1f;
+  --todo-tone-2-ink: #f0a3b1;
+  --todo-tone-3-bg: #10293c;
+  --todo-tone-3-ink: #8ec6ea;
+  --todo-tone-4-bg: #123526;
+  --todo-tone-4-ink: #86d9a8;
+  --todo-tone-5-bg: #261a3a;
+  --todo-tone-5-ink: #c1a8ee;
+  --todo-tone-6-bg: #351f13;
+  --todo-tone-6-ink: #efa87c;
+
+  --pay-1-bg: #1c232a;
+  --pay-1-ink: #9fb2bf;
+  --pay-2-bg: #123526;
+  --pay-2-ink: #86d9a8;
+  --pay-3-bg: #3a2c10;
+  --pay-3-ink: #efc27a;
+
+  /* 六种班次：深底 + 亮字 */
+  --shift-day-bg: #10344a;
+  --shift-day-ink: #8fd8f5;
+  --shift-night-bg: #1b3358;
+  --shift-night-ink: #a9c8f2;
+  --shift-rest-bg: #10382a;
+  --shift-rest-ink: #7fd9a8;
+  --shift-dayx-bg: #3d3110;
+  --shift-dayx-ink: #f0c66e;
+  --shift-nightx-bg: #3d2113;
+  --shift-nightx-ink: #f0a172;
+  --shift-leave-bg: #262b31;
+  --shift-leave-ink: #b6bfc9;
+
+  /* 柱色：暗色下用「深底上那一档」亮色，色相不变 */
+  --bar-day: #7cc7ea;
+  --bar-night: #8fb0e8;
+  --bar-dayx: #ffd27a;
+  --bar-nightx: #f0a56a;
+
+  /* 深底上的班次色（值班牌、概览条）：这一组本来就是给深底用的，只微调一档 */
+  --shift-day-on-dark: #7cc7ea;
+  --shift-night-on-dark: #8fb0e8;
+  --shift-rest-on-dark: #6fae8a;
+  --shift-dayx-on-dark: #ffd27a;
+  --shift-nightx-on-dark: #f0a56a;
+  --shift-leave-on-dark: #9aa6b0;
+
+  /* 深底上阴影几乎不可见：靠更重的黑压出层次 */
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.55), 0 10px 24px rgba(0, 0, 0, 0.45);
+  --shadow-raised-flat: 0 1px 2px rgba(0, 0, 0, 0.55);
+  --shadow-floating: 0 2px 6px rgba(0, 0, 0, 0.6), 0 10px 24px rgba(0, 0, 0, 0.5);
+  --shadow-overlay: 0 18px 48px rgba(0, 0, 0, 0.65);
+  --shadow-sheet: 0 10px 34px rgba(0, 0, 0, 0.6);
+
+  /* 半透明叠层的暗色版：滑块要看得见但不抢戏 */
+  --scroll-thumb: rgba(230, 237, 243, 0.16);
+  --scroll-thumb-hover: rgba(230, 237, 243, 0.28);
+  --scroll-thumb-active: rgba(230, 237, 243, 0.45);
+  --hover-veil: rgba(230, 237, 243, 0.05);
+  --hover-surface: rgba(255, 255, 255, 0.08);
+  /* 班次块在暗色下整体是深底，描边一律换成浅色才看得见 */
+  --changed-stroke: rgba(230, 237, 243, 0.5);
+  --changed-stroke-inverse: rgba(230, 237, 243, 0.65);
+  --surface-fade: rgba(22, 27, 34, 0);
 }
 
 /* ------------------------------------------------------------ 小屏

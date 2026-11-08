@@ -256,12 +256,12 @@
 .summary-popover-list::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: var(--radius-pill);
-  background: rgba(19, 20, 22, 0.14);
+  background: var(--scroll-thumb);
   background-clip: content-box;
 }
 
 .summary-popover-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(19, 20, 22, 0.24);
+  background: var(--scroll-thumb-hover);
   background-clip: content-box;
 }
 
@@ -350,7 +350,7 @@
   right: 0;
   bottom: 0;
   width: 32px;
-  background: linear-gradient(to left, var(--surface), rgba(255, 255, 255, 0));
+  background: linear-gradient(to left, var(--surface), var(--surface-fade));
   /* 白板右缘是 12px 圆角，这层渐隐正好压在角上：
    * 不裁弧的话，它用不透明白把 arc 以外的区域填实，
    * 右上 / 右下看着就是两个直角 —— 跟着卡片裁同一道弧。 */
@@ -982,12 +982,12 @@
  * 只表示这一件事：加班有右上角橙标、法定有「法」角标，三者不重复表达。
  * 用 inset 阴影而不是 border —— 加 border 会让块高 +2px，整行格子对不齐。 */
 .cal-shift.is-changed {
-  box-shadow: inset 0 0 0 1px rgba(19, 20, 22, 0.45);
+  box-shadow: inset 0 0 0 1px var(--changed-stroke);
 }
 
 /* 夜班反相块上，深色内描边看不见 —— 换成浅色 */
 .cal-shift.t-night.is-changed {
-  box-shadow: inset 0 0 0 1px rgba(238, 244, 251, 0.55);
+  box-shadow: inset 0 0 0 1px var(--changed-stroke-inverse);
 }
 
 /* ── 改班弹层 ─────────────────────────────────────────── */
@@ -1114,7 +1114,7 @@
 .dialog-day .todo-list::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: var(--radius-pill);
-  background: rgba(19, 20, 22, 0.14);
+  background: var(--scroll-thumb);
   background-clip: content-box;
 }
 
