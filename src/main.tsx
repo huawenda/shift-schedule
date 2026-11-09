@@ -6,6 +6,51 @@ import './styles.scss'
 // Tailwind v4 入口：只启用 theme + utilities（不含 preflight），另在 @layer base 里补了边框两条
 import './index.css'
 
+/* 全应用禁用 HTML5 原生拖拽。
+ *
+ * 链接 / 图片 / 选中的文字在浏览器里默认可拖，拖起来会浮出一张带 URL 的
+ * 半透明预览卡片（像把界面「扯走」了一块），在桌面壳里尤其违和。
+ * 本项目没有任何 drop 目标，也不做拖放排序，直接取消 dragstart 最省事。
+ *
+ * 挂在 document 的**捕获阶段**：Radix Dialog / Sheet 用 Portal 挂到 body，
+ * 不在 React 根节点内，组件上写 onDragStart 覆盖不到。
+ * 侧栏调宽走 pointer events + setPointerCapture，文件导入走 <input type="file">，
+ * 都与 HTML5 drag 是两套机制，不受影响。
+ * 若以后真要加拖放，改成按 [data-allow-drag] 白名单放行即可。 */
+let suppressNextClick = false
+
+/** 每次新手势开始清零：拖出窗口松手时不会派发 click，标记不能留到下一次点击 */
+document.addEventListener(
+  'pointerdown',
+  () => {
+    suppressNextClick = false
+  },
+  true
+)
+
+document.addEventListener(
+  'dragstart',
+  event => {
+    event.preventDefault()
+    suppressNextClick = true
+  },
+  true
+)
+
+/* dragstart 被取消后，浏览器会把同一次「按下→移动→松手」当成普通 click 派发，
+ * 于是拖一下侧栏链接反而会跳到那一页 —— 屏蔽拖拽不能顺带引入误导航。
+ * 只吞紧跟被取消的 dragstart 的那一次 click，正常点击（不触发 dragstart）不受影响。 */
+document.addEventListener(
+  'click',
+  event => {
+    if (!suppressNextClick) return
+    suppressNextClick = false
+    event.preventDefault()
+    event.stopPropagation()
+  },
+  true
+)
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <App />
