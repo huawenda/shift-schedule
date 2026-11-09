@@ -332,6 +332,100 @@ try {
     !(extracted ?? []).some(line => line.includes('请协助确认')),
     extracted.join(' / ')
   )
+
+  /* ---------- 10. 工序轨道 ---------- */
+  console.log('\n【10 工序轨道】')
+  await cdp.evaluate(`location.hash = '#/jig/pivot'`)
+  await sleep(900)
+  const rail = await cdp.evaluate(`(async () => {
+    const fixture = ${JSON.stringify(FIXTURE)}
+    const original = window.__TAURI__.dialog.open
+    window.__TAURI__.dialog.open = async () => fixture
+    ;[...document.querySelectorAll('button')].find(b => b.textContent.includes('浏览'))?.click()
+    await new Promise(r => setTimeout(r, 4000))
+    window.__TAURI__.dialog.open = original
+
+    const stages = [...document.querySelectorAll('.jig-stage')].map(el => ({
+      name: el.querySelector('.jig-stage-name')?.textContent?.trim() ?? '',
+      count: el.querySelector('.jig-stage-count')?.textContent?.trim() ?? ''
+    }))
+    // 透视表总计行的工序计数，应与轨道上的数字一致
+    const table = document.querySelector('.jig-table')
+    const heads = [...(table?.querySelectorAll('thead th') ?? [])].map(th => th.textContent.trim())
+    const totalRow = [...(table?.querySelectorAll('tbody tr') ?? [])].pop()
+    const cells = [...(totalRow?.querySelectorAll('td') ?? [])].map(td => td.textContent.trim())
+    const total = {}
+    heads.forEach((h, i) => { total[h] = cells[i] })
+    return { stages, total, heads }
+  })()`)
+  check(
+    '轨道上有 11 道工序',
+    (rail?.stages?.length ?? 0) === 11,
+    `${rail?.stages?.length ?? 0} 道`
+  )
+  check(
+    '工序顺序按 order 排（PNP 在首、Jig入库 在末）',
+    rail?.stages?.[0]?.name === 'PNP' &&
+      rail?.stages?.[rail.stages.length - 1]?.name === 'Jig入库',
+    `${rail?.stages?.[0]?.name} → ${rail?.stages?.[rail.stages.length - 1]?.name}`
+  )
+  const railMismatch = (rail?.stages ?? []).filter(
+    s => rail?.total?.[s.name] !== s.count
+  )
+  check(
+    '轨道计数与透视表总计行逐项一致',
+    railMismatch.length === 0,
+    railMismatch.length > 0
+      ? railMismatch.map(s => `${s.name}: 轨道${s.count} vs 表${rail.total[s.name]}`).join('; ')
+      : `${rail?.stages?.length ?? 0} 道全对`
+  )
+
+  /* ---------- 11. 显示范围与可用性筛选 ---------- */
+  console.log('\n【11 显示范围与可用性筛选】')
+  const filter = await cdp.evaluate(`(async () => {
+    const readTable = () => {
+      const table = document.querySelector('.jig-table')
+      return {
+        rows: table ? table.querySelectorAll('tbody tr').length : 0,
+        heads: [...(table?.querySelectorAll('thead th') ?? [])].map(th => th.textContent.trim())
+      }
+    }
+    const before = readTable()
+    // 可用性分段：点「可用」
+    const availBtns = [...document.querySelectorAll('.segmented-item')]
+    const availBtn = availBtns.find(b => b.textContent.includes('可用') && !b.textContent.includes('非'))
+    availBtn?.click()
+    await new Promise(r => setTimeout(r, 800))
+    const afterAvail = readTable()
+    const counts = [...document.querySelectorAll('.jig-toolbar-count')].map(c => c.textContent.trim())
+
+    // 切回全部
+    availBtns.find(b => b.textContent.trim().startsWith('全部'))?.click()
+    await new Promise(r => setTimeout(r, 800))
+    const afterAll = readTable()
+
+    return { before, afterAvail, afterAll, counts }
+  })()`)
+  check(
+    '可用性分段有三档且带计数',
+    (filter?.counts?.length ?? 0) === 3,
+    (filter?.counts ?? []).join(' / ')
+  )
+  check(
+    '切「可用」后表格变了',
+    filter?.before?.rows !== filter?.afterAvail?.rows,
+    `${filter?.before?.rows} → ${filter?.afterAvail?.rows} 行`
+  )
+  check(
+    '切回「全部」后行数复原',
+    filter?.afterAll?.rows === filter?.before?.rows,
+    `${filter?.afterAll?.rows} 行`
+  )
+  check(
+    '「可用」档的表头只剩五道可用工序',
+    (filter?.afterAvail?.heads ?? []).length < (filter?.before?.heads ?? []).length,
+    `${(filter?.before?.heads ?? []).length} → ${(filter?.afterAvail?.heads ?? []).length} 列`
+  )
 } catch (error) {
   check('探针执行', false, String(error))
 } finally {

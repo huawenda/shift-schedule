@@ -7,7 +7,12 @@ import {
   type JigPrefs
 } from '../core/config'
 import { readExcel, validateSource, type SourceData } from '../core/excel'
-import { generatePivot } from '../core/pivot'
+import { generatePivot, type StageCategory } from '../core/pivot'
+import {
+  computePivotScope,
+  type PivotScope,
+  type PivotScopeResult
+} from '../core/pivotScope'
 import { processSourceData, queryData } from '../core/query'
 import type { Row, Table } from '../core/table'
 import {
@@ -38,8 +43,6 @@ export interface JigTables {
   detail: Table
   /** 结果透视 */
   queryPivot: Table
-  /** 全量透视 */
-  pivotAll: Table
   /** 数据审查 */
   review: Table
 }
@@ -49,7 +52,6 @@ const EMPTY_TABLE: Table = { columns: [], rows: [] }
 const EMPTY_TABLES: JigTables = {
   detail: EMPTY_TABLE,
   queryPivot: EMPTY_TABLE,
-  pivotAll: EMPTY_TABLE,
   review: EMPTY_TABLE
 }
 
@@ -67,8 +69,18 @@ export interface JigData {
   sourceName: string
   /** 源文件路径 */
   sourcePath: string
-  /** 四个视图的表 */
+  /** 三个视图的表（全量透视由 scope 单独给出 —— 它带筛选状态） */
   tables: JigTables
+  /** 全量透视的显示范围 */
+  pivotScope: PivotScope
+  /** 改显示范围 */
+  setPivotScope: (scope: PivotScope) => void
+  /** 全量透视的可用性筛选档位 */
+  pivotAvail: StageCategory
+  /** 改可用性筛选 */
+  setPivotAvail: (avail: StageCategory) => void
+  /** 全量透视的当前结果（表 + 计数 + P/N 候选） */
+  pivot: PivotScopeResult
   /** 正在读文件 */
   busy: boolean
   /** 能否选文件（静态版不行） */
@@ -86,6 +98,20 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const [sourcePath, setSourcePath] = useState('')
   const [tables, setTables] = useState<JigTables>(EMPTY_TABLES)
   const [busy, setBusy] = useState(false)
+  const [pivotScope, setPivotScope] = useState<PivotScope>('all')
+  const [pivotAvail, setPivotAvail] = useState<StageCategory>('all')
+
+  /**
+   * 全量透视的当前结果。
+   *
+   * 口径全在 `computePivotScope` 里 —— 组件只管渲染。
+   * 工序轨道的计数取自这张表的「总计」行，与表里的数字必然一致。
+   */
+  const pivot = useMemo(
+    () =>
+      computePivotScope(source?.rows ?? [], pivotScope, pivotAvail, config),
+    [config, pivotAvail, pivotScope, source]
+  )
 
   /** 上次用过的源文件目录 —— 本机偏好，不进备份 */
   const sourceDir = useMemo(() => {
@@ -127,13 +153,16 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       setSourcePath(picked.path)
       writeRaw(STORAGE_KEYS.jigSourceDir, dirname(picked.path))
 
-      // 换了源数据，旧的查询命中与全部四张表都作废
+      // 换了源数据，旧的查询命中与三张表都作废
       setTables({
         detail: EMPTY_TABLE,
         queryPivot: EMPTY_TABLE,
-        pivotAll: generatePivot(data.rows, false, config),
         review: processSourceData(data.rows, config)
       })
+
+      // 筛选状态也复位 —— 旧的 P/N 范围在新文件里可能不存在
+      setPivotScope('all')
+      setPivotAvail('all')
 
       notify(`已载入 ${picked.name} · ${data.rows.length} 行`, 'info')
     } catch (error) {
@@ -183,6 +212,11 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     sourceName: source?.fileName ?? '',
     sourcePath,
     tables,
+    pivotScope,
+    setPivotScope,
+    pivotAvail,
+    setPivotAvail,
+    pivot,
     busy,
     canPick: canPickJigFile(),
     pickSource,

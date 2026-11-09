@@ -6,7 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { JigConfig } from '../core/config'
 import { rulesFromConfig, validateSizeMatch } from '../core/validate'
 import type { JigData } from '../hooks/useJigData'
+import { JigPivotToolbar } from './JigPivotToolbar'
 import { JigQueryPanel } from './JigQueryPanel'
+import { JigStageRail } from './JigStageRail'
 import { JigTable } from './JigTable'
 import {
   JIG_TAB_LABELS,
@@ -119,6 +121,21 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
                     <span className="jig-toolbar-note">{viewNote(id, data)}</span>
                   </div>
 
+                  {id === 'pivot' ? (
+                    <JigPivotToolbar
+                      avail={data.pivotAvail}
+                      availCounts={data.pivot.availCounts}
+                      onAvailChange={data.setPivotAvail}
+                      onScopeChange={data.setPivotScope}
+                      pnOptions={data.pivot.pnOptions}
+                      scope={data.pivotScope}
+                    />
+                  ) : null}
+
+                  {id === 'pivot' ? (
+                    <JigStageRail config={config} table={data.pivot.table} />
+                  ) : null}
+
                   {id === 'detail' ? (
                     <JigTable
                       emptyHint="先载入源数据，再粘贴 Jig ID 查询。"
@@ -141,7 +158,7 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
                       emptyHint="先在顶栏选择 MES 导出的 Excel 文件。"
                       emptyTitle="尚未载入数据"
                       keywordTotal={config.keywordTotal}
-                      table={data.tables.pivotAll}
+                      table={data.pivot.table}
                     />
                   ) : (
                     <JigTable
@@ -173,7 +190,7 @@ function viewNote(tab: JigTabId, data: JigData): string {
       : tab === 'queryPivot'
         ? data.tables.queryPivot.rows.length
         : tab === 'pivot'
-          ? data.tables.pivotAll.rows.length
+          ? data.pivot.table.rows.length
           : data.tables.review.rows.length
   return `${rows} 行`
 }

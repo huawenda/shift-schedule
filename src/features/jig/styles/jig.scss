@@ -144,6 +144,88 @@
   filter: brightness(0.94);
 }
 
+/* ── 工序轨道 ──
+ *
+ * 11 道工序横排。条形长度恒定、透明度表达数量档位 —— 读的是「多/少」
+ * 不是「占比」：现场看这条轨道是为了判断「走到哪道工序了」，
+ * 占比条反而会让后段工序显得更少，失去流水顺序的直观性。
+ */
+.jig-rail {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.jig-rail-track {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow-x: auto;
+}
+
+.jig-stage {
+  flex: 1 1 0;
+  min-width: 76px;
+  position: relative;
+  padding: 3px 10px 3px 16px;
+  border-left: 2px solid var(--border);
+}
+
+/* 工序量条：透明度表达数量档位，长度恒定 */
+.jig-stage-bar {
+  height: 3px;
+  margin-bottom: 5px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.jig-stage[data-empty='true'] .jig-stage-bar {
+  opacity: 0 !important;
+}
+
+.jig-stage:first-child {
+  padding-left: 4px;
+  border-left-color: transparent;
+}
+
+.jig-stage[data-empty='true'] {
+  opacity: 0.34;
+}
+
+.jig-stage-name {
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jig-stage-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.jig-stage[data-empty='true'] .jig-stage-count {
+  color: var(--muted);
+}
+
+/* 有治具在制的工序：左规转为强调色 */
+.jig-stage[data-active='true'] {
+  border-left-color: var(--accent);
+}
+
+/* 计数最高的一道工序：数字用强调色，作为视觉锚点 */
+.jig-stage[data-lead='true'] .jig-stage-count {
+  color: var(--accent);
+}
+
 /* ── 两栏布局 ──
  *
  * 左边是 Jig ID 输入与操作，右边是表格区。
@@ -227,6 +309,27 @@
   font-size: var(--fs-small);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* 工具条上的字段名（「显示范围」「P/N」这类） */
+.jig-toolbar-label {
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 分段按钮上的计数：与可用性分档口径一致 */
+.jig-toolbar-count {
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/* 显示范围下拉：宽度跟着内容走，不要撑满整行 */
+.jig-scope-select {
+  width: auto;
+  min-width: 150px;
 }
 
 /* ── 窄屏 ──
