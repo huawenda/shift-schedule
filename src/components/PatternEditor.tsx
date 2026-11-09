@@ -84,7 +84,7 @@ export function PatternEditor({ pattern, existing, onSave, onClose }: PatternEdi
           <div>
             <DialogTitle className="dialog-title">{pattern ? '编辑班序' : '新建班序'}</DialogTitle>
             <DialogDescription className="dialog-sub">
-              {PATTERN_CYCLE_LENGTH} 天一轮 · 锚点日 {PATTERN_ANCHOR_DATE}
+             锚点日 {PATTERN_ANCHOR_DATE}
             </DialogDescription>
           </div>
         </DialogHeader>

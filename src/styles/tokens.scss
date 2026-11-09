@@ -206,7 +206,7 @@
   --sp-6: 32px;
 
   /* 死令牌：外壳换成 shadcn Sidebar 后，实际宽度由 SidebarProvider 的 inline
-   * --sidebar-width 决定（默认 16rem = 256px，用户可拖右缘在 200–400px 间调整）。
+   * --sidebar-width 决定（默认 16rem = 256px，用户可拖右缘在 200–320px 间调整）。
    * 这里只是改造前 228px 的记录，改它不会有任何效果。 */
   --sidebar-width: 228px;
   --topbar-height: 48px;

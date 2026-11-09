@@ -19,7 +19,13 @@ import { STORAGE_KEYS, readRaw, writeRaw } from '../platform/storage'
  */
 export const SIDEBAR_DEFAULT_WIDTH = 256
 export const SIDEBAR_MIN_WIDTH = 200
-export const SIDEBAR_MAX_WIDTH = 400
+/**
+ * 上限 320：默认 256 再放宽 64 就够放长姓名 / 品牌字标了。
+ * 原先 400 在常见窗口（1000–1400px）下会吃掉近三分之一屏宽，
+ * 画布被挤到 31 天矩阵必然横滚；拖到底反而是个不好用的状态。
+ * readWidth() 也走 clamp()，所以本机存过 384 / 400 的旧值会在读取时自动夹回 320。
+ */
+export const SIDEBAR_MAX_WIDTH = 320
 
 /** 位移小于这个就算「点击」（折叠），不算拖动 */
 const DRAG_THRESHOLD = 4

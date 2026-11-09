@@ -633,7 +633,6 @@ export function SettingsScreen({
             <section className="settings-section">
               <div className="settings-label">
                 <h2>外观</h2>
-                <p>界面配色。</p>
               </div>
 
               <div className="settings-panel">
@@ -665,9 +664,6 @@ export function SettingsScreen({
                     </button>
                   </div>
                 </div>
-                <p className="settings-hint">
-                  选「跟随系统」时，系统在浅色与深色之间切换，本应用会立刻跟着变。
-                </p>
               </div>
             </section>
 
@@ -675,7 +671,6 @@ export function SettingsScreen({
               <section className="settings-section">
                 <div className="settings-label">
                   <h2>窗口</h2>
-                  <p>关闭主窗口时怎么处理。</p>
                 </div>
 
                 <div className="settings-panel">
@@ -699,11 +694,6 @@ export function SettingsScreen({
                       </button>
                     </div>
                   </div>
-                  <p className="settings-hint">
-                    {closeBehavior === 'tray'
-                      ? '关闭窗口后程序继续在托盘运行；点任务栏托盘图标可重新打开，退出请用托盘菜单。'
-                      : '关闭窗口即退出程序。'}
-                  </p>
                 </div>
               </section>
             ) : null}
@@ -716,13 +706,6 @@ export function SettingsScreen({
                   （%LOCALAPPDATA%\<bundle id>\EBWebView），卸载 / 重装 /
                   清理应用数据会连它一起清掉，所以要提醒先导出。
                 */}
-                {isTauriShell() ? (
-                  <p>
-                    数据只保存在电脑本地，不联网、不上传。
-                    <br />
-                    卸载、重装或清理应用数据前，请先导出备份。
-                  </p>
-                ) : null}
                 <p className="settings-meta">
                   当前 {roster.members.length} 位成员 · {roster.overrides.length} 条改班记录
                 </p>
