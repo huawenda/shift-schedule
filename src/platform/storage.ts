@@ -36,7 +36,15 @@ export const STORAGE_KEYS = {
    * 同样属于「这台电脑」的偏好，不进备份文件 —— 换台电脑时按系统走就行，
    * 把某台机器的深色设定跟着数据搬过去反而别扭。
    */
-  theme: 'shift-schedule:local:theme:v1'
+  theme: 'shift-schedule:local:theme:v1',
+  /**
+   * 侧栏展开时的宽度（px，字符串存）。
+   *
+   * 与折叠状态分开：shadcn 自己用 cookie 记 `sidebar_state`（是否折叠），
+   * 这里只记「展开时多宽」。同样不进备份文件 —— 换台机器屏幕尺寸不同，
+   * 搬过去反而不合适。
+   */
+  sidebarWidth: 'shift-schedule:local:sidebar-width:v1'
 } as const
 
 function getBrowserStorage(): Storage | null {

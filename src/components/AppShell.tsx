@@ -1,8 +1,9 @@
-import { type ReactNode } from 'react'
+import { type CSSProperties, type ReactNode } from 'react'
 
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useIsCompact } from '@/hooks/use-compact'
+import { useSidebarWidth } from '@/hooks/useSidebarWidth'
 import { AppSidebar } from './AppSidebar'
 import { MobileNav } from './MobileNav'
 import { TopBar } from './TopBar'
@@ -59,10 +60,17 @@ export function AppShell({
   children
 }: AppShellProps) {
   const isCompact = useIsCompact()
+  const { width, dragProps, consumeDragClick } = useSidebarWidth()
 
   return (
     <TooltipProvider>
-      <SidebarProvider className="h-svh min-h-0 overflow-hidden">
+      {/* --sidebar-width 走 inline style：SidebarProvider 的 ...style 展开在它自己的
+          16rem 之后，所以这里传入会覆盖默认值，且不用改 CLI 生成的 sidebar.tsx。
+          窄屏没有侧栏，这个变量留着也不影响布局。 */}
+      <SidebarProvider
+        className="h-svh min-h-0 overflow-hidden"
+        style={{ '--sidebar-width': `${width}px` } as CSSProperties}
+      >
         <a
           className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:border focus:border-border focus:bg-background focus:px-3 focus:py-1.5 focus:text-sm"
           href="#main"
@@ -76,7 +84,13 @@ export function AppShell({
         </a>
 
         {isCompact ? null : (
-          <AppSidebar hrefs={hrefs} route={route} onNavigate={onNavigate} />
+          <AppSidebar
+            consumeDragClick={consumeDragClick}
+            dragProps={dragProps}
+            hrefs={hrefs}
+            route={route}
+            onNavigate={onNavigate}
+          />
         )}
 
         <SidebarInset

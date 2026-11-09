@@ -11,7 +11,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail
+  SidebarRail,
+  useSidebar
 } from '@/components/ui/sidebar'
 import type { Route } from './AppShell'
 
@@ -41,11 +42,21 @@ function BrandMark() {
   )
 }
 
+/** 只取 rail 需要的那几个事件，避免这个组件直接依赖宽度 hook */
+type RailDragProps = Pick<
+  React.ComponentProps<'button'>,
+  'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel' | 'onKeyDown'
+>
+
 interface AppSidebarProps {
   route: Route
   /** 三个入口的 href：由 App 生成，带上当前结算月，修饰键开新标签也能落到同一个月份 */
   hrefs: Record<Route, string>
   onNavigate: (route: Route) => void
+  /** 拖右缘调整宽度；由 AppShell 的 useSidebarWidth 提供 */
+  dragProps: RailDragProps
+  /** 拖完抬手也会派发 click，用它把那一次从「折叠」里摘出去 */
+  consumeDragClick: () => boolean
 }
 
 /**
@@ -54,7 +65,15 @@ interface AppSidebarProps {
  * 链接仍是真实的 `<a href>`，只是拦住普通点击改成应用内导航 ——
  * Cmd/Ctrl + 点击照旧开新标签，地址里带着当前结算月（和改造前一致）。
  */
-export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
+export function AppSidebar({
+  route,
+  hrefs,
+  onNavigate,
+  dragProps,
+  consumeDragClick
+}: AppSidebarProps) {
+  const { state, toggleSidebar } = useSidebar()
+
   /** 修饰键按下时交还给浏览器，等同于「在新标签打开这个视图」 */
   function intercept(event: React.MouseEvent<HTMLAnchorElement>, next: Route) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
@@ -137,7 +156,26 @@ export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-      <SidebarRail />
+      {/*
+        右缘这条 rail 原本只是「点击折叠」。这里**复用**它而不是另造一条手柄：
+        两者都绝对定位在侧栏右缘，叠在一起会互相抢 pointer 事件。
+        SidebarRail 把 {...props} 展开在最后，所以 onClick / title / tabIndex
+        也能覆盖，CLI 生成的 sidebar.tsx 一个字都不用改。
+
+        位移 < 4px 时 hook 不算拖动，抬手仍走原来的点击折叠；只有真拖过，
+        consumeDragClick 才把那次 click 摘掉，避免「拖完顺手把侧栏收了」。
+        折叠态的宽度由 --sidebar-width-icon 决定，拖了也看不出来，索性不绑拖拽。
+      */}
+      <SidebarRail
+        {...(state === 'collapsed' ? {} : dragProps)}
+        aria-label={state === 'collapsed' ? '展开侧栏' : '调整侧栏宽度，点击折叠侧栏'}
+        className="touch-none select-none data-[dragging=true]:after:bg-sidebar-border focus-visible:after:bg-sidebar-border"
+        onClick={() => {
+          if (!consumeDragClick()) toggleSidebar()
+        }}
+        tabIndex={0}
+        title="拖动调整宽度 · 点击折叠 · ←/→ 微调"
+      />
     </Sidebar>
   )
 }
