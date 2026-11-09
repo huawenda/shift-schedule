@@ -288,32 +288,43 @@
   color: var(--accent);
 }
 
+/* ── 页签 ──
+ *
+ * **沿用本项目的胶囊形态**（shadcn Tabs 的 default variant），不改样式。
+ * 这一页虽然整体照搬原项目，但页签是本项目自己的控件 —— 换掉会让
+ * 「同一个应用里两套页签」这种事更明显。差异只在间距上：
+ * 原项目页签是通栏排开的，这里保持胶囊的内边距。
+ */
+.jig-tabs [data-slot='tabs-list'] {
+  flex: none;
+}
+
 /* ── 页签徽标 ──
  *
  * 每段视图的条目数（如「33」）。原项目有，本项目原先没有 ——
  * 页签上直接看到数量，就不必切过去才知道有没有数据。
  */
 .jig-tab-badge {
-  margin-left: 6px;
-  font-size: var(--fs-small);
+  margin-left: 7px;
+  font-size: var(--fs-micro);
   font-variant-numeric: tabular-nums;
   color: var(--muted);
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 /* ── 两栏布局 ──
  *
- * 左边是 Jig ID 输入与操作，右边是表格区。
- * 左栏宽度固定：它装着一个多行输入框，宽度跟着右栏走会被挤成一条缝。
+ * 照搬原项目的 `.work`：左输入栏 + 右主区。
  *
  * **高度：整页跟随窗口高度，表格自己滚。**
  * 这一页与排班三页不同 —— 排班页是「内容滚」，JIG 页是「表格滚」：
  * 表格有几百行，若让整页滚，工序轨道与工具条会跟着一起走，看不到当前范围。
- * 所以从 canvas-flow 到 TabsContent 每一层都得有确定高度，缺一层表格就长出窗口。
+ * 所以从 canvas 到 TabsContent 每一层都得有确定高度，缺一层表格就长出窗口。
  *
  * `min-height: 0` 是关键：flex/grid 子项默认 `min-height: auto`，
  * 内容多高它就多高，overflow 就永远不会触发。
  */
+
 /*
  * 这一页整页不滚，滚的是表格内部。
  *
@@ -321,12 +332,102 @@
  * 那一套是给「内容滚」的三页用的；JIG 页表格有几百行，让整页滚的话
  * 工序轨道与工具条会跟着走，看不到当前范围。
  *
- * 底部内边距一并去掉：不再滚动就没有「滚到底的呼吸位」，
- * 留白由表格自己的边框与外层间距给出。
+ * 画布的 padding 也去掉：原项目的 `.work` 是通栏贴边的（两列之间用
+ * 竖线分隔，不是留白）。留白由两列各自的 padding 给出。
  */
-.canvas.is-jig > .canvas-flow {
+.canvas.is-jig {
+  padding: 0;
   overflow: hidden;
-  padding-bottom: 0;
+  gap: 0;
+}
+
+/* 两列：左栏固定 260px（原项目同宽），右栏吃掉剩余 */
+.jig-work {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/*
+ * 左栏：原项目的 `.side` —— 白底、右边界线、通栏到底。
+ *
+ * **不是卡片**。原项目整页只有两条竖线分隔（侧栏边界、表格边界），
+ * 到处加卡片边框会让这一页看起来像一堆卡片拼的，与原项目完全不同。
+ *
+ * 三段式（grid rows auto 1fr auto）：标签行固定、输入框吃掉剩余高度、
+ * 底部操作区固定。输入框因此能一直往下加行，窗口越宽输入框越高。
+ */
+.jig-side {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--sp-3);
+  min-height: 0;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border-right: 1px solid var(--rule);
+}
+
+/* 标签行：「输入 Jig ID」在左，「清空」在右 */
+.jig-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.jig-side-label {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+/* 输入框：Jig ID 每行一个，几十行起步，要能一直往下加 */
+.jig-side-input {
+  width: 100%;
+  min-height: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-control);
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+}
+
+.jig-side-input:focus-visible {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 30%, transparent);
+}
+
+/* 底部：开始查询 + 提示 */
+.jig-side-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.jig-side-foot > button {
+  width: 100%;
+}
+
+.jig-side-hint {
+  font-size: var(--fs-label);
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* 右侧：页签 + 表格 + 导出条 */
+.jig-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 0;
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
 }
 
 .jig-tabs {
@@ -335,7 +436,7 @@
 }
 
 /*
- * TabsContent 必须是 flex 容器：里面的 .jig-layout 要靠它拿到高度。
+ * TabsContent 必须是 flex 容器：里面的轨道/工具条/表格要靠它拿到高度。
  *
  * :not([hidden]) 是保险 —— Radix 未激活的 TabsContent 会带 hidden 属性，
  * 若这里无条件写 display:flex，未选中的面板会被一起显示出来。
@@ -345,83 +446,15 @@
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-}
-
-.jig-layout {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: var(--sp-4);
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-/*
- * 左栏高度独立，不与表格联动。
- *
- * grid 子项默认 stretch（拉满整行高度），那样输入面板会被撑到跟表格一样高，
- * 里面大片空白。现在让它按内容走（align-self: start）——
- * 输入框给固定高度，其余内容按需排。
- */
-.jig-side {
-  display: flex;
-  flex-direction: column;
   gap: var(--sp-3);
-  align-self: start;
-  min-height: 0;
-  padding: var(--sp-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  background: var(--surface);
 }
 
-.jig-side-label {
+/* 底部导出条：原项目把导出放在这里（左下角大按钮） */
+.jig-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--muted);
-}
-
-/* 输入框：Jig ID 每行一个，几十行起步，要能一直往下加。
- *
- * **固定高度，不参与联动** —— 左栏整体按内容走（align-self: start），
- * 输入框若还写 flex:1 1 auto，在没有确定高度的列里会塌成一行高。
- * 给一个明确的高度，用户想多粘几行可以自己拖（resize: vertical）。
- */
-.jig-side-input {
-  flex: 0 0 auto;
-  height: 220px;
-  width: 100%;
-  padding: var(--sp-2) var(--sp-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--canvas);
-  color: var(--text);
-  font-family: inherit;
-  font-size: var(--fs-control);
-  line-height: 1.6;
-  resize: vertical;
-  outline: none;
-}
-
-.jig-side-input:focus-visible {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 30%, transparent);
-}
-
-.jig-side-hint {
-  font-size: var(--fs-small);
-  color: var(--muted);
-}
-
-/* 右侧：工具条 + 表格，表格吃掉剩余高度 */
-.jig-main {
-  display: flex;
-  flex-direction: column;
   gap: var(--sp-3);
-  min-height: 0;
+  flex: none;
 }
 
 .jig-toolbar {
@@ -429,6 +462,59 @@
   align-items: center;
   gap: var(--sp-2);
   flex-wrap: wrap;
+}
+
+/*
+ * 「标出尺寸不匹配」开关。
+ *
+ * 原生 checkbox + 自绘外观：语义与键盘可达性都保住了，
+ * 外观与原项目一致（30×17 的胶囊，滑块 13px）。
+ */
+.jig-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-control);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.jig-switch input {
+  appearance: none;
+  position: relative;
+  width: 30px;
+  height: 17px;
+  margin: 0;
+  flex: none;
+  background: var(--border-strong);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 140ms;
+}
+
+.jig-switch input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: transform 140ms;
+}
+
+.jig-switch input:checked {
+  background: var(--accent);
+}
+
+.jig-switch input:checked::after {
+  transform: translateX(13px);
+}
+
+.jig-switch input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .jig-toolbar-spacer {
@@ -678,17 +764,14 @@
 /* ── 窄屏 ──
  *
  * JIG 只在桌面壳里出现，而桌面壳最小宽 1024 —— 侧栏永远在，
- * 底部标签栏那条路够不到这一页。所以这里只需要处理
- * 1024–1200 这段「壳里把窗口拖窄」的情况：两栏改成上下叠。
+ * 底部标签栏那条路够不到这一页。
+ *
+ * **两栏不叠**（原项目也是固定两列）—— 叠起来输入框就只剩一条缝，
+ * 几十个 Jig ID 没法看。只把左栏收窄一点。
  */
 @media (max-width: 1199px) {
-  .jig-layout {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .jig-side-input {
-    min-height: 120px;
+  .jig-work {
+    grid-template-columns: 220px minmax(0, 1fr);
   }
 }
 

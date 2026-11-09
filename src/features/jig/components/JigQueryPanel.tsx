@@ -99,9 +99,25 @@ export function JigQueryPanel({
 
   return (
     <aside className="jig-side">
-      <div className="jig-side-label">
-        <span>输入 Jig ID</span>
-        {count > 0 ? <span className="jig-toolbar-note">{count} 个</span> : null}
+      {/*
+        标签行：「清空」在右侧（原项目如此）。
+        它紧挨着输入框的标题 —— 清空的是这个框里的东西，
+        放在输入框下方会让人以为它清的是下面的查询结果。
+      */}
+      <div className="jig-side-head">
+        <span className="jig-side-label">输入 Jig ID</span>
+        <Button
+          disabled={count === 0}
+          onClick={() => {
+            setText('')
+            onClear()
+          }}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          清空
+        </Button>
       </div>
 
       <textarea
@@ -117,26 +133,18 @@ export function JigQueryPanel({
         value={text}
       />
 
-      <Button disabled={!ready || count === 0} onClick={runQuery} type="button">
-        开始查询
-      </Button>
-
-      <div className="jig-side-hint">
-        Ctrl+Enter 查询 · 粘贴时自动挑出 Jig ID
+      <div className="jig-side-foot">
+        <Button
+          disabled={!ready || count === 0}
+          onClick={runQuery}
+          type="button"
+        >
+          开始查询
+        </Button>
+        <div className="jig-side-hint">
+          Ctrl+Enter 查询 · 粘贴时自动挑出 Jig ID
+        </div>
       </div>
-
-      <Button
-        disabled={count === 0}
-        onClick={() => {
-          setText('')
-          onClear()
-        }}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        清空
-      </Button>
     </aside>
   )
 }

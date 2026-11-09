@@ -1,6 +1,6 @@
 import {
-  Download,
   FolderOpen,
+  Loader,
   Moon,
   Settings,
   SlidersHorizontal,
@@ -16,16 +16,16 @@ interface JigTopBarProps {
   sourceName: string
   /** 源文件完整路径，落在 title 提示里 */
   sourcePath: string
+  /** 已选中但尚未加载的文件名；null = 没选过 */
+  pendingName: string | null
   /** 是否正在读文件 */
   busy: boolean
   /** 能否选文件（静态版不行） */
   canPick: boolean
   /** 打开文件选择器 */
   onPick: () => void
-  /** 能否导出（静态版不行） */
-  canExport: boolean
-  /** 导出当前视图 */
-  onExport: () => void
+  /** 读取已选中的文件 */
+  onLoad: () => void
   /** 打开型号尺寸映射面板 */
   onOpenSizeMapping: () => void
   /** 打开 JIG 设置 */
@@ -41,15 +41,19 @@ interface JigTopBarProps {
  * 与排班三页的顶栏是两件事：那边是「月份导航 + 备份」，这边的月份毫无意义
  * （JIG 数据来自 MES 导出的 Excel，与哪个月份无关），要的是**源文件**与
  * 针对 JIG 的操作。
+ *
+ * **「浏览…」与「加载」分成两步**（与原项目一致）：选完先看到文件名与路径，
+ * 不满意还能换；点「加载」才真的读。MES 导出的文件动辄几百 KB 到几 MB，
+ * 一步到位时选错文件就得从头再走一遍对话框。
  */
 export function JigTopBar({
   sourceName,
   sourcePath,
+  pendingName,
   busy,
   canPick,
   onPick,
-  canExport,
-  onExport,
+  onLoad,
   onOpenSizeMapping,
   onOpenSettings,
   theme,
@@ -58,6 +62,12 @@ export function JigTopBar({
   /** 窄屏没有侧栏可折叠，导航在底部标签栏，这个开关不显示 */
   const isCompact = useIsCompact()
 
+  /** 顶栏显示的是「当前选定的文件」：选过没加载时显示待加载的那个 */
+  const shownName = pendingName ?? sourceName
+  const shownPath = pendingName ? pendingName : sourcePath
+  /** 已经加载过、且之后又选了新的 → 两者都显示得出来 */
+  const shownIsPending = pendingName !== null && pendingName !== sourceName
+
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
       {isCompact ? null : <SidebarTrigger />}
@@ -65,9 +75,12 @@ export function JigTopBar({
       {/* 源文件位置：路径可能很长，截断显示，完整路径走 title 提示 */}
       <div className="flex min-w-0 items-center gap-2">
         <FolderOpen aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-        {sourceName ? (
-          <span className="truncate text-sm" title={sourcePath}>
-            {sourceName}
+        {shownName ? (
+          <span className="truncate text-sm" title={shownPath}>
+            {shownName}
+            {shownIsPending ? (
+              <span className="ml-1 text-xs text-muted-foreground">（待加载）</span>
+            ) : null}
           </span>
         ) : (
           <span className="truncate text-sm text-muted-foreground">
@@ -87,14 +100,14 @@ export function JigTopBar({
           浏览…
         </Button>
         <Button
-          disabled={!canExport}
-          onClick={onExport}
+          disabled={!pendingName || busy}
+          onClick={onLoad}
           size="sm"
           type="button"
           variant="outline"
         >
-          <Download data-icon="inline-start" />
-          导出
+          {busy ? <Loader className="animate-spin" /> : null}
+          加载
         </Button>
         <Button onClick={onOpenSizeMapping} size="sm" type="button" variant="outline">
           <SlidersHorizontal data-icon="inline-start" />

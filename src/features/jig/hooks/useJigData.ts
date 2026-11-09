@@ -136,6 +136,15 @@ export interface JigData {
   detailFlags: boolean[]
   /** 下钻明细的标红标记（与 table.rows 同序） */
   drillFlags: boolean[]
+  /**
+   * 「标出尺寸不匹配」开关（查询结果页工具条左侧）。
+   *
+   * **与配置里的 `sizeValidationEnabled` 分开**：那是从备份带过来的默认值，
+   * 这个是本次会话的临时开关 —— 用户看一眼标红太多，随手关掉，不想改配置。
+   */
+  sizeValidation: boolean
+  /** 改「标出尺寸不匹配」开关 */
+  setSizeValidation: (on: boolean) => void
   /** 能否导出（静态版不行） */
   canExport: boolean
   /** 导出当前视图 */
@@ -158,6 +167,12 @@ export interface JigData {
   sourceRows: number
   /** 源数据列数 */
   sourceColumns: number
+  /** 已选中但尚未加载的文件路径；null = 没选过 */
+  pendingPath: string | null
+  /** 已选中但尚未加载的文件名 */
+  pendingName: string | null
+  /** 读已选中的文件 */
+  loadSource: () => Promise<void>
   /** 能否选文件（静态版不行） */
   canPick: boolean
   /** 选文件 → 读 → 建表 */
@@ -171,7 +186,26 @@ export interface JigData {
 export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const [source, setSource] = useState<SourceData | null>(null)
   const [sourcePath, setSourcePath] = useState('')
+  /**
+   * 已选中但还没加载的文件。
+   *
+   * 「浏览…」与「加载」分成两步 —— 选完先看文件名与路径，不满意能换；
+   * 点「加载」才真的读。MES 导出的文件动辄几百 KB 到几 MB，
+   * 一步到位时选错文件就得从头再走一遍对话框。
+   */
+  const [pendingPath, setPendingPath] = useState<string | null>(null)
+  const [pendingName, setPendingName] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  /**
+   * 「标出尺寸不匹配」开关（查询结果页）。
+   *
+   * 初值取配置里的 `sizeValidationEnabled`。
+   * **这是本次会话的临时开关，不写回配置** —— 用户看一眼标红太多随手关掉，
+   * 不该因此把备份里的配置改了。
+   */
+  const [sizeValidation, setSizeValidation] = useState(
+    config.sizeValidationEnabled
+  )
   /**
    * 底部状态轨的两项：状态灯与常驻日志。
    *
@@ -299,24 +333,28 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
    * 查询结果页的标红标记。
    *
    * **跟随「标出尺寸不匹配」开关**（与审查页不同）。
+   *
+   * 开关初值取配置里的 `sizeValidationEnabled`（默认 false），
+   * 但它是**本次会话的临时开关** —— 用户看一眼标红太多随手关掉，
+   * 不该因此把配置改了。
    */
   const detailFlags = useMemo(() => {
-    if (!config.sizeValidationEnabled) return []
+    if (!sizeValidation) return []
     const rules = rulesFromConfig(config)
     return detailTable.rows.map(row => {
       const size = row['对应尺寸'] ?? ''
       return !validateSizeMatch(row['P/N'] ?? '', size, rules)
     })
-  }, [config, detailTable.rows])
+  }, [config, detailTable.rows, sizeValidation])
 
   /**
    * 下钻明细的标红标记。
    *
-   * **默认标出**，不跟随查询结果页的开关 —— 这一页就是用来核对下钻结果的，
-   * 用户没勾选时看到的是一片「全部匹配」，容易误判。
+   * **恒定标出**，不受「标出尺寸不匹配」开关影响 —— 与原项目同一口径。
+   * 这一页就是用来核对下钻结果的，用户没勾选时看到的是一片「全部匹配」，
+   * 容易误判。
    */
   const drillFlags = useMemo(() => {
-    if (!config.sizeValidationEnabled) return []
     const rules = rulesFromConfig(config)
     return drillTable.rows.map(row => {
       const size = row['对应尺寸'] ?? ''
@@ -416,32 +454,63 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     []
   )
 
+  /**
+   * 第一步：选文件（**不读**）。
+   *
+   * 与原项目一致，分「浏览…」与「加载」两步：
+   * 选完先看到文件名与路径，不满意还能再换一个；点「加载」才真的读。
+   * MES 导出的 Excel 动辄几百 KB 到几 MB，一步到位时选错文件就得重来。
+   *
+   * 这里比原项目多一步：原项目是浏览器 `<input type=file>`，选完拿不到路径；
+   * 壳里能拿到真实路径，所以「已选择」之后可以先把路径记下来，
+   * 「加载」时直接按路径读 —— 不用把文件内容先缓在内存里。
+   */
   const pickSource = useCallback(async () => {
     if (!canPickJigFile()) {
       notify('选择文件需要桌面版', 'warning')
       return
     }
 
-    setBusy(true)
-    setStatus('busy')
-    setLog('正在读取源文件…')
     try {
       const picked = await pickJigExcelFile(sourceDir)
       if (!picked) {
-        setBusy(false)
         setStatus(source ? 'ready' : 'idle')
         setLog(source ? '已取消选择源文件' : '等待载入源数据')
         return
       }
 
-      const bytes = await readPickedFile(picked.path)
+      setPendingPath(picked.path)
+      setPendingName(picked.name)
+      setStatus('idle')
+      setLog(`已选择 ${picked.name}，点「加载」读取`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      notify(message, 'error')
+      setStatus('error')
+      setLog(message)
+    }
+  }, [notify, source, sourceDir])
+
+  /**
+   * 第二步：读取已选中的文件。
+   *
+   * 没选过文件就点「加载」是空操作 —— 按钮本来就是灰的。
+   */
+  const loadSource = useCallback(async () => {
+    if (!pendingPath) return
+
+    setBusy(true)
+    setStatus('busy')
+    setLog('正在读取源文件…')
+    try {
+      const bytes = await readPickedFile(pendingPath)
       // plugin 侧返回的是字节数组；xlsx 要 ArrayBuffer
       const buffer = bytes.buffer.slice(
         bytes.byteOffset,
         bytes.byteOffset + bytes.byteLength
       ) as ArrayBuffer
 
-      const data = await readExcel(buffer, picked.name)
+      const data = await readExcel(buffer, pendingName ?? '源文件')
       const error = validateSource(data)
       if (error) {
         notify(error, 'error')
@@ -452,8 +521,8 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       }
 
       setSource(data)
-      setSourcePath(picked.path)
-      writeRaw(STORAGE_KEYS.jigSourceDir, dirname(picked.path))
+      setSourcePath(pendingPath)
+      writeRaw(STORAGE_KEYS.jigSourceDir, dirname(pendingPath))
 
       // 换了源数据，旧的查询命中与三张表都作废
       setQueryIds([])
@@ -465,7 +534,7 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
 
       setStatus('ready')
       setLog(`已载入 ${data.rows.length} 行 · ${data.columns.length} 列`)
-      notify(`已载入 ${picked.name} · ${data.rows.length} 行`, 'info')
+      notify(`已载入 ${pendingName} · ${data.rows.length} 行`, 'info')
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       notify(message, 'error')
@@ -474,7 +543,7 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     } finally {
       setBusy(false)
     }
-  }, [config, notify, source, sourceDir])
+  }, [config, notify, pendingName, pendingPath])
 
   const runQuery = useCallback(
     (ids: string[]) => {
@@ -647,6 +716,11 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     log,
     sourceRows: source?.rows.length ?? 0,
     sourceColumns: source?.columns.length ?? 0,
+    pendingPath,
+    pendingName,
+    loadSource,
+    sizeValidation,
+    setSizeValidation,
     canPick: canPickJigFile(),
     pickSource,
     runQuery,

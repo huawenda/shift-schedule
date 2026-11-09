@@ -133,13 +133,13 @@ export function AppShell({
           {route === 'jig' ? (
             <JigTopBar
               busy={jig.busy}
-              canExport={jig.canExport}
               canPick={jig.canPick}
-              onExport={() => void jig.exportCurrent(jigTab)}
+              onLoad={() => void jig.loadSource()}
               onOpenSettings={onOpenJigSettings}
               onOpenSizeMapping={onOpenJigSizeMapping}
               onPick={() => void jig.pickSource()}
               onToggleTheme={onToggleTheme}
+              pendingName={jig.pendingName}
               sourceName={jig.sourceName}
               sourcePath={jig.sourcePath}
               theme={theme}
