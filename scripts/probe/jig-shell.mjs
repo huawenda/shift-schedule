@@ -333,6 +333,51 @@ try {
     extracted.join(' / ')
   )
 
+  /*
+   * 回归：粘贴内容不能重复。
+   *
+   * 上面的断言用合成 paste 事件测不出重复 —— 合成事件没有「默认粘贴」这个
+   * 动作，所以即使 preventDefault 晚了（await 之后才调），也不会出现两份。
+   * 真粘贴时浏览器会先执行默认粘贴把原文写进框，我们再写一遍就重了。
+   *
+   * 所以直接验时序：dispatchEvent 返回时（同步阶段已过），默认行为必须
+   * 已经被掐断 —— 即 defaultPrevented 为 true。
+   * 若 preventDefault 被挪到 await 之后，这里就是 false。
+   */
+  const prevented = await cdp.evaluate(`(() => {
+    const input = document.querySelector('.jig-side-input')
+    if (!input) return { ok: false, error: '找不到输入框' }
+    const event = new ClipboardEvent('paste', { bubbles: true, cancelable: true })
+    input.dispatchEvent(event)
+    return { ok: true, prevented: event.defaultPrevented }
+  })()`)
+  check(
+    '粘贴的默认行为在同步阶段就被掐断（否则会粘两份）',
+    prevented?.ok === true && prevented?.prevented === true,
+    `defaultPrevented=${prevented?.prevented}`
+  )
+
+  /* ---------- 10. 粘贴内容不重复 ---------- */
+  // 再验一次实际写入的内容没有重复行 —— 上一条验的是时序，这一条验结果。
+  const dup = await cdp.evaluate(`(async () => {
+    const input = document.querySelector('.jig-side-input')
+    if (!input) return { ok: false, error: '找不到输入框' }
+    input.value = ''
+    input.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true }))
+    await new Promise(r => setTimeout(r, 1200))
+    const lines = input.value.split(/\\r?\\n/).map(s => s.trim()).filter(Boolean)
+    return { ok: true, lines }
+  })()`)
+  const lineList = dup?.lines ?? []
+  const unique = new Set(lineList)
+  check(
+    '粘贴后没有重复行',
+    lineList.length === unique.size,
+    lineList.length === unique.size
+      ? `${lineList.length} 行，无重复`
+      : `${lineList.length} 行里有重复：${lineList.join(' / ')}`
+  )
+
   /* ---------- 10. 工序轨道 ---------- */
   console.log('\n【10 工序轨道】')
   await cdp.evaluate(`location.hash = '#/jig/pivot'`)

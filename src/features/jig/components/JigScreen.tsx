@@ -94,6 +94,17 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
   /** 当前页显示多少行（页签徽标与底栏共用同一个口径） */
   const counts = computeViewCounts(data, tab)
 
+  /**
+   * 跑查询，查成了就跳到「查询结果」页。
+   *
+   * 查询的结果在「查询结果」页 —— 停在别的页签上，用户点了查询却看不到
+   * 任何变化，会以为没生效。查都没查成（没源数据 / 没填 ID）时不跳：
+   * 跳过去是空表,只会让人更困惑。
+   */
+  const runQuery = (ids: string[]) => {
+    if (data.runQuery(ids)) onTabChange('detail')
+  }
+
   return (
     <div className="canvas is-jig">
       <div className="jig-work">
@@ -101,7 +112,7 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
           clipboardAutoProcessEnabled={data.prefs.clipboardAutoProcessEnabled}
           notify={notify}
           onClear={data.clearQuery}
-          onQuery={data.runQuery}
+          onQuery={runQuery}
           ready={data.ready}
         />
 

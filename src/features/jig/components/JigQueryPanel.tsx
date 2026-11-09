@@ -2,6 +2,8 @@ import { useCallback, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 
+import { canReadClipboard, readClipboardText } from '@/platform/jigFile'
+
 import { processClipboardContent } from '../core/clipboard'
 
 interface JigQueryPanelProps {
@@ -52,25 +54,51 @@ export function JigQueryPanel({
   }, [onQuery, parseIds])
 
   /**
-   * 粘贴：先掐断浏览器默认粘贴，再自己读系统剪贴板。
+   * 粘贴：从系统剪贴板读文本，自己挑出 Jig ID 写进去。
    *
-   * 读取是异步的，不先 preventDefault 的话会出现「原文 + 提取结果」两份内容。
-   * 读不到剪贴板时退回按原文粘贴，不阻塞用户。
+   * ## 为什么必须同步 preventDefault
    *
-   * **浏览器 / 静态版不能拦默认粘贴**：那里没有剪贴板插件，拦了就等于
-   * 「粘贴键完全没用」。所以先探测能不能读，读得到才 preventDefault。
+   * `preventDefault()` 只能在事件派发的**同步阶段**调用。一旦 await 过，
+   * 处理函数就返回了 Promise，浏览器随即执行默认粘贴（文本先进框），
+   * 之后我们再 `setText` 写一遍 —— **内容重复**。
+   * 所以顺序必须是：先同步掐断默认粘贴，再 await 读剪贴板。
+   *
+   * ## 浏览器 / 静态版不拦
+   *
+   * 那里没有剪贴板插件，读不到系统剪贴板；拦了默认粘贴又写不进内容，
+   * 等于「粘贴键完全没用」。所以**先同步判断能不能读**（壳里才有插件），
+   * 不能读就完全不碰这个事件，让浏览器自己粘原文。
+   *
+   * 用「有没有插件」而不是「读没读到」来判断 —— 后者必须 await 才知道，
+   * 那时已经晚了。
    */
   const onPaste = useCallback(
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const clipboard = await readClipboardTextSafe()
-      if (clipboard === null) {
-        // 读不到系统剪贴板 —— 浏览器里这是常态，让浏览器自己粘原文。
-        notify('当前环境读不到系统剪贴板，已按原文粘贴', 'warning')
+      // 同步判定：能不能读系统剪贴板。壳里才有插件。
+      const canRead = canReadClipboard()
+      if (!canRead) {
+        // 浏览器里：让浏览器自己粘原文，不拦。
         return
       }
 
+      // 同步掐断默认粘贴 —— 必须在 await 之前
       event.preventDefault()
       event.stopPropagation()
+
+      // 同步取一份原文兜底：插件读失败时用它还原用户按下的内容。
+      // 也要在 await 之前取 —— 事件对象在异步之后不该再碰。
+      const raw = event.clipboardData?.getData('text/plain') ?? ''
+
+      const clipboard = await readClipboardTextSafe()
+      if (clipboard === null) {
+        // 插件在但读失败（权限等）：把原文还回去，别让用户白按一次
+        if (raw) {
+          setText(prev => prev + raw)
+        } else {
+          notify('读不到系统剪贴板，请手动粘贴', 'warning')
+        }
+        return
+      }
 
       // 「粘贴时自动提取」关掉时，按原文粘贴 —— 用户可能就想粘一段完整文本
       if (!clipboardAutoProcessEnabled) {
@@ -152,7 +180,6 @@ export function JigQueryPanel({
 /** 读系统剪贴板；拿不到时返回 null（界面据此按原文粘贴） */
 async function readClipboardTextSafe(): Promise<string | null> {
   try {
-    const { readClipboardText } = await import('@/platform/jigFile')
     return await readClipboardText()
   } catch {
     return null

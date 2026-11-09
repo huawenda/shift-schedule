@@ -177,8 +177,8 @@ export interface JigData {
   canPick: boolean
   /** 选文件 → 读 → 建表 */
   pickSource: () => Promise<void>
-  /** 用给定的 ID 列表跑查询 */
-  runQuery: (ids: string[]) => void
+  /** 用给定的 ID 列表跑查询；返回是否真的查了 */
+  runQuery: (ids: string[]) => boolean
   /** 清空查询结果（不动源数据） */
   clearQuery: () => void
 }
@@ -545,18 +545,24 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     }
   }, [config, notify, pendingName, pendingPath])
 
+  /**
+   * 执行查询。
+   *
+   * **返回是否真的查了**：没源数据或 ID 为空时会提前返回 false ——
+   * 界面据此决定要不要跳到「查询结果」页（查都没查，跳过去是空的）。
+   */
   const runQuery = useCallback(
-    (ids: string[]) => {
+    (ids: string[]): boolean => {
       if (!source) {
         notify('请先载入源数据', 'warning')
         setStatus('idle')
         setLog('请先载入源数据')
-        return
+        return false
       }
       if (ids.length === 0) {
         notify('请输入要查询的 Jig ID', 'warning')
         setLog('请输入要查询的 Jig ID')
-        return
+        return false
       }
 
       // 只存 ID —— 表由配置派生，改了映射表会自动重算
@@ -570,6 +576,7 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       setStatus('ready')
       setLog(text)
       notify(text)
+      return true
     },
     [config, notify, source]
   )

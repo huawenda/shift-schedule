@@ -91,6 +91,18 @@ export async function readPickedFile(path: string): Promise<Uint8Array> {
 }
 
 /**
+ * 能不能读系统剪贴板 —— **同步**判断，不发命令。
+ *
+ * 存在的理由是粘贴事件的时序：`preventDefault()` 只能在事件派发的同步阶段
+ * 调用，一旦 await 过就来不及了（浏览器会先执行默认粘贴，之后再自己写一遍，
+ * 内容就重复了）。所以「能不能读」必须在进 handler 前就知道 ——
+ * 用「有没有插件」来判断，而不是「读没读到」。
+ */
+export function canReadClipboard(): boolean {
+  return isTauriShell() && Boolean(tauri()?.core?.invoke)
+}
+
+/**
  * 读系统剪贴板里的文本；拿不到时返回 null。
  *
  * JIG 页的「粘贴 Jig ID」要能从邮件正文里自动挑出 ID ——
