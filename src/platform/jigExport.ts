@@ -58,11 +58,24 @@ export function withTimestamp(fileName: string): string {
 }
 
 /**
+ * 把「上次的目录 + 本次文件名」拼成对话框的 defaultPath。
+ *
+ * 必须带上文件名：Windows 的保存对话框把 defaultPath 当**预填路径**，
+ * 只给目录时它会定位到那个目录、但文件名栏留空 —— 每次导出都要手敲名字。
+ */
+function joinDefaultPath(defaultDir: string | null, fileName: string): string {
+  if (!defaultDir) return fileName
+  const dir = defaultDir.replace(/[\\/]+$/, '')
+  return `${dir}\\${fileName}`
+}
+
+/**
  * 弹出「另存为」对话框，用户选定后把内容写进去。
  *
  * 返回落盘后的完整路径；用户取消返回 null。
  *
- * `defaultPath` 传上次用过的目录，第二次导出时直接落在那里。
+ * `defaultPath` 传「上次用过的目录 + 本次文件名」：第二次导出直接落在
+ * 那里，且文件名已经填好，点保存即可。
  */
 export async function exportJigFile(
   fileName: string,
@@ -76,8 +89,8 @@ export async function exportJigFile(
 
   const path = await dialog.save({
     title: '导出 Excel',
-    filters: [{ name: 'Excel', extensions: ['xlsx'] }],
-    ...(defaultDir ? { defaultPath: defaultDir } : {})
+    defaultPath: joinDefaultPath(defaultDir, fileName),
+    filters: [{ name: 'Excel', extensions: ['xlsx'] }]
   })
   if (!path) return null
 

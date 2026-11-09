@@ -170,7 +170,7 @@
     --ui-primary-foreground: oklch(0.985 0 0);
     --ui-secondary: oklch(0.97 0 0);
     --ui-secondary-foreground: oklch(0.205 0 0);
-    --ui-muted: oklch(0.97 0 0);
+    --ui-muted: oklch(0.94 0 0);
     --ui-muted-foreground: oklch(0.556 0 0);
     --ui-accent: oklch(0.97 0 0);
     --ui-accent-foreground: oklch(0.205 0 0);
@@ -222,7 +222,7 @@
     --ui-primary-foreground: #0b0e12;
     --ui-secondary: #1e242c;
     --ui-secondary-foreground: #e6edf3;
-    --ui-muted: #1e242c;
+    --ui-muted: #2a323c;
     --ui-muted-foreground: #9aa6b2;
     --ui-accent: #262e37;
     --ui-accent-foreground: #e6edf3;

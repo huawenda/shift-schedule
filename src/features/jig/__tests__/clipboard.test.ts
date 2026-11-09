@@ -11,6 +11,7 @@ import {
   processClipboardContent,
   extractJigIds,
   isPureJigIds,
+  prepareQueryIds,
 } from '../core/clipboard'
 
 /**
@@ -100,5 +101,57 @@ describe('剪贴板 —— 纯净列表判定', () => {
   it('纯净列表不去重, 原样保留', () => {
     const dup = 'CJJ349000910\nCJJ349000910'
     expect(processClipboardContent(dup)).toBe(dup)
+  })
+})
+
+describe('剪贴板 —— 归一化与边界', () => {
+  it('小写 ID 也能提取, 输出统一大写', () => {
+    expect(extractJigIds('cjj349000910')).toEqual(['CJJ349000910'])
+  })
+
+  it('全角字母数字按半角识别', () => {
+    expect(extractJigIds('ＣＪＪ３４９０００９１０')).toEqual(['CJJ349000910'])
+  })
+
+  it('零宽字符夹在 ID 中间也能识别', () => {
+    expect(extractJigIds('CJJ349\u200B000910')).toEqual(['CJJ349000910'])
+  })
+
+  it('下划线 / 连字符紧邻时不截取', () => {
+    expect(extractJigIds('X_CJJ349000910')).toEqual([])
+    expect(extractJigIds('ABC-CJJ349000910')).toEqual([])
+  })
+
+  it('CRLF 列表仍判定为纯净列表', () => {
+    expect(isPureJigIds('CJJ349000910\r\nCJJ349000919')).toBe(true)
+  })
+
+  it('制表符分隔的混合文本可提取', () => {
+    expect(extractJigIds('CJJ349000910\tC4M123456789')).toEqual([
+      'CJJ349000910',
+      'C4M123456789',
+    ])
+  })
+})
+
+describe('prepareQueryIds', () => {
+  it('去重、丢弃无效行并计数', () => {
+    const out = prepareQueryIds([
+      'CJJ349000910',
+      'cjj349000910',
+      'hello',
+      'CJJ349000919',
+      '',
+      '  ',
+    ])
+    expect(out.ids).toEqual(['CJJ349000910', 'CJJ349000919'])
+    expect(out.ignored).toBe(1)
+  })
+
+  it('全角 / 带空格的行归一化后保留', () => {
+    expect(prepareQueryIds([' ＣＪＪ３４９０００９１０ '])).toEqual({
+      ids: ['CJJ349000910'],
+      ignored: 0,
+    })
   })
 })

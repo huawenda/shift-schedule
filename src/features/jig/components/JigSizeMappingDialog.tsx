@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -21,6 +21,7 @@ import {
   type MappingPair
 } from '../core/mapping'
 import { createDefaultJigConfig, type JigConfig } from '../core/config'
+import { JigScrollbar } from './JigScrollbar'
 
 interface JigSizeMappingDialogProps {
   /** 当前的业务配置 */
@@ -54,9 +55,35 @@ export function JigSizeMappingDialog({
   const [pairs, setPairs] = useState<MappingPair[]>(() =>
     orderedPairs(config.jigSizeMapping, config.jigSizeMappingOrder)
   )
+  /** 打开时的初始值，用来判断「有未保存的改动」 */
+  const initialPairs = useRef(pairs).current
+  const dirty = useMemo(
+    () => JSON.stringify(pairs) !== JSON.stringify(initialPairs),
+    [pairs, initialPairs]
+  )
+  /** 关闭前先拦一下未保存的改动（与班次弹层同一套） */
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+
+  function requestClose() {
+    if (dirty) {
+      setConfirmDiscard(true)
+      return
+    }
+    onClose()
+  }
 
   const errors = useMemo(() => validateMappingPairs(pairs), [pairs])
   const errorCount = Object.keys(errors).length
+
+  /**
+   * 排序模式。
+   *
+   * 与人员配置（MemberRowsEditor）同一套：进入后把行压成 44px 紧凑行，
+   * 只有行首把手能拖，固定步长 52（行高 44 + 间距 8）。
+   * 编辑态里的输入框高度不一（有报错时还会长出一行），直接拿固定步长
+   * 做 transform 会让行互相重叠、目标位置算错 —— 这正是之前「动效很乱」的原因。
+   */
+  const [sorting, setSorting] = useState(false)
 
   /**
    * 报错信息在行内，列表又是可滚动的 —— 用户在末尾新增一行、填了重复型号，
@@ -68,15 +95,14 @@ export function JigSizeMappingDialog({
 
   /* ------------------------------------------------------------ 拖拽排序
    *
-   * 用 **pointer events + setPointerCapture**，不是 HTML5 drag。
+   * **只在排序模式里启用**，行复用人员配置的 `.sort-row` 样式（44px 高 +
+   * 8px 间距），所以固定步长 52 与实际行距严格相等。
    *
-   * 本项目上一轮已全局禁用 HTML5 原生拖拽（main.tsx 在 document 捕获阶段
-   * 取消 dragstart），以免拖链接时浮出 URL 预览卡片。成员表的排序
-   * （MemberRowsEditor）走的是 pointer events，与 HTML5 drag 是两套机制，
-   * 不受影响 —— 映射表沿用同一套，因此**不需要为 JIG 开任何拖拽白名单**。
+   * 用 pointer events + setPointerCapture，不是 HTML5 drag —— 本项目在
+   * main.tsx 里全局禁用了原生拖拽（防 URL 预览浮层），成员表也是这套，
+   * 因此不需要为 JIG 开任何拖拽白名单。
    *
-   * 步长固定：行高 44 + 间距 8 = 52。被拖行跟手，夹在它和目标之间的行
-   * 让出一条；拖到滚动区上下缘自动滚。
+   * 被拖行跟手，夹在它和目标之间的行让出一条；拖到滚动区上下缘自动滚。
    */
   const SORT_STEP = 52
   const [sortDrag, setSortDrag] = useState<{
@@ -133,7 +159,7 @@ export function JigSizeMappingDialog({
 
   function onSortPointerDown(
     index: number,
-    event: React.PointerEvent<HTMLButtonElement>
+    event: React.PointerEvent<HTMLSpanElement>
   ) {
     if (event.pointerType === 'mouse' && event.button !== 0) return
     event.preventDefault()
@@ -150,13 +176,13 @@ export function JigSizeMappingDialog({
     autoScrollTimer.current = window.setInterval(sortAutoStep, 40)
   }
 
-  function onSortPointerMove(event: React.PointerEvent<HTMLButtonElement>) {
+  function onSortPointerMove(event: React.PointerEvent<HTMLSpanElement>) {
     if (!sortRef.current) return
     event.preventDefault()
     updateSort(event.clientY)
   }
 
-  function onSortPointerUp(event: React.PointerEvent<HTMLButtonElement>) {
+  function onSortPointerUp(event: React.PointerEvent<HTMLSpanElement>) {
     const state = sortRef.current
     if (!state) return
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -166,6 +192,13 @@ export function JigSizeMappingDialog({
     setSortDrag(null)
     stopAutoScroll()
     move(state.from, state.target)
+  }
+
+  /** 指针被系统打断（来电、切窗口等）：放弃这次拖动，不落顺序 */
+  function cancelSortDrag() {
+    sortRef.current = null
+    setSortDrag(null)
+    stopAutoScroll()
   }
 
   /** 被拖行跟手，夹在它和目标之间的行让出一条行距 */
@@ -194,6 +227,50 @@ export function JigSizeMappingDialog({
     if (firstIndex === undefined) return
     rowRefs.current[firstIndex]?.scrollIntoView({ block: 'nearest' })
   }, [errors])
+
+  /*
+   * 列表可视高度对齐到**整行**。
+   *
+   * 滚动区高度如果不是行距的整数倍，底部会露出下一行输入框的上边框 ——
+   * 看起来像多画了两条横线。这里按「表头 + 若干完整行」算高度，
+   * 静止时底部永远落在行与行的分界上。
+   */
+  useEffect(() => {
+    const body = listRef.current
+    if (!body) return
+
+    const align = () => {
+      const map = body.parentElement
+      const head = map?.querySelector<HTMLElement>('.jig-map-head')
+      const headHeight = head
+        ? head.offsetHeight + (parseFloat(getComputedStyle(head).marginBottom) || 0)
+        : 0
+      const rows = [...body.querySelectorAll<HTMLElement>('.jig-map-row, .sort-row')]
+      if (rows.length === 0) {
+        body.style.height = ''
+        return
+      }
+
+      const sortGap = body.querySelector('.sort-row') ? 8 : 0
+      // 与 .jig-map 的 max-height: min(60vh, 520px) 保持一致（含上下 padding 与表头）
+      const cap = Math.min(window.innerHeight * 0.6, 520) - 24 - headHeight
+      let used = 0
+      for (const row of rows) {
+        const next = used + row.offsetHeight + sortGap
+        if (next > cap) break
+        used = next
+      }
+      // 至少留一行，避免窗口极矮时滚动区高度为 0
+      body.style.height = `${Math.max(rows[0].offsetHeight, used)}px`
+    }
+
+    const frame = requestAnimationFrame(align)
+    window.addEventListener('resize', align)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('resize', align)
+    }
+  }, [pairs, sorting])
 
   const patch = (index: number, next: Partial<MappingPair>) =>
     setPairs(prev =>
@@ -227,28 +304,73 @@ export function JigSizeMappingDialog({
   }
 
   return (
-    <Dialog onOpenChange={open => { if (!open) onClose() }} open>
-      <DialogContent className="jig-map-dialog" showCloseButton={false}>
-        <DialogHeader>
-          <DialogTitle>型号尺寸匹配</DialogTitle>
-          <DialogDescription>
-            决定「对应尺寸」列怎么填。改了之后所有视图立刻按新规则重算。
-          </DialogDescription>
+    <Dialog onOpenChange={open => { if (!open) requestClose() }} open>
+      <DialogContent
+        className="jig-map-dialog gap-0 p-0"
+        onInteractOutside={event => {
+          // 点遮罩 = 取消；有未保存改动时先确认
+          event.preventDefault()
+          requestClose()
+        }}
+        onOpenAutoFocus={event => {
+          // 不在打开时自动聚焦第一个输入框（否则 184 会被选中、弹出即带焦点环）
+          event.preventDefault()
+        }}
+        showCloseButton={false}
+      >
+        <DialogHeader className="dialog-head">
+          <DialogTitle className="dialog-title">型号尺寸匹配</DialogTitle>
         </DialogHeader>
 
         <div className="jig-map">
-          <div className="jig-map-head">
-            <span className="jig-map-col jig-map-col--grip" />
-            <span className="jig-map-col">型号</span>
-            <span className="jig-map-col">对应尺寸</span>
-            <span className="jig-map-col jig-map-col--act" />
-          </div>
+          {/*
+            表头放在滚动区**外面**：原生滚动条已隐藏（改用 JigScrollbar），
+            两者宽度一致，列能严格对齐；同时表头不会盖住滚动的行，
+            也不存在 sticky 背景透出内容的问题。排序模式是另一套紧凑行，隐藏。
+          */}
+          {sorting ? null : (
+            <div className="jig-map-head">
+              <span>型号</span>
+              <span>对应尺寸</span>
+              <span />
+            </div>
+          )}
 
           <div className="jig-map-body" ref={listRef}>
             {pairs.length === 0 ? (
               <p className="jig-map-empty">
                 还没有任何映射规则，点下方「新增」开始添加。
               </p>
+            ) : sorting ? (
+              /* 排序模式：与人员配置同一套紧凑行，行高 44 + 间距 8 */
+              <div className="sort-list">
+                {pairs.map((pair, index) => (
+                  <div
+                    className={[
+                      'sort-row',
+                      sortDrag?.from === index ? 'is-dragging' : ''
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    key={index}
+                    style={{ transform: sortTransform(index) }}
+                  >
+                    <span
+                      className="sort-handle"
+                      onPointerCancel={cancelSortDrag}
+                      onPointerDown={event => onSortPointerDown(index, event)}
+                      onPointerMove={onSortPointerMove}
+                      onPointerUp={onSortPointerUp}
+                    >
+                      ⠿
+                    </span>
+                    <span className="sort-name">
+                      {pair.model.trim() || '（未填型号）'}
+                    </span>
+                    <span className="sort-meta">{pair.size.trim() || '—'}</span>
+                  </div>
+                ))}
+              </div>
             ) : (
               pairs.map((pair, index) => {
                 const error = errors[index]
@@ -259,19 +381,7 @@ export function JigSizeMappingDialog({
                     ref={el => {
                       rowRefs.current[index] = el
                     }}
-                    style={{ transform: sortTransform(index) }}
                   >
-                    <button
-                      aria-label={`拖动第 ${index + 1} 行调整顺序`}
-                      className="jig-map-grip"
-                      type="button"
-                      onPointerDown={event => onSortPointerDown(index, event)}
-                      onPointerMove={onSortPointerMove}
-                      onPointerUp={onSortPointerUp}
-                      onPointerCancel={onSortPointerUp}
-                    >
-                      <GripVertical />
-                    </button>
                     <Input
                       aria-label={`第 ${index + 1} 行型号`}
                       aria-invalid={Boolean(error)}
@@ -288,26 +398,6 @@ export function JigSizeMappingDialog({
                       value={pair.size}
                     />
                     <div className="jig-map-act">
-                      <Button
-                        aria-label={`第 ${index + 1} 行上移`}
-                        disabled={index === 0}
-                        onClick={() => move(index, index - 1)}
-                        size="icon-sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        <ArrowUp />
-                      </Button>
-                      <Button
-                        aria-label={`第 ${index + 1} 行下移`}
-                        disabled={index === pairs.length - 1}
-                        onClick={() => move(index, index + 1)}
-                        size="icon-sm"
-                        type="button"
-                        variant="ghost"
-                      >
-                        <ArrowDown />
-                      </Button>
                       <Button
                         aria-label={`删除第 ${index + 1} 行`}
                         onClick={() => remove(index)}
@@ -326,28 +416,69 @@ export function JigSizeMappingDialog({
               })
             )}
           </div>
+
+          {/* 原生滚动条已隐藏，换成与 JIG 表格同一套的覆盖式浮层 */}
+          <JigScrollbar targetRef={listRef} />
         </div>
 
-        <DialogFooter className="jig-map-footer">
-          <Button onClick={add} size="sm" type="button" variant="outline">
-            <Plus data-icon="inline-start" />
-            新增
-          </Button>
-          <Button onClick={restore} size="sm" type="button" variant="ghost">
-            恢复默认
-          </Button>
-          <span className="jig-toolbar-spacer" />
-          {errorCount > 0 ? (
-            <span className="jig-map-error-count">
-              {errorCount} 处需要修正
-            </span>
-          ) : null}
-          <Button disabled={errorCount > 0} onClick={save} size="sm" type="button">
-            保存
-          </Button>
-          <Button onClick={onClose} size="sm" type="button" variant="outline">
-            取消
-          </Button>
+        <DialogFooter className="jig-map-footer mx-0 mb-0">
+          {confirmDiscard ? (
+            <>
+              <span className="dialog-discard mr-auto">有未保存的修改</span>
+              <Button
+                onClick={() => setConfirmDiscard(false)}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                继续编辑
+              </Button>
+              <Button onClick={onClose} size="sm" type="button" variant="destructive">
+                放弃修改
+              </Button>
+            </>
+          ) : sorting ? (
+            <>
+              <span className="jig-toolbar-spacer" />
+              <Button onClick={() => setSorting(false)} size="sm" type="button">
+                完成
+              </Button>
+              <Button onClick={requestClose} size="sm" type="button" variant="outline">
+                取消
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={add} size="sm" type="button" variant="outline">
+                <Plus data-icon="inline-start" />
+                新增
+              </Button>
+              <Button
+                disabled={pairs.length < 2}
+                onClick={() => setSorting(true)}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                排序
+              </Button>
+              <Button onClick={restore} size="sm" type="button" variant="ghost">
+                恢复默认
+              </Button>
+              <span className="jig-toolbar-spacer" />
+              {errorCount > 0 ? (
+                <span className="jig-map-error-count">
+                  {errorCount} 处需要修正
+                </span>
+              ) : null}
+              <Button disabled={errorCount > 0} onClick={save} size="sm" type="button">
+                保存
+              </Button>
+              <Button onClick={requestClose} size="sm" type="button" variant="outline">
+                取消
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

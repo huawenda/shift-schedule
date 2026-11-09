@@ -5,7 +5,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { JigConfig } from '../core/config'
 import type { ReviewScope } from '../core/review'
 import { ALL_PN } from '../core/reviewView'
-import { computeViewCounts } from '../core/view'
 import type { JigData } from '../hooks/useJigData'
 import { JigDrillBar } from './JigDrillBar'
 import { JigPivotToolbar } from './JigPivotToolbar'
@@ -109,9 +108,6 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
 
   const drillMismatchCount = drillFlags.filter(Boolean).length
 
-  /** 当前页显示多少行（页签徽标与底栏共用同一个口径） */
-  const counts = computeViewCounts(data, tab)
-
   /**
    * 跑查询，查成了就跳到「查询结果」页。
    *
@@ -146,9 +142,6 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
               {JIG_TAB_ORDER.map(id => (
                 <TabsTrigger key={id} value={id}>
                   {JIG_TAB_LABELS[id]}
-                  {counts.byTab[id] > 0 ? (
-                    <span className="jig-tab-badge">{counts.byTab[id]}</span>
-                  ) : null}
                 </TabsTrigger>
               ))}
             </TabsList>

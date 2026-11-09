@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -53,17 +53,40 @@ export function JigSettingsDialog({
     sourceDir,
     exportDir
   })
+  /** 关闭前先拦一下未保存的改动（与班次弹层同一套） */
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+
+  const dirty = useMemo(() => {
+    const keys = Object.keys(prefs) as Array<keyof JigPrefs>
+    return (
+      keys.some(key => draft[key] !== prefs[key]) ||
+      dirs.sourceDir !== sourceDir ||
+      dirs.exportDir !== exportDir
+    )
+  }, [draft, prefs, dirs, sourceDir, exportDir])
+
+  function requestClose() {
+    if (dirty) {
+      setConfirmDiscard(true)
+      return
+    }
+    onClose()
+  }
 
   const patch = (next: Partial<JigPrefs>) => setDraft(prev => ({ ...prev, ...next }))
 
   return (
-    <Dialog onOpenChange={open => { if (!open) onClose() }} open>
-      <DialogContent className="jig-settings-dialog">
-        <DialogHeader>
-          <DialogTitle>JIG 设置</DialogTitle>
-          <DialogDescription>
-            这些只对这台电脑生效，不进备份文件。
-          </DialogDescription>
+    <Dialog onOpenChange={open => { if (!open) requestClose() }} open>
+      <DialogContent
+        className="jig-settings-dialog gap-0 p-0"
+        onInteractOutside={event => {
+          // 与班次弹层一致：点遮罩等同于点取消；有未保存改动时先确认
+          event.preventDefault()
+          requestClose()
+        }}
+      >
+        <DialogHeader className="dialog-head">
+          <DialogTitle className="dialog-title">JIG 设置</DialogTitle>
         </DialogHeader>
 
         <div className="jig-settings">
@@ -222,21 +245,39 @@ export function JigSettingsDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <span className="jig-toolbar-spacer" />
-          <Button
-            onClick={() => {
-              onSave(draft, dirs)
-              onClose()
-            }}
-            size="sm"
-            type="button"
-          >
-            保存
-          </Button>
-          <Button onClick={onClose} size="sm" type="button" variant="outline">
-            取消
-          </Button>
+        <DialogFooter className="mx-0 mb-0">
+          {confirmDiscard ? (
+            <>
+              <span className="dialog-discard mr-auto">有未保存的修改</span>
+              <Button
+                onClick={() => setConfirmDiscard(false)}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                继续编辑
+              </Button>
+              <Button onClick={onClose} size="sm" type="button" variant="destructive">
+                放弃修改
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={requestClose} size="sm" type="button" variant="outline">
+                取消
+              </Button>
+              <Button
+                onClick={() => {
+                  onSave(draft, dirs)
+                  onClose()
+                }}
+                size="sm"
+                type="button"
+              >
+                保存
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

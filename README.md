@@ -308,6 +308,10 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 localStorage 不可用时（隐私模式、`file://` 的某些配置）自动退化为内存存储，
 页面仍能跑但刷新即丢，底部会出一条常驻提示催你导出备份。
 
+桌面版另有一份 JIG 配置文件：`%APPDATA%\com.huawenda.shiftschedule\jig-config.json`，
+存业务配置（型号→尺寸映射、工序顺序）与本机偏好（目录、行高、开关）；**文件为准**，
+localStorage 只做 Web 版回退，备份 v6 的 `jig` 段照旧、导入会覆盖文件里的业务配置。
+
 ### 5.2 备份格式 v6
 
 ```json

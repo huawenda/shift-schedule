@@ -24,6 +24,7 @@ import { JigSizeMappingDialog } from './features/jig/components/JigSizeMappingDi
 import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
 import { useJigData } from './features/jig/hooks/useJigData'
 import { pickJigDirectory } from './platform/jigFile'
+import { readJigConfigFile, updateJigConfigFile } from './platform/jigConfigFile'
 import { readRaw, writeRaw, STORAGE_KEYS } from './platform/storage'
 import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
@@ -94,14 +95,41 @@ export function App() {
     }
   })
 
-  /** 改 JIG 配置：更新 state 并写进 localStorage */
+  /** 供异步回调读最新配置，避免把写盘副作用塞进 setState 的 updater 里 */
+  const jigConfigRef = useRef(jigConfig)
+  useEffect(() => {
+    jigConfigRef.current = jigConfig
+  }, [jigConfig])
+
+  /**
+   * 启动后以**配置文件**为准（壳里才有）。
+   *
+   * localStorage 只是初值与 Web 静态版的兜底：文件存在且版本匹配时，
+   * 用它覆盖启动初值；文件不存在 / 损坏 / 版本不符就保持现状。
+   * 不在这里回写文件，避免「读一次又写一次」的启动抖动。
+   */
+  useEffect(() => {
+    let cancelled = false
+    void readJigConfigFile().then(file => {
+      if (cancelled || !file?.config) return
+      const next = mergeJigConfig(file.config as Record<string, unknown>)
+      jigConfigRef.current = next
+      setJigConfigState(next)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  /** 改 JIG 配置：更新 state、写 localStorage 缓存，并落盘到配置文件 */
   const setJigConfig = useCallback(
     (next: JigConfig | ((prev: JigConfig) => JigConfig)) => {
-      setJigConfigState(prev => {
-        const value = typeof next === 'function' ? next(prev) : next
-        writeRaw(STORAGE_KEYS.jigConfig, JSON.stringify(value))
-        return value
-      })
+      const value =
+        typeof next === 'function' ? next(jigConfigRef.current) : next
+      jigConfigRef.current = value
+      setJigConfigState(value)
+      writeRaw(STORAGE_KEYS.jigConfig, JSON.stringify(value))
+      void updateJigConfigFile({ config: value })
     },
     []
   )

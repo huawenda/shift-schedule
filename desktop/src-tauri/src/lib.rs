@@ -196,6 +196,39 @@ fn read_clipboard_text(app: tauri::AppHandle) -> Result<String, String> {
         .map_err(|error| format!("读取剪贴板失败：{error}"))
 }
 
+/// JIG 配置文件路径：`<app_config_dir>/jig-config.json`。
+///
+/// 与排班数据不同：排班仍在 WebView2 的 localStorage 里，而 JIG 的业务配置
+/// 与本机偏好落到用户配置目录下的独立 JSON —— 便于备份、排查，也能被用户直接看到。
+fn jig_config_file(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|error| format!("定位配置目录失败：{error}"))?;
+    Ok(dir.join("jig-config.json"))
+}
+
+/// 读 JIG 配置文件。文件不存在返回 `None`，由前端落回默认值。
+#[tauri::command]
+fn read_jig_config(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let file = jig_config_file(&app)?;
+    match std::fs::read_to_string(&file) {
+        Ok(text) => Ok(Some(text)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(format!("读取 JIG 配置失败：{error}")),
+    }
+}
+
+/// 写 JIG 配置文件（内容由前端序列化好）。
+#[tauri::command]
+fn write_jig_config(app: tauri::AppHandle, contents: String) -> Result<(), String> {
+    let file = jig_config_file(&app)?;
+    if let Some(dir) = file.parent() {
+        std::fs::create_dir_all(dir).map_err(|error| format!("创建配置目录失败：{error}"))?;
+    }
+    std::fs::write(&file, contents).map_err(|error| format!("写入 JIG 配置失败：{error}"))
+}
+
 /// 把二进制内容写进用户选定的路径，返回完整路径。
 ///
 /// JIG 页要导出 Excel：用户在原生「另存为」对话框里挑好路径与文件名，
@@ -314,7 +347,9 @@ pub fn run() {
             set_window_theme,
             read_picked_file,
             read_clipboard_text,
-            save_jig_export
+            save_jig_export,
+            read_jig_config,
+            write_jig_config
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 窗口失败");

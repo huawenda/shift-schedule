@@ -532,19 +532,6 @@
   flex: none;
 }
 
-/* ── 页签徽标 ──
- *
- * 每段视图的条目数（如「33」）。原项目有，本项目原先没有 ——
- * 页签上直接看到数量，就不必切过去才知道有没有数据。
- */
-.jig-tab-badge {
-  margin-left: 7px;
-  font-size: var(--fs-micro);
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  opacity: 0.8;
-}
-
 /* ── 两栏布局 ──
  *
  * 照搬原项目的 `.work`：左输入栏 + 右主区。
@@ -799,9 +786,16 @@
   max-width: 560px;
 }
 
+/*
+ * 结构与班次弹层（DayEditor）完全一致：
+ * DialogContent 去掉默认的 padding 与 gap（组件上写 gap-0 p-0），
+ * 头部复用 `.dialog-head` —— 自带 16px 内边距和一条**通栏**分隔线；
+ * 内容区在这里补左右内边距，底部留 12px 再交给 DialogFooter。
+ */
 .jig-settings {
   display: flex;
   flex-direction: column;
+  padding: 0 var(--sp-4) var(--sp-3);
 }
 
 .jig-settings-row {
@@ -864,9 +858,16 @@
 }
 
 .jig-map {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /*
+   * 左右各收 4px：滚动区自己再加 4px 内边距，给输入框的 3px 焦点环
+   * 留出空间 —— 否则左边那一圈会被 overflow 裁掉，看着像被切平了。
+   * 12 + 4 = 16，内容与标题仍然左对齐。
+   */
+  padding: var(--sp-3) calc(var(--sp-4) - var(--sp-1)) var(--sp-3);
   /* 弹层总高固定，映射表自己滚 —— 与项目里「弹层按内容高度」的既有做法一致 */
   max-height: min(60vh, 520px);
 }
@@ -874,52 +875,54 @@
 .jig-map-head,
 .jig-map-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) auto;
+  /* 操作列固定 28px（只剩删除按钮）：表头与内容列宽才能完全对齐 */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px;
   align-items: center;
   gap: var(--sp-2);
 }
 
 .jig-map-head {
-  padding: 0 var(--sp-2) var(--sp-2);
+  /*
+   * 表头在滚动区**外面**。
+   *
+   * 原生滚动条已隐藏（改用 JigScrollbar），表头与滚动区宽度一致，
+   * 列能严格对齐；也不再需要 sticky —— 之前 sticky 背景会透出滚动的行，
+   * 看起来像表头「透明」了一块。
+   * 左右 4px 与滚动区内容（body 的 padding）对齐。
+   */
+  margin: 0 var(--sp-1) var(--sp-1);
+  padding: var(--sp-2) 0;
   font-size: var(--fs-small);
   font-weight: 600;
   color: var(--muted);
   border-bottom: 1px solid var(--border);
 }
 
+/*
+ * 表头文字对齐输入框**里面**的文字：输入框是 border 1px + px-2.5(10px)，
+ * 所以表头补 11px 左内边距。只对齐边框的话，表头会比 184 / 65/55 明显偏左。
+ */
+.jig-map-head span:not(:last-child) {
+  padding-left: calc(var(--sp-2) + 3px);
+}
+
 .jig-map-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding-top: var(--sp-2);
+  /* 左右留 4px 给输入框的 3px 焦点环；顶部空间由表头自己的 padding 提供 */
+  padding: 0 var(--sp-1);
+}
+
+/* 原生滚动条隐藏，改用 JigScrollbar 覆盖式浮层（与 JIG 表格同一套） */
+.jig-map-body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .jig-map-row {
   position: relative;
-  padding: var(--sp-1) var(--sp-2);
-  /* 拖拽排序时，被拖行跟手、夹在中间的让出一条 —— 固定步长 52 */
-  transition: transform 120ms ease;
-}
-
-.jig-map-row:has(.jig-map-grip:active) {
-  transition: none;
-}
-
-.jig-map-grip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: grab;
-  touch-action: none;
-}
-
-.jig-map-grip:active {
-  cursor: grabbing;
+  padding: var(--sp-1) 0;
 }
 
 .jig-map-input {
@@ -930,6 +933,7 @@
 .jig-map-act {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 2px;
 }
 
@@ -1169,4 +1173,15 @@
 .jig-osb-thumb:hover {
   background: var(--control-hover);
   opacity: 0.9;
+}
+
+/*
+ * 弹层里的覆盖式滚动条单独合成一层。
+ *
+ * 弹层是 `transform: translate(-50%, -50%)` 的 fixed 层；滚动条每帧改
+ * 透明度与滑块位置，如果不隔离，Chromium 会把整块弹层（含底部按钮文字）
+ * 一起重新栅格化，表现为滚动时文字轻微抖动。
+ */
+.jig-map .jig-osb {
+  will-change: opacity;
 }

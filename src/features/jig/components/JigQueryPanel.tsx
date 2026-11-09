@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 
 import { canReadClipboard, readClipboardText } from '@/platform/jigFile'
 
-import { processClipboardContent } from '../core/clipboard'
+import { processClipboardContent, isPureJigIds } from '../core/clipboard'
 
 interface JigQueryPanelProps {
   /** 是否已有源数据 —— 没有时不让查 */
@@ -66,23 +66,47 @@ export function JigQueryPanel({
   }, [onQuery, parseIds])
 
   /**
-   * 粘贴：从系统剪贴板读文本，自己挑出 Jig ID 写进去。
+   * 把一段文本插到当前光标 / 选区处。
    *
-   * ## 为什么必须同步 preventDefault
+   * `block=true` 用于「一整块 ID」：与前后内容之间补换行，免得新 ID
+   * 粘在已有行尾上；`block=false` 模拟原生粘贴，原样插入（含用户选中的
+   * 区间会被替换）。之前一律追加到末尾，光标在中间或全选后粘贴都会出错。
+   */
+  const insertAtSelection = useCallback(
+    (el: HTMLTextAreaElement, text: string, block: boolean) => {
+      if (!el.isConnected) return
+
+      const current = el.value
+      const start = el.selectionStart ?? current.length
+      const end = el.selectionEnd ?? current.length
+      const body = text.replace(/\r\n?/g, '\n')
+
+      const before = block && start > 0 && current[start - 1] !== '\n' ? '\n' : ''
+      const after = block && end < current.length && current[end] !== '\n' ? '\n' : ''
+      const next = current.slice(0, start) + before + body + after + current.slice(end)
+
+      onValueChange(next)
+
+      // 等受控值写回 DOM 再定位光标 —— 否则会被 React 的重渲染打回末尾
+      const caret = start + before.length + body.length
+      requestAnimationFrame(() => {
+        if (!el.isConnected) return
+        el.focus()
+        const pos = Math.min(caret, el.value.length)
+        el.setSelectionRange(pos, pos)
+      })
+    },
+    [onValueChange]
+  )
+
+  /**
+   * 粘贴：挑出 Jig ID 并插到光标处。
    *
-   * `preventDefault()` 只能在事件派发的**同步阶段**调用。一旦 await 过，
-   * 处理函数就返回了 Promise，浏览器随即执行默认粘贴（文本先进框），
-   * 之后我们再 `setText` 写一遍 —— **内容重复**。
-   * 所以顺序必须是：先同步掐断默认粘贴，再 await 读剪贴板。
+   * `preventDefault()` 只能在事件派发的**同步阶段**调用 —— 一旦 await 过，
+   * 浏览器会先执行默认粘贴，我们随后再写一遍，内容就重复了。
+   * 顺序必须是「先同步掐断，再异步取文本」。
    *
-   * ## 浏览器 / 静态版不拦
-   *
-   * 那里没有剪贴板插件，读不到系统剪贴板；拦了默认粘贴又写不进内容，
-   * 等于「粘贴键完全没用」。所以**先同步判断能不能读**（壳里才有插件），
-   * 不能读就完全不碰这个事件，让浏览器自己粘原文。
-   *
-   * 用「有没有插件」而不是「读没读到」来判断 —— 后者必须 await 才知道，
-   * 那时已经晚了。
+   * 浏览器 / 静态版没有剪贴板能力，直接放行原生粘贴，完全不碰事件。
    */
   const onPaste = useCallback(
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -97,42 +121,41 @@ export function JigQueryPanel({
       event.preventDefault()
       event.stopPropagation()
 
-      // 同步取一份原文兜底：插件读失败时用它还原用户按下的内容。
-      // 也要在 await 之前取 —— 事件对象在异步之后不该再碰。
+      const el = event.currentTarget
+      /*
+       * 事件里带的文本就是用户按下的内容，**优先用它**：
+       * 读系统剪贴板是一次异步 IPC，期间剪贴板可能已被别的程序改掉；
+       * 只有事件里拿不到文本时（WebView2 偶发为空）才回退去读系统剪贴板。
+       */
       const raw = event.clipboardData?.getData('text/plain') ?? ''
+      const clipboard = raw || (await readClipboardTextSafe()) || ''
 
-      const clipboard = await readClipboardTextSafe()
-      if (clipboard === null) {
-        // 插件在但读失败（权限等）：把原文还回去，别让用户白按一次
-        if (raw) {
-          onValueChange(prev => prev + raw)
-        } else {
-          notify('读不到系统剪贴板，请手动粘贴', 'warning')
-        }
+      if (!clipboard) {
+        notify('剪贴板里没有文本', 'warning')
         return
       }
 
       // 「粘贴时自动提取」关掉时，按原文粘贴 —— 用户可能就想粘一段完整文本
       if (!clipboardAutoProcessEnabled) {
-        onValueChange(prev => prev + clipboard)
+        insertAtSelection(el, clipboard, false)
         return
       }
 
       const processed = processClipboardContent(clipboard)
-      if (processed === clipboard) {
-        // 纯净的 ID 列表或没有 ID：按原文粘贴，与旧版行为一致
-        onValueChange(prev => prev + processed)
-        return
-      }
+      const extracted = processed !== clipboard
+      /*
+       * 纯 ID 列表同样按「块」插入：它本身是多行内容，若光标停在某行中间，
+       * 原样插入会把两个 ID 粘成一行。只有「没提取出任何 ID」的混合文本
+       * 才按原生粘贴处理。
+       */
+      insertAtSelection(el, processed, extracted || isPureJigIds(clipboard))
 
-      const count = processed.split(/\r?\n/).filter(Boolean).length
-      onValueChange(prev => {
-        const base = prev.replace(/\s*$/, '')
-        return base ? `${base}\n${processed}` : processed
-      })
-      notify(`已从粘贴内容提取 ${count} 个 Jig ID`)
+      if (extracted) {
+        const count = processed.split(/\r?\n/).filter(Boolean).length
+        notify(`已从粘贴内容提取 ${count} 个 Jig ID`)
+      }
     },
-    [clipboardAutoProcessEnabled, notify]
+    [clipboardAutoProcessEnabled, insertAtSelection, notify]
   )
 
   const count = parseIds().length

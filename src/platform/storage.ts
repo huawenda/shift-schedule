@@ -73,6 +73,9 @@ export const STORAGE_KEYS = {
    */
   jigClipboardProcess: 'shift-schedule:local:jig-clipboard-process:v1',
 
+  /** JIG 表格行高（px，字符串存）。本机偏好，Web 静态版靠它记住。 */
+  jigRowHeight: 'shift-schedule:local:jig-row-height:v1',
+
   /**
    * JIG 的业务配置（型号→尺寸映射、工序顺序等）。
    *

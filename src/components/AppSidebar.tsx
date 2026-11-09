@@ -149,26 +149,38 @@ export function AppSidebar({
         </SidebarGroup>
 
         {showJig ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>业务</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={route === 'jig'} tooltip="JIG 数据">
-                    <a
-                      aria-current={route === 'jig' ? 'page' : undefined}
-                      data-view="jig"
-                      href={hrefs.jig}
-                      onClick={event => intercept(event, 'jig')}
-                    >
-                      <Table2 className="size-4" />
-                      <span>JIG 数据</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <>
+            {/*
+              收缩态下两组的分组标题都隐掉了，图标连成一条 —— 补一道短分隔线
+              （左右留 8px，不碰侧栏边界），展开态有「业务」标题，不需要。
+            */}
+            {state === 'collapsed' ? (
+              <div
+                aria-hidden="true"
+                className="mx-2 my-2 h-px shrink-0 bg-sidebar-border"
+              />
+            ) : null}
+            <SidebarGroup>
+              <SidebarGroupLabel>业务</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-1">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={route === 'jig'} tooltip="JIG 数据">
+                      <a
+                        aria-current={route === 'jig' ? 'page' : undefined}
+                        data-view="jig"
+                        href={hrefs.jig}
+                        onClick={event => intercept(event, 'jig')}
+                      >
+                        <Table2 className="size-4" />
+                        <span>JIG 数据</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
         ) : null}
       </SidebarContent>
 

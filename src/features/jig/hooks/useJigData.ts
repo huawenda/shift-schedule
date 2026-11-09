@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { prepareQueryIds } from '../core/clipboard'
 import {
   createDefaultJigConfig,
   createDefaultJigPrefs,
+  mergeJigPrefs,
   type JigConfig,
   type JigPrefs
 } from '../core/config'
@@ -45,6 +47,7 @@ import {
   safeFileName,
   withTimestamp
 } from '@/platform/jigExport'
+import { readJigConfigFile, updateJigConfigFile } from '@/platform/jigConfigFile'
 import { readRaw, writeRaw, STORAGE_KEYS } from '@/platform/storage'
 
 /**
@@ -430,6 +433,11 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       ...defaults,
       sourceDir: read(STORAGE_KEYS.jigSourceDir) ?? defaults.sourceDir,
       exportDir: read(STORAGE_KEYS.jigExportDir) ?? defaults.exportDir,
+      rowHeight: (() => {
+        const raw = read(STORAGE_KEYS.jigRowHeight)
+        const value = raw ? Number(raw) : NaN
+        return Number.isFinite(value) && value > 0 ? value : defaults.rowHeight
+      })(),
       exportTimestampEnabled:
         readRaw(STORAGE_KEYS.jigExportTimestamp) === null
           ? defaults.exportTimestampEnabled
@@ -440,6 +448,23 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
           : readRaw(STORAGE_KEYS.jigClipboardProcess) === '1'
     }
   })
+
+  /**
+   * 启动后以配置文件里的偏好为准（壳里才有）。
+   *
+   * localStorage 只是初值与 Web 版兜底；文件存在时覆盖它。
+   * 行高这类偏好以前只存在内存里，重启会丢 —— 现在一并进文件。
+   */
+  useEffect(() => {
+    let cancelled = false
+    void readJigConfigFile().then(file => {
+      if (cancelled || !file?.prefs) return
+      setPrefs(mergeJigPrefs(file.prefs as Record<string, unknown>))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   /** 上次用过的源文件目录 —— 本机偏好，不进备份 */
   const sourceDir = prefs.sourceDir || null
@@ -490,12 +515,16 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
         STORAGE_KEYS.jigClipboardProcess,
         next.clipboardAutoProcessEnabled ? '1' : '0'
       )
+      writeRaw(STORAGE_KEYS.jigRowHeight, String(next.rowHeight))
 
-      setPrefs({
+      const merged: JigPrefs = {
         ...next,
         sourceDir: dirs.sourceDir ?? '',
         exportDir: dirs.exportDir ?? ''
-      })
+      }
+      setPrefs(merged)
+      // 桌面版：整份偏好落盘到配置文件（读-改-写，保留配置里的 config 段）
+      void updateJigConfigFile({ prefs: merged })
     },
     []
   )
@@ -630,14 +659,30 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
         return false
       }
 
+      /*
+       * 输入框是自由文本：逐行归一化、去重、丢掉认不出的行。
+       *
+       * 纯 ID 列表粘贴时可能带重复行 —— 查询前不收敛的话，明细里会出现
+       * 重复行，命中 / 未找到的统计也会翻倍；整封邮件被粘进来时，
+       * 不校验则每一行都会被当成 ID 去查。
+       */
+      const { ids: queryIdsToRun, ignored } = prepareQueryIds(ids)
+      if (queryIdsToRun.length === 0) {
+        const message = `没有识别到有效的 Jig ID（${ignored} 行无法识别）`
+        notify(message, 'warning')
+        setLog(message)
+        return false
+      }
+
       // 只存 ID —— 表由配置派生，改了映射表会自动重算
-      setQueryIds(ids)
+      setQueryIds(queryIdsToRun)
       // 新的查询结果，旧的下钻定位不再有意义
       setDrill(null)
 
-      const detail = queryData(source.rows, ids, config)
+      const detail = queryData(source.rows, queryIdsToRun, config)
       const found = detail.rows.filter(row => row['P/N'] !== '【未找到】').length
-      const text = `查询 ${detail.rows.length} 条 · 命中 ${found} · 未找到 ${detail.rows.length - found}`
+      const base = `查询 ${detail.rows.length} 条 · 命中 ${found} · 未找到 ${detail.rows.length - found}`
+      const text = ignored > 0 ? `${base} · 已忽略 ${ignored} 行` : base
       setStatus('ready')
       setLog(text)
       notify(text)
