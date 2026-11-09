@@ -1,4 +1,4 @@
-import { CalendarDays, LayoutGrid, Settings } from 'lucide-react'
+import { CalendarDays, LayoutGrid, Settings, Table2 } from 'lucide-react'
 
 import {
   Sidebar,
@@ -14,6 +14,7 @@ import {
   SidebarRail,
   useSidebar
 } from '@/components/ui/sidebar'
+import { isTauriShell } from '@/platform/env'
 import type { Route } from './AppShell'
 
 /**
@@ -86,6 +87,15 @@ export function AppSidebar({
     { id: 'overview' as const, label: '月度概览', icon: CalendarDays }
   ]
 
+  /**
+   * JIG 数据只在桌面壳里出现。
+   *
+   * 这一页要读用户自选的 Excel 文件、读系统剪贴板（从邮件正文里挑 Jig ID）、
+   * 导出带标红的 Excel —— 这三件事都依赖 Tauri 的文件系统与剪贴板插件。
+   * 静态版与小程序端没有这些能力，挂一个点不动的入口只会让人以为坏了。
+   */
+  const showJig = isTauriShell()
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -137,6 +147,29 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {showJig ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>车间数据</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={route === 'jig'} tooltip="JIG 数据">
+                    <a
+                      aria-current={route === 'jig' ? 'page' : undefined}
+                      data-view="jig"
+                      href={hrefs.jig}
+                      onClick={event => intercept(event, 'jig')}
+                    >
+                      <Table2 className="size-4" />
+                      <span>JIG 数据</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
       </SidebarContent>
 
       <SidebarFooter>

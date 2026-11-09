@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { AppShell, type Route } from './components/AppShell'
+import {
+  buildHash,
+  DEFAULT_LOCATION,
+  parseLocation,
+  ROUTE_TITLE,
+  type AppLocation,
+  type Route
+} from './appLocation'
+import { AppShell } from './components/AppShell'
 import { DayEditor } from './components/DayEditor'
 import { ScrollOverlay } from './components/ScrollOverlay'
 import { ShiftEditor } from './components/ShiftEditor'
 import type { MatrixMode } from './components/TeamMatrix'
 import { Toaster } from './components/ui/sonner'
+import { JigScreen } from './features/jig/components/JigScreen'
+import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
 import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
@@ -31,6 +41,7 @@ import { emptySalary, type SelfIdentity } from './data/profile'
 import { formatOvertimeHours } from './data/overtime'
 import { SHIFT_META, type ShiftType } from './data/shifts'
 import { getCloseBehavior, syncCloseBehaviorToShell } from './platform/windowPrefs'
+import { isTauriShell } from './platform/env'
 import { useBackupFlow } from './hooks/useBackupFlow'
 import { useMonthNavigation } from './hooks/useMonthNavigation'
 import { useRoster } from './hooks/useRoster'
@@ -39,74 +50,6 @@ import { useToasts } from './hooks/useToasts'
 
 /** 从哪儿点开的格子：矩阵只能改班次，概览页的日历能记加班 */
 type EditSource = 'matrix' | 'calendar'
-
-/**
- * 应用内的完整位置：视图 + 结算月 + 设置页签，全部来自 hash。
- *
- * hash 格式（当前结算月省略月份前缀）：
- *   #/overview                #/2026-10/overview
- *   #/matrix                  #/2026-10/matrix
- *   #/settings/roster         #/2026-10/settings/profile
- *
- * 月份放在最前面而不是挂在某个视图上，是为了「切到设置再切回来」也保得住；
- * 当前月不写进 URL，默认地址保持干净，翻到别的月份才多出一段。
- */
-interface AppLocation {
-  route: Route
-  /** null = 当前结算月（URL 里省略） */
-  month: MonthKey | null
-  settingsTab: SettingsTab
-}
-
-const DEFAULT_LOCATION: AppLocation = { route: 'overview', month: null, settingsTab: 'roster' }
-
-/** 解析 hash；未知视图回落到概览，未知参数按「当前月 / 人员配置」处理 */
-function parseLocation(hash: string): AppLocation {
-  const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean)
-  let month: MonthKey | null = null
-
-  const head = parseMonthKey(parts[0] ?? '')
-  if (head) {
-    month = head
-    parts.shift()
-  }
-
-  const [view, param] = parts
-
-  if (view === 'matrix' || view === 'overview') {
-    // 兼容旧式 `#/matrix/2026-10`：月份写在视图后面
-    const trailing = param ? parseMonthKey(param) : null
-    return { route: view, month: trailing ?? month, settingsTab: 'roster' }
-  }
-
-  if (view === 'settings') {
-    return { route: 'settings', month, settingsTab: param === 'profile' ? 'profile' : 'roster' }
-  }
-
-  return { ...DEFAULT_LOCATION, month }
-}
-
-/** 生成规范 hash：当前月省略月份；设置页总是带页签 */
-function buildHash(location: AppLocation): string {
-  const prefix = location.month && compareMonth(location.month, currentMonthKey()) !== 0
-    ? `/${monthKeyToString(location.month)}`
-    : ''
-
-  if (location.route === 'settings') return `#${prefix}/settings/${location.settingsTab}`
-  return `#${prefix}/${location.route}`
-}
-
-/**
- * 任务栏 / 原生标题栏：**只显示当前视图名**，不带软件名前缀。
- * 与 index.html 的 `<title>`、tauri.conf.json 的窗口初始 title 保持同一套值，
- * 否则窗口创建那一帧是「月度概览」、React 挂载后又跳成「昼夜 · 月度概览」。
- * 原生标题栏左侧已有应用图标，任务栏悬停也显示产品名，再拼一遍「昼夜 ·」是重复。
- */
-const ROUTE_TITLE: Record<Route, string> = {
-  overview: '月度概览',
-  matrix: '全员矩阵',
-  settings: '设置'
-}
 
 export function App() {
   const api = useRoster()
@@ -131,6 +74,7 @@ export function App() {
   const scrollPositions = useRef<Record<Route, { flow: number; matrixLeft: number; matrixTop: number }>>({
     overview: { flow: 0, matrixLeft: 0, matrixTop: 0 },
     matrix: { flow: 0, matrixLeft: 0, matrixTop: 0 },
+    jig: { flow: 0, matrixLeft: 0, matrixTop: 0 },
     settings: { flow: 0, matrixLeft: 0, matrixTop: 0 }
   })
 
@@ -152,7 +96,21 @@ export function App() {
    */
   useEffect(() => {
     function syncFromHash() {
-      const next = parseLocation(window.location.hash)
+      const parsed = parseLocation(window.location.hash)
+
+      /*
+       * JIG 页只在桌面壳里存在（要读用户自选的 Excel、读系统剪贴板、
+       * 导出带标红的文件，都依赖 Tauri 插件）。
+       *
+       * 静态版 / 小程序端收到 `#/jig` 时回落到概览 —— 那一端既没有侧栏入口，
+       * 也没有 JIG 页需要的文件能力，留着一个进得去出不来的页面没意义。
+       * 桌面壳的最小窗口宽 1024，侧栏永远在，窄屏那条「底部标签栏」的路
+       * 本来也够不到 JIG，所以只在非壳环境做这次回落。
+       */
+      const next = parsed.route === 'jig' && !isTauriShell()
+        ? { ...DEFAULT_LOCATION }
+        : parsed
+
       setLocation(next)
       const normalized = buildHash(next)
       if (window.location.hash && window.location.hash !== normalized) {
@@ -215,7 +173,7 @@ export function App() {
    * 而不是在浏览过的几个页面之间来回切（Android / iOS 的原生 app 都是这个行为）。
    * `month` 不传时沿用当前结算月；显式传 null 表示回到当前月。
    */
-  const navigate = useCallback((nextRoute: Route, options: { month?: MonthKey | null; settingsTab?: SettingsTab } = {}) => {
+  const navigate = useCallback((nextRoute: Route, options: { month?: MonthKey | null; settingsTab?: SettingsTab; jigTab?: JigTabId } = {}) => {
     // 先记下当前页的滚动位置，再换路由：切 tab 回来时能回到离开处
     const flow = document.querySelector<HTMLElement>('.canvas-flow')
     const matrix = document.querySelector<HTMLElement>('.matrix-scroll')
@@ -228,13 +186,14 @@ export function App() {
     const next: AppLocation = {
       route: nextRoute,
       month: 'month' in options ? (options.month ?? null) : (location.month ?? currentMonth),
-      settingsTab: options.settingsTab ?? location.settingsTab
+      settingsTab: options.settingsTab ?? location.settingsTab,
+      jigTab: options.jigTab ?? location.jigTab
     }
     const hash = buildHash(next)
 
     if (window.location.hash !== hash) window.history.replaceState(null, '', hash)
     setLocation(next)
-  }, [location.route, location.month, location.settingsTab, currentMonth])
+  }, [location.route, location.month, location.settingsTab, location.jigTab, currentMonth])
 
   function goMonth(delta: number) {
     navigate(location.route, { month: shiftMonth(monthKey, delta) })
@@ -248,14 +207,20 @@ export function App() {
     navigate('settings', { month: location.month, settingsTab: tab })
   }
 
+  /** JIG 页切子页：只改子页，hash 形如 `#/jig/pivot`（不带月份） */
+  function changeJigTab(tab: JigTabId) {
+    navigate('jig', { jigTab: tab })
+  }
+
   /** 直达「个人资料」页（侧栏点「设置」时用默认 tab，这里是显式指定） */
   const openProfileTab = useCallback(() => navigate('settings', { settingsTab: 'profile' }), [navigate])
 
   /** 侧栏链接带上当前月份，Cmd/Ctrl+点击开新标签也能落到同一个结算月 */
   const hrefs = useMemo<Record<Route, string>>(() => ({
-    matrix: buildHash({ route: 'matrix', month: monthKey, settingsTab: 'roster' }),
-    overview: buildHash({ route: 'overview', month: monthKey, settingsTab: 'roster' }),
-    settings: buildHash({ route: 'settings', month: monthKey, settingsTab: 'roster' })
+    matrix: buildHash({ route: 'matrix', month: monthKey, settingsTab: 'roster', jigTab: 'detail' }),
+    overview: buildHash({ route: 'overview', month: monthKey, settingsTab: 'roster', jigTab: 'detail' }),
+    jig: buildHash({ route: 'jig', month: null, settingsTab: 'roster', jigTab: 'detail' }),
+    settings: buildHash({ route: 'settings', month: monthKey, settingsTab: 'roster', jigTab: 'detail' })
   }), [monthKey])
 
   function clearAll() {
@@ -426,6 +391,8 @@ export function App() {
             onGroupFilterChange={setMatrixGroup}
             onModeChange={setMatrixMode}
           />
+        ) : route === 'jig' ? (
+          <JigScreen tab={location.jigTab} onTabChange={changeJigTab} />
         ) : (
           <OverviewScreen
             period={period}

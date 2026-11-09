@@ -101,7 +101,8 @@
  * 设置页的姓名/岗位输入框也会长得像通栏。都按同一档收住，三页翻起来宽度不跳。
  */
 .canvas.is-matrix,
-.canvas.is-settings {
+.canvas.is-settings,
+.canvas.is-jig {
   width: 100%;
   max-width: 1228px;
   margin: 0 auto;

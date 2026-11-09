@@ -1,16 +1,22 @@
 import { type CSSProperties, type ReactNode } from 'react'
 
+import { type Route } from '@/appLocation'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useIsCompact } from '@/hooks/use-compact'
 import { useSidebarWidth } from '@/hooks/useSidebarWidth'
 import { isTauriShell } from '@/platform/env'
+import { JigTopBar } from '@/features/jig/components/JigTopBar'
 import { AppSidebar } from './AppSidebar'
 import { MobileNav } from './MobileNav'
 import { TopBar } from './TopBar'
 
-/** 三个一级页面：全员矩阵看全组、月度概览看本人、设置改配置 */
-export type Route = 'matrix' | 'overview' | 'settings'
+/**
+ * Route 的定义在 appLocation —— 路由解析与外壳共用同一份，避免两处各说各话。
+ * 这里再导出一次，是为了让「外壳的 props 类型」与「路由的类型」保持一个出处，
+ * 外部按 `from '@/components/AppShell'` 取 Route 的老写法不用改。
+ */
+export type { Route }
 
 interface AppShellProps {
   route: Route
@@ -101,16 +107,24 @@ export function AppShell({
           id="main"
           tabIndex={-1}
         >
-          <TopBar
-            atCurrentMonth={atCurrentMonth}
-            monthTitle={monthTitle}
-            onBackup={onBackup}
-            onRestore={onRestore}
-            onShiftMonth={onShiftMonth}
-            onToday={onToday}
-            onToggleTheme={onToggleTheme}
-            theme={theme}
-          />
+          {/*
+            JIG 页有自己的顶栏：月份导航对它毫无意义（数据来自 MES 导出的
+            Excel，与结算月无关），要的是源文件与 JIG 专属操作。
+          */}
+          {route === 'jig' ? (
+            <JigTopBar onToggleTheme={onToggleTheme} theme={theme} />
+          ) : (
+            <TopBar
+              atCurrentMonth={atCurrentMonth}
+              monthTitle={monthTitle}
+              onBackup={onBackup}
+              onRestore={onRestore}
+              onShiftMonth={onShiftMonth}
+              onToday={onToday}
+              onToggleTheme={onToggleTheme}
+              theme={theme}
+            />
+          )}
           {children}
         </SidebarInset>
 
