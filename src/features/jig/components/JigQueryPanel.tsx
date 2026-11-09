@@ -7,6 +7,8 @@ import { processClipboardContent } from '../core/clipboard'
 interface JigQueryPanelProps {
   /** 是否已有源数据 —— 没有时不让查 */
   ready: boolean
+  /** 粘贴时是否自动从混合文本里挑出 JIG ID（本机偏好） */
+  clipboardAutoProcessEnabled: boolean
   /** 执行查询 */
   onQuery: (ids: string[]) => void
   /** 清空查询结果 */
@@ -25,7 +27,13 @@ interface JigQueryPanelProps {
  * **高度按内容，不与表格联动** —— 表格有几百行，左栏若被拉成同样高，
  * 里面大片空白，输入框反而被压扁。这里用 `align-self: start` 独立成一块。
  */
-export function JigQueryPanel({ ready, onQuery, onClear, notify }: JigQueryPanelProps) {
+export function JigQueryPanel({
+  ready,
+  clipboardAutoProcessEnabled,
+  onQuery,
+  onClear,
+  notify
+}: JigQueryPanelProps) {
   const [text, setText] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -64,6 +72,12 @@ export function JigQueryPanel({ ready, onQuery, onClear, notify }: JigQueryPanel
       event.preventDefault()
       event.stopPropagation()
 
+      // 「粘贴时自动提取」关掉时，按原文粘贴 —— 用户可能就想粘一段完整文本
+      if (!clipboardAutoProcessEnabled) {
+        setText(prev => prev + clipboard)
+        return
+      }
+
       const processed = processClipboardContent(clipboard)
       if (processed === clipboard) {
         // 纯净的 ID 列表或没有 ID：按原文粘贴，与旧版行为一致
@@ -78,7 +92,7 @@ export function JigQueryPanel({ ready, onQuery, onClear, notify }: JigQueryPanel
       })
       notify(`已从粘贴内容提取 ${count} 个 Jig ID`)
     },
-    [notify]
+    [clipboardAutoProcessEnabled, notify]
   )
 
   const count = parseIds().length

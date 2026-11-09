@@ -42,6 +42,10 @@ interface AppShellProps {
   jig: JigData
   /** JIG 页当前子页 —— 导出「当前视图」要知道导哪一页的表 */
   jigTab: JigTabId
+  /** 打开型号尺寸映射面板 */
+  onOpenJigSizeMapping: () => void
+  /** 打开 JIG 设置 */
+  onOpenJigSettings: () => void
   children: ReactNode
 }
 
@@ -75,6 +79,8 @@ export function AppShell({
   onToggleTheme,
   jig,
   jigTab,
+  onOpenJigSizeMapping,
+  onOpenJigSettings,
   children
 }: AppShellProps) {
   const isCompact = useIsCompact()
@@ -128,6 +134,8 @@ export function AppShell({
               canExport={jig.canExport}
               canPick={jig.canPick}
               onExport={() => void jig.exportCurrent(jigTab)}
+              onOpenSettings={onOpenJigSettings}
+              onOpenSizeMapping={onOpenJigSizeMapping}
               onPick={() => void jig.pickSource()}
               onToggleTheme={onToggleTheme}
               sourceName={jig.sourceName}

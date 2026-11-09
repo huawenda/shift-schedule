@@ -61,23 +61,19 @@ import { readRaw, writeRaw, STORAGE_KEYS } from '@/platform/storage'
  * - 本机偏好（源目录）进 localStorage。
  */
 
-/** 四个视图各自的表 */
+/**
+ * 两张「由查询派生」的表。
+ *
+ * 数据审查表不在这里 —— 它带 P/N 过滤与视野档位，由 `review` 单独给出。
+ */
 export interface JigTables {
   /** 查询结果 */
   detail: Table
   /** 结果透视 */
   queryPivot: Table
-  /** 数据审查 */
-  review: Table
 }
 
 const EMPTY_TABLE: Table = { columns: [], rows: [] }
-
-const EMPTY_TABLES: JigTables = {
-  detail: EMPTY_TABLE,
-  queryPivot: EMPTY_TABLE,
-  review: EMPTY_TABLE
-}
 
 export interface UseJigDataOptions {
   /** 业务配置（型号→尺寸映射、工序顺序等） */
@@ -93,7 +89,7 @@ export interface JigData {
   sourceName: string
   /** 源文件路径 */
   sourcePath: string
-  /** 三个视图的表（全量透视由 scope 单独给出 —— 它带筛选状态） */
+  /** 两张查询派生的表（全量透视与审查各由自己的筛选状态给出） */
   tables: JigTables
   /** 全量透视的显示范围 */
   pivotScope: PivotScope
@@ -121,6 +117,13 @@ export interface JigData {
   review: ReviewView
   /** 审查页的 P/N 候选 */
   reviewPnOptions: string[]
+  /** 本机偏好（源目录、导出目录、行高、粘贴开关、时间戳开关） */
+  prefs: JigPrefs
+  /** 保存本机偏好 */
+  savePrefs: (
+    prefs: JigPrefs,
+    dirs: { sourceDir: string | null; exportDir: string | null }
+  ) => void
   /** 查询结果页的标红标记（与 table.rows 同序） */
   detailFlags: boolean[]
   /** 下钻明细的标红标记（与 table.rows 同序） */
@@ -152,7 +155,6 @@ export interface JigData {
 export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const [source, setSource] = useState<SourceData | null>(null)
   const [sourcePath, setSourcePath] = useState('')
-  const [tables, setTables] = useState<JigTables>(EMPTY_TABLES)
   const [busy, setBusy] = useState(false)
   const [pivotScope, setPivotScope] = useState<PivotScope>('all')
   const [pivotAvail, setPivotAvail] = useState<StageCategory>('all')
@@ -161,12 +163,43 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const [reviewPn, setReviewPn] = useState(ALL_PN)
   const [reviewScope, setReviewScope] = useState<ReviewScope>('all')
   /**
-   * 本次查询命中的源行（快照）。
+   * 上次查询用的 ID 列表。
+   *
+   * **只存 ID，不存算好的表** —— 查询结果依赖型号→尺寸映射表，
+   * 改了映射就必须重算。存成算好的表的话，改完映射界面上的「对应尺寸」
+   * 列还是旧值，用户会以为保存没生效；导出的文件里也是旧值，
+   * 拿去做尺寸核对会得出错误结论。
+   */
+  const [queryIds, setQueryIds] = useState<string[]>([])
+
+  /**
+   * 本次查询命中的源行。
    *
    * 结果透视的下钻底稿必须是它 —— 透视表是「命中记录的汇总」，
    * 下钻要回到同样的记录上，不能拿全部源数据去筛。
    */
-  const [queryHits, setQueryHits] = useState<Row[]>([])
+  const queryHits = useMemo(() => {
+    if (!source || queryIds.length === 0) return []
+    return source.rows.filter((row: Row) => queryIds.includes(row['Jig ID']))
+  }, [queryIds, source])
+
+  /** 查询结果表 */
+  const detailTable = useMemo(() => {
+    if (!source || queryIds.length === 0) return EMPTY_TABLE
+    return queryData(source.rows, queryIds, config)
+  }, [config, queryIds, source])
+
+  /** 结果透视表：基于命中的行 */
+  const queryPivotTable = useMemo(() => {
+    if (queryHits.length === 0) return EMPTY_TABLE
+    return generatePivot(queryHits, false, config)
+  }, [config, queryHits])
+
+  /** 两张表的集合（供界面统一取用） */
+  const tables: JigTables = useMemo(
+    () => ({ detail: detailTable, queryPivot: queryPivotTable }),
+    [detailTable, queryPivotTable]
+  )
 
   /**
    * 全量透视的当前结果。
@@ -207,6 +240,19 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   }, [drill])
 
   /**
+   * 审查页的「全部」视图。
+   *
+   * **派生而不是存起来** —— 它依赖型号→尺寸映射表，改了映射就必须重算。
+   * 存成 state 的话，改完映射界面上的「对应尺寸」列还是旧值，
+   * 用户会以为保存没生效；导出的文件里也是旧值，拿去做尺寸核对
+   * 会得出错误结论。
+   */
+  const reviewAllTable = useMemo(
+    () => (source ? processSourceData(source.rows, config) : EMPTY_TABLE),
+    [config, source]
+  )
+
+  /**
    * 审查页的当前视图。
    *
    * 口径全在 `computeReviewView` 里：先按 P/N 过滤，再分类，再按档筛行。
@@ -217,11 +263,11 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const review = useMemo(
     () =>
       computeReviewView(
-        filterReviewByPn(tables.review, reviewPn),
+        filterReviewByPn(reviewAllTable, reviewPn),
         reviewScope,
         rulesFromConfig(config)
       ),
-    [config, reviewPn, reviewScope, tables.review]
+    [config, reviewAllTable, reviewPn, reviewScope]
   )
 
   /**
@@ -232,11 +278,11 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const detailFlags = useMemo(() => {
     if (!config.sizeValidationEnabled) return []
     const rules = rulesFromConfig(config)
-    return tables.detail.rows.map(row => {
+    return detailTable.rows.map(row => {
       const size = row['对应尺寸'] ?? ''
       return !validateSizeMatch(row['P/N'] ?? '', size, rules)
     })
-  }, [config, tables.detail.rows])
+  }, [config, detailTable.rows])
 
   /**
    * 下钻明细的标红标记。
@@ -255,30 +301,80 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
 
   /** 审查页的 P/N 候选：取自全部审查行，不受当前过滤影响 */
   const reviewPnList = useMemo(
-    () => reviewPnOptions(tables.review),
-    [tables.review]
+    () => reviewPnOptions(reviewAllTable),
+    [reviewAllTable]
   )
 
+  /**
+   * 本机偏好：源目录、导出目录、行高、粘贴开关、时间戳开关。
+   *
+   * **从 localStorage 读一次，之后由 state 持有** —— 设置面板改完要立刻生效，
+   * 不能每次都去读盘（读盘是同步的，会卡一下）。
+   */
+  const [prefs, setPrefs] = useState<JigPrefs>(() => {
+    const defaults = createDefaultJigPrefs()
+    const read = (key: string) => {
+      const raw = readRaw(key)
+      return raw?.trim() || null
+    }
+    return {
+      ...defaults,
+      sourceDir: read(STORAGE_KEYS.jigSourceDir) ?? defaults.sourceDir,
+      exportDir: read(STORAGE_KEYS.jigExportDir) ?? defaults.exportDir,
+      exportTimestampEnabled:
+        readRaw(STORAGE_KEYS.jigExportTimestamp) === null
+          ? defaults.exportTimestampEnabled
+          : readRaw(STORAGE_KEYS.jigExportTimestamp) === '1',
+      clipboardAutoProcessEnabled:
+        readRaw(STORAGE_KEYS.jigClipboardProcess) === null
+          ? defaults.clipboardAutoProcessEnabled
+          : readRaw(STORAGE_KEYS.jigClipboardProcess) === '1'
+    }
+  })
+
   /** 上次用过的源文件目录 —— 本机偏好，不进备份 */
-  const sourceDir = useMemo(() => {
-    const raw = readRaw(STORAGE_KEYS.jigSourceDir)
-    const trimmed = raw?.trim()
-    return trimmed ? trimmed : null
-  }, [])
+  const sourceDir = prefs.sourceDir || null
 
   /** 上次用过的导出目录 —— 本机偏好，不进备份 */
-  const exportDir = useMemo(() => {
-    const raw = readRaw(STORAGE_KEYS.jigExportDir)
-    const trimmed = raw?.trim()
-    return trimmed ? trimmed : null
-  }, [])
+  const exportDir = prefs.exportDir || null
 
   /** 导出文件名是否加时间戳 —— 本机偏好，不进备份 */
-  const exportTimestampEnabled = useMemo(() => {
-    const raw = readRaw(STORAGE_KEYS.jigExportTimestamp)
-    // 默认关闭 —— 与原项目一致（默认导出「审查数据.xlsx」这种固定名）
-    return raw === '1'
-  }, [])
+  const exportTimestampEnabled = prefs.exportTimestampEnabled
+
+  /**
+   * 保存本机偏好：写进 localStorage 并更新 state。
+   *
+   * **不进备份文件** —— 换个机器就该按新机器的情况重设，
+   * 把旧机器的路径搬过去只会指向一个不存在的目录。
+   */
+  const savePrefs = useCallback(
+    (
+      next: JigPrefs,
+      dirs: { sourceDir: string | null; exportDir: string | null }
+    ) => {
+      if (dirs.sourceDir) writeRaw(STORAGE_KEYS.jigSourceDir, dirs.sourceDir)
+      else writeRaw(STORAGE_KEYS.jigSourceDir, '')
+
+      if (dirs.exportDir) writeRaw(STORAGE_KEYS.jigExportDir, dirs.exportDir)
+      else writeRaw(STORAGE_KEYS.jigExportDir, '')
+
+      writeRaw(
+        STORAGE_KEYS.jigExportTimestamp,
+        next.exportTimestampEnabled ? '1' : '0'
+      )
+      writeRaw(
+        STORAGE_KEYS.jigClipboardProcess,
+        next.clipboardAutoProcessEnabled ? '1' : '0'
+      )
+
+      setPrefs({
+        ...next,
+        sourceDir: dirs.sourceDir ?? '',
+        exportDir: dirs.exportDir ?? ''
+      })
+    },
+    []
+  )
 
   const pickSource = useCallback(async () => {
     if (!canPickJigFile()) {
@@ -314,17 +410,12 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       writeRaw(STORAGE_KEYS.jigSourceDir, dirname(picked.path))
 
       // 换了源数据，旧的查询命中与三张表都作废
-      setTables({
-        detail: EMPTY_TABLE,
-        queryPivot: EMPTY_TABLE,
-        review: processSourceData(data.rows, config)
-      })
+      setQueryIds([])
 
       // 筛选状态也复位 —— 旧的 P/N 范围在新文件里可能不存在
       setPivotScope('all')
       setPivotAvail('all')
       setDrill(null)
-      setQueryHits([])
 
       notify(`已载入 ${picked.name} · ${data.rows.length} 行`, 'info')
     } catch (error) {
@@ -345,19 +436,12 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
         return
       }
 
-      const detail = queryData(source.rows, ids, config)
-      // 结果透视基于**命中的行**（与旧版一致），不是全部源数据
-      const hits = source.rows.filter((row: Row) => ids.includes(row['Jig ID']))
-
-      setTables(prev => ({
-        ...prev,
-        detail,
-        queryPivot: generatePivot(hits, false, config)
-      }))
-      setQueryHits(hits)
+      // 只存 ID —— 表由配置派生，改了映射表会自动重算
+      setQueryIds(ids)
       // 新的查询结果，旧的下钻定位不再有意义
       setDrill(null)
 
+      const detail = queryData(source.rows, ids, config)
       const found = detail.rows.filter(row => row['P/N'] !== '【未找到】').length
       notify(`查询 ${detail.rows.length} 条 · 命中 ${found} · 未找到 ${detail.rows.length - found}`)
     },
@@ -365,12 +449,7 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   )
 
   const clearQuery = useCallback(() => {
-    setTables(prev => ({
-      ...prev,
-      detail: EMPTY_TABLE,
-      queryPivot: EMPTY_TABLE
-    }))
-    setQueryHits([])
+    setQueryIds([])
     setDrill(null)
   }, [])
 
@@ -489,6 +568,8 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     setReviewScope,
     review,
     reviewPnOptions: reviewPnList,
+    prefs,
+    savePrefs,
     detailFlags,
     drillFlags,
     busy,

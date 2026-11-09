@@ -455,6 +455,174 @@
   min-width: 150px;
 }
 
+/* ── JIG 设置 ──
+ *
+ * 独立于排班的设置页 —— 两套业务的设置项完全不同，混在一起谁都不好找。
+ * 这一屏全是本机偏好，不进备份文件。
+ */
+.jig-settings-dialog {
+  max-width: 560px;
+}
+
+.jig-settings {
+  display: flex;
+  flex-direction: column;
+}
+
+.jig-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.jig-settings-row:last-child {
+  border-bottom: 0;
+}
+
+.jig-settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--fs-control);
+  font-weight: 500;
+  color: var(--text);
+}
+
+.jig-settings-hint {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.jig-settings-control {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+/* 目录路径：太长时截断，完整路径走 title */
+.jig-settings-path {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.jig-settings-path.is-default {
+  font-style: italic;
+}
+
+/* ── 型号尺寸映射面板 ──
+ *
+ * 独立弹层，不做成设置页里的一个分组：映射表通常有十几行，塞进固定宽的
+ * 表单会把整页挤到要滚动；而这张表又是使用频率最高、最容易出错的一块。
+ */
+.jig-map-dialog {
+  max-width: 640px;
+}
+
+.jig-map {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* 弹层总高固定，映射表自己滚 —— 与项目里「弹层按内容高度」的既有做法一致 */
+  max-height: min(60vh, 520px);
+}
+
+.jig-map-head,
+.jig-map-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.jig-map-head {
+  padding: 0 var(--sp-2) var(--sp-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.jig-map-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: var(--sp-2);
+}
+
+.jig-map-row {
+  position: relative;
+  padding: var(--sp-1) var(--sp-2);
+  /* 拖拽排序时，被拖行跟手、夹在中间的让出一条 —— 固定步长 52 */
+  transition: transform 120ms ease;
+}
+
+.jig-map-row:has(.jig-map-grip:active) {
+  transition: none;
+}
+
+.jig-map-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.jig-map-grip:active {
+  cursor: grabbing;
+}
+
+.jig-map-input {
+  height: 30px;
+  font-size: var(--fs-small);
+}
+
+.jig-map-act {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 报错信息在行内，占整行宽度（不影响上面三个列的排布） */
+.jig-map-error {
+  grid-column: 1 / -1;
+  font-size: var(--fs-small);
+  color: var(--destructive);
+}
+
+.jig-map-error-count {
+  font-size: var(--fs-small);
+  color: var(--destructive);
+}
+
+.jig-map-empty {
+  padding: var(--sp-4) var(--sp-2);
+  font-size: var(--fs-small);
+  color: var(--muted);
+  text-align: center;
+}
+
+.jig-map-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
 /* ── 下钻面包屑 ──
  *
  * 路径：「全量透视」› P/N › CST › 工序。

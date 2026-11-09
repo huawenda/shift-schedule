@@ -54,6 +54,30 @@ export async function pickJigExcelFile(
 }
 
 /**
+ * 弹一个原生目录选择器。用户取消返回 null。
+ *
+ * JIG 页用它挑「源文件默认目录」与「导出默认目录」——
+ * 都是**这台电脑**的属性，不进备份文件。
+ */
+export async function pickJigDirectory(
+  current: string | null
+): Promise<string | null> {
+  const dialog = tauri()?.dialog
+  if (!dialog?.open) throw new Error('当前环境不支持选择目录')
+
+  const picked = await dialog.open({
+    directory: true,
+    multiple: false,
+    title: '选择目录',
+    ...(current ? { defaultPath: current } : {})
+  })
+
+  if (!picked) return null
+  const path = Array.isArray(picked) ? picked[0] : picked
+  return path ?? null
+}
+
+/**
  * 读一个用户选中的文件，返回字节。
  *
  * 走壳里自定义的 `read_picked_file` 命令，而不是 fs 插件：fs 的读权限被

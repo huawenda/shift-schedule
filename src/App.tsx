@@ -15,8 +15,11 @@ import type { MatrixMode } from './components/TeamMatrix'
 import { Toaster } from './components/ui/sonner'
 import { createDefaultJigConfig } from './features/jig/core/config'
 import { JigScreen } from './features/jig/components/JigScreen'
+import { JigSettingsDialog } from './features/jig/components/JigSettingsDialog'
+import { JigSizeMappingDialog } from './features/jig/components/JigSizeMappingDialog'
 import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
 import { useJigData } from './features/jig/hooks/useJigData'
+import { pickJigDirectory } from './platform/jigFile'
 import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
@@ -74,7 +77,11 @@ export function App() {
    * 配置目前是默认值：型号→尺寸映射、11 道工序顺序这些要进备份文件，
    * P8 接上；在此之前与原项目出厂配置一致。
    */
-  const jigConfig = useMemo(() => createDefaultJigConfig(), [])
+  const [jigConfig, setJigConfig] = useState(createDefaultJigConfig)
+  /** 型号尺寸映射面板是否打开 */
+  const [jigMapOpen, setJigMapOpen] = useState(false)
+  /** JIG 设置面板是否打开 */
+  const [jigSettingsOpen, setJigSettingsOpen] = useState(false)
   const jigData = useJigData({
     config: jigConfig,
     notify: (text, tone) => toast.info(text, { tone })
@@ -373,6 +380,8 @@ export function App() {
         theme={theme.resolved}
         jig={jigData}
         jigTab={location.jigTab}
+        onOpenJigSettings={() => setJigSettingsOpen(true)}
+        onOpenJigSizeMapping={() => setJigMapOpen(true)}
       >
         {route === 'settings' ? (
           <SettingsScreen
@@ -425,6 +434,37 @@ export function App() {
           />
         )}
       </AppShell>
+
+      {jigSettingsOpen ? (
+        <JigSettingsDialog
+          canPickDir={isTauriShell()}
+          exportDir={jigData.prefs.exportDir || null}
+          onClose={() => setJigSettingsOpen(false)}
+          onPickDir={current => pickJigDirectory(current)}
+          onSave={(prefs, dirs) => jigData.savePrefs(prefs, dirs)}
+          prefs={jigData.prefs}
+          sourceDir={jigData.prefs.sourceDir || null}
+        />
+      ) : null}
+
+      {jigMapOpen ? (
+        <JigSizeMappingDialog
+          config={jigConfig}
+          onClose={() => setJigMapOpen(false)}
+          onSave={(mapping, order) => {
+            // 改映射 → 所有视图按新规则重算。
+            // 之所以能自动生效，是因为四张表都是从源数据**派生**出来的，
+            // 不是加载时算好存起来的。
+            setJigConfig(prev => ({
+              ...prev,
+              jigSizeMapping: mapping,
+              jigSizeMappingOrder: order
+            }))
+            setJigMapOpen(false)
+            toast.info('型号尺寸映射已更新，各视图已重算', { tone: 'info' })
+          }}
+        />
+      ) : null}
 
       {editor && editorMember ? (
         editor.source === 'calendar' ? (

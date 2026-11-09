@@ -120,6 +120,7 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
             <TabsContent className="jig-tab-panel" key={id} value={id}>
               <div className="jig-layout">
                 <JigQueryPanel
+                  clipboardAutoProcessEnabled={data.prefs.clipboardAutoProcessEnabled}
                   notify={notify}
                   onClear={data.clearQuery}
                   onQuery={data.runQuery}
@@ -274,6 +275,6 @@ function tabCount(tab: JigTabId, data: JigData): number {
     case 'pivot':
       return data.pivot.table.rows.length
     default:
-      return data.tables.review.rows.length
+      return data.review.table.rows.length
   }
 }

@@ -66,7 +66,12 @@ export const STORAGE_KEYS = {
    *
    * 同样不进备份 —— 换个习惯不该跟着备份文件跑到别的机器上。
    */
-  jigExportTimestamp: 'shift-schedule:local:jig-export-timestamp:v1'
+  jigExportTimestamp: 'shift-schedule:local:jig-export-timestamp:v1',
+
+  /**
+   * 粘贴时是否自动从混合文本里挑出 JIG ID（'1' = 开）。
+   */
+  jigClipboardProcess: 'shift-schedule:local:jig-clipboard-process:v1'
 } as const
 
 function getBrowserStorage(): Storage | null {
