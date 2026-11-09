@@ -18,13 +18,13 @@
         "title": "月度概览",
         "width": 1466,
         "height": 900,
-        "minWidth": 1466,
+        "minWidth": 1024,
         "minHeight": 720,
         "resizable": true,
         "center": true,
         "fullscreen": false,
         "theme": "Light",
-        "backgroundColor": "#0e2228",
+        "backgroundColor": "#ffffff",
         "dragDropEnabled": false
       }
     ],

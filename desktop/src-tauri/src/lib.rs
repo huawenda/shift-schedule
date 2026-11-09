@@ -45,15 +45,17 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
-/// 把原生标题栏染成和深青外框同色（`--chrome: #0e2228`）。
+/// 原生标题栏配色：跟着前端主题走，浅色白底深字、深色画布深色 + 浅字。
 ///
 /// 不做自绘标题栏：保留系统的缩放、贴靠、阴影、Alt+Space 菜单与高 DPI 处理，
-/// 只把那条浅灰 caption 换掉，窗口与内容的接缝就消失了。
-/// - Win11：caption / text / border 三个 DWM 属性都生效，颜色与外壳完全一致；
-/// - Win10 或旧版 Win11：caption 颜色可能被忽略，但 immersive dark mode
-///   仍会把标题栏变深灰，至少不再是一条白条。
+/// 只把 caption / text / border 三个 DWM 属性换掉。
+/// 旧版把标题栏写死成深青 `#0e2228`（`--chrome`），那是改造前深青 L 形外壳的颜色；
+/// 外壳换成 shadcn 浅色 Sidebar、又加了暗色主题之后，这道深青成了唯一跟不上主题的部分。
+/// - 颜色与 `tokens.scss` 的画布对齐：浅 `#ffffff` / 深 `#0f1318`；
+/// - Win11 三个属性都生效；Win10 或旧版 Win11 可能忽略 caption 颜色，
+///   此时 immersive dark mode 仍会让标题栏走深灰，不会留一条白条。
 #[cfg(target_os = "windows")]
-fn paint_caption(window: &tauri::WebviewWindow) {
+fn paint_caption(window: &tauri::WebviewWindow, dark: bool) {
     use std::ffi::c_void;
 
     use windows::Win32::Graphics::Dwm::{
@@ -65,27 +67,22 @@ fn paint_caption(window: &tauri::WebviewWindow) {
         return;
     };
 
-    // COLORREF = 0x00BBGGRR：#0E2228 / #E9F2F4
-    let caption = 0x0028_220E_u32;
-    let text = 0x00F4_F2E9_u32;
-    let border = caption;
-    let dark = 1_i32;
-
-    let dark_result = unsafe {
-        DwmSetWindowAttribute(
-            hwnd,
-            DWMWA_USE_IMMERSIVE_DARK_MODE,
-            &dark as *const i32 as *const c_void,
-            4,
-        )
+    // COLORREF = 0x00BBGGRR：浅 #ffffff / #1f2328，深 #0f1318 / #e9f2f4
+    let (caption, text) = if dark {
+        (0x0018_130F_u32, 0x00F4_F2E9_u32)
+    } else {
+        (0x00FF_FFFF_u32, 0x0028_231F_u32)
     };
-
-    // 系统不支持自定义 caption 颜色时，至少让标题栏走暗色。
-    if dark_result.is_err() {
-        let _ = window.set_theme(Some(tauri::Theme::Dark));
-    }
+    let border = caption;
+    let immersive = if dark { 1_i32 } else { 0_i32 };
 
     unsafe {
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_USE_IMMERSIVE_DARK_MODE,
+            &immersive as *const i32 as *const c_void,
+            4,
+        );
         let _ = DwmSetWindowAttribute(
             hwnd,
             DWMWA_CAPTION_COLOR,
@@ -104,6 +101,27 @@ fn paint_caption(window: &tauri::WebviewWindow) {
             &border as *const u32 as *const c_void,
             4,
         );
+    }
+}
+
+/// 前端主题变化时同步原生窗口：DWM 标题栏 + WebView 原生控件一起换。
+///
+/// 只改窗口装饰，不碰任何业务数据。前端在 `applyTheme()` 与 index.html 的
+/// 首帧脚本里各调一次（后者避免深色用户启动时先闪一帧浅色标题栏）；
+/// 浏览器 / 静态版里没有 `__TAURI__`，调用点会直接跳过。
+#[tauri::command]
+fn set_window_theme(app: tauri::AppHandle, dark: bool) {
+    let theme = if dark {
+        tauri::Theme::Dark
+    } else {
+        tauri::Theme::Light
+    };
+    if let Some(window) = app.get_webview_window("main") {
+        // WebView2 里的原生控件（滚动条、输入框、右键菜单）跟着一起换，
+        // 否则暗色页面上会浮着一条浅色滚动条。
+        let _ = window.set_theme(Some(theme));
+        #[cfg(target_os = "windows")]
+        paint_caption(&window, dark);
     }
 }
 
@@ -152,7 +170,9 @@ pub fn run() {
             #[cfg(target_os = "windows")]
             {
                 if let Some(window) = app.get_webview_window("main") {
-                    paint_caption(&window);
+                    // 初始按浅色画；真实主题由前端首帧脚本立刻同步过来。
+                    // 深色用户不会停在一条浅色标题栏上。
+                    paint_caption(&window, false);
                 }
             }
 
@@ -208,7 +228,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![save_backup_to, set_close_to_tray])
+        .invoke_handler(tauri::generate_handler![save_backup_to, set_close_to_tray, set_window_theme])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 窗口失败");
 }

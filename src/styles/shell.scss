@@ -7,6 +7,31 @@
  */
 
 
+/* ------------------------------------------------------------ 壳内标题栏分隔线
+ *
+ * Tauri 用的是系统原生标题栏（DWM 画），WebView 的客户区从窗口第一像素开始。
+ * 浅色主题下标题栏是白的、侧栏和顶栏也是白的，两者连成一片看不出边界；
+ * 深色主题同理。这里在客户区最顶端压一道 1px 发丝线，把上下分开。
+ *
+ * 只在壳里挂 `.is-tauri-shell`（AppShell 用 isTauriShell() 判断）——
+ * 浏览器 / 静态版没有原生标题栏，多这条线就是凭空一道横线。
+ * 用 fixed 伪元素而不是 border-top：不占布局高度、不进滚动流，
+ * 也就不会把 `h-svh` 的外壳撑出 1px 滚动条。
+ * z-index 40 盖过侧栏 / 顶栏（它们最高到 10），但低于弹层遮罩（50）——
+ * 弹层打开时这条线跟着内容一起被压暗，才是合理的层叠。
+ */
+.is-tauri-shell::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 40;
+  height: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+
 /* ------------------------------------------------------------ 画布内容 */
 
 .canvas {
@@ -33,6 +58,10 @@
  * 窗口再矮也不会丢内容：`.canvas-flow` 自己有 overflow-y: auto。
  */
 .canvas.is-pinned {
+  /* 底部内边距挪进 .canvas-flow（见下）：留白留在滚动容器**内部**，
+   * 才不会在滚动区与视口底边之间形成一条固定白边。大屏下这条白边
+   * 恒为 --pad(24px)，内容还没滚就先少一截可视高度。 */
+  padding-bottom: 0;
   overflow: hidden;
 }
 
@@ -47,12 +76,19 @@
   flex: 1 1 auto;
   overflow-y: auto;
   padding-top: var(--sp-4);
+  /* 滚到底时最后一张卡片与底边之间留一格呼吸；在滚动容器内部，不形成固定白条 */
+  padding-bottom: var(--sp-4);
   border-top: 1px solid var(--rule);
 }
 
 /* 矩阵页：矩阵要吃掉 flow 的剩余高度。
  * 它的 30 天横滚、以及行数多时的纵向滚动都在 `.matrix-scroll` 内部完成；
  * 不伸展的话它会按内容高度撑开，外层 flow 跟着滚，就成了两层竖向滚动。 */
+/* ⚠️ 矩阵页**不设例外**：三个页面滚到底时，最后一行内容与视口底边之间
+ * 必须都是 --sp-4(16px)。曾经为了「不白占 16px 高度」给矩阵页单独清零，
+ * 结果图例直接贴住底边、与另两页的下边距不一致，看起来像被裁掉了。
+ * 矩阵的 .matrix-scroll 本来就会按 flow 的高度收缩，少这 16px 并不换来
+ * 一行可见内容，却破坏了三页一致的滚动节奏。 */
 .canvas.is-pinned > .canvas-flow > .matrix {
   flex: 1 1 auto;
 }
@@ -264,16 +300,8 @@
  * 窄屏的导航由 Sidebar 自己切成的 Sheet 抽屉负责（见 AppShell）。
  */
 @media (max-width: 1023px) {
-  /* 内容滚动区一直铺到底：画布底部内边距会在 .canvas-flow 的裁剪线和视口底部之间留一条白边 */
-  .canvas.is-pinned {
-    padding-bottom: 0;
-  }
-
-  /* 滚动到底时，最后一张卡片与底边之间留一格呼吸。
-   * 这段留白在滚动容器**内部**，不会形成白条；没有它时「每日明细」的合计行会直接贴住底边。 */
-  .canvas.is-pinned > .canvas-flow {
-    padding-bottom: var(--sp-4);
-  }
+  /* 底部留白已在基础规则里全局处理（.canvas.is-pinned / .canvas-flow），
+   * 窄屏不再需要单独覆盖。 */
 
   /* 390px 下标题和分段控件经常挤不进一行 */
   .canvas-head {

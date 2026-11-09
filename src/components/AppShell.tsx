@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useIsCompact } from '@/hooks/use-compact'
 import { useSidebarWidth } from '@/hooks/useSidebarWidth'
+import { isTauriShell } from '@/platform/env'
 import { AppSidebar } from './AppSidebar'
 import { MobileNav } from './MobileNav'
 import { TopBar } from './TopBar'
@@ -61,6 +62,8 @@ export function AppShell({
 }: AppShellProps) {
   const isCompact = useIsCompact()
   const { width, dragProps, consumeDragClick } = useSidebarWidth()
+  /** 壳里的内容区顶端要画一道线，把原生标题栏与 WebView 分开（见 shell.scss） */
+  const inTauri = isTauriShell()
 
   return (
     <TooltipProvider>
@@ -68,7 +71,7 @@ export function AppShell({
           16rem 之后，所以这里传入会覆盖默认值，且不用改 CLI 生成的 sidebar.tsx。
           窄屏没有侧栏，这个变量留着也不影响布局。 */}
       <SidebarProvider
-        className="h-svh min-h-0 overflow-hidden"
+        className={`h-svh min-h-0 overflow-hidden${inTauri ? ' is-tauri-shell' : ''}`}
         style={{ '--sidebar-width': `${width}px` } as CSSProperties}
       >
         <a

@@ -52,7 +52,7 @@ export function resolveTheme(preference: ThemePreference): ResolvedTheme {
   return preference
 }
 
-/** 把解析后的主题写到根节点上，并同步 PWA 状态栏色 */
+/** 把解析后的主题写到根节点上，并同步 PWA 状态栏色与 Tauri 原生窗口 */
 export function applyTheme(theme: ResolvedTheme): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
@@ -61,6 +61,14 @@ export function applyTheme(theme: ResolvedTheme): void {
 
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
   if (meta) meta.content = THEME_COLOR[theme]
+
+  /* 壳里还要换原生标题栏（DWM caption / text / border）与 WebView2 的
+   * 原生控件主题，否则暗色页面上会浮着一条浅色标题栏和浅色滚动条。
+   * 与 windowPrefs.ts 一样只认 __TAURI__：静态版 / 浏览器直接跳过。
+   * 命令是幂等的，index.html 的首帧脚本也会先调一次（防启动闪一下浅色），
+   * 这里覆盖之后的每一次切换与「跟随系统」的实时变化。 */
+  const invoke = window.__TAURI__?.core?.invoke
+  if (invoke) void invoke('set_window_theme', { dark: theme === 'dark' }).catch(() => {})
 }
 
 /** 订阅主题变化：跟随系统时，系统切深浅色要立刻反映到界面上 */
