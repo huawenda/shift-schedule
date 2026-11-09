@@ -17,6 +17,12 @@ export interface TauriDialogApi {
     defaultPath?: string
     filters?: { name: string; extensions: string[] }[]
   }) => Promise<string | string[] | null>
+  /** 「另存为」对话框：返回用户选定的完整路径，取消则返回 null */
+  save?: (options: {
+    title?: string
+    defaultPath?: string
+    filters?: { name: string; extensions: string[] }[]
+  }) => Promise<string | null>
 }
 
 export interface TauriCoreApi {

@@ -52,7 +52,21 @@ export const STORAGE_KEYS = {
    * 车间共享盘的挂载点未必一样，跟着备份文件搬过去反而指到不存在的目录。
    * 所以单独一个键，也不进导出的 JSON。
    */
-  jigSourceDir: 'shift-schedule:local:jig-source-dir:v1'
+  jigSourceDir: 'shift-schedule:local:jig-source-dir:v1',
+
+  /**
+   * JIG 导出的默认目录（绝对路径）。
+   *
+   * 与 jigSourceDir 同一档：路径是「这台电脑」的属性。
+   */
+  jigExportDir: 'shift-schedule:local:jig-export-dir:v1',
+
+  /**
+   * 导出文件名是否加时间戳（'1' = 开）。
+   *
+   * 同样不进备份 —— 换个习惯不该跟着备份文件跑到别的机器上。
+   */
+  jigExportTimestamp: 'shift-schedule:local:jig-export-timestamp:v1'
 } as const
 
 function getBrowserStorage(): Storage | null {

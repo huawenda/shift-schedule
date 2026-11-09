@@ -196,6 +196,42 @@ fn read_clipboard_text(app: tauri::AppHandle) -> Result<String, String> {
         .map_err(|error| format!("读取剪贴板失败：{error}"))
 }
 
+/// 把二进制内容写进用户选定的路径，返回完整路径。
+///
+/// JIG 页要导出 Excel：用户在原生「另存为」对话框里挑好路径与文件名，
+/// 前端把 xlsx 的字节交给这个命令落盘。
+///
+/// 能力面与 `save_backup_to` 对称：**只写用户自己指定的那一个文件**，
+/// 不遍历目录、不写别处、不删。
+///
+/// 为什么不用 fs 插件的 `writeFile`：fs 的写权限被刻意限制在 `$DOWNLOAD` /
+/// `$DOCUMENT`，而用户可能要把报告存到 D 盘或共享盘。为一个导出文件
+/// 把 fs 放开到 `**` 不划算。
+#[tauri::command]
+fn save_jig_export(path: String, contents: Vec<u8>) -> Result<String, String> {
+    let target = std::path::PathBuf::from(&path);
+
+    // 路径必须是用户选定的完整文件路径，且父目录存在。
+    // 不接受空路径，也不接受指向目录的路径。
+    if path.is_empty() {
+        return Err("未选择保存位置".to_string());
+    }
+    if target.is_dir() {
+        return Err("这是一个目录，不是文件名".to_string());
+    }
+    let parent = match target.parent() {
+        Some(p) => p,
+        None => return Err("路径不合法".to_string()),
+    };
+    if !parent.is_dir() {
+        return Err(format!("目录不存在：{}", parent.to_string_lossy()));
+    }
+
+    std::fs::write(&target, &contents).map_err(|error| format!("写入失败：{error}"))?;
+
+    Ok(target.to_string_lossy().into_owned())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -277,7 +313,8 @@ pub fn run() {
             set_close_to_tray,
             set_window_theme,
             read_picked_file,
-            read_clipboard_text
+            read_clipboard_text,
+            save_jig_export
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 窗口失败");

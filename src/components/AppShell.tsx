@@ -7,6 +7,7 @@ import { useIsCompact } from '@/hooks/use-compact'
 import { useSidebarWidth } from '@/hooks/useSidebarWidth'
 import { isTauriShell } from '@/platform/env'
 import { JigTopBar } from '@/features/jig/components/JigTopBar'
+import type { JigTabId } from '@/features/jig/components/jigTabs'
 import type { JigData } from '@/features/jig/hooks/useJigData'
 import { AppSidebar } from './AppSidebar'
 import { MobileNav } from './MobileNav'
@@ -39,6 +40,8 @@ interface AppShellProps {
    * 只有 JIG 页的顶栏用得到，但它是外壳的一部分，所以从 App 一路传下来。
    */
   jig: JigData
+  /** JIG 页当前子页 —— 导出「当前视图」要知道导哪一页的表 */
+  jigTab: JigTabId
   children: ReactNode
 }
 
@@ -71,6 +74,7 @@ export function AppShell({
   theme,
   onToggleTheme,
   jig,
+  jigTab,
   children
 }: AppShellProps) {
   const isCompact = useIsCompact()
@@ -121,7 +125,9 @@ export function AppShell({
           {route === 'jig' ? (
             <JigTopBar
               busy={jig.busy}
+              canExport={jig.canExport}
               canPick={jig.canPick}
+              onExport={() => void jig.exportCurrent(jigTab)}
               onPick={() => void jig.pickSource()}
               onToggleTheme={onToggleTheme}
               sourceName={jig.sourceName}

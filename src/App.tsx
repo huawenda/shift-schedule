@@ -372,6 +372,7 @@ export function App() {
         onToggleTheme={theme.toggle}
         theme={theme.resolved}
         jig={jigData}
+        jigTab={location.jigTab}
       >
         {route === 'settings' ? (
           <SettingsScreen

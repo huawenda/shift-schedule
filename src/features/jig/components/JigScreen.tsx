@@ -1,14 +1,16 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import type { JigConfig } from '../core/config'
-import { rulesFromConfig, validateSizeMatch } from '../core/validate'
+import type { ReviewScope } from '../core/review'
+import { ALL_PN } from '../core/reviewView'
 import type { JigData } from '../hooks/useJigData'
 import { JigDrillBar } from './JigDrillBar'
 import { JigPivotToolbar } from './JigPivotToolbar'
 import { JigQueryPanel } from './JigQueryPanel'
+import { JigReviewToolbar } from './JigReviewToolbar'
 import { JigStageRail } from './JigStageRail'
 import { JigTable } from './JigTable'
 import {
@@ -60,30 +62,12 @@ interface JigScreenProps {
  * `.jig-tab-panel` 每一层都要有确定高度，缺一层表格就长出窗口。
  */
 export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenProps) {
-  /** 尺寸校验规则：由配置派生一次，四张表共用 */
-  const rules = useMemo(() => rulesFromConfig(config), [config])
-
   /**
-   * 查询结果里哪些行尺寸不匹配。
-   *
-   * 标红是这套数据的核心信息：P/N 的尺寸码与「对应尺寸」对不上，
-   * 意味着这张板做不了这个规格。
+   * 标红标记由 useJigData 算 —— 显示与导出必须用**同一份**标记，
+   * 否则「屏幕上标红的行」与「导出文件里标红的行」会不一致。
    */
-  const detailFlags = useMemo(() => {
-    if (!config.sizeValidationEnabled) return []
-    return data.tables.detail.rows.map(row => {
-      const size = row['对应尺寸'] ?? ''
-      return !validateSizeMatch(row['P/N'] ?? '', size, rules)
-    })
-  }, [config.sizeValidationEnabled, data.tables.detail.rows, rules])
-
-  const reviewFlags = useMemo(() => {
-    if (!config.sizeValidationEnabled) return []
-    return data.tables.review.rows.map(row => {
-      const size = row['对应尺寸'] ?? ''
-      return !validateSizeMatch(row['P/N'] ?? '', size, rules)
-    })
-  }, [config.sizeValidationEnabled, data.tables.review.rows, rules])
+  const detailFlags = data.detailFlags
+  const drillFlags = data.drillFlags
 
   /**
    * 切页时清掉下钻。
@@ -101,20 +85,6 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
 
   /** 某个页签此刻是否显示下钻明细 */
   const drillOn = (id: JigTabId) => data.drill !== null && data.drill.from === id
-
-  /**
-   * 下钻明细的尺寸不匹配标记。
-   *
-   * **默认标出**，不跟随查询结果页的开关 —— 这一页就是用来核对下钻结果的，
-   * 用户没勾选时看到的是一片「全部匹配」，容易误判。
-   */
-  const drillFlags = useMemo(() => {
-    if (!config.sizeValidationEnabled) return []
-    return data.drillTable.rows.map(row => {
-      const size = row['对应尺寸'] ?? ''
-      return !validateSizeMatch(row['P/N'] ?? '', size, rules)
-    })
-  }, [config.sizeValidationEnabled, data.drillTable.rows, rules])
 
   const drillMismatchCount = drillFlags.filter(Boolean).length
 
@@ -189,6 +159,15 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
                           pnOptions={data.pivot.pnOptions}
                           scope={data.pivotScope}
                         />
+                      ) : id === 'review' ? (
+                        <JigReviewToolbar
+                          counts={data.review.counts}
+                          onPnChange={data.setReviewPn}
+                          onScopeChange={data.setReviewScope}
+                          pn={data.reviewPn}
+                          pnOptions={data.reviewPnOptions}
+                          scope={data.reviewScope}
+                        />
                       ) : (
                         <div className="jig-toolbar">
                           <span className="jig-toolbar-label">{viewNote(id, data)}</span>
@@ -236,13 +215,13 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
                     />
                   ) : (
                     <JigTable
-                      emptyHint="先在顶栏选择 MES 导出的 Excel 文件。"
-                      emptyTitle="尚未载入数据"
+                      emptyHint={reviewEmptyHint(data.reviewScope, data.reviewPn)}
+                      emptyTitle={reviewEmptyTitle(data.reviewScope, data.reviewPn)}
                       keywordTotal={config.keywordTotal}
-                      mismatchFlags={reviewFlags}
+                      mismatchFlags={data.review.flags}
                       showRowNumbers
                       sizeColumn="对应尺寸"
-                      table={data.tables.review}
+                      table={data.review.table}
                     />
                   )}
                 </div>
@@ -259,6 +238,30 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
 function viewNote(tab: JigTabId, data: JigData): string {
   if (!data.ready) return '尚未载入源数据'
   return `${tabCount(tab, data)} 行`
+}
+
+/**
+ * 审查页的空态文案。
+ *
+ * 分档以后「空」有多种原因 —— 只说「没有符合条件的数据」，用户不知道是
+ * 数据真的没问题、还是档位选窄了。所以每一档都要说清「这一档为什么可能为空」
+ * 以及「怎么放宽」。
+ */
+function reviewEmptyTitle(scope: ReviewScope, pn: string): string {
+  if (!pn || pn === ALL_PN) {
+    return scope === 'all' ? '尚未载入数据' : '当前范围内没有尺寸不匹配的记录'
+  }
+  return scope === 'all' ? '没有符合条件的数据' : '当前范围内没有尺寸不匹配的记录'
+}
+
+function reviewEmptyHint(scope: ReviewScope, pn: string): string {
+  if (scope === 'mismatch') {
+    return '这一档只保留尺寸对不上的行；切到「所有对象」可看到该范围内的全部记录。'
+  }
+  if (pn && pn !== ALL_PN) {
+    return `换一个 P/N，或把 P/N 切回「全部」。`
+  }
+  return '先在顶栏选择 MES 导出的 Excel 文件。'
 }
 
 /** 各页签的条目数（页签上的徽标） */

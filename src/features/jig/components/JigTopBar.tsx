@@ -15,6 +15,10 @@ interface JigTopBarProps {
   canPick: boolean
   /** 打开文件选择器 */
   onPick: () => void
+  /** 能否导出（静态版不行） */
+  canExport: boolean
+  /** 导出当前视图 */
+  onExport: () => void
   /** 当前生效的主题；按钮图标与 aria-label 都跟着它变 */
   theme: 'light' | 'dark'
   onToggleTheme: () => void
@@ -33,6 +37,8 @@ export function JigTopBar({
   busy,
   canPick,
   onPick,
+  canExport,
+  onExport,
   theme,
   onToggleTheme
 }: JigTopBarProps) {
@@ -67,7 +73,13 @@ export function JigTopBar({
         >
           浏览…
         </Button>
-        <Button disabled size="sm" type="button" variant="outline">
+        <Button
+          disabled={!canExport}
+          onClick={onExport}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
           <Download data-icon="inline-start" />
           导出
         </Button>

@@ -13,7 +13,8 @@ import {
   type DrillFrom,
   type DrillState
 } from '../core/drill'
-import { readExcel, validateSource, type SourceData } from '../core/excel'
+import { readExcel, validateSource, writeExcel, type SourceData } from '../core/excel'
+import { pickExportTarget } from '../core/export'
 import { generatePivot, type StageCategory } from '../core/pivot'
 import {
   computePivotScope,
@@ -22,13 +23,28 @@ import {
   type PivotScopeResult
 } from '../core/pivotScope'
 import { processSourceData, queryData } from '../core/query'
+import type { ReviewScope } from '../core/review'
+import {
+  ALL_PN,
+  computeReviewView,
+  filterReviewByPn,
+  reviewPnOptions,
+  type ReviewView
+} from '../core/reviewView'
 import type { Row, Table } from '../core/table'
+import { rulesFromConfig, validateSizeMatch } from '../core/validate'
 import {
   canPickJigFile,
   dirname,
   pickJigExcelFile,
   readPickedFile
 } from '@/platform/jigFile'
+import {
+  canExportJig,
+  exportJigFile,
+  safeFileName,
+  withTimestamp
+} from '@/platform/jigExport'
 import { readRaw, writeRaw, STORAGE_KEYS } from '@/platform/storage'
 
 /**
@@ -93,6 +109,26 @@ export interface JigData {
   drill: DrillState | null
   /** 下钻的明细表 */
   drillTable: Table
+  /** 审查页的 P/N 过滤 */
+  reviewPn: string
+  /** 改审查页的 P/N 过滤 */
+  setReviewPn: (pn: string) => void
+  /** 审查页的视野档位 */
+  reviewScope: ReviewScope
+  /** 改审查页的视野档位 */
+  setReviewScope: (scope: ReviewScope) => void
+  /** 审查页的当前视图（表 + 标红标记 + 两档计数） */
+  review: ReviewView
+  /** 审查页的 P/N 候选 */
+  reviewPnOptions: string[]
+  /** 查询结果页的标红标记（与 table.rows 同序） */
+  detailFlags: boolean[]
+  /** 下钻明细的标红标记（与 table.rows 同序） */
+  drillFlags: boolean[]
+  /** 能否导出（静态版不行） */
+  canExport: boolean
+  /** 导出当前视图 */
+  exportCurrent: (tab: 'detail' | 'queryPivot' | 'pivot' | 'review') => Promise<void>
   /**
    * 点透视表的计数格进入下钻。
    *
@@ -121,6 +157,9 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const [pivotScope, setPivotScope] = useState<PivotScope>('all')
   const [pivotAvail, setPivotAvail] = useState<StageCategory>('all')
   const [drill, setDrill] = useState<DrillState | null>(null)
+  /** 审查页的 P/N 过滤与视野档位 */
+  const [reviewPn, setReviewPn] = useState(ALL_PN)
+  const [reviewScope, setReviewScope] = useState<ReviewScope>('all')
   /**
    * 本次查询命中的源行（快照）。
    *
@@ -167,11 +206,78 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     return () => window.removeEventListener('keydown', onKey)
   }, [drill])
 
+  /**
+   * 审查页的当前视图。
+   *
+   * 口径全在 `computeReviewView` 里：先按 P/N 过滤，再分类，再按档筛行。
+   *
+   * **审查页不过「标出尺寸不匹配」开关** —— 它的存在意义就是挑出对不上的
+   * JIG，关掉标红这页就没有内容了。
+   */
+  const review = useMemo(
+    () =>
+      computeReviewView(
+        filterReviewByPn(tables.review, reviewPn),
+        reviewScope,
+        rulesFromConfig(config)
+      ),
+    [config, reviewPn, reviewScope, tables.review]
+  )
+
+  /**
+   * 查询结果页的标红标记。
+   *
+   * **跟随「标出尺寸不匹配」开关**（与审查页不同）。
+   */
+  const detailFlags = useMemo(() => {
+    if (!config.sizeValidationEnabled) return []
+    const rules = rulesFromConfig(config)
+    return tables.detail.rows.map(row => {
+      const size = row['对应尺寸'] ?? ''
+      return !validateSizeMatch(row['P/N'] ?? '', size, rules)
+    })
+  }, [config, tables.detail.rows])
+
+  /**
+   * 下钻明细的标红标记。
+   *
+   * **默认标出**，不跟随查询结果页的开关 —— 这一页就是用来核对下钻结果的，
+   * 用户没勾选时看到的是一片「全部匹配」，容易误判。
+   */
+  const drillFlags = useMemo(() => {
+    if (!config.sizeValidationEnabled) return []
+    const rules = rulesFromConfig(config)
+    return drillTable.rows.map(row => {
+      const size = row['对应尺寸'] ?? ''
+      return !validateSizeMatch(row['P/N'] ?? '', size, rules)
+    })
+  }, [config, drillTable.rows])
+
+  /** 审查页的 P/N 候选：取自全部审查行，不受当前过滤影响 */
+  const reviewPnList = useMemo(
+    () => reviewPnOptions(tables.review),
+    [tables.review]
+  )
+
   /** 上次用过的源文件目录 —— 本机偏好，不进备份 */
   const sourceDir = useMemo(() => {
     const raw = readRaw(STORAGE_KEYS.jigSourceDir)
     const trimmed = raw?.trim()
     return trimmed ? trimmed : null
+  }, [])
+
+  /** 上次用过的导出目录 —— 本机偏好，不进备份 */
+  const exportDir = useMemo(() => {
+    const raw = readRaw(STORAGE_KEYS.jigExportDir)
+    const trimmed = raw?.trim()
+    return trimmed ? trimmed : null
+  }, [])
+
+  /** 导出文件名是否加时间戳 —— 本机偏好，不进备份 */
+  const exportTimestampEnabled = useMemo(() => {
+    const raw = readRaw(STORAGE_KEYS.jigExportTimestamp)
+    // 默认关闭 —— 与原项目一致（默认导出「审查数据.xlsx」这种固定名）
+    return raw === '1'
   }, [])
 
   const pickSource = useCallback(async () => {
@@ -294,6 +400,75 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
 
   const exitDrill = useCallback(() => setDrill(null), [])
 
+  /**
+   * 导出当前视图。
+   *
+   * 导出跟着「看到的」走 —— 下钻时导出的是明细，审查页切到「尺寸不匹配」
+   * 后导出拿到的就是一张纯异常清单。
+   */
+  const exportCurrent = useCallback(
+    async (tab: 'detail' | 'queryPivot' | 'pivot' | 'review') => {
+      if (!canExportJig()) {
+        notify('导出需要桌面版', 'warning')
+        return
+      }
+
+      const target = pickExportTarget({
+        tab,
+        detail: tables.detail,
+        detailFlags,
+        queryPivot: tables.queryPivot,
+        pivot: pivot.table,
+        review: review.table,
+        reviewFlags: review.flags,
+        drill,
+        drillTable,
+        drillFlags,
+        config
+      })
+
+      if (!target) {
+        notify('当前页面没有可导出的数据', 'error')
+        return
+      }
+
+      // 文件名不能含路径分隔符等非法字符（P/N、工序名里可能出现）
+      const safeName = safeFileName(target.name)
+      const fileName = exportTimestampEnabled
+        ? withTimestamp(`${safeName}.xlsx`)
+        : `${safeName}.xlsx`
+
+      try {
+        // writeExcel 是异步的 —— xlsx 库按需加载（见 core/excel.ts 文件头）
+        const buffer = await writeExcel(target.table, target.red)
+        const bytes = new Uint8Array(buffer)
+        const path = await exportJigFile(fileName, bytes, exportDir)
+        if (!path) return // 用户取消
+        notify(`已导出 ${fileName}`, 'info')
+      } catch (error) {
+        notify(
+          `导出失败：${error instanceof Error ? error.message : String(error)}`,
+          'error'
+        )
+      }
+    },
+    [
+      config,
+      detailFlags,
+      drill,
+      drillFlags,
+      drillTable,
+      exportDir,
+      exportTimestampEnabled,
+      notify,
+      pivot.table,
+      review.flags,
+      review.table,
+      tables.detail,
+      tables.queryPivot
+    ]
+  )
+
   return {
     ready: source !== null,
     sourceName: source?.fileName ?? '',
@@ -308,11 +483,21 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     drillTable,
     drillTo,
     exitDrill,
+    reviewPn,
+    setReviewPn,
+    reviewScope,
+    setReviewScope,
+    review,
+    reviewPnOptions: reviewPnList,
+    detailFlags,
+    drillFlags,
     busy,
     canPick: canPickJigFile(),
     pickSource,
     runQuery,
-    clearQuery
+    clearQuery,
+    canExport: canExportJig(),
+    exportCurrent
   }
 }
 
