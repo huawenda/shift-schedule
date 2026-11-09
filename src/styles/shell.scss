@@ -188,6 +188,10 @@
 
 .segmented {
   display: inline-flex;
+  /* 选中色与外框之间留 1px 的 surface 底色缝：黑色不再直接顶到 1px 边框上。
+   * 用父级 padding 而不是给 .is-on 画 inset 描边 —— 后者是矩形，
+   * 四个圆角处会被下面的 overflow:hidden 裁断，缝在角上不连续。 */
+  padding: 1px;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
@@ -195,13 +199,28 @@
 }
 
 .segmented-item {
-  height: 28px;
+  /* 高度减 2 抵消父级上下各 1px 的 padding，控件总高仍是 30px ——
+   * 加缝不能让顶栏行高、弹层四张等高卡片跟着长高。 */
+  height: 26px;
   padding: 0 var(--sp-3);
   border: 0;
   background: transparent;
   color: var(--muted);
   font-size: var(--fs-small);
   font-weight: 500;
+}
+
+/* 内缩之后，首尾项要自己带圆角（比外框小 1px 才同心）。
+ * 只给首尾、且只给外侧两角：若所有项都加圆角，相邻两项之间会露出
+ * 一个沙漏形的 surface 缺口，中间的选中块也会变成胶囊。 */
+.segmented-item:first-child {
+  border-top-left-radius: calc(var(--radius-control) - 1px);
+  border-bottom-left-radius: calc(var(--radius-control) - 1px);
+}
+
+.segmented-item:last-child {
+  border-top-right-radius: calc(var(--radius-control) - 1px);
+  border-bottom-right-radius: calc(var(--radius-control) - 1px);
 }
 
 .segmented-item:hover {
@@ -292,7 +311,8 @@
     line-height: 1.5;
   }
 
+  /* 触屏上高一档（原 32），同样减 2 抵消父级 padding，总高保持 34px */
   .segmented-item {
-    height: 32px;
+    height: 30px;
   }
 }
