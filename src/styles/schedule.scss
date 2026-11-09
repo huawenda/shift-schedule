@@ -383,6 +383,10 @@
    * 见 TeamMatrix 里的 wheel 监听。原生滚动条在 Windows 上又粗又有箭头，
    * 而且横向那条永远压在最后一行格子下面，比留着更碍事。 */
   scrollbar-width: none;
+  /* 触屏：滚到两端不回弹，也不把滚动链传给外层画布。
+   * 移动端浏览器默认会把内容拉出边界再弹回来（iOS rubber-band /
+   * Android stretch glow），横滑 31 天到头时尤其明显；`none` 同时禁掉两者。 */
+  overscroll-behavior: none;
 }
 
 .matrix-scroll::-webkit-scrollbar {
@@ -1444,25 +1448,26 @@
     font-size: var(--fs-label);
   }
 
-  .matrix-scroll {
-    -webkit-overflow-scrolling: touch;
-  }
+  /* 不再写 `-webkit-overflow-scrolling: touch`：iOS 13+ 默认就是惯性滚动，
+   * 这条旧声明反而会启用旧的 rubber-band 边界回弹，与基础规则里的
+   * `overscroll-behavior: none` 打架。 */
 
   .matrix-legend {
     gap: var(--sp-3);
   }
 
   /* 弹层内容跟着 36px 的控件走，但**仍然锁高** —— 否则切 tab 时抽屉伸缩、
-   * 文字重新栅格化。两个值随控件高度重算：
-   *   卡片 89 = 上下 padding 24 + 边框 2 + 标题行 27 + 内容 36（桌面 83 的移动版）；
-   *   页高 318 = 选项区 116（padding 12 + 42×2 + gap 6 + 14）+ 两张卡 202（89 + 12，×2）。
-   * ⚠️ 改选项行高、卡片高度或卡片数量时，这两个值必须同步重算，差 1px 就会抖。 */
+   * 文字重新栅格化。卡片 89 = 上下 padding 24 + 边框 2 + 标题行 27 + 内容 36。
+   * 页高按**实机两页总高反推**，不再按控件尺寸手算（原先按选项区 116 算成 318，
+   * 实测该断点选项区是 126，班次页比待办页高 10px，切 tab 会跳一下）。
+   * 328 让两页总高都停在 498.7px。⚠️ 改选项行高、卡片高度或按钮条排布时，
+   * 必须重新实测，差 1px 就会抖。 */
   .dialog-section {
     height: 89px;
   }
 
   .dialog-day {
-    --day-content-height: 318px;
+    --day-content-height: 328px;
   }
 
   /* 待办列表吃满页高、只在内部滚（桌面规则已给 flex / overflow，
@@ -1554,10 +1559,15 @@
     margin-right: 0;
   }
 
-  /* 弹层容器已换成 Radix Dialog（居中、自带遮罩与滚动），这里只保留日历弹层的宽度兜底 */
+  /* 弹层容器已换成 Radix Dialog（居中、自带遮罩与滚动），这里只保留日历弹层的宽度兜底。
+   * ⚠️ 这个断点底部按钮条从横排变竖排：班次页「保存 / 取消 / 恢复默认」三颗 = 145px，
+   * 待办页只有「完成」= 65px，天生差 80px。把这段差额补给待办页的内容区
+   * （空态盒 / 待办列表本来就 flex 拉伸填满，不浪费），两页总高才都停在 560.7px。
+   * 398 = 328 + 80 - 10（班次页选项区在这个断点又矮了 10px）。改按钮条必须重测。 */
   .dialog-day {
     width: 100%;
     max-height: 88dvh;
+    --day-content-height: 398px;
   }
 
   .dialog-head {

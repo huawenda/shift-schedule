@@ -20,20 +20,36 @@
  * 设置页原本只有黑字标题 + 灰说明，右半边是一整块面板，左栏像没设计过的附注。
  */
 .settings-label h2 {
+  position: relative;
+  /* 竖条 3px + 与文字的 8px 间距，原先靠 ::before 的 margin-right 占位 */
+  padding-left: 11px;
   margin-bottom: 6px;
   font-size: var(--fs-subhead);
   font-weight: 600;
 }
 
+/* 竖条绝对定位 + 垂直居中于标题行盒，不再用 vertical-align 的基线偏移。
+ * 原先写的是 inline-block + vertical-align: -2px：那是按基线手动顶的魔法数字，
+ * 只在某个字号/字体下碰巧对齐。这里 h2 用的是 --fs-subhead（比统计卡的
+ * --fs-body 大一档），汉字字形几乎填满行盒，竖条就被压低了约 1.5px，
+ * 看着像「没和文字对齐」。改成绝对定位 + 垂直居中后与字号无关。
+ *
+ * top 再减 1px 是补 CJK 字形的视差：16px 字 / 24px 行盒里，汉字笔画的
+ * 视觉中心比行盒中心高约 1px（实机像素量过），纯 50% 居中会让竖条偏低 1px。
+ * 高度取 14px 与汉字笔画的视觉高度一致，上下边界才不会一长一短。 */
 .settings-label h2::before {
   content: "";
-  display: inline-block;
+  position: absolute;
+  top: calc(50% - 1px);
+  left: 0;
   width: 3px;
-  height: 13px;
-  margin-right: 8px;
+  height: 14px;
   border-radius: 2px;
-  background: var(--ui-primary);
-  vertical-align: -2px;
+  /* 与概览页统计卡 / 待办卡的抬头竖条同一支 --accent（浅 #1b6c80 / 深 #58b8cf）。
+   * 之前用 --ui-primary（近黑）是把它当「标题装饰」，结果同一套抬头语言里
+   * 设置页这根看起来像另一套东西。 */
+  background: var(--accent);
+  transform: translateY(-50%);
 }
 
 .settings-label p {
