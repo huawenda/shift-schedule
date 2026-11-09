@@ -175,7 +175,7 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 
 | 区域 | 尺寸 | 内容 |
 |---|---|---|
-| 侧栏 | 256px（拖右缘 200–320px；折叠 48px） | 品牌标识 + **全员矩阵**／**月度概览**／**设置** |
+| 侧栏 | 256px（拖右缘 200–320px；折叠 48px） | 品牌标识 + **全员矩阵**／**月度概览**／**设置**；桌面版另有「车间数据」组下的 **JIG 数据** |
 | 底部标签栏 | 56px + 安全区（窗口 <1024px 时替代侧栏） | **全员矩阵**／**月度概览**／**设置**，图标 + 文字，选中态高亮 |
 | 顶栏 | 56px | 折叠按钮 + `‹` 月份标题 `›`「回到本期」，右侧：导出备份 · 导入备份 |
 | 底部提示 | — | 操作反馈统一弹在窗口底部居中，2.6–8s 后自动消失；悬停暂停，常驻提示可手动关闭 |
@@ -397,7 +397,7 @@ src/
 │   └── useToasts.ts         底部提示的 sonner 适配层（API 与旧实现一致）
 ├── components/
 │   ├── AppShell.tsx         SidebarProvider + SidebarInset + 跳转链接
-│   ├── AppSidebar.tsx       侧栏导航（品牌 + 三个视图）
+│   ├── AppSidebar.tsx       侧栏导航（品牌 + 视图组 + 车间数据组 + 设置）
 │   ├── TopBar.tsx           顶栏（折叠按钮 + 月份导航 + 导出导入）
 │   ├── SummaryBar.tsx       3 格概览条（白特/夜特并入白班/夜班）
 │   ├── TeamMatrix.tsx       全员矩阵（表头 + 逐行 grid）
@@ -473,6 +473,8 @@ fixtures/
 **暗色主题已实现**：`<html data-theme="dark">` 覆盖项目令牌（`src/styles/tokens.scss`），
 `.dark` 类覆盖 shadcn 的 `--ui-*`（`src/index.css`），由 `src/platform/theme.ts` 驱动；
 偏好三态（跟随系统 / 浅色 / 深色）存在本机 localStorage，默认浅色。
+暗色下画布与侧栏同底 `#0b0e12`（`--ui-background`），卡片靠色调台阶浮起；
+改动这个令牌会连带 `bg-background` 的其它使用者，详见 `DESIGN.md`。
 
 **夜班是六色里唯一的反相块**（深蓝底 + 近白字）：浅蓝灰的夜班和事假几乎同色，
 矩阵里要回头看图例才分得清；反相之后一眼可辨。
