@@ -96,11 +96,16 @@ function buildHash(location: AppLocation): string {
   return `#${prefix}/${location.route}`
 }
 
-/** 任务栏 / 原生标题栏：品牌 + 当前视图，避免和页面 H1 重复成两行同名 */
+/**
+ * 任务栏 / 原生标题栏：**只显示当前视图名**，不带软件名前缀。
+ * 与 index.html 的 `<title>`、tauri.conf.json 的窗口初始 title 保持同一套值，
+ * 否则窗口创建那一帧是「月度概览」、React 挂载后又跳成「昼夜 · 月度概览」。
+ * 原生标题栏左侧已有应用图标，任务栏悬停也显示产品名，再拼一遍「昼夜 ·」是重复。
+ */
 const ROUTE_TITLE: Record<Route, string> = {
-  overview: '昼夜 · 月度概览',
-  matrix: '昼夜 · 全员矩阵',
-  settings: '昼夜 · 设置'
+  overview: '月度概览',
+  matrix: '全员矩阵',
+  settings: '设置'
 }
 
 export function App() {
