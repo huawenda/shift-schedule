@@ -69,9 +69,16 @@
   pointer-events: none;
 }
 
+/*
+ * 单元格 padding 的上下值跟着「表格行高」偏好走。
+ *
+ * 行高是本机偏好（不进备份），所以走 CSS 变量而不是 props ——
+ * 改一次根节点的变量，整张表跟着变，不必把偏好层层传下去。
+ * 默认 7px 对应约 30px 的行高（与原项目的默认值一致）。
+ */
 .jig-table td,
 .jig-table th {
-  padding: 7px 10px;
+  padding: var(--jig-row-pad, 7px) 10px;
   text-align: left;
   white-space: nowrap;
 }

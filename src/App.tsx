@@ -13,13 +13,18 @@ import { ScrollOverlay } from './components/ScrollOverlay'
 import { ShiftEditor } from './components/ShiftEditor'
 import type { MatrixMode } from './components/TeamMatrix'
 import { Toaster } from './components/ui/sonner'
-import { createDefaultJigConfig } from './features/jig/core/config'
+import {
+  createDefaultJigConfig,
+  mergeJigConfig,
+  type JigConfig
+} from './features/jig/core/config'
 import { JigScreen } from './features/jig/components/JigScreen'
 import { JigSettingsDialog } from './features/jig/components/JigSettingsDialog'
 import { JigSizeMappingDialog } from './features/jig/components/JigSizeMappingDialog'
 import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
 import { useJigData } from './features/jig/hooks/useJigData'
 import { pickJigDirectory } from './platform/jigFile'
+import { readRaw, writeRaw, STORAGE_KEYS } from './platform/storage'
 import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
@@ -74,10 +79,32 @@ export function App() {
    * JIG 的业务配置与数据状态也提到 App —— 顶栏（源文件名 + 浏览按钮）在
    * 外壳层，页面在内容层，两边要用同一份状态。
    *
-   * 配置目前是默认值：型号→尺寸映射、11 道工序顺序这些要进备份文件，
-   * P8 接上；在此之前与原项目出厂配置一致。
+   * **配置从 localStorage 读初值**：业务配置要进备份文件（换机器要带走），
+   * 但「这台机器上关掉再打开还在」也重要 —— 所以两边都存，备份文件是权威来源，
+   * 导入备份会覆盖 localStorage 这份。
    */
-  const [jigConfig, setJigConfig] = useState(createDefaultJigConfig)
+  const [jigConfig, setJigConfigState] = useState(() => {
+    const raw = readRaw(STORAGE_KEYS.jigConfig)
+    if (!raw) return createDefaultJigConfig()
+    try {
+      return mergeJigConfig(JSON.parse(raw) as Record<string, unknown>)
+    } catch {
+      // 存坏了就用默认值 —— 配置坏了不该让整个应用打不开
+      return createDefaultJigConfig()
+    }
+  })
+
+  /** 改 JIG 配置：更新 state 并写进 localStorage */
+  const setJigConfig = useCallback(
+    (next: JigConfig | ((prev: JigConfig) => JigConfig)) => {
+      setJigConfigState(prev => {
+        const value = typeof next === 'function' ? next(prev) : next
+        writeRaw(STORAGE_KEYS.jigConfig, JSON.stringify(value))
+        return value
+      })
+    },
+    []
+  )
   /** 型号尺寸映射面板是否打开 */
   const [jigMapOpen, setJigMapOpen] = useState(false)
   /** JIG 设置面板是否打开 */
@@ -106,7 +133,10 @@ export function App() {
   const toast = useToasts()
   /** 主题：跟随系统 / 浅色 / 深色。解析结果同时喂给外壳与 Toast 容器。 */
   const theme = useTheme()
-  const { backup, restore } = useBackupFlow(api, toast)
+  const { backup, restore } = useBackupFlow(api, toast, {
+    config: jigConfig,
+    onRestore: next => setJigConfig(next)
+  })
   /** 存储不可写时那条常驻提示的 id，可写后撤掉 */
   const persistenceToast = useRef<number | null>(null)
 

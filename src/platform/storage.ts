@@ -71,7 +71,18 @@ export const STORAGE_KEYS = {
   /**
    * 粘贴时是否自动从混合文本里挑出 JIG ID（'1' = 开）。
    */
-  jigClipboardProcess: 'shift-schedule:local:jig-clipboard-process:v1'
+  jigClipboardProcess: 'shift-schedule:local:jig-clipboard-process:v1',
+
+  /**
+   * JIG 的业务配置（型号→尺寸映射、工序顺序等）。
+   *
+   * **业务配置却存在 localStorage 里**，看起来矛盾 —— 原因是它**同时**进备份文件
+   * （换机器要带走），而 localStorage 这份是为了「这台机器上关掉再打开还在」。
+   * 备份文件是权威来源：导入备份会覆盖这里。
+   *
+   * 键名里的 `v1` 与备份文件的 `version` 不是同一个编号体系。
+   */
+  jigConfig: 'shift-schedule:local:jig-config:v1'
 } as const
 
 function getBrowserStorage(): Storage | null {

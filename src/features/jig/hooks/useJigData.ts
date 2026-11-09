@@ -342,6 +342,21 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const exportTimestampEnabled = prefs.exportTimestampEnabled
 
   /**
+   * 表格行高 → CSS 变量。
+   *
+   * 走 CSS 变量而不是 props：行高是**显示**层面的偏好，表格有四张，
+   * 层层传 props 既啰嗦又容易漏。改一次根节点的变量，整张表跟着变。
+   *
+   * 行高（px）换算成单元格上下 padding：内容高约 16px，所以
+   * padding = (rowHeight - 16) / 2。
+   */
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const pad = Math.max(2, Math.round((prefs.rowHeight - 16) / 2))
+    document.documentElement.style.setProperty('--jig-row-pad', `${pad}px`)
+  }, [prefs.rowHeight])
+
+  /**
    * 保存本机偏好：写进 localStorage 并更新 state。
    *
    * **不进备份文件** —— 换个机器就该按新机器的情况重设，

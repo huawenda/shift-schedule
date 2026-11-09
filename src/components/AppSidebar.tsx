@@ -119,7 +119,7 @@ export function AppSidebar({
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>视图</SidebarGroupLabel>
+          <SidebarGroupLabel>排班</SidebarGroupLabel>
           <SidebarGroupContent>
             {/*
               gap-1：shadcn 默认是 gap-0 —— 选中项与相邻的 hover 项都是整块圆角底，
@@ -150,7 +150,7 @@ export function AppSidebar({
 
         {showJig ? (
           <SidebarGroup>
-            <SidebarGroupLabel>车间数据</SidebarGroupLabel>
+            <SidebarGroupLabel>业务</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-1">
                 <SidebarMenuItem>

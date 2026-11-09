@@ -94,7 +94,7 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
         <div>
           <h1 className="canvas-title">JIG 数据</h1>
           <p className="canvas-sub">
-            按 Jig ID 查 MES 导出的 Excel，按 P/N · CST · 工序透视汇总，并核对型号与尺寸是否匹配。
+            JIG 数据查找与整理
           </p>
         </div>
       </div>

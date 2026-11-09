@@ -120,9 +120,9 @@ try {
   )
   check('window.__TAURI__.core.invoke 可用', injected === true)
 
-  /* ---------- 1. 跳���首次向导 ---------- */
+  /* ---------- 1. 跳过首次向导 ---------- */
   // 全新用户数据目录里没有花名册，App 会停在三步向导上，JIG 页面根本进不去。
-  // 这里塞一份最小的花名册（一��成员 + 本人），把向导跳过去。
+  // 这里塞一份最小的花名册（一个成员 + 本人），把向导跳过去。
   console.log('\n【1 跳过错导】')
   await cdp.evaluate(`(() => {
     const roster = {
@@ -253,7 +253,7 @@ try {
   )
 
   /* ---------- 8. 查询链路 ---------- */
-  // 输�� ID → 查 → 明细表出结果。这一条走的是 useJigData.runQuery，
+  // 输入 ID → 查 → 明细表出结果。这一条走的是 useJigData.runQuery，
   // 命中判定用的是「P/N != 【未找到】」的旧口径。
   console.log('\n【8 查询链路】')
   await cdp.evaluate(`location.hash = '#/jig/detail'`)

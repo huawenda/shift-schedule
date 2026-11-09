@@ -26,7 +26,7 @@ const customPattern = {
 
 describe('backup 当前格式', () => {
   it('导出再导入完全还原', () => {
-    const text = JSON.stringify(createBackup(roster))
+    const text = JSON.stringify(createBackup(roster, null))
     const result = parseBackup(text)
 
     expect(result.memberCount).toBe(2)
@@ -36,9 +36,9 @@ describe('backup 当前格式', () => {
     expect(result.droppedMembers).toEqual([])
   })
 
-  it('版本号是 5', () => {
-    expect(createBackup(roster).version).toBe(5)
-    expect(BACKUP_VERSION).toBe(5)
+  it('版本号是 6', () => {
+    expect(createBackup(roster, null).version).toBe(6)
+    expect(BACKUP_VERSION).toBe(6)
   })
 
   it('岗位字段随备份往返：有岗位保留，无岗位缺省', () => {
@@ -49,7 +49,7 @@ describe('backup 当前格式', () => {
         { id: 'm2', name: '李静', patternId: '4J' }
       ]
     }
-    const text = JSON.stringify(createBackup(withPosition))
+    const text = JSON.stringify(createBackup(withPosition, null))
     const result = parseBackup(text)
     expect(result.roster.members[0].position).toBe('班长')
     expect(result.roster.members[1].position).toBeUndefined()
@@ -62,7 +62,7 @@ describe('backup 当前格式', () => {
       patterns: [customPattern]
     }
 
-    const text = JSON.stringify(createBackup(withPattern))
+    const text = JSON.stringify(createBackup(withPattern, null))
     const result = parseBackup(text)
 
     expect(result.roster.patterns).toHaveLength(1)
@@ -74,7 +74,7 @@ describe('backup 当前格式', () => {
   })
 
   it('拒收别的应用导出的文件', () => {
-    const text = JSON.stringify({ app: 'someone-else', version: 5, roster: { members: [], overrides: [] } })
+    const text = JSON.stringify({ app: 'someone-else', version: 6, roster: { members: [], overrides: [] } })
     expect(() => parseBackup(text)).toThrow('不是「昼夜」导出的')
   })
 
@@ -83,12 +83,12 @@ describe('backup 当前格式', () => {
   })
 
   it('没有成员的备份不予导入', () => {
-    const text = JSON.stringify({ app: 'shift-schedule-local', version: 5, roster: { members: [], overrides: [] } })
+    const text = JSON.stringify({ app: 'shift-schedule-local', version: 6, roster: { members: [], overrides: [] } })
     expect(() => parseBackup(text)).toThrow('没有成员')
   })
 
   it('没有 roster 字段的文件报「没有可恢复的数据」', () => {
-    expect(() => parseBackup(JSON.stringify({ app: 'shift-schedule-local', version: 5 }))).toThrow(
+    expect(() => parseBackup(JSON.stringify({ app: 'shift-schedule-local', version: 6 }))).toThrow(
       '没有可恢复的数据'
     )
   })
@@ -101,7 +101,7 @@ describe('旧格式一律拒绝（开发期不做兼容）', () => {
       version: 4,
       roster: { members: [{ id: 'm1', name: '王磊', patternId: '4F' }], overrides: [], patterns: [] }
     })
-    expect(() => parseBackup(text)).toThrow('只认 v5')
+    expect(() => parseBackup(text)).toThrow('只认 v6')
   })
 
   it('没有版本号的文件也拒收', () => {
@@ -135,7 +135,7 @@ describe('待办的备份往返', () => {
   }
 
   it('导出再导入，待办原样还原', () => {
-    const result = parseBackup(JSON.stringify(createBackup(withTodos)))
+    const result = parseBackup(JSON.stringify(createBackup(withTodos, null)))
     expect(result.todoCount).toBe(3)
     expect(result.roster.todos).toEqual(withTodos.todos)
   })
@@ -146,13 +146,13 @@ describe('待办的备份往返', () => {
       version: 4,
       roster: { members: [{ id: 'm1', name: '王磊', patternId: '4F' }], overrides: [], patterns: [] }
     })
-    expect(() => parseBackup(text)).toThrow('只认 v5')
+    expect(() => parseBackup(text)).toThrow('只认 v6')
   })
 
   it('待办里的脏数据被丢掉，不影响其它待办', () => {
     const dirty = {
       app: 'shift-schedule-local',
-      version: 5,
+      version: 6,
       roster: {
         members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
         overrides: [],
@@ -185,7 +185,7 @@ describe('分组的备份往返', () => {
       ]
     }
 
-    const result = parseBackup(JSON.stringify(createBackup(withGroups)))
+    const result = parseBackup(JSON.stringify(createBackup(withGroups, null)))
     expect(result.roster.groups).toEqual(withGroups.groups)
     expect(result.roster.members.map(member => member.groupId)).toEqual(['g1', 'g2'])
   })
@@ -193,7 +193,7 @@ describe('分组的备份往返', () => {
   it('没有 groups 字段的 v5 备份仍可导入，所有人未分组', () => {
     const text = JSON.stringify({
       app: 'shift-schedule-local',
-      version: 5,
+      version: 6,
       roster: {
         members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
         overrides: [],
@@ -217,7 +217,7 @@ describe('加班字段的备份往返', () => {
       ]
     }
 
-    const result = parseBackup(JSON.stringify(createBackup(withOvertime)))
+    const result = parseBackup(JSON.stringify(createBackup(withOvertime, null)))
     expect(result.roster.overrides).toEqual(
       expect.arrayContaining([
         { memberId: 'm1', date: '2026-10-20', shift: '白特', overtimeHours: 2.5, isLegal: true },
@@ -242,14 +242,14 @@ describe('个人信息（本人 + 薪资）的备份往返', () => {
   }
 
   it('本人指针与四项薪资都能还原', () => {
-    const result = parseBackup(JSON.stringify(createBackup(withSelf)))
+    const result = parseBackup(JSON.stringify(createBackup(withSelf, null)))
     expect(result.roster.profile).toEqual(withSelf.profile)
   })
 
   it('薪资值在导入时会被清洗（手改的 JSON 塞了脏字符也能收敛）', () => {
     const dirty = {
       app: 'shift-schedule-local',
-      version: 5,
+      version: 6,
       roster: {
         members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
         overrides: [],
@@ -267,7 +267,7 @@ describe('个人信息（本人 + 薪资）的备份往返', () => {
   it('本人指向一个不存在的成员时，profile 归零而不是让整个导入失败', () => {
     const broken = {
       app: 'shift-schedule-local',
-      version: 5,
+      version: 6,
       roster: {
         members: [{ id: 'm1', name: '王磊', patternId: '4F' }],
         overrides: [],

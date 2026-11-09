@@ -71,9 +71,6 @@ export function JigSettingsDialog({
           <div className="jig-settings-row">
             <div className="jig-settings-label">
               <span>源文件目录</span>
-              <span className="jig-settings-hint">
-                选 MES 导出文件时从这里开始
-              </span>
             </div>
             <div className="jig-settings-control">
               <span
@@ -149,7 +146,6 @@ export function JigSettingsDialog({
           <div className="jig-settings-row">
             <div className="jig-settings-label">
               <span>表格行高</span>
-              <span className="jig-settings-hint">一行的像素高度</span>
             </div>
             <div className="jig-settings-control">
               <div className="segmented" role="group" aria-label="表格行高">
@@ -173,7 +169,7 @@ export function JigSettingsDialog({
             <div className="jig-settings-label">
               <span>粘贴时自动提取 ID</span>
               <span className="jig-settings-hint">
-                从邮件正文里挑出 Jig ID，只保留 ID 行
+                从粘贴板中提取 JIG ID
               </span>
             </div>
             <div className="jig-settings-control">
@@ -202,9 +198,6 @@ export function JigSettingsDialog({
           <div className="jig-settings-row">
             <div className="jig-settings-label">
               <span>导出文件名加时间戳</span>
-              <span className="jig-settings-hint">
-                关：固定名（如「审查数据.xlsx」）；开：带 20261109-1530
-              </span>
             </div>
             <div className="jig-settings-control">
               <div className="segmented" role="group" aria-label="导出文件名加时间戳">
