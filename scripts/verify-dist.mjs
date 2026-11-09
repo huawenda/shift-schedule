@@ -474,10 +474,14 @@ async function runScenario(name, url, downloadDir) {
         vw: window.innerWidth
       }
     })()`)
+    /* 桌面档有 `min-width: 200px` 下限：窄窗口里「格子一半」只有 109–127px，
+     * 扣掉内边距 / 列间距 / 56px 岗位列后姓名列仅剩约 15px，中文姓名会逐字换行。
+     * 所以期望宽度是 max(格子一半, 200)，而不是严格等于格子一半。 */
+    const expectedPopoverW = Math.max(200, Math.round(summaryPopover.cellW / 2))
     check(
-      `${name}: 名单浮层贴按钮、宽度=格子一半且不出屏`,
+      `${name}: 名单浮层贴按钮、宽度=max(格子一半,200)且不出屏`,
       Math.abs(summaryPopover.left - summaryPopover.trigLeft) <= 1 &&
-        Math.abs(summaryPopover.w - Math.round(summaryPopover.cellW / 2)) <= 2 &&
+        Math.abs(summaryPopover.w - expectedPopoverW) <= 2 &&
         summaryPopover.top > summaryPopover.trigBottom &&
         summaryPopover.right <= summaryPopover.vw,
       JSON.stringify(summaryPopover)

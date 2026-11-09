@@ -124,6 +124,8 @@
  * 宽度三档（沿用改造前的标准）：
  *   桌面      格子的一半 —— Popover 挂在 body 上，百分比不再相对格子，
  *             所以由 SummaryBar 打开时量一次格子宽度，写进 --summary-panel-w；
+ *             ⚠️ 另有 min-width: 200px 下限：桌面壳最小窗口格子一半只有
+ *             109–127px，扣掉内边距/列间距/岗位列后姓名列剩 15px，中文逐字换行。
  *   ≤1023    min(320px, 100vw - 24px)
  *   ≤639     自绘版贴满整条概览条（width: auto）
  */
@@ -150,6 +152,11 @@
 /* 桌面 / 平板：Radix 浮层的外壳（定位由 Radix 负责，这里只定宽与配色） */
 .summary-popover-panel {
   width: var(--summary-panel-w, 196px);
+  /* 桌面壳最小窗口（1024）走的是桌面档，格子的一半只剩约 127px：
+   * 扣掉左右内边距 24、列间距 12、岗位列 56，姓名列被 flex 压到 35px 左右，
+   * 中文姓名就会逐字断成两三行。给浮层一个下限，姓名才能真正单行。
+   * 宽窗口下格子的一半远大于 200，这一档不生效；Radix 的碰撞避让仍负责出屏。 */
+  min-width: 200px;
   max-width: calc(100vw - 2 * var(--sp-4));
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
@@ -229,7 +236,12 @@
 }
 
 .summary-popover-name {
+  /* 中文默认可在任意字间断行；窄浮层里「周子衡」会被拆成「周子 / 衡」。
+   * 禁止断行，超长姓名用省略号兜底（不换行、也不撑破浮层）。 */
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .summary-popover-item:last-child {
