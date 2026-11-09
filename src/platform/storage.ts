@@ -44,7 +44,15 @@ export const STORAGE_KEYS = {
    * 这里只记「展开时多宽」。同样不进备份文件 —— 换台机器屏幕尺寸不同，
    * 搬过去反而不合适。
    */
-  sidebarWidth: 'shift-schedule:local:sidebar-width:v1'
+  sidebarWidth: 'shift-schedule:local:sidebar-width:v1',
+  /**
+   * JIG 源 Excel 的默认目录（绝对路径）。
+   *
+   * 与 backupDir 同一档：路径是「这台电脑」的属性 —— 换台电脑时
+   * 车间共享盘的挂载点未必一样，跟着备份文件搬过去反而指到不存在的目录。
+   * 所以单独一个键，也不进导出的 JSON。
+   */
+  jigSourceDir: 'shift-schedule:local:jig-source-dir:v1'
 } as const
 
 function getBrowserStorage(): Storage | null {

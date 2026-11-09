@@ -115,8 +115,14 @@ export default defineConfig({
     modulePreload: { polyfill: false },
     rollupOptions: {
       output: {
-        format: 'iife',
-        inlineDynamicImports: true,
+        // 桌面线**不**用 inlineDynamicImports：壳里走 http://tauri.localhost，
+        // 模块脚本与动态 import 都正常工作，没有静态版那种「双击 index.html
+        // 也要能跑」的约束。
+        //
+        // 这条改动让 1MB 级的 xlsx-js-style 单独成一个 chunk —— JIG 页选文件
+        // 时才下载，排班三页完全不用付这个体积。
+        // （静态版仍用 inlineDynamicImports，那边是 file:// 场景，必须单文件。）
+        format: 'es',
         entryFileNames: 'assets/app-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]'
       }

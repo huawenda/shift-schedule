@@ -115,14 +115,14 @@ const rows: Row[] = [
 describe('导出红字', () => {
   const C = colLetter('对应尺寸', columns)
 
-  it('不传 red 时不带任何颜色', () => {
-    const buf = writeExcel({ columns, rows })
+  it('不传 red 时不带任何颜色', async () => {
+    const buf = await writeExcel({ columns, rows })
     expect(colorAt(buf, `${C}2`)).toBeNull()
     expect(colorAt(buf, `${C}3`)).toBeNull()
   })
 
-  it('标记为不匹配的行, 对应尺寸单元格为红色', () => {
-    const buf = writeExcel(
+  it('标记为不匹配的行, 对应尺寸单元格为红色', async () => {
+    const buf = await writeExcel(
       { columns, rows },
       { rows: [false, true, false], column: '对应尺寸' },
     )
@@ -130,8 +130,8 @@ describe('导出红字', () => {
     expect(colorAt(buf, `${C}3`)).toBe('FFFF0000')
   })
 
-  it('未标记的行不带颜色', () => {
-    const buf = writeExcel(
+  it('未标记的行不带颜色', async () => {
+    const buf = await writeExcel(
       { columns, rows },
       { rows: [false, true, false], column: '对应尺寸' },
     )
@@ -139,22 +139,22 @@ describe('导出红字', () => {
     expect(colorAt(buf, `${C}4`)).toBeNull()
   })
 
-  it('红字只落在指定列, 不影响同行其他列', () => {
-    const buf = writeExcel(
+  it('红字只落在指定列, 不影响同行其他列', async () => {
+    const buf = await writeExcel(
       { columns, rows },
       { rows: [false, true, false], column: '对应尺寸' },
     )
     expect(colorAt(buf, `${colLetter('P/N', columns)}3`)).toBeNull()
   })
 
-  it('列名不存在时安全跳过, 不抛错', () => {
-    expect(() =>
+  it('列名不存在时安全跳过, 不抛错', async () => {
+    await expect(
       writeExcel({ columns, rows }, { rows: [true], column: '不存在的列' }),
-    ).not.toThrow()
+    ).resolves.toBeInstanceOf(ArrayBuffer)
   })
 
-  it('值与颜色对齐不错位', () => {
-    const buf = writeExcel(
+  it('值与颜色对齐不错位', async () => {
+    const buf = await writeExcel(
       { columns, rows },
       { rows: [false, true, false], column: '对应尺寸' },
     )
@@ -162,7 +162,7 @@ describe('导出红字', () => {
     expect(colorAt(buf, `${C}3`)).toBe('FFFF0000') // 65 标记
   })
 
-  it('空表格也能正常导出', () => {
-    expect(() => writeExcel({ columns: [], rows: [] })).not.toThrow()
+  it('空表格也能正常导出', async () => {
+    await expect(writeExcel({ columns: [], rows: [] })).resolves.toBeInstanceOf(ArrayBuffer)
   })
 })

@@ -1,0 +1,247 @@
+/* ── JIG 数据页 ──────────────────────────────────────────────
+ *
+ * MES JIG 数据的查询与透视。样式全部走本项目令牌，不引新色 ——
+ * 这套界面要跟排班三页放在同一个应用里，色板不统一会像两个产品。
+ *
+ * 表格用本项目的 ui/table（<table> 语义），不是自绘的 CSS Grid：
+ * 行列数不定、还要横向滚动，语义化表格天然支持 sticky 固定首列。
+ */
+
+/* 表格滚动区：横向为主（工序多时列多），纵向也允许（几百行）。
+ * 原生滚动条已被 shell.scss 压成 0 宽，由 ScrollOverlay 接管。 */
+.jig-table-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.jig-table {
+  width: 100%;
+  font-size: var(--fs-control);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* 表头随滚动冻结在滚动区上沿。
+ * border-collapse: collapse 的表格里 sticky 的边框会跟着滚，
+ * 所以把边框换成 inset 阴影，视觉上仍是那根 1px 线。 */
+.jig-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-tint);
+  box-shadow: inset 0 -1px 0 var(--border);
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* P/N 列固定在左侧：横向滚动时它是「这一行是谁」的唯一线索，
+ * 滚走了就分不清哪行是谁了。 */
+.jig-table-sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+
+.jig-table thead .jig-table-sticky-col {
+  z-index: 3;
+  background: var(--surface-tint);
+}
+
+/* 固定列右边压一道线：内容从它下面滑过时，那道线告诉人「这里被挡住了」 */
+.jig-table-sticky-col::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+
+.jig-table td,
+.jig-table th {
+  padding: 7px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* 数字列用等宽字形，位数不同时也能纵向对齐 */
+.jig-table .is-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* 行号列：更窄、居中、字更小 —— 它是辅助信息 */
+.jig-table-num {
+  width: 44px;
+  color: var(--muted);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 三种行 ──
+ *
+ * 小计行 = 某个 P/N 下各 CST 的合计；总计行 = 全表合计。
+ * 两者靠底色与字重区分，不靠颜色 —— 报表里颜色留给「异常」用。 */
+
+/* 小计行：浅灰带底 + 加粗（对应原项目的 --band） */
+.jig-table tbody tr.is-subtotal td {
+  background: var(--surface-tint);
+  font-weight: 600;
+}
+
+/* 总计行：强调色底 + 更粗的顶线（对应原项目的 --accent-soft） */
+.jig-table tbody tr.is-total td {
+  background: var(--accent-weak);
+  font-weight: 600;
+}
+
+.jig-table tbody tr.is-total td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* ── 尺寸不匹配 ──
+ *
+ * 标红是这套数据的核心信息：P/N 的尺寸码与「对应尺寸」对不上，
+ * 意味着这张板做不了这个规格。界面与导出文件里都要标出来。
+ * 颜色用 --destructive（本项目的语义危险色），不用原项目写死的 #EF4444。 */
+.jig-table tbody tr.is-mismatch td.is-flagged {
+  color: var(--destructive);
+  font-weight: 600;
+}
+
+/* 整行的底色略微染一点红，扫行时更容易发现 —— 但不盖住单元格的红色文字 */
+.jig-table tbody tr.is-mismatch td {
+  background: color-mix(in oklch, var(--destructive) 6%, transparent);
+}
+
+/* ── 可下钻的计数格 ──
+ *
+ * 透视表里点计数格能下钻到明细。只给非空数字格加可点的样子，
+ * 标识列（P/N、CST ID）与空格子不可点 —— 免得用户到处点却没反应。 */
+.jig-table tbody td.is-clickable {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.jig-table tbody td.is-clickable:hover {
+  background: var(--accent-soft);
+}
+
+/* 小计与总计行的计数格仍可下钻，但悬停时保留自己的底色 ——
+ * 否则鼠标扫过时行会「褪色」，汇总行的底纹忽隐忽现。 */
+.jig-table tbody tr.is-subtotal td.is-clickable:hover,
+.jig-table tbody tr.is-total td.is-clickable:hover {
+  background: inherit;
+  filter: brightness(0.94);
+}
+
+/* ── 两栏布局 ──
+ *
+ * 左边是 Jig ID 输入与操作，右边是表格区。
+ * 左栏宽度固定：它装着一个多行输入框，宽度跟着右栏走会被挤成一条缝。 */
+.jig-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: var(--sp-4);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.jig-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 0;
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.jig-side-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* 输入框：Jig ID 每行一个，几十行起步，要能一直往下加 */
+.jig-side-input {
+  flex: 1 1 auto;
+  min-height: 160px;
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--canvas);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-control);
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+
+.jig-side-input:focus-visible {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 30%, transparent);
+}
+
+.jig-side-hint {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* 右侧：工具条 + 表格，表格吃掉剩余高度 */
+.jig-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 0;
+}
+
+.jig-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.jig-toolbar-spacer {
+  margin-left: auto;
+}
+
+.jig-toolbar-note {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 窄屏 ──
+ *
+ * JIG 只在桌面壳里出现，而桌面壳最小宽 1024 —— 侧栏永远在，
+ * 底部标签栏那条路够不到这一页。所以这里只需要处理
+ * 1024–1200 这段「壳里把窗口拖窄」的情况：两栏改成上下叠。
+ */
+@media (max-width: 1199px) {
+  .jig-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .jig-side-input {
+    min-height: 120px;
+  }
+}

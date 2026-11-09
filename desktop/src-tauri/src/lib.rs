@@ -154,6 +154,48 @@ fn save_backup_to(dir: String, file_name: String, contents: String) -> Result<St
     Ok(target.to_string_lossy().into_owned())
 }
 
+/// 读一个用户选中的文件，把内容原样返回给前端。
+///
+/// JIG 数据页要读 MES 导出的 Excel：用户在原生对话框里挑一个文件，
+/// 前端拿到路径后调这个命令把字节读回来。
+///
+/// 为什么要自定义命令，而不是用 fs 插件的 `readFile`：
+/// `capabilities/default.json` 里 fs 的读权限被刻意限制在 `$DOWNLOAD` /
+/// `$DOCUMENT` 两个目录，而 MES 导出的文件通常躺在 D 盘、桌面上或某个
+/// 车间共享盘里 —— 为了读这一个文件把 fs 放开到 `**` 并不划算。
+/// 这个命令的能力面窄得多：**只读一个已存在的文件**，不遍历目录、
+/// 不读目录列表、不写、不删。
+///
+/// 大文件也没有上限：MES 导出的表格几百行到几千行，几百 KB 到几 MB，
+/// 一次读进内存交给前端的 xlsx 解析完全够用。
+#[tauri::command]
+fn read_picked_file(path: String) -> Result<Vec<u8>, String> {
+    let file_path = std::path::PathBuf::from(&path);
+
+    if !file_path.is_file() {
+        return Err(format!("文件不存在：{path}"));
+    }
+
+    std::fs::read(&file_path).map_err(|error| format!("读取失败：{error}"))
+}
+
+/// 把剪贴板里的文本读出来。
+///
+/// JIG 页的「粘贴 Jig ID」要能从邮件正文里自动挑出 ID —— 那是系统级
+/// 剪贴板的内容，不是网页能拿到的：WebView2 里 `navigator.clipboard.readText`
+/// 在 onPaste 事件里基本必被拒绝（需要额外的用户激活与权限）。
+/// 所以走 clipboard-manager 插件，读的是真正的系统剪贴板。
+///
+/// 剪贴板里没有文本时返回空串而不是报错 —— 界面据此按「按原文粘贴」处理。
+#[tauri::command]
+fn read_clipboard_text(app: tauri::AppHandle) -> Result<String, String> {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+
+    app.clipboard()
+        .read_text()
+        .map_err(|error| format!("读取剪贴板失败：{error}"))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -166,6 +208,8 @@ pub fn run() {
         // 备份导出/导入的原生对话框与文件读写。
         .plugin(init_dialog())
         .plugin(init_fs())
+        // 系统剪贴板读取：JIG 页从邮件正文里挑 Jig ID 用。
+        .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             #[cfg(target_os = "windows")]
             {
@@ -228,7 +272,13 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![save_backup_to, set_close_to_tray, set_window_theme])
+        .invoke_handler(tauri::generate_handler![
+            save_backup_to,
+            set_close_to_tray,
+            set_window_theme,
+            read_picked_file,
+            read_clipboard_text
+        ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 窗口失败");
 }

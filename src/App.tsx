@@ -13,8 +13,10 @@ import { ScrollOverlay } from './components/ScrollOverlay'
 import { ShiftEditor } from './components/ShiftEditor'
 import type { MatrixMode } from './components/TeamMatrix'
 import { Toaster } from './components/ui/sonner'
+import { createDefaultJigConfig } from './features/jig/core/config'
 import { JigScreen } from './features/jig/components/JigScreen'
 import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
+import { useJigData } from './features/jig/hooks/useJigData'
 import { MatrixScreen } from './screens/MatrixScreen'
 import { OverviewScreen } from './screens/OverviewScreen'
 import { SettingsScreen, type SettingsTab } from './screens/SettingsScreen'
@@ -65,6 +67,18 @@ export function App() {
    */
   const [matrixMode, setMatrixMode] = useState<MatrixMode>('shift')
   const [matrixGroup, setMatrixGroup] = useState<string | null>(null)
+  /**
+   * JIG 的业务配置与数据状态也提到 App —— 顶栏（源文件名 + 浏览按钮）在
+   * 外壳层，页面在内容层，两边要用同一份状态。
+   *
+   * 配置目前是默认值：型号→尺寸映射、11 道工序顺序这些要进备份文件，
+   * P8 接上；在此之前与原项目出厂配置一致。
+   */
+  const jigConfig = useMemo(() => createDefaultJigConfig(), [])
+  const jigData = useJigData({
+    config: jigConfig,
+    notify: (text, tone) => toast.info(text, { tone })
+  })
   /**
    * 三个一级页面各自的滚动位置。
    * 切 tab 时页面整块卸载重挂，滚动容器随之归零；离开前把滚动位置记下来，
@@ -357,6 +371,7 @@ export function App() {
         onToday={goToday}
         onToggleTheme={theme.toggle}
         theme={theme.resolved}
+        jig={jigData}
       >
         {route === 'settings' ? (
           <SettingsScreen
@@ -392,7 +407,13 @@ export function App() {
             onModeChange={setMatrixMode}
           />
         ) : route === 'jig' ? (
-          <JigScreen tab={location.jigTab} onTabChange={changeJigTab} />
+          <JigScreen
+            config={jigConfig}
+            data={jigData}
+            notify={(text, tone) => toast.info(text, { tone })}
+            tab={location.jigTab}
+            onTabChange={changeJigTab}
+          />
         ) : (
           <OverviewScreen
             period={period}

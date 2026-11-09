@@ -7,6 +7,7 @@ import { useIsCompact } from '@/hooks/use-compact'
 import { useSidebarWidth } from '@/hooks/useSidebarWidth'
 import { isTauriShell } from '@/platform/env'
 import { JigTopBar } from '@/features/jig/components/JigTopBar'
+import type { JigData } from '@/features/jig/hooks/useJigData'
 import { AppSidebar } from './AppSidebar'
 import { MobileNav } from './MobileNav'
 import { TopBar } from './TopBar'
@@ -33,6 +34,11 @@ interface AppShellProps {
   /** 当前生效的主题；顶栏主题按钮的图标与 aria-label 跟着它变 */
   theme: 'light' | 'dark'
   onToggleTheme: () => void
+  /**
+   * JIG 页的数据状态（源文件、选文件回调）。
+   * 只有 JIG 页的顶栏用得到，但它是外壳的一部分，所以从 App 一路传下来。
+   */
+  jig: JigData
   children: ReactNode
 }
 
@@ -64,6 +70,7 @@ export function AppShell({
   onRestore,
   theme,
   onToggleTheme,
+  jig,
   children
 }: AppShellProps) {
   const isCompact = useIsCompact()
@@ -112,7 +119,15 @@ export function AppShell({
             Excel，与结算月无关），要的是源文件与 JIG 专属操作。
           */}
           {route === 'jig' ? (
-            <JigTopBar onToggleTheme={onToggleTheme} theme={theme} />
+            <JigTopBar
+              busy={jig.busy}
+              canPick={jig.canPick}
+              onPick={() => void jig.pickSource()}
+              onToggleTheme={onToggleTheme}
+              sourceName={jig.sourceName}
+              sourcePath={jig.sourcePath}
+              theme={theme}
+            />
           ) : (
             <TopBar
               atCurrentMonth={atCurrentMonth}

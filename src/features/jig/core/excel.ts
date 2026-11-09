@@ -1,9 +1,23 @@
 /**
  * Excel 读写 —— 封装 xlsx 库, 对齐 pandas dtype=str + keep_default_na=False
+ *
+ * **xlsx 库按需 import()**：它有 1MB 级，静态导入会把它整个塞进主 chunk ——
+ * 而排班三页根本用不到 Excel。主包从 1,233 kB 涨到 1,893 kB 就是这么来的。
+ * 改成动态 import 后它单独成 chunk，只有进 JIG 页选文件时才下载。
  */
 
-import * as XLSX from 'xlsx-js-style'
 import type { Row } from './table'
+
+/**
+ * xlsx 库的加载器。
+ *
+ * 抽成一个函数而不是模块顶层 `const p = import(...)`：模块顶层就发起动态
+ * import 的话，**任何**引用到本模块的地方都会触发预加载 —— 相当于静态导入。
+ * 放进函数里，才是「真的调用到才加载」。
+ */
+async function loadXlsx() {
+  return import('xlsx-js-style')
+}
 
 export interface SourceData {
   columns: string[]
@@ -15,6 +29,7 @@ export async function readExcel(
   arrayBuffer: ArrayBuffer,
   fileName: string,
 ): Promise<SourceData> {
+  const XLSX = await loadXlsx()
   const wb = XLSX.read(arrayBuffer, { type: 'array' })
   const ws = wb.Sheets[wb.SheetNames[0]]
   if (!ws) throw new Error('这个文件里没有可读的工作表')
@@ -69,11 +84,14 @@ export interface RedMark {
  * 关键: 样式必须在 aoa_to_sheet **之前**挂到单元格对象上。
  * 该库写样式时是遍历 aoa 里每个 {v,t,s} 对象来收集样式的,
  * 事后给 ws[addr] 补 s 不会被收集到。
+ *
+ * **异步的原因**：xlsx 库按需加载（见文件头），同步写法拿不到库对象。
  */
-export function writeExcel(
+export async function writeExcel(
   table: { columns: string[]; rows: Row[] },
   red?: RedMark,
-): ArrayBuffer {
+): Promise<ArrayBuffer> {
+  const XLSX = await loadXlsx()
   const colIdx = red ? table.columns.indexOf(red.column) : -1
   const hasRed = Boolean(red && colIdx >= 0)
 

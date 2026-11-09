@@ -1,4 +1,5 @@
 import { isTauriShell } from './env'
+import { tauri } from './tauri'
 import { readRaw, removeRaw, writeRaw, STORAGE_KEYS } from './storage'
 
 /**
@@ -11,52 +12,6 @@ import { readRaw, removeRaw, writeRaw, STORAGE_KEYS } from './storage'
  *
  * 所以这层只负责「记住一个路径字符串」，是否可用由调用方按 `canChooseBackupDir()` 判断。
  */
-
-interface TauriDialogApi {
-  open?: (options: {
-    directory?: boolean
-    multiple?: boolean
-    title?: string
-    defaultPath?: string
-  }) => Promise<string | string[] | null>
-}
-
-interface TauriCoreApi {
-  invoke?: <T = unknown>(command: string, args?: Record<string, unknown>) => Promise<T>
-}
-
-interface TauriPathApi {
-  /** 系统的「下载」目录；壳里由 Tauri 的 path API 解析 */
-  downloadDir?: () => Promise<string>
-}
-
-interface TauriWindowHandle {
-  /** 改原生窗口标题（任务栏显示的就是它） */
-  setTitle?: (title: string) => Promise<void>
-}
-
-interface TauriWindowApi {
-  getCurrentWindow?: () => TauriWindowHandle
-}
-
-interface TauriGlobal {
-  core?: TauriCoreApi
-  dialog?: TauriDialogApi
-  path?: TauriPathApi
-  window?: TauriWindowApi
-}
-
-declare global {
-  interface Window {
-    __TAURI__?: TauriGlobal
-  }
-}
-
-/** 取壳注入的全局对象；node（单测）里没有 window，返回 null */
-function tauri(): TauriGlobal | null {
-  if (typeof window === 'undefined') return null
-  return window.__TAURI__ ?? null
-}
 
 /** 只有壳里能「选目录 + 写任意目录」，浏览器里这一行要禁用 */
 export function canChooseBackupDir(): boolean {

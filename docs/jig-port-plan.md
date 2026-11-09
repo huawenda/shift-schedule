@@ -349,7 +349,7 @@ JIG 若要做固定高度，**用同一套办法**：按容器宽度算出一档
 |---|---|---|
 | **P1** ✅ | `features/jig/core/` 整包平移 + 测试搬入 | ✅ 已完成，见下 |
 | **P2** ✅ | 侧栏入口 + 路由 + 顶栏/画布骨架（空页） | ✅ 已完成，见下 |
-| **P3** | 源文件选择 + 读取 + 查询结果视图 + 粘贴提取 | 能选文件、能查、能粘贴提取 ID |
+| **P3** ✅ | 源文件选择 + 读取 + 查询结果视图 + 粘贴提取 | ✅ 已完成，见下 |
 | **P4** | 全量透视 + 工序轨道 + 显示范围/可用性筛选 | 与原项目数值一致（用同一份 fixture 交叉验证） |
 | **P5** | 结果透视 + 下钻 | 下钻面包屑与原项目一致 |
 | **P6** | 数据审查 + 导出（含红色标记） | 导出文件的红色标记与原项目一致 |
@@ -448,6 +448,62 @@ snake_case 转换对不上。补了 `LEGACY_PREF_KEYS` 别名映射（只列改�
 **产物影响**：`dist/assets/app-*.js` 1,233.23 kB / gzip 408.86 kB，与改动前一致 ——
 P1 阶段 core 未被界面引用，被 tree-shaking 整个移除，`xlsx-js-style` 也没进包。
 P2 接入界面后它会进来（届时按方案 §7.1 用动态 `import()` 隔离）。
+
+---
+
+### P3 完成情况（2026-11-09）
+
+**做了什么**
+
+| 项 | 内容 |
+|---|---|
+| 壳内新命令 | `read_picked_file(path)` 读一个已存在的文件；`read_clipboard_text(app)` 读系统剪贴板文本 |
+| 新插件 | `tauri-plugin-clipboard-manager`（读剪贴板）；能力面只开 `clipboard-manager:allow-read-text` |
+| 平台层 | `src/platform/tauri.ts`（`window.__TAURI__` 的**唯一**类型声明，从 `backupDir.ts` 抽出来共用）、`src/platform/jigFile.ts`（选文件 / 读文件 / 读剪贴板） |
+| 数据状态 | `src/features/jig/hooks/useJigData.ts` —— 源数据在内存、四个视图共享同一份源数据 |
+| 界面 | `JigTable.tsx`（表格，含小计 / 总计 / 标红三种行）、`JigQueryPanel.tsx`（ID 输入 + 粘贴提取）、`styles/jig.scss` |
+
+**为什么不用 fs 插件读文件**
+
+`capabilities/default.json` 里 fs 的读权限被刻意限制在 `$DOWNLOAD` / `$DOCUMENT`，
+而 MES 导出的文件通常在 D 盘、桌面或车间共享盘里。为了读这一个文件把 fs 放开到 `**`
+并不划算 —— 自定义命令的能力面窄得多：**只读一个已存在的文件**，不遍历目录、不读目录列表、不写、不删。
+
+**为什么剪贴板必须用插件**
+
+「从邮件正文直接粘贴」读的是系统级剪贴板。WebView2 里 `navigator.clipboard.readText`
+在 `onPaste` 事件中基本必被拒绝（需要额外的用户激活与权限）—— 只有插件能拿到真正的系统剪贴板。
+
+**实机验收（release exe + CDP，探针 `scripts/probe/jig-shell.mjs`，16/16 通过）**
+
+| 项 | 结果 |
+|---|---|
+| 壳注入 | `window.__TAURI__.core.invoke` 可用 ✓ |
+| 读剪贴板 | 返回字符串 ✓ |
+| 读 MES Excel | 44,783 字节，头是 `PK\x03\x04` ✓ |
+| 错误路径 | 读不存在的文件报错「文件不存在：…」 ✓ |
+| JIG 页面 | 标题「JIG 数据」、四个页签、「浏览…」可用、输入框在 ✓ |
+| 切页签 | query-pivot / pivot / review 三个都切得动 ✓ |
+| **端到端** | 选文件 → 读 → 解析 → 出表：**33 行 × 14 列**（与 P1 交叉验证基线一致）✓ |
+| 查询链路 | 查 3 个 ID → 3 行；不存在的 ID 标【未找到】 ✓ |
+| 粘贴提取 | 从邮件正文里挑出 2 个 Jig ID，正文未混入 ✓ |
+
+**一个真实缺陷（已修）**
+
+最初 `onPaste` 无条件 `preventDefault()` 再去读剪贴板。**在浏览器 / 静态版里没有剪贴板插件**，
+读取必然失败 —— 结果是「粘贴键完全没用」，而且还弹一句错误。改成**先探测能不能读，读得到才拦默认粘贴**；
+读不到就放行让浏览器自己粘原文，并提示一句「已按原文粘贴」。
+
+**三个环境坑**
+
+1. **`cargo build --release` 出来的 exe 连的是 devUrl，不是打包好的前端** ——
+   `custom-protocol` feature 只在 `tauri build` 时才带上。直接 cargo 构建的 exe 启动后
+   打开的是 `chrome-error://chromewebdata/`（127.0.0.1 拒绝连接）。
+   要用 `pnpm exec tauri build --config desktop/src-tauri/tauri.conf.json --no-bundle`。
+2. **全新用户数据目录会停在三步向导上**，JIG 页面根本进不去 ——
+   探针要先往 localStorage 塞一份最小花名册（`shift-schedule:local:roster:v2`）。
+3. **CDP 的 `Runtime.evaluate` 返回值在 `result.result.value`**，而本项目的
+   `cdp.mjs` 已经包了一层 `evaluate()`，直接用包装版，别自己再取一层。
 
 ---
 
