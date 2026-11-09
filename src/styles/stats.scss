@@ -408,6 +408,29 @@ button.plaque-shift:focus-visible {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--sp-2);
+  /* 三列贴片的可用宽度取决于「侧栏宽度 + 画布宽度」，视口断点看不出来，
+   * 直接按这一块自己的宽度做容器查询（见下）。 */
+  container: day-counts / inline-size;
+}
+
+/* 窄卡（三列各约 110px）里放不下「数字 + 白班 + 10h」：中文标签会在任意
+ * 字间断行（"白" / "班"），把这一行从 43px 撑到 59px；左卡变高又带着右侧
+ * 加班分布一起变高（那张卡绝对定位铺满、跟随 grid 行高）。
+ * 收紧间距、标签降一档字号并禁止断行，让六格始终维持同一高度。 */
+@container day-counts (max-width: 370px) {
+  .day-count {
+    gap: var(--sp-1);
+    padding: var(--sp-2) 6px;
+  }
+
+  .day-count-label {
+    font-size: var(--fs-label);
+    white-space: nowrap;
+  }
+
+  .day-count-extra {
+    padding: 0 3px;
+  }
 }
 
 /*
@@ -552,11 +575,15 @@ button.plaque-shift:focus-visible {
   border-bottom: 1px solid var(--border);
 }
 
-/* 类目名那一行 */
+/* 类目名那一行。
+ * padding-top 取 12px 而不是 5px：两卡等高时，左卡 `.stat-foot` 的分隔线
+ * 与这里柱形图的横轴原本差 7px（foot 线更高），看起来像两条线没对齐。
+ * 加大上内边距让 axis-row 变高、上边的 `.ot-plot-row` 相应变矮，横轴上移 7px；
+ * 类目文字的绝对位置不变（顶边上移 7px 与内边距多 7px 正好抵消）。 */
 .ot-axis-row {
   display: flex;
   gap: var(--sp-3);
-  padding-top: 5px;
+  padding-top: 12px;
 }
 
 .ot-col {
