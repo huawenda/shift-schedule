@@ -20,7 +20,10 @@ interface JigQueryPanelProps {
  *
  * 核心用法是「从邮件正文直接粘贴」—— 用户收到一封列出十几个 Jig ID 的邮件，
  * 全选复制粘进来，期望程序自动挑出那些 ID。这一步靠剪贴板插件读**系统剪贴板**
- * （WebView2 里 `navigator.clipboard.readText` 在 onPaste 事件里基本必被拒）。
+ * （WebView2 里 `navigator.clipboard.readText` 在 onPaste 事件中基本必被拒）。
+ *
+ * **高度按内容，不与表格联动** —— 表格有几百行，左栏若被拉成同样高，
+ * 里面大片空白，输入框反而被压扁。这里用 `align-self: start` 独立成一块。
  */
 export function JigQueryPanel({ ready, onQuery, onClear, notify }: JigQueryPanelProps) {
   const [text, setText] = useState('')
@@ -109,14 +112,14 @@ export function JigQueryPanel({ ready, onQuery, onClear, notify }: JigQueryPanel
       </div>
 
       <Button
-        className="mt-auto"
+        disabled={count === 0}
         onClick={() => {
           setText('')
           onClear()
         }}
         size="sm"
         type="button"
-        variant="ghost"
+        variant="outline"
       >
         清空
       </Button>

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   createDefaultJigConfig,
@@ -6,10 +6,18 @@ import {
   type JigConfig,
   type JigPrefs
 } from '../core/config'
+import {
+  buildDrillTable,
+  openDrill as openDrillState,
+  resolvePivotPns,
+  type DrillFrom,
+  type DrillState
+} from '../core/drill'
 import { readExcel, validateSource, type SourceData } from '../core/excel'
 import { generatePivot, type StageCategory } from '../core/pivot'
 import {
   computePivotScope,
+  pivotScopePn,
   type PivotScope,
   type PivotScopeResult
 } from '../core/pivotScope'
@@ -81,6 +89,18 @@ export interface JigData {
   setPivotAvail: (avail: StageCategory) => void
   /** 全量透视的当前结果（表 + 计数 + P/N 候选） */
   pivot: PivotScopeResult
+  /** 当前的下钻状态；null = 没在下钻 */
+  drill: DrillState | null
+  /** 下钻的明细表 */
+  drillTable: Table
+  /**
+   * 点透视表的计数格进入下钻。
+   *
+   * 只有结果透视与全量透视两页有下钻；其余页传进来直接忽略。
+   */
+  drillTo: (from: DrillFrom, rowIndex: number, column: string) => void
+  /** 退出下钻，回到透视表 */
+  exitDrill: () => void
   /** 正在读文件 */
   busy: boolean
   /** 能否选文件（静态版不行） */
@@ -100,6 +120,14 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const [busy, setBusy] = useState(false)
   const [pivotScope, setPivotScope] = useState<PivotScope>('all')
   const [pivotAvail, setPivotAvail] = useState<StageCategory>('all')
+  const [drill, setDrill] = useState<DrillState | null>(null)
+  /**
+   * 本次查询命中的源行（快照）。
+   *
+   * 结果透视的下钻底稿必须是它 —— 透视表是「命中记录的汇总」，
+   * 下钻要回到同样的记录上，不能拿全部源数据去筛。
+   */
+  const [queryHits, setQueryHits] = useState<Row[]>([])
 
   /**
    * 全量透视的当前结果。
@@ -112,6 +140,32 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       computePivotScope(source?.rows ?? [], pivotScope, pivotAvail, config),
     [config, pivotAvail, pivotScope, source]
   )
+
+  /**
+   * 下钻的明细表。
+   *
+   * 底稿与当前显示的透视表同源 —— 全量透视用透视的底稿，
+   * 结果透视用查询命中的行。底稿不同，筛出的行数就与格子上的数字对不上。
+   */
+  const drillTable = useMemo(
+    () =>
+      buildDrillTable(
+        drill,
+        drill?.from === 'queryPivot' ? queryHits : pivot.rows,
+        config
+      ),
+    [config, drill, pivot.rows, queryHits]
+  )
+
+  /** Esc 退出下钻 */
+  useEffect(() => {
+    if (!drill) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDrill(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [drill])
 
   /** 上次用过的源文件目录 —— 本机偏好，不进备份 */
   const sourceDir = useMemo(() => {
@@ -163,6 +217,8 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       // 筛选状态也复位 —— 旧的 P/N 范围在新文件里可能不存在
       setPivotScope('all')
       setPivotAvail('all')
+      setDrill(null)
+      setQueryHits([])
 
       notify(`已载入 ${picked.name} · ${data.rows.length} 行`, 'info')
     } catch (error) {
@@ -192,6 +248,9 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
         detail,
         queryPivot: generatePivot(hits, false, config)
       }))
+      setQueryHits(hits)
+      // 新的查询结果，旧的下钻定位不再有意义
+      setDrill(null)
 
       const found = detail.rows.filter(row => row['P/N'] !== '【未找到】').length
       notify(`查询 ${detail.rows.length} 条 · 命中 ${found} · 未找到 ${detail.rows.length - found}`)
@@ -205,7 +264,35 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       detail: EMPTY_TABLE,
       queryPivot: EMPTY_TABLE
     }))
+    setQueryHits([])
+    setDrill(null)
   }, [])
+
+  /**
+   * 点透视表的计数格进入下钻。
+   *
+   * `rowIndex` 是**当前显示的那张透视表**的行下标 —— 全量透视用带筛选的
+   * 透视表，结果透视用命中记录的透视表。两者行数不同，下标各算各的。
+   */
+  const drillTo = useCallback(
+    (from: DrillFrom, rowIndex: number, column: string) => {
+      const table = from === 'pivot' ? pivot.table : tables.queryPivot
+      const next = openDrillState({
+        rowIndex,
+        column,
+        from,
+        table,
+        viewPns: resolvePivotPns(table, config.keywordTotal),
+        scopePn: from === 'pivot' ? pivotScopePn(pivotScope) : '',
+        scopeIsProd: from === 'pivot' && pivotScope === 'prod',
+        config
+      })
+      if (next) setDrill(next)
+    },
+    [config, pivot.table, pivotScope, tables.queryPivot]
+  )
+
+  const exitDrill = useCallback(() => setDrill(null), [])
 
   return {
     ready: source !== null,
@@ -217,6 +304,10 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     pivotAvail,
     setPivotAvail,
     pivot,
+    drill,
+    drillTable,
+    drillTo,
+    exitDrill,
     busy,
     canPick: canPickJigFile(),
     pickSource,

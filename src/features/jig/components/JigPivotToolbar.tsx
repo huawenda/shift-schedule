@@ -1,11 +1,7 @@
 import { Select } from '@/components/Select'
 
 import type { StageCategory } from '../core/pivot'
-import {
-  PIVOT_AVAIL_OPTIONS,
-  pivotScopeLabel,
-  type PivotScope
-} from '../core/pivotScope'
+import { PIVOT_AVAIL_OPTIONS, type PivotScope } from '../core/pivotScope'
 
 interface JigPivotToolbarProps {
   /** 当前显示范围 */
@@ -85,10 +81,6 @@ export function JigPivotToolbar({
           </button>
         ))}
       </div>
-
-      <span className="jig-toolbar-note">
-        {pivotScopeLabel(scope)}
-      </span>
     </div>
   )
 }

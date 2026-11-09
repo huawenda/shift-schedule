@@ -8,7 +8,11 @@
  */
 
 /* 表格滚动区：横向为主（工序多时列多），纵向也允许（几百行）。
- * 原生滚动条已被 shell.scss 压成 0 宽，由 ScrollOverlay 接管。 */
+ * 原生滚动条已被 shell.scss 压成 0 宽，由 ScrollOverlay 接管。
+ *
+ * **高度链**：flex:1 + min-height:0 是让表格吃掉右主区剩余高度、
+ * 自己内部滚的关键。父链上每一层（.canvas-flow → .jig-tabs → .jig-tab-panel
+ * → .jig-layout → .jig-main）都必须给出确定高度，缺一层表格就长出窗口。 */
 .jig-table-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -107,6 +111,44 @@
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
+/*
+ * 总计行冻结在滚动区底部。
+ *
+ * 透视表有几百行，总计行在最后 —— 不冻结的话横向扫读时看不到全表合计。
+ * sticky 的元素在正常流里仍占一个行高，所以滚动范围与原来完全一致，
+ * 滑到底时不会压住最后一条明细。
+ *
+ * z-index 高于明细行、低于表头（表头在上沿、总计行在下沿，不冲突）。
+ */
+.jig-table tbody tr.is-total td {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  /* 冻结的行要盖住下方滚过来的内容，底色不能是半透明的 */
+  background: var(--accent-weak);
+}
+
+/*
+ * 总计列（末列）单独成栏。
+ *
+ * 它是「这一行的合计」，与各工序列语义不同，所以：
+ *   - 左侧一道竖线，把它与明细区彻底分开；
+ *   - 数字右对齐 + 等宽字形。
+ * 末列右缘再补一道线（见下），让表格无论是否横向滚动都有明确的收尾。
+ */
+.jig-table .jig-table-total-col {
+  border-left: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-weight: 600;
+}
+
+/* 末列右缘竖规：把内容区封闭起来 */
+.jig-table td:last-child,
+.jig-table th:last-child {
+  border-right: 1px solid var(--border);
+}
+
 /* ── 尺寸不匹配 ──
  *
  * 标红是这套数据的核心信息：P/N 的尺寸码与「对应尺寸」对不上，
@@ -164,11 +206,17 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   overflow-x: auto;
+  /* 原生横向条已被 shell.scss 压成 0 宽；轨道窄了就横向滚 */
+  scrollbar-width: none;
+}
+
+.jig-rail-track::-webkit-scrollbar {
+  height: 0;
 }
 
 .jig-stage {
   flex: 1 1 0;
-  min-width: 76px;
+  min-width: 88px;
   position: relative;
   padding: 3px 10px 3px 16px;
   border-left: 2px solid var(--border);
@@ -195,13 +243,20 @@
   opacity: 0.34;
 }
 
+/*
+ * 工序名允许换行，而不是截断成「Jig 洗净及…」。
+ *
+ * 原项目用 nowrap + ellipsis，工序名被砍掉一半后反而看不出是哪道工序。
+ * 这里改成两行内换行 —— 轨道本来就有 3px 的条 + 名字 + 数字，
+ * 名字占两行不影响读数，工序全称看得全更重要。
+ */
 .jig-stage-name {
   font-size: var(--fs-small);
   font-weight: 500;
   color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .jig-stage-count {
@@ -226,10 +281,65 @@
   color: var(--accent);
 }
 
+/* ── 页签徽标 ──
+ *
+ * 每段视图的条目数（如「33」）。原项目有，本项目原先没有 ——
+ * 页签上直接看到数量，就不必切过去才知道有没有数据。
+ */
+.jig-tab-badge {
+  margin-left: 6px;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
 /* ── 两栏布局 ──
  *
  * 左边是 Jig ID 输入与操作，右边是表格区。
- * 左栏宽度固定：它装着一个多行输入框，宽度跟着右栏走会被挤成一条缝。 */
+ * 左栏宽度固定：它装着一个多行输入框，宽度跟着右栏走会被挤成一条缝。
+ *
+ * **高度：整页跟随窗口高度，表格自己滚。**
+ * 这一页与排班三页不同 —— 排班页是「内容滚」，JIG 页是「表格滚」：
+ * 表格有几百行，若让整页滚，工序轨道与工具条会跟着一起走，看不到当前范围。
+ * 所以从 canvas-flow 到 TabsContent 每一层都得有确定高度，缺一层表格就长出窗口。
+ *
+ * `min-height: 0` 是关键：flex/grid 子项默认 `min-height: auto`，
+ * 内容多高它就多高，overflow 就永远不会触发。
+ */
+/*
+ * 这一页整页不滚，滚的是表格内部。
+ *
+ * 覆盖 shell.scss 的 `.canvas.is-pinned > .canvas-flow { overflow-y: auto }` ——
+ * 那一套是给「内容滚」的三页用的；JIG 页表格有几百行，让整页滚的话
+ * 工序轨道与工具条会跟着走，看不到当前范围。
+ *
+ * 底部内边距一并去掉：不再滚动就没有「滚到底的呼吸位」，
+ * 留白由表格自己的边框与外层间距给出。
+ */
+.canvas.is-jig > .canvas-flow {
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.jig-tabs {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/*
+ * TabsContent 必须是 flex 容器：里面的 .jig-layout 要靠它拿到高度。
+ *
+ * :not([hidden]) 是保险 —— Radix 未激活的 TabsContent 会带 hidden 属性，
+ * 若这里无条件写 display:flex，未选中的面板会被一起显示出来。
+ */
+.jig-tab-panel:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .jig-layout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -238,10 +348,18 @@
   min-height: 0;
 }
 
+/*
+ * 左栏高度独立，不与表格联动。
+ *
+ * grid 子项默认 stretch（拉满整行高度），那样输入面板会被撑到跟表格一样高，
+ * 里面大片空白。现在让它按内容走（align-self: start）——
+ * 输入框给固定高度，其余内容按需排。
+ */
 .jig-side {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
+  align-self: start;
   min-height: 0;
   padding: var(--sp-4);
   border: 1px solid var(--border);
@@ -259,10 +377,15 @@
   color: var(--muted);
 }
 
-/* 输入框：Jig ID 每行一个，几十行起步，要能一直往下加 */
+/* 输入框：Jig ID 每行一个，几十行起步，要能一直往下加。
+ *
+ * **固定高度，不参与联动** —— 左栏整体按内容走（align-self: start），
+ * 输入框若还写 flex:1 1 auto，在没有确定高度的列里会塌成一行高。
+ * 给一个明确的高度，用户想多粘几行可以自己拖（resize: vertical）。
+ */
 .jig-side-input {
-  flex: 1 1 auto;
-  min-height: 160px;
+  flex: 0 0 auto;
+  height: 220px;
   width: 100%;
   padding: var(--sp-2) var(--sp-3);
   border: 1px solid var(--border);
@@ -272,7 +395,7 @@
   font-family: inherit;
   font-size: var(--fs-control);
   line-height: 1.6;
-  resize: none;
+  resize: vertical;
   outline: none;
 }
 
@@ -330,6 +453,51 @@
 .jig-scope-select {
   width: auto;
   min-width: 150px;
+}
+
+/* ── 下钻面包屑 ──
+ *
+ * 路径：「全量透视」› P/N › CST › 工序。
+ * 每一段都能看出自己在哪一层 —— 下钻可以点很深，
+ * 不给面包屑用户就不知道自己钻到哪了、怎么回去。
+ */
+.jig-drill-bar {
+  gap: var(--sp-2);
+}
+
+.jig-drill-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.jig-drill-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.jig-drill-sep {
+  padding: 0 4px;
+  opacity: 0.55;
+}
+
+.jig-drill-crumb {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+/* 最后一段是当前位置，颜色深一点 */
+.jig-drill-crumb.is-last {
+  color: var(--text);
+  font-weight: 500;
 }
 
 /* ── 窄屏 ──

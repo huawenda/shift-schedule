@@ -75,6 +75,12 @@ function isNumericColumn(name: string, keywordTotal: string): boolean {
  * - **小计行**（CST ID == "--"）：某个 P/N 下各 CST 的合计，加粗 + 浅底；
  * - **总计行**（P/N == "总计"）：全表合计，加粗 + 更重一档的底 + 上边框；
  * - **明细行**：普通行。
+ *
+ * ## 总计行冻结在底部
+ *
+ * 透视表有几百行，总计行在最后 —— 不冻结的话，横向扫读时看不到全表合计。
+ * 做法是给它 `position: sticky; bottom: 0`：它在正常流里仍占一个行高，
+ * 滚动范围与原来完全一致，滑到底时不会压住最后一条明细。
  */
 export function JigTable({
   table,
@@ -98,6 +104,9 @@ export function JigTable({
   const lastIndex = table.rows.length - 1
   const totalRowIndex = isTotal(table.rows[lastIndex], keywordTotal) ? lastIndex : -1
 
+  /** 总计列在列序里的下标；-1 表示这张表没有总计列 */
+  const totalColumnIndex = table.columns.indexOf(keywordTotal)
+
   return (
     <div className="jig-table-scroll">
       <UITable className="jig-table">
@@ -108,11 +117,12 @@ export function JigTable({
                 #
               </TableHead>
             ) : null}
-            {table.columns.map(name => (
+            {table.columns.map((name, index) => (
               <TableHead
                 className={[
                   isNumericColumn(name, keywordTotal) ? 'is-num' : '',
-                  name === 'P/N' ? 'jig-table-sticky-col' : ''
+                  name === 'P/N' ? 'jig-table-sticky-col' : '',
+                  index === totalColumnIndex ? 'jig-table-total-col' : ''
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -146,21 +156,25 @@ export function JigTable({
                   <TableCell className="jig-table-num jig-table-sticky-col">{rowIndex + 1}</TableCell>
                 ) : null}
 
-                {table.columns.map(name => {
+                {table.columns.map((name, index) => {
                   const value = row[name] ?? ''
                   const numeric = isNumericColumn(name, keywordTotal)
+                  /**
+                   * 可点判定：标识列（P/N、CST ID）不可点，空格不可点，其余可点。
+                   *
+                   * **「总计」列是可点的** —— 点它表示「这一行在全部工序上的合计」，
+                   * 下钻时对应「全部工序」（key.eng 不设）。原项目也是这个口径。
+                   */
                   const clickable =
-                    Boolean(onCellClick) &&
-                    !IDENTITY_COLUMNS.has(name) &&
-                    value !== '' &&
-                    !numeric
+                    Boolean(onCellClick) && !IDENTITY_COLUMNS.has(name) && value !== ''
 
                   return (
                     <TableCell
                       className={[
                         numeric ? 'is-num' : '',
                         clickable ? 'is-clickable' : '',
-                        mismatch && name === sizeColumn ? 'is-flagged' : ''
+                        mismatch && name === sizeColumn ? 'is-flagged' : '',
+                        index === totalColumnIndex ? 'jig-table-total-col' : ''
                       ]
                         .filter(Boolean)
                         .join(' ')}
