@@ -204,7 +204,13 @@
  * 色值不用 shadcn 默认的那套 oklch 灰阶：默认灰阶与项目令牌（冷调深色）
  * 不是一个色温，侧栏、顶栏、弹层与画布会各走各的。 */
 .dark {
-    --ui-background: #0f1318;
+    /* 画布与侧栏同底：#0b0e12 = --ui-sidebar = tokens.scss 的 --ground，
+       三者统一；卡片 --ui-card(#161b22) 靠色调台阶浮起来，不靠深边框勾。
+       原先画布是亮一档的 #0f1318，暗色下侧栏与画布之间会切出一道色差。
+       ⚠️ bg-background 不只画布在用（outline 按钮 / Tabs 选中态 / 底部标签栏 /
+       跳过导航链接都走它），改这里会一起跟着走；只想动画布时改成覆写
+       [data-slot="sidebar-inset"] 的 background。 */
+    --ui-background: #0b0e12;
     --ui-foreground: #e6edf3;
     --ui-card: #161b22;
     --ui-card-foreground: #e6edf3;

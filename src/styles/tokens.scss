@@ -323,7 +323,10 @@
   --surface: #161b22;
   --surface-tint: #1b2129;
   --surface-sunken: #11161c;
-  --canvas: #0f1318;
+  /* 与 .dark 的 --ui-background 同值（侧栏底色）。
+   * ⚠️ 这是**死令牌**：真正画画布的是 index.css 里 SidebarInset 的
+   * bg-background → --ui-background。改这里不会有视觉效果，别改错地方。 */
+  --canvas: #0b0e12;
   --raised: #1e242c;
   --active: #262e37;
   --surface-nav: #0f1318;
