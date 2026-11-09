@@ -75,6 +75,14 @@ export interface JigTables {
 
 const EMPTY_TABLE: Table = { columns: [], rows: [] }
 
+/**
+ * 底部状态轨的状态灯。
+ *
+ * 三态足够：空闲（还没载入）/ 处理中 / 就绪，外加出错。
+ * 颜色语义与本项目一致 —— 就绪用品牌青，出错用危险红。
+ */
+export type JigStatus = 'idle' | 'busy' | 'ready' | 'error'
+
 export interface UseJigDataOptions {
   /** 业务配置（型号→尺寸映射、工序顺序等） */
   config: JigConfig
@@ -142,6 +150,14 @@ export interface JigData {
   exitDrill: () => void
   /** 正在读文件 */
   busy: boolean
+  /** 状态灯：空闲 / 处理中 / 就绪 / 出错 */
+  status: JigStatus
+  /** 常驻日志：最近一次动作的结果（不带时间戳，只留最新一条） */
+  log: string
+  /** 源数据行数（底部栏「源 N 行」） */
+  sourceRows: number
+  /** 源数据列数 */
+  sourceColumns: number
   /** 能否选文件（静态版不行） */
   canPick: boolean
   /** 选文件 → 读 → 建表 */
@@ -156,6 +172,15 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const [source, setSource] = useState<SourceData | null>(null)
   const [sourcePath, setSourcePath] = useState('')
   const [busy, setBusy] = useState(false)
+  /**
+   * 底部状态轨的两项：状态灯与常驻日志。
+   *
+   * **只留最新一条**，不攒历史 —— 原项目也是这么做的：
+   * 底部那行是「现在怎么样」，不是日志文件。攒历史反而要在旁边加滚动，
+   * 把它变成第二个内容区。
+   */
+  const [status, setStatus] = useState<JigStatus>('idle')
+  const [log, setLog] = useState('等待载入源数据')
   const [pivotScope, setPivotScope] = useState<PivotScope>('all')
   const [pivotAvail, setPivotAvail] = useState<StageCategory>('all')
   const [drill, setDrill] = useState<DrillState | null>(null)
@@ -398,10 +423,14 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     }
 
     setBusy(true)
+    setStatus('busy')
+    setLog('正在读取源文件…')
     try {
       const picked = await pickJigExcelFile(sourceDir)
       if (!picked) {
         setBusy(false)
+        setStatus(source ? 'ready' : 'idle')
+        setLog(source ? '已取消选择源文件' : '等待载入源数据')
         return
       }
 
@@ -417,6 +446,8 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       if (error) {
         notify(error, 'error')
         setBusy(false)
+        setStatus('error')
+        setLog(error)
         return
       }
 
@@ -432,22 +463,30 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
       setPivotAvail('all')
       setDrill(null)
 
+      setStatus('ready')
+      setLog(`已载入 ${data.rows.length} 行 · ${data.columns.length} 列`)
       notify(`已载入 ${picked.name} · ${data.rows.length} 行`, 'info')
     } catch (error) {
-      notify(error instanceof Error ? error.message : String(error), 'error')
+      const message = error instanceof Error ? error.message : String(error)
+      notify(message, 'error')
+      setStatus('error')
+      setLog(message)
     } finally {
       setBusy(false)
     }
-  }, [config, notify, sourceDir])
+  }, [config, notify, source, sourceDir])
 
   const runQuery = useCallback(
     (ids: string[]) => {
       if (!source) {
         notify('请先载入源数据', 'warning')
+        setStatus('idle')
+        setLog('请先载入源数据')
         return
       }
       if (ids.length === 0) {
         notify('请输入要查询的 Jig ID', 'warning')
+        setLog('请输入要查询的 Jig ID')
         return
       }
 
@@ -458,7 +497,10 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
 
       const detail = queryData(source.rows, ids, config)
       const found = detail.rows.filter(row => row['P/N'] !== '【未找到】').length
-      notify(`查询 ${detail.rows.length} 条 · 命中 ${found} · 未找到 ${detail.rows.length - found}`)
+      const text = `查询 ${detail.rows.length} 条 · 命中 ${found} · 未找到 ${detail.rows.length - found}`
+      setStatus('ready')
+      setLog(text)
+      notify(text)
     },
     [config, notify, source]
   )
@@ -523,6 +565,8 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
 
       if (!target) {
         notify('当前页面没有可导出的数据', 'error')
+        setStatus('error')
+        setLog('当前页面没有可导出的数据')
         return
       }
 
@@ -537,13 +581,24 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
         const buffer = await writeExcel(target.table, target.red)
         const bytes = new Uint8Array(buffer)
         const path = await exportJigFile(fileName, bytes, exportDir)
-        if (!path) return // 用户取消
-        notify(`已导出 ${fileName}`, 'info')
+        if (!path) {
+          setStatus('ready')
+          setLog('已取消导出')
+          return // 用户取消
+        }
+        const redCount = target.red?.rows.filter(Boolean).length ?? 0
+        const text =
+          redCount > 0
+            ? `已导出 ${fileName}，${redCount} 处尺寸不匹配已标红`
+            : `已导出 ${fileName}`
+        setStatus('ready')
+        setLog(text)
+        notify(text, 'info')
       } catch (error) {
-        notify(
-          `导出失败：${error instanceof Error ? error.message : String(error)}`,
-          'error'
-        )
+        const message = `导出失败：${error instanceof Error ? error.message : String(error)}`
+        notify(message, 'error')
+        setStatus('error')
+        setLog(message)
       }
     },
     [
@@ -588,6 +643,10 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     detailFlags,
     drillFlags,
     busy,
+    status,
+    log,
+    sourceRows: source?.rows.length ?? 0,
+    sourceColumns: source?.columns.length ?? 0,
     canPick: canPickJigFile(),
     pickSource,
     runQuery,

@@ -6,8 +6,10 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { useIsCompact } from '@/hooks/use-compact'
 import { useSidebarWidth } from '@/hooks/useSidebarWidth'
 import { isTauriShell } from '@/platform/env'
+import { JigStatusRail } from '@/features/jig/components/JigStatusRail'
 import { JigTopBar } from '@/features/jig/components/JigTopBar'
 import type { JigTabId } from '@/features/jig/components/jigTabs'
+import { computeViewCounts } from '@/features/jig/core/view'
 import type { JigData } from '@/features/jig/hooks/useJigData'
 import { AppSidebar } from './AppSidebar'
 import { MobileNav } from './MobileNav'
@@ -155,6 +157,24 @@ export function AppShell({
             />
           )}
           {children}
+
+          {/*
+            底部状态轨：JIG 页专属。
+
+            放在画布**外面**（而不是页面里）—— 它要贴着窗口底边通栏，
+            画布有 padding 且自身占满剩余高度，插进去就得跟着内缩。
+
+            行数口径走 `computeViewCounts`：页签徽标与这行必须是同一个数，
+            两处各算一遍必然漂移。
+          */}
+          {route === 'jig' ? (
+            <JigStatusRail
+              currentRows={computeViewCounts(jig, jigTab).current}
+              log={jig.log}
+              sourceRows={jig.sourceRows}
+              status={jig.status}
+            />
+          ) : null}
         </SidebarInset>
 
         {isCompact ? (

@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { JigConfig } from '../core/config'
 import type { ReviewScope } from '../core/review'
 import { ALL_PN } from '../core/reviewView'
+import { computeViewCounts } from '../core/view'
 import type { JigData } from '../hooks/useJigData'
 import { JigDrillBar } from './JigDrillBar'
 import { JigPivotToolbar } from './JigPivotToolbar'
@@ -267,14 +268,5 @@ function reviewEmptyHint(scope: ReviewScope, pn: string): string {
 
 /** 各页签的条目数（页签上的徽标） */
 function tabCount(tab: JigTabId, data: JigData): number {
-  switch (tab) {
-    case 'detail':
-      return data.tables.detail.rows.length
-    case 'queryPivot':
-      return data.tables.queryPivot.rows.length
-    case 'pivot':
-      return data.pivot.table.rows.length
-    default:
-      return data.review.table.rows.length
-  }
+  return computeViewCounts(data, tab).byTab[tab]
 }

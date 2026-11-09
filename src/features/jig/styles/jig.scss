@@ -691,3 +691,104 @@
     min-height: 120px;
   }
 }
+
+/* ── 底部状态轨 ────────────────────────────────────────────────
+ *
+ * 搬自原项目的第三层（原项目叫「状态轨」）。它通栏贴在窗口底边，
+ * 承载三件事：状态灯、常驻日志、行数对账。
+ *
+ * 挂在画布**外面**（AppShell 里，与顶栏同一层），所以它通栏、
+ * 不受画布 padding 影响 —— 画布占满剩余高度，状态轨是它下面的一条。
+ */
+.jig-status-rail {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex: none;
+  height: 28px;
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-label);
+  color: var(--muted);
+  background: var(--surface);
+  border-top: 1px solid var(--rule);
+}
+
+/* 状态灯：6px 的圆点，跟原项目同尺寸 —— 够小才不抢注意力 */
+.jig-status-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--control);
+}
+
+.jig-status-dot[data-state='ready'] {
+  background: var(--accent);
+}
+
+.jig-status-dot[data-state='busy'] {
+  background: var(--warning-solid);
+}
+
+.jig-status-dot[data-state='error'] {
+  background: var(--danger);
+}
+
+/* 常驻日志：只留最新一条，不攒历史 */
+.jig-status-log {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.jig-status-spacer {
+  flex: 1;
+}
+
+/* 行数对账：等宽数字，两行的数才对得齐 */
+.jig-status-meta {
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+}
+
+/*
+ * 作者署名：常驻在状态轨最右端。
+ *
+ * 用竖规与「源 x 行」隔开，字号比日志小一号 —— 日常几乎看不见，
+ * 但需要时一直在那里。
+ */
+.jig-status-sign {
+  padding-left: var(--sp-3);
+  border-left: 1px solid var(--rule);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+  color: var(--faint);
+  user-select: none;
+}
+
+/* 载入中的琥珀细进度条 */
+.jig-status-bar {
+  position: relative;
+  width: 120px;
+  height: 2px;
+  overflow: hidden;
+  background: var(--rule);
+}
+
+.jig-status-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--warning-solid);
+  animation: jig-sweep 1.1s ease-in-out infinite;
+}
+
+@keyframes jig-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
