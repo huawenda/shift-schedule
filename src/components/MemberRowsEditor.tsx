@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createMemberId, type Member, type MemberGroup } from '../data/roster'
-import { Select } from './Select'
+import { Select, type SelectGroup, type SelectOption } from './Select'
 import { Input } from '@/components/ui/input'
 
 /** 「未分组」不是真实分组，用哨兵值表达 tab/筛选条件 */
@@ -86,6 +86,143 @@ interface MemberRowsEditorProps {
   onImport?: () => void
 }
 
+/* ---------------------------------------------------------------- 单行
+ *
+ * 一行一个 memo 组件。改一格姓名时父层 `rows` 会换引用，但 `rows.map` 保留了
+ * 其余行的对象引用，加上这里的 props 全是 primitive / 稳定引用 / 稳定回调，
+ * 于是只有被改的那一行重渲染 —— 不必把整张表（每行两个 Radix Select）重建一遍。
+ *
+ * `lazyOptions`：班序下拉有 20 项，几十行同屏时首屏会白建上千个 `SelectItem`
+ * 元素（它们绝大多数从没被展开过）。延到第一次展开再注水。
+ */
+interface MemberRowViewProps {
+  row: MemberRow
+  index: number
+  isSelf: boolean
+  error: string
+  showGroupField: boolean
+  groupOptions: SelectOption[]
+  patternGroups: SelectGroup[]
+  patternLabel: string
+  onPatch: (key: string, next: Partial<MemberRow>) => void
+  onRemove: (key: string) => void
+}
+
+const MemberRowView = memo(function MemberRowView({
+  row,
+  index,
+  isSelf,
+  error,
+  showGroupField,
+  groupOptions,
+  patternGroups,
+  patternLabel,
+  onPatch,
+  onRemove
+}: MemberRowViewProps) {
+  const label = row.name || `第 ${index + 1} 位成员`
+
+  return (
+    <div className="member-row-wrap">
+      <div
+        className={[
+          'member-row',
+          isSelf ? 'is-self' : '',
+          error ? 'is-invalid' : ''
+        ].filter(Boolean).join(' ')}
+        data-row-index={index}
+      >
+        {isSelf ? (
+          <span className="member-locked member-field-name" title="本人的姓名与班序请在「个人信息」里改">
+            <span className="member-locked-name">{row.name}</span>
+            <span className="badge-self">本人</span>
+          </span>
+        ) : (
+          <Input
+            aria-label={`第 ${index + 1} 位成员的姓名`}
+            autoComplete="off"
+            className="member-field-name"
+            maxLength={12}
+            name={`member-name-${index}`}
+            placeholder="姓名"
+            spellCheck={false}
+            value={row.name}
+            onChange={event => onPatch(row.key, { name: event.target.value })}
+          />
+        )}
+
+        {/* 分组是部门归属，不是身份：本人那一行也可以改 */}
+        {showGroupField ? (
+          <Select
+            ariaLabel={`${label} 的分组`}
+            className="member-field-group"
+            groups={[{ options: groupOptions }]}
+            lazyOptions
+            value={row.groupId}
+            onChange={next => onPatch(row.key, { groupId: next })}
+          />
+        ) : null}
+
+        {/* 班序与岗位包成一层：桌面 display: contents 继续按列排，
+            手机上则作为一个两列网格落到卡片的第二行 */}
+        <div className="member-fields">
+          {isSelf ? (
+            <span className="member-locked member-locked-pattern member-field-pattern">
+              {patternLabel}
+            </span>
+          ) : (
+            <Select
+              ariaLabel={`${label} 的班序`}
+              className="member-field-pattern"
+              groups={patternGroups}
+              lazyOptions
+              value={row.patternId}
+              onChange={next => onPatch(row.key, { patternId: next })}
+            />
+          )}
+
+          {isSelf ? (
+            <span
+              className="member-locked member-locked-position member-field-position"
+              title="本人的岗位请在「个人信息」里改"
+            >
+              {row.position || '—'}
+            </span>
+          ) : (
+            <Input
+              aria-label={`${label} 的岗位`}
+              autoComplete="off"
+              className="member-field-position"
+              maxLength={12}
+              name={`member-position-${index}`}
+              placeholder="岗位（可选）"
+              spellCheck={false}
+              value={row.position}
+              onChange={event => onPatch(row.key, { position: event.target.value })}
+            />
+          )}
+        </div>
+
+        <div className="member-row-actions">
+          <button
+            className="btn btn-quiet"
+            disabled={isSelf}
+            title={isSelf ? '本人不能在这里删除，请到「个人信息」里更换' : undefined}
+            type="button"
+            onClick={() => onRemove(row.key)}
+          >
+            删除
+          </button>
+        </div>
+      </div>
+
+      {/* 错误提示挂在字段行外面：红边只描字段，文案不会跟着被框住，
+          两个错误行也不会连成一块 */}
+      {error ? <p className="member-row-error" role="alert">{error}</p> : null}
+    </div>
+  )
+})
+
 /**
  * 成员表：姓名 + 分组（只在「全部」显示）+ 班序 + 岗位（+ 组内排序）。
  *
@@ -108,16 +245,108 @@ export function MemberRowsEditor({
   sorting = false,
   onImport
 }: MemberRowsEditorProps) {
-  const patternNames = new Map(patterns.map(option => [option.id, option.name]))
-  const groupNames = new Map(groups.map(group => [group.id, group.name]))
+  const patternNames = useMemo(
+    () => new Map(patterns.map(option => [option.id, option.name])),
+    [patterns]
+  )
+  const groupNames = useMemo(
+    () => new Map(groups.map(group => [group.id, group.name])),
+    [groups]
+  )
 
   /** 当前 tab 可见的行；其余操作都以它们的 key 映射回完整草稿 */
-  const visibleRows = rows.filter(row => {
+  const visibleRows = useMemo(() => rows.filter(row => {
     if (visibleGroup === undefined) return true
     if (visibleGroup === UNGROUPED_MEMBERS) return !row.groupId
     return row.groupId === visibleGroup
-  })
-  const fullIndexByKey = new Map(rows.map((row, index) => [row.key, index]))
+  }), [rows, visibleGroup])
+  const fullIndexByKey = useMemo(
+    () => new Map(rows.map((row, index) => [row.key, index])),
+    [rows]
+  )
+
+  /**
+   * 行内校验预计算：原来每行 `errorOf()` 都要 `rows.find` 两遍（O(n²)），
+   * 而且它依赖整表，单行抽 memo 后传不进稳定的 error。
+   * 这里先按姓名建桶，一遍扫出每行的错误；语义与原来逐行 find 完全一致：
+   * 同名的两行互相报错，提示里带的是「另一行」的分组名。
+   */
+  const errorByKey = useMemo(() => {
+    const selfName = rows.find(item => item.id === selfId)?.name.trim() ?? ''
+    const sameName = new Map<string, MemberRow[]>()
+    rows.forEach(row => {
+      if (selfId && row.id === selfId) return
+      const name = row.name.trim()
+      if (!name) return
+      const bucket = sameName.get(name)
+      if (bucket) bucket.push(row)
+      else sameName.set(name, [row])
+    })
+
+    const result = new Map<string, string>()
+    rows.forEach(row => {
+      // 本人行只读、不参与成员表校验
+      if (selfId && row.id === selfId) return
+      const name = row.name.trim()
+      if (!name) {
+        result.set(row.key, '请填写姓名')
+        return
+      }
+      if (selfName && name === selfName) {
+        result.set(row.key, '与本人同名，矩阵里会分不清')
+        return
+      }
+      // 不只看「前面的行」：分组 tab 里同名的另一条可能在别的 tab，
+      // 也要在当前行给出错误，否则吸底保存条灰着却看不到原因。
+      const duplicate = sameName.get(name)?.find(item => item.id !== row.id)
+      if (duplicate) {
+        const group = groupNames.get(duplicate.groupId) ?? '未分组'
+        result.set(row.key, `与「${group}」的「${name}」重名`)
+      }
+    })
+    return result
+  }, [rows, selfId, groupNames])
+
+  /**
+   * 回调按 key 定位而不是下标，引用恒定 —— 否则每个行组件都会被内联箭头
+   * 冲掉 memo。最新数据放 ref：回调只在用户交互时触发，拿到的总是当前这一帧。
+   */
+  const rowsRef = useRef(rows)
+  rowsRef.current = rows
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+
+  const patchByKey = useCallback((key: string, next: Partial<MemberRow>) => {
+    onChangeRef.current(
+      rowsRef.current.map(item => (item.key === key ? { ...item, ...next } : item))
+    )
+  }, [])
+  const removeByKey = useCallback((key: string) => {
+    onChangeRef.current(rowsRef.current.filter(item => item.key !== key))
+  }, [])
+
+  /** 下拉选项：引用稳定，单行的 memo 才立得住 */
+  const groupOptions = useMemo<SelectOption[]>(() => [
+    { value: '', label: '未分组' },
+    ...groups.map(group => ({ value: group.id, label: group.name }))
+  ], [groups])
+
+  const patternGroups = useMemo<SelectGroup[]>(() => {
+    // 有自建班序才分组：只有内置时多一行「内置」标题纯属噪音
+    const custom = patterns.filter(option => !option.builtin)
+    if (custom.length === 0) {
+      return [{ options: patterns.map(option => ({ value: option.id, label: option.name })) }]
+    }
+    return [
+      {
+        label: '内置',
+        options: patterns
+          .filter(option => option.builtin)
+          .map(option => ({ value: option.id, label: option.name }))
+      },
+      { label: '自定义', options: custom.map(option => ({ value: option.id, label: option.name })) }
+    ]
+  }, [patterns])
 
   /**
    * 可见行内部换位：把新顺序回填到这些行在整张表里占的槽位。
@@ -138,40 +367,6 @@ export function MemberRowsEditor({
       nextRows[slot] = nextVisible[index]
     })
     onChange(nextRows)
-  }
-
-  /** 行内校验：空名 / 与本人同名 / 与任意一行重名（可能藏在别的分组 tab 里） */
-  function errorOf(row: MemberRow): string {
-    // 本人行只读、不参与成员表校验
-    if (selfId && row.id === selfId) return ''
-    const name = row.name.trim()
-    if (!name) return '请填写姓名'
-
-    const selfName = rows.find(item => item.id === selfId)?.name.trim() ?? ''
-    if (selfName && name === selfName) return '与本人同名，矩阵里会分不清'
-
-    // 不只看「前面的行」：分组 tab 里同名的另一条可能在别的 tab，
-    // 也要在当前行给出错误，否则吸底保存条灰着却看不到原因。
-    const duplicate = rows.find(item => item.id !== row.id && item.name.trim() === name)
-    if (duplicate) {
-      const group = groupNames.get(duplicate.groupId) ?? '未分组'
-      return `与「${group}」的「${name}」重名`
-    }
-    return ''
-  }
-
-  /** 可见行下标 → 完整草稿下标；改完再交回整表 */
-  function patch(index: number, next: Partial<MemberRow>) {
-    const row = visibleRows[index]
-    const fullIndex = row ? fullIndexByKey.get(row.key) : undefined
-    if (fullIndex === undefined) return
-    onChange(rows.map((item, rowIndex) => (rowIndex === fullIndex ? { ...item, ...next } : item)))
-  }
-
-  function remove(index: number) {
-    const row = visibleRows[index]
-    if (!row) return
-    onChange(rows.filter(item => item.key !== row.key))
   }
 
   function append() {
@@ -326,22 +521,6 @@ export function MemberRowsEditor({
     )
   }
 
-  const builtin = patterns.filter(option => option.builtin)
-  const custom = patterns.filter(option => !option.builtin)
-  const groupOptions = [
-    { value: '', label: '未分组' },
-    ...groups.map(group => ({ value: group.id, label: group.name }))
-  ]
-
-  // 有自建班序才分组：只有内置时多一行「内置」标题纯属噪音
-  const patternGroups =
-    custom.length === 0
-      ? [{ options: patterns.map(option => ({ value: option.id, label: option.name })) }]
-      : [
-        { label: '内置', options: builtin.map(option => ({ value: option.id, label: option.name })) },
-        { label: '自定义', options: custom.map(option => ({ value: option.id, label: option.name })) }
-      ]
-
   return (
     <div className={`member-editor${showGroupField ? ' is-grouped' : ''}`}>
       <div className="member-editor-head">
@@ -357,108 +536,21 @@ export function MemberRowsEditor({
         </p>
       ) : null}
 
-      {visibleRows.map((row, index) => {
-        const isSelfRow = Boolean(selfId && row.id === selfId)
-        const rowError = errorOf(row)
-        return (
-        <div className="member-row-wrap" key={row.key}>
-        <div
-          className={[
-            'member-row',
-            isSelfRow ? 'is-self' : '',
-            rowError ? 'is-invalid' : ''
-          ].filter(Boolean).join(' ')}
-          data-row-index={index}
-        >
-
-          {isSelfRow ? (
-            <span className="member-locked member-field-name" title="本人的姓名与班序请在「个人信息」里改">
-              <span className="member-locked-name">{row.name}</span>
-              <span className="badge-self">本人</span>
-            </span>
-          ) : (
-            <Input
-              aria-label={`第 ${index + 1} 位成员的姓名`}
-              autoComplete="off"
-              className="member-field-name"
-              maxLength={12}
-              name={`member-name-${index}`}
-              placeholder="姓名"
-              spellCheck={false}
-              value={row.name}
-              onChange={event => patch(index, { name: event.target.value })}
-            />
-          )}
-
-          {/* 分组是部门归属，不是身份：本人那一行也可以改 */}
-          {showGroupField ? (
-            <Select
-              ariaLabel={`${row.name || `第 ${index + 1} 位成员`} 的分组`}
-              className="member-field-group"
-              groups={[{ options: groupOptions }]}
-              value={row.groupId}
-              onChange={next => patch(index, { groupId: next })}
-            />
-          ) : null}
-
-          {/* 班序与岗位包成一层：桌面 display: contents 继续按列排，
-              手机上则作为一个两列网格落到卡片的第二行 */}
-          <div className="member-fields">
-            {isSelfRow ? (
-              <span className="member-locked member-locked-pattern member-field-pattern">
-                {patternNames.get(row.patternId) ?? row.patternId}
-              </span>
-            ) : (
-              <Select
-                ariaLabel={`${row.name || `第 ${index + 1} 位成员`} 的班序`}
-                className="member-field-pattern"
-                groups={patternGroups}
-                value={row.patternId}
-                onChange={next => patch(index, { patternId: next })}
-              />
-            )}
-
-            {isSelfRow ? (
-              <span
-                className="member-locked member-locked-position member-field-position"
-                title="本人的岗位请在「个人信息」里改"
-              >
-                {row.position || '—'}
-              </span>
-            ) : (
-              <Input
-                aria-label={`${row.name || `第 ${index + 1} 位成员`} 的岗位`}
-                autoComplete="off"
-                className="member-field-position"
-                maxLength={12}
-                name={`member-position-${index}`}
-                placeholder="岗位（可选）"
-                spellCheck={false}
-                value={row.position}
-                onChange={event => patch(index, { position: event.target.value })}
-              />
-            )}
-          </div>
-
-          <div className="member-row-actions">
-            <button
-              className="btn btn-quiet"
-              disabled={isSelfRow}
-              title={isSelfRow ? '本人不能在这里删除，请到「个人信息」里更换' : undefined}
-              type="button"
-              onClick={() => remove(index)}
-            >
-              删除
-            </button>
-          </div>
-        </div>
-
-        {/* 错误提示挂在字段行外面：红边只描字段，文案不会跟着被框住，
-            两个错误行也不会连成一块 */}
-        {rowError ? <p className="member-row-error" role="alert">{rowError}</p> : null}
-        </div>
-        )
-      })}
+      {visibleRows.map((row, index) => (
+        <MemberRowView
+          key={row.key}
+          row={row}
+          index={index}
+          isSelf={Boolean(selfId && row.id === selfId)}
+          error={errorByKey.get(row.key) ?? ''}
+          showGroupField={showGroupField}
+          groupOptions={groupOptions}
+          patternGroups={patternGroups}
+          patternLabel={patternNames.get(row.patternId) ?? row.patternId}
+          onPatch={patchByKey}
+          onRemove={removeByKey}
+        />
+      ))}
 
       <div className="member-editor-actions">
         <button className="btn btn-add" type="button" onClick={onAdd ?? append}>添加成员</button>

@@ -160,14 +160,24 @@ export function SettingsScreen({
     if (flowRef.current) flowRef.current.scrollTop = 0
   }, [tab])
 
+  /**
+   * 只有**外部花名册真的换了引用**才重置草稿（保存、导入、删分组）。
+   *
+   * 首次挂载必须跳过：`rows` 的 useState 初始化用的就是这个表达式，
+   * 再 setRows 一次只会得到一个新数组引用，把整张成员表（每行两个 Radix Select）
+   * 在首屏里再渲染一遍 —— 这是「从别的页面进设置总会卡一下」的主因。
+   */
+  const syncedMembers = useRef(roster.members)
   useEffect(() => {
+    if (syncedMembers.current === roster.members) return
+    syncedMembers.current = roster.members
     if (skipMemberSync.current) {
       skipMemberSync.current = false
       return
     }
     setRows(orderByGroup(toRows(roster.members), roster.groups))
     setDirty(false)
-  }, [roster.members])
+  }, [roster.members, roster.groups])
 
   const self = getSelf(roster)
   const drafts = useMemo(() => fromRows(rows), [rows])

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { cn } from 'cn'
 
 import {
@@ -28,6 +29,11 @@ interface SelectProps {
   groups: SelectGroup[]
   value: string
   onChange: (value: string) => void
+  /**
+   * 只在「同屏几十上百个下拉」时开启：选项元素延到第一次展开才创建。
+   * 默认 false，其余调用点（个人资料、向导、弹层）保持原行为。
+   */
+  lazyOptions?: boolean
 }
 
 /**
@@ -50,21 +56,35 @@ const decode = (value: string) => (value === EMPTY ? '' : value)
  * `className` 落到 trigger 上：调用方传的都是布局类（`member-field-group` 的 grid-area 之类），
  * 放在触发按钮上语义一致。
  */
-export function Select({ ariaLabel, className, disabled, groups, onChange, value }: SelectProps) {
+export function Select({
+  ariaLabel, className, disabled, groups, onChange, value, lazyOptions = false
+}: SelectProps) {
+  const [warmed, setWarmed] = useState(false)
   const options = groups.flatMap(group => group.options)
   const current = options.find(option => option.value === value)
+  const showOptions = !lazyOptions || warmed
 
+  /**
+   * 成员表一行两个下拉、班序又有 20 条：无条件创建 `SelectItem` 元素树是
+   * 首屏渲染的大头。开启后选项延到第一次展开时「注水」，之后常驻 ——
+   * 关闭动画不会缺内容，再展开也不用重建。
+   *
+   * 只在 `onOpenChange` 里注水：Radix 自己在 Trigger 的冒泡阶段绑了
+   * `onPointerDown` 来开面板，不碰它。open 与 warmed 是同一批更新，
+   * commit 时选项已经注册进 collection，选中项高亮与 typeahead 都与原来一致。
+   */
   return (
     <SelectRoot
       disabled={disabled}
       value={encode(value)}
       onValueChange={next => onChange(decode(next))}
+      onOpenChange={next => { if (next && lazyOptions) setWarmed(true) }}
     >
       <SelectTrigger aria-label={ariaLabel} className={cn('w-full', className)}>
         <SelectValue placeholder="请选择">{current?.label ?? '请选择'}</SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {groups.map((group, index) => (
+        {showOptions ? groups.map((group, index) => (
           <SelectGroup key={group.label ?? `group-${index}`}>
             {group.label ? <SelectLabel>{group.label}</SelectLabel> : null}
             {group.options.map(option => (
@@ -73,7 +93,7 @@ export function Select({ ariaLabel, className, disabled, groups, onChange, value
               </SelectItem>
             ))}
           </SelectGroup>
-        ))}
+        )) : null}
       </SelectContent>
     </SelectRoot>
   )
