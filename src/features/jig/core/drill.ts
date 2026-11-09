@@ -29,6 +29,7 @@ import type { JigConfig } from './config'
 import { buildDetailTable } from './query'
 import {
   drillPivotRows,
+  ORIGINAL_CST_KEY,
   SUMMARY_CST,
   type PivotDrillKey
 } from './pivot'
@@ -141,6 +142,15 @@ export function openDrill(input: OpenDrillInput): DrillState | null {
  * `baseRows` 必须与当前显示的透视表**用同一批行** ——
  * 全量透视传透视的底稿，结果透视传本次查询命中的行（快照）。
  * 底稿不同，筛出的行数就与格子上的数字对不上。
+ *
+ * ## CST ID 还原
+ *
+ * 透视表用 Lot ID 回填了空的 CST ID（那是分组键，必须有值）。
+ * 但下钻明细是**原样展示源数据**的地方 —— 那块板就是没编 CST 号，
+ * 显示成 Lot ID 会让人以为它有 CST 号。
+ *
+ * 所以这里按 `ORIGINAL_CST_KEY` 记下的原值还原。**筛选仍用回填后的值** ——
+ * 定位键（key.cst）来自透视表，用原值就与格子的口径对不上了。
  */
 export function buildDrillTable(
   drill: DrillState | null,
@@ -149,5 +159,13 @@ export function buildDrillTable(
 ): Table {
   if (!drill) return { columns: [], rows: [] }
   const rows = drillPivotRows(baseRows, drill.key, drill.filterProduction, config)
-  return buildDetailTable(rows, config)
+
+  // 还原 CST ID 的原值（回填过的行才需要）
+  const restored = rows.map(r =>
+    ORIGINAL_CST_KEY in r
+      ? { ...r, 'CST ID': r[ORIGINAL_CST_KEY] ?? '' }
+      : r
+  )
+
+  return buildDetailTable(restored, config)
 }

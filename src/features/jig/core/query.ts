@@ -157,16 +157,29 @@ export function queryData(
 
   const mapped = applySizeMapping(merged, cfg)
 
-  // 对应 Python 的 fillna("【未找到】"): 剩余空值填占位符。
-    // 型号/尺寸两列已在 applySizeMapping 阶段归一化, 这里不能回填,
-    // 否则未命中行会显示成型号="【未找到】" 而非旧版的空单元格。
-    const filled = mapped.map((r) => {
-      const out: Row = {}
-      for (const [k, v] of Object.entries(r)) {
-        out[k] = v === '' && k !== '对应尺寸' && k !== 'Jig 对应型号' ? NOT_FOUND : v
-      }
-      return out
-    })
+  /*
+   * 对应 Python 的 fillna("【未找到】"): 剩余空值填占位符。
+   *
+   * 型号/尺寸两列已在 applySizeMapping 阶段归一化, 这里不能回填,
+   * 否则未命中行会显示成型号="【未找到】" 而非旧版的空单元格。
+   *
+   * **CST ID 列也不回填**: 有些行有 Lot ID 但没有 CST ID, 这是正常的
+   * (一块板还没编到 CST 号)。那不是「没找到」, 是「这一列本来就空」——
+   * 填成【未找到】会让人以为查不到这条记录。
+   *
+   * 全量透视里用 Lot ID 回填 CST ID 是**刻意为之**(那边 CST ID 是分组键,
+   * 必须有值才能汇总); 明细页是原样展示源数据, 不做这层推断。
+   */
+  const filled = mapped.map((r) => {
+    const out: Row = {}
+    for (const [k, v] of Object.entries(r)) {
+      out[k] =
+        v === '' && k !== '对应尺寸' && k !== 'Jig 对应型号' && k !== 'CST ID'
+          ? NOT_FOUND
+          : v
+    }
+    return out
+  })
 
   const sorted = sortRows(filled, cfg)
   return { columns: columnsOf(sorted, Object.keys(sorted[0] ?? {})), rows: sorted }

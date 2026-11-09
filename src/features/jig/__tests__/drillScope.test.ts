@@ -161,4 +161,47 @@ describe('buildDrillTable', () => {
   it('没有下钻时返回空表', () => {
     expect(buildDrillTable(null, rows, config).rows).toHaveLength(0)
   })
+
+  it('有 Lot 但没 CST 的行: 明细里 CST 列留空, 不用 Lot 顶替', () => {
+    // 透视表用 Lot ID 回填 CST ID（那是分组键，必须有值），这是刻意为之；
+    // 但下钻明细是原样展示源数据的地方 —— 那块板就是没编 CST 号。
+    const lotRows: Row[] = [
+      {
+        'P/N': 'PN-A',
+        'Lot ID': 'LOT-9',
+        'CST ID': '',
+        'Jig ID': 'J9',
+        工程名: 'PNP',
+        工程: '50000'
+      }
+    ]
+
+    const table = generatePivot(lotRows, false, config)
+
+    // 透视表里该分组用的是 Lot ID
+    const cstRow = table.rows.find(r => r['CST ID'] !== SUMMARY_CST)
+    expect(cstRow?.['CST ID']).toBe('LOT-9')
+
+    // 下钻到该分组
+    const viewPns = resolvePivotPns(table, config.keywordTotal)
+    const rowIndex = table.rows.findIndex(r => r['CST ID'] === 'LOT-9')
+    const d = openDrill({
+      rowIndex,
+      column: config.keywordTotal,
+      from: 'pivot',
+      table,
+      viewPns,
+      scopePn: '',
+      scopeIsProd: false,
+      config
+    })
+
+    const detail = buildDrillTable(d, lotRows, config)
+    expect(detail.rows).toHaveLength(1)
+    // CST 留空，Lot 照常显示
+    expect(detail.rows[0]['CST ID']).toBe('')
+    expect(detail.rows[0]['Lot ID']).toBe('LOT-9')
+    // 内部键不能漏进表里
+    expect(detail.columns).not.toContain('__原始CSTID')
+  })
 })

@@ -119,6 +119,53 @@ describe('查询', () => {
     expect(r['对应尺寸']).toBe('')
   })
 
+  it('未命中行的 CST ID 也是 【未找到】', () => {
+    const t = queryData(source, ['NOTEXIST0001'], config)
+    expect(t.rows[0]['CST ID']).toBe(NOT_FOUND)
+  })
+
+  it('有 Lot ID 但没有 CST ID 的行: CST 列留空, 不用 Lot 顶替', () => {
+    // 有些行有 Lot ID 但没 CST ID，这是正常的（板还没编到 CST 号）。
+    // 明细页原样展示源数据 —— 那不是「没找到」，是「这一列本来就空」。
+    const rows: Row[] = [
+      {
+        'P/N': 'PN-C',
+        'Lot ID': 'LOT-9',
+        'CST ID': '',
+        'Slot No': '1',
+        'Jig ID': 'JIG-NO-CST',
+        'Jig 对应型号': '184 184',
+        'Glass判定': 'G',
+        '工程名': 'PNP',
+        'Jig状态': 'INPRODUCTION',
+      }
+    ]
+
+    const t = queryData(rows, ['JIG-NO-CST'], config)
+    expect(t.rows[0]['CST ID']).toBe('')
+    // Lot ID 照常显示 —— 它是源数据里的真实值
+    expect(t.rows[0]['Lot ID']).toBe('LOT-9')
+  })
+
+  it('审查页里同样留空（与明细页一致）', () => {
+    const rows: Row[] = [
+      {
+        'P/N': 'PN-C',
+        'Lot ID': 'LOT-9',
+        'CST ID': '',
+        'Slot No': '1',
+        'Jig ID': 'JIG-NO-CST',
+        'Jig 对应型号': '184 184',
+        'Glass判定': 'G',
+        '工程名': 'PNP',
+        'Jig状态': 'INPRODUCTION',
+      }
+    ]
+
+    const t = processSourceData(rows, config)
+    expect(t.rows[0]['CST ID']).toBe('')
+  })
+
   it('Slot No 数值排序: 2 在 10 之前', () => {
     const t = queryData(source, ['CJJ349000910', 'CJJ349000919'], config)
     expect(t.rows.map((r) => r['Slot No'])).toEqual(['2', '10'])

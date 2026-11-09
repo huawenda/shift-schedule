@@ -1,4 +1,5 @@
 import {
+  Download,
   FolderOpen,
   Loader,
   Moon,
@@ -18,6 +19,8 @@ interface JigTopBarProps {
   sourcePath: string
   /** 已选中但尚未加载的文件名；null = 没选过 */
   pendingName: string | null
+  /** 是否处于「已选未加载」状态（顶栏标「（待加载）」） */
+  pendingUnloaded: boolean
   /** 是否正在读文件 */
   busy: boolean
   /** 能否选文件（静态版不行） */
@@ -26,6 +29,10 @@ interface JigTopBarProps {
   onPick: () => void
   /** 读取已选中的文件 */
   onLoad: () => void
+  /** 能否导出（静态版不行，或当前页没数据） */
+  canExport: boolean
+  /** 导出当前视图 */
+  onExport: () => void
   /** 打开型号尺寸映射面板 */
   onOpenSizeMapping: () => void
   /** 打开 JIG 设置 */
@@ -50,10 +57,13 @@ export function JigTopBar({
   sourceName,
   sourcePath,
   pendingName,
+  pendingUnloaded,
   busy,
   canPick,
   onPick,
   onLoad,
+  canExport,
+  onExport,
   onOpenSizeMapping,
   onOpenSettings,
   theme,
@@ -64,9 +74,7 @@ export function JigTopBar({
 
   /** 顶栏显示的是「当前选定的文件」：选过没加载时显示待加载的那个 */
   const shownName = pendingName ?? sourceName
-  const shownPath = pendingName ? pendingName : sourcePath
-  /** 已经加载过、且之后又选了新的 → 两者都显示得出来 */
-  const shownIsPending = pendingName !== null && pendingName !== sourceName
+  const shownPath = pendingName ?? sourcePath
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
@@ -78,7 +86,7 @@ export function JigTopBar({
         {shownName ? (
           <span className="truncate text-sm" title={shownPath}>
             {shownName}
-            {shownIsPending ? (
+            {pendingUnloaded ? (
               <span className="ml-1 text-xs text-muted-foreground">（待加载）</span>
             ) : null}
           </span>
@@ -108,6 +116,16 @@ export function JigTopBar({
         >
           {busy ? <Loader className="animate-spin" /> : null}
           加载
+        </Button>
+        <Button
+          disabled={!canExport}
+          onClick={onExport}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <Download data-icon="inline-start" />
+          导出
         </Button>
         <Button onClick={onOpenSizeMapping} size="sm" type="button" variant="outline">
           <SlidersHorizontal data-icon="inline-start" />

@@ -24,6 +24,21 @@ import { emptyTable } from './table'
 export const SUMMARY_CST = '--'
 
 /**
+ * 回填前的 CST ID 藏在哪。
+ *
+ * 透视表里 CST ID 是**分组键**，必须唯一 —— 有的行有 Lot ID 但没 CST ID，
+ * 用 Lot ID 顶上才能分组。这是刻意为之。
+ *
+ * 但下钻明细是**原样展示源数据**的地方：那块板就是没编 CST 号，
+ * 显示成 Lot ID 会让人以为它有 CST 号。所以回填时把原值存进这个内部键，
+ * 下钻明细展示前再还原回去。
+ *
+ * 它不会出现在任何表里 —— `applySizeMapping` 只取 cfg.outputColumns 里的列，
+ * 这个键不在其中。
+ */
+export const ORIGINAL_CST_KEY = '__原始CSTID'
+
+/**
  * 「可用」工程的集合。
  *
  * 现场口径: JIG 出现在 PNP / PNP 2nd / Jig 洗净及检查 / Jig Loading /
@@ -112,10 +127,16 @@ export function preparePivotRows(
   cfg: JigConfig,
 ): Row[] {
   // --- 1. 数据预处理: CST ID 为空时用 Lot ID 回填 ---
+  //
+  // 回填是**刻意为之**：透视表按 (P/N, CST ID) 分组，CST ID 必须有值才能
+  // 把这些行归到一起。但原值要留着 —— 下钻明细展示时按原样还原
+  // （见 ORIGINAL_CST_KEY 的说明）。
   let work: Row[] = [...df]
   if (work.some((r) => 'Lot ID' in r)) {
     work = work.map((r) =>
-      r['CST ID'] === '' ? { ...r, 'CST ID': r['Lot ID'] ?? '' } : r,
+      r['CST ID'] === ''
+        ? { ...r, 'CST ID': r['Lot ID'] ?? '', [ORIGINAL_CST_KEY]: '' }
+        : r,
     )
   }
 

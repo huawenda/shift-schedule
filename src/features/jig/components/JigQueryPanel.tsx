@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 
@@ -9,6 +9,17 @@ import { processClipboardContent } from '../core/clipboard'
 interface JigQueryPanelProps {
   /** 是否已有源数据 —— 没有时不让查 */
   ready: boolean
+  /** 输入框的内容（受控：提到 hook 里，外壳层要读它判断要不要跳页） */
+  value: string
+  /**
+   * 改输入框内容。
+   *
+   * 支持 updater 形式（`(prev) => next`）—— 粘贴时要「在原内容后面追加」，
+   * 用的是同一份旧值，不能先读再写（中间可能已经被别的操作改过）。
+   */
+  onValueChange: (
+    next: string | ((prev: string) => string)
+  ) => void
   /** 粘贴时是否自动从混合文本里挑出 JIG ID（本机偏好） */
   clipboardAutoProcessEnabled: boolean
   /** 执行查询 */
@@ -26,27 +37,28 @@ interface JigQueryPanelProps {
  * 全选复制粘进来，期望程序自动挑出那些 ID。这一步靠剪贴板插件读**系统剪贴板**
  * （WebView2 里 `navigator.clipboard.readText` 在 onPaste 事件中基本必被拒）。
  *
- * **高度按内容，不与表格联动** —— 表格有几百行，左栏若被拉成同样高，
- * 里面大片空白，输入框反而被压扁。这里用 `align-self: start` 独立成一块。
+ * **受控**：内容提到 useJigData —— 顶栏的「加载」按钮在外壳层，
+ * 要判断「输入框是不是空的」必须能读到它。
  */
 export function JigQueryPanel({
   ready,
+  value,
+  onValueChange,
   clipboardAutoProcessEnabled,
   onQuery,
   onClear,
   notify
 }: JigQueryPanelProps) {
-  const [text, setText] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   /** 把输入框里的内容拆成 ID 列表 */
   const parseIds = useCallback(
     () =>
-      text
+      value
         .split(/\r?\n/)
         .map(line => line.trim())
         .filter(Boolean),
-    [text]
+    [value]
   )
 
   const runQuery = useCallback(() => {
@@ -93,7 +105,7 @@ export function JigQueryPanel({
       if (clipboard === null) {
         // 插件在但读失败（权限等）：把原文还回去，别让用户白按一次
         if (raw) {
-          setText(prev => prev + raw)
+          onValueChange(prev => prev + raw)
         } else {
           notify('读不到系统剪贴板，请手动粘贴', 'warning')
         }
@@ -102,19 +114,19 @@ export function JigQueryPanel({
 
       // 「粘贴时自动提取」关掉时，按原文粘贴 —— 用户可能就想粘一段完整文本
       if (!clipboardAutoProcessEnabled) {
-        setText(prev => prev + clipboard)
+        onValueChange(prev => prev + clipboard)
         return
       }
 
       const processed = processClipboardContent(clipboard)
       if (processed === clipboard) {
         // 纯净的 ID 列表或没有 ID：按原文粘贴，与旧版行为一致
-        setText(prev => prev + processed)
+        onValueChange(prev => prev + processed)
         return
       }
 
       const count = processed.split(/\r?\n/).filter(Boolean).length
-      setText(prev => {
+      onValueChange(prev => {
         const base = prev.replace(/\s*$/, '')
         return base ? `${base}\n${processed}` : processed
       })
@@ -137,7 +149,7 @@ export function JigQueryPanel({
         <Button
           disabled={count === 0}
           onClick={() => {
-            setText('')
+            onValueChange('')
             onClear()
           }}
           size="sm"
@@ -151,14 +163,14 @@ export function JigQueryPanel({
       <textarea
         aria-label="输入 Jig ID"
         className="jig-side-input"
-        onChange={event => setText(event.target.value)}
+        onChange={event => onValueChange(event.target.value)}
         onKeyDown={event => {
           if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) runQuery()
         }}
         onPaste={onPaste}
         placeholder={'在此粘贴 Jig ID，每行一个\n也支持从邮件正文直接粘贴'}
         ref={inputRef}
-        value={text}
+        value={value}
       />
 
       <div className="jig-side-foot">

@@ -12,61 +12,138 @@
  *
  * **高度链**：flex:1 + min-height:0 是让表格吃掉右主区剩余高度、
  * 自己内部滚的关键。父链上每一层（.canvas-flow → .jig-tabs → .jig-tab-panel
- * → .jig-layout → .jig-main）都必须给出确定高度，缺一层表格就长出窗口。 */
-.jig-table-scroll {
+ * → .jig-work → .jig-main）都必须给出确定高度，缺一层表格就长出窗口。 */
+/*
+ * 表格外框 + 定位父级。
+ *
+ * 滚动条的浮层要贴在这个容器里（它的位置按「滚动区 rect 减 父容器 rect」
+ * 算出来），所以外框与滚动区分成两层 —— 与原项目的
+ * `.grid-wrap` / `.grid-scroll` 同构。
+ */
+.jig-table-wrap {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
+  /*
+   * 必须裁切子元素 —— 否则圆角会被子层盖掉。
+   *
+   * `.jig-table-scroll` 有不透明底色、又铺满整块 padding box；方角会压在
+   * 这层 1px 边框的内侧，左上/右上那圈圆弧看起来「断了」，只剩一个直角。
+   * `overflow: hidden` 让子层按圆角裁切。滚动与浮层滚动条都在框内，
+   * 不受影响（浮层只会在最靠边的几像素被圆角削掉一点，静止时本就不可见）。
+   */
+  overflow: hidden;
+}
+
+/* 真正的滚动区 */
+.jig-table-scroll {
+  height: 100%;
+  overflow: auto;
+  background: var(--surface);
+}
+
+/*
+ * 原生滚动条彻底隐藏（两个方向）。
+ *
+ * 原生条会占掉 10~15px，表格右侧的列与底部行因此被挤；而且只看不滚时
+ * 那条灰条一直杵在外面。改用自绘的覆盖式浮层（见 JigScrollbar.tsx），
+ * 静止时完全看不见，滚动时淡入。
+ *
+ * 横向与纵向都隐藏，所以这里不用 `scrollbar-width`（那个是整体开关，
+ * 会连另一个方向一起干掉），只用 ::-webkit-scrollbar 分轴设 0。
+ */
+.jig-table-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/*
+ * ui/table 自带一层 `overflow-x-auto` 的容器 —— 去掉它，
+ * 否则表格区会有**两层**横向滚动容器，鼠标滚轮在内层就滚完了，
+ * 外层永远不动。
+ *
+ * 同时去掉它的 `w-full`：表格要按内容撑开（列宽由内容定），
+ * 宽度受限时才由外层出横向滚动条。
+ */
+.jig-table-scroll [data-slot='table-container'] {
+  overflow: visible;
+  width: auto;
+}
+
+/* ── 表格字体 ──
+ *
+ * **列宽测量必须与实际渲染字体完全一致**，否则量出来的宽度是错的。
+ *
+ * 表格在 shadcn 的 `ui/table` 里，带 `data-slot` 属性，会命中 index.css 的
+ * `[data-slot] { font-family: var(--font-sans) }`（Geist Variable）。
+ * 中文不在 Geist 的覆盖范围，会回落到系统字体 —— 这个回落链条很长，
+ * 手写一份必然与实际不一致。
+ *
+ * 所以把字体栈收敛到这个变量：CSS 用它渲染，JS 测量时也从它读。
+ * 两者同源，改一处两边都跟着变。
+ */
+:root {
+  --jig-table-font: 'Geist Variable', 'PingFang SC', 'Microsoft YaHei',
+    system-ui, -apple-system, sans-serif;
 }
 
 .jig-table {
-  width: 100%;
+  font-family: var(--jig-table-font);
+}
+
+.jig-table {
+  /*
+   * **列宽完全由内容决定**，不吃满容器宽度。
+   *
+   * 做法：JS 用 canvas measureText 量出每列的最宽内容，写进 <colgroup>；
+   * CSS 用 `table-layout: fixed` 让那些宽度成为**确定值**而不是「最小宽度」
+   * （自动布局下浏览器仍会按比例拉伸富余量）。
+   *
+   * **表格总宽由 JS 内联给**（各列宽之和），不靠 `width: max-content` ——
+   * 那个算的是**内容**的 max-content 总和，不是列宽之和：实测列宽指定
+   * 52/120/90/300 时 max-content 给出 620px，多出的 58px 全被塞给最后一列。
+   *
+   * 容器比表格宽时右侧留白（原项目用一条空的弹性轨道顶到容器右缘，
+   * 效果一样）；容器比表格窄时整体横向滚动。
+   *
+   * **不能加 `min-width: 100%`**：那会让表格至少铺满容器，富余量又
+   * 被摊回各列 —— 正是「某列独吞宽度」的根源。
+   */
+  table-layout: fixed;
   font-size: var(--fs-control);
   border-collapse: separate;
   border-spacing: 0;
 }
 
-/* 表头随滚动冻结在滚动区上沿。
- * border-collapse: collapse 的表格里 sticky 的边框会跟着滚，
- * 所以把边框换成 inset 阴影，视觉上仍是那根 1px 线。 */
+/* 行号列的固定宽度（<col> 之外用不着，这里只是兜底） */
+.jig-table-num {
+  width: 52px;
+}
+
+/*
+ * 表头：白底 + 一道稍重的底线。
+ *
+ * **表头底色是白的**（不是浅灰）—— 灰色留给数据行区分层级，
+ * 表头再压一层灰，表头与数据就分不出主次了。
+ * 底线用 --border-strong（比行分隔线重一档），是原项目的做法：
+ * 表头是「下面所有行的分界」，线就该比行间线明显。
+ */
 .jig-table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--surface-tint);
-  box-shadow: inset 0 -1px 0 var(--border);
-  color: var(--muted);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-/* P/N 列固定在左侧：横向滚动时它是「这一行是谁」的唯一线索，
- * 滚走了就分不清哪行是谁了。 */
-.jig-table-sticky-col {
-  position: sticky;
-  left: 0;
-  z-index: 1;
   background: var(--surface);
-}
-
-.jig-table thead .jig-table-sticky-col {
-  z-index: 3;
-  background: var(--surface-tint);
-}
-
-/* 固定列右边压一道线：内容从它下面滑过时，那道线告诉人「这里被挡住了」 */
-.jig-table-sticky-col::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--border);
-  pointer-events: none;
+  box-shadow: inset 0 -1px 0 var(--border-strong);
+  color: var(--muted);
+  /* 与内容同字号，只靠字重区分层级 —— 表头不是小一号的附注 */
+  font-size: var(--fs-control);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-align: center;
+  white-space: nowrap;
 }
 
 /*
@@ -75,26 +152,142 @@
  * 行高是本机偏好（不进备份），所以走 CSS 变量而不是 props ——
  * 改一次根节点的变量，整张表跟着变，不必把偏好层层传下去。
  * 默认 7px 对应约 30px 的行高（与原项目的默认值一致）。
+ *
+ * **全部居中**（原项目口径）：表头居中，内容也居中，两边才对得上。
+ * 曾经把标识列设成左对齐想便于扫读，结果内容短的列偏移最明显
+ * （「Jig 对应型号」偏 36.6px，「P/N」偏 3.5px），用户反馈后改回全居中。
  */
 .jig-table td,
 .jig-table th {
   padding: var(--jig-row-pad, 7px) 10px;
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
+  /*
+   * 列宽是确定的（table-layout: fixed），内容比列宽长时必须裁切 ——
+   * 不裁的话内容会溢到相邻列上，两列的字叠在一起。
+   */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 数字列用等宽字形，位数不同时也能纵向对齐 */
 .jig-table .is-num {
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: center;
 }
 
-/* 行号列：更窄、居中、字更小 —— 它是辅助信息 */
+/*
+ * 汇总列（总计）：右对齐 + 左侧竖规。
+ *
+ * 右对齐是报表惯例 —— 数字位数不同时个位能扫成一条竖线，比居中
+ * 更容易纵向比较大小。竖规把它与明细列在视觉上分开。
+ */
+.jig-table .jig-table-total-col {
+  text-align: right;
+  padding-right: 14px;
+}
+
+.jig-table tbody td.jig-table-total-col {
+  border-left: 1px solid var(--border-strong);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.jig-table thead th.jig-table-total-col {
+  border-left: 1px solid var(--border-strong);
+}
+
+/*
+ * 末列右缘竖规：把内容区封闭起来。
+ *
+ * 表格本身有边框，但列宽总和超过容器时会横向滚动，右缘滚出可视区，
+ * 末列右侧就什么都没有了 —— 表格看起来没有结束。补一条竖规，
+ * 让内容有明确的收尾线。
+ *
+ * **贴住外框时不画**（见下面的 data-hflush 规则）：末列右缘与网格区
+ * 右框线只隔 1px，两条线并排会看成双线；此时由外框收尾就够了。
+ */
+.jig-table tbody td:last-child {
+  border-right: 1px solid var(--border-strong);
+}
+
+.jig-table thead th:last-child {
+  border-right: 1px solid var(--border-strong);
+}
+
+/*
+ * 末列贴住滚动区右缘（表格宽度 ≥ 滚动区宽度）→ 不画它自己的右框线。
+ * 表格比滚动区窄时（右侧还有空白）保留，否则表看起来没有结束。
+ * `data-hflush` 由 JigTable 实测表格与滚动区的宽度得出。
+ */
+.jig-table-scroll[data-hflush='true'] .jig-table tbody td:last-child,
+.jig-table-scroll[data-hflush='true'] .jig-table thead th:last-child {
+  border-right: 0;
+}
+
+/*
+ * 行号列：白底、弱化，不与内容争视线；冻结在左侧，横向滚动时它是
+ * 「这一行是第几条」的唯一线索。
+ *
+ * 底色必须**不透明** —— sticky 单元格要盖住从它下面滑过的内容。
+ * 尺寸匹配与否都不改行底（不匹配只染「对应尺寸」那一格的字），
+ * 所以这里始终是 --surface，横向滚动时不会透出下方内容。
+ */
 .jig-table-num {
   width: 44px;
   color: var(--muted);
   text-align: center;
   font-variant-numeric: tabular-nums;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  user-select: none;
+}
+
+/* 表头同时冻结上、左两个方向，层级要高于普通表头（2）与正文行号（1） */
+.jig-table thead th.jig-table-num {
+  z-index: 3;
+  background: var(--surface);
+}
+
+/*
+ * 行分隔线画在**单元格**上，不画在 tr 上。
+ *
+ * 原项目是自绘的 CSS Grid 表格，每格自己带 border-bottom。
+ * 这里用的是语义化 <table> 且 border-collapse: separate ——
+ * tr 上的 border 在 separate 模式下不参与绘制，只有 td 的 border 才画。
+ * 若靠 shadcn 的 `border-b`（在 tr 上），行线会整个不显示。
+ */
+.jig-table tbody td {
+  border-bottom: 1px solid var(--border);
+}
+
+/*
+ * 最后一行的下框线：**只在它贴着网格底边时去掉**。
+ *
+ * - 内容超过一屏（data-vscroll='true'）→ 末行滚到底时紧贴外框，
+ *   两条线并排会叠成双线，去掉。
+ * - 内容不足一屏（false）→ 末行下方还有空白，必须画一条给它封口，
+ *   否则表格看起来没有结束。
+ *
+ * 总计行另有一套规则（data-vscroll + tr.is-total），特异性更高，不受这里影响。
+ */
+.jig-table-scroll[data-vscroll='true'] .jig-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* 悬停：浅青底（原项目 --accent-soft）。shadcn 默认的 muted/50 偏灰，
+ * 与小计/总计行的灰带撞色，扫行时分不清是在悬停还是汇总行。 */
+.jig-table tbody tr:hover td {
+  background: var(--accent-soft);
+}
+
+/* 汇总行悬停时保持自己的底色 —— 否则鼠标扫过时底纹忽隐忽现 */
+.jig-table tbody tr.is-subtotal:hover td,
+.jig-table tbody tr.is-total:hover td {
+  background: var(--raised);
 }
 
 /* ── 三种行 ──
@@ -102,19 +295,41 @@
  * 小计行 = 某个 P/N 下各 CST 的合计；总计行 = 全表合计。
  * 两者靠底色与字重区分，不靠颜色 —— 报表里颜色留给「异常」用。 */
 
-/* 小计行：浅灰带底 + 加粗（对应原项目的 --band） */
+/*
+ * 小计行：浅灰带底 + 加粗（原项目的 --band）。
+ *
+ * 底色是灰不是青 —— 青是品牌色，用在小计行上会和「可点下钻」的
+ * 悬停反馈撞在一起，分不清哪里能点。
+ */
 .jig-table tbody tr.is-subtotal td {
-  background: var(--surface-tint);
+  background: var(--raised);
   font-weight: 600;
+  border-bottom-color: var(--border-strong);
 }
 
-/* 总计行：强调色底 + 更粗的顶线（对应原项目的 --accent-soft） */
+/*
+ * 小计行的左缘竖规：分组标记。
+ *
+ * 画在**行号列**上（原项目口径）—— 它标的是「这一组从这里开始」，
+ * 得有个固定的起点。透视表没有行号列（showRowNumbers=false），
+ * 所以透视表里没有这道竖线，与原项目一致。
+ */
+.jig-table tbody tr.is-subtotal td.jig-table-num {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/*
+ * 总计行：同样用灰带底（原项目 is-total 与 is-sub 同色），
+ * 只靠字重更重区分 —— 两级汇总都用同一套底色，读者一眼知道
+ * 「这两行是汇总」，不会以为小计行是另一种东西。
+ */
 .jig-table tbody tr.is-total td {
-  background: var(--accent-weak);
-  font-weight: 600;
+  background: var(--raised);
+  font-weight: 700;
 }
 
-.jig-table tbody tr.is-total td:first-child {
+/* 总计行的左缘竖规用「就绪」色，与小计行的品牌色区分（原项目口径） */
+.jig-table tbody tr.is-total td.jig-table-num {
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
@@ -132,65 +347,82 @@
   bottom: 0;
   z-index: 1;
   /* 冻结的行要盖住下方滚过来的内容，底色不能是半透明的 */
-  background: var(--accent-weak);
+  background: var(--raised);
 }
 
 /*
- * 总计列（末列）单独成栏。
+ * 总计行的下框线：画不画取决于「末行是否接触网格底线」。
  *
- * 它是「这一行的合计」，与各工序列语义不同，所以：
- *   - 左侧一道竖线，把它与明细区彻底分开；
- *   - 数字右对齐 + 等宽字形。
- * 末列右缘再补一道线（见下），让表格无论是否横向滚动都有明确的收尾。
+ * - **接触**（内容超过一屏，总计行冻结吸在滚动区底部）→ 不画。
+ *   它正下方就是滚动区的边框，两条线紧挨着，看起来像外框被加粗。
+ * - **不接触**（内容不足一屏，总计行停在内容末尾，下方是留白）→ 画。
+ *   下方没有框线可借，得自己画一条把这一行封口，否则它像悬在空白里。
+ *
+ * 与原项目的 `.grid__foot` / `.grid__foot--end` 同一口径。
+ * `data-vscroll` 由 JigTable 用 ResizeObserver 实测「内容是否超过一屏」得出。
  */
-.jig-table .jig-table-total-col {
-  border-left: 1px solid var(--border);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  font-weight: 600;
+.jig-table-scroll[data-vscroll='false'] .jig-table tbody tr.is-total td {
+  border-bottom: 1px solid var(--border-strong);
 }
 
-/* 末列右缘竖规：把内容区封闭起来 */
-.jig-table td:last-child,
-.jig-table th:last-child {
-  border-right: 1px solid var(--border);
+/*
+ * 内容超过一屏时，总计行冻结吸在滚动区底部 —— 它正下方就是网格底线，
+ * 自己再画一条下框线，两条线紧挨着像外框被加粗。所以去掉。
+ */
+.jig-table-scroll[data-vscroll='true'] .jig-table tbody tr.is-total td {
+  border-bottom: 0;
+}
+
+/*
+ * 内容不足一屏时，总计行上沿补一道框线（把这一行封口），
+ * 而它紧贴的最后一条明细要把自己的下框线去掉 —— 两条叠成双线。
+ */
+.jig-table-scroll[data-vscroll='false'] .jig-table tbody tr.is-total td {
+  border-top: 1px solid var(--border-strong);
+}
+
+.jig-table-scroll[data-vscroll='false']
+  .jig-table
+  tbody
+  tr.is-before-total
+  td {
+  border-bottom: 0;
 }
 
 /* ── 尺寸不匹配 ──
  *
  * 标红是这套数据的核心信息：P/N 的尺寸码与「对应尺寸」对不上，
  * 意味着这张板做不了这个规格。界面与导出文件里都要标出来。
- * 颜色用 --destructive（本项目的语义危险色），不用原项目写死的 #EF4444。 */
+ *
+ * 标记方式：**只把「对应尺寸」那一格的字染红**，不加粗、不铺行底色 ——
+ * 匹配与不匹配的行底完全一致，异常只落在真正对不上的那一个值上。
+ */
 .jig-table tbody tr.is-mismatch td.is-flagged {
-  color: var(--destructive);
-  font-weight: 600;
-}
-
-/* 整行的底色略微染一点红，扫行时更容易发现 —— 但不盖住单元格的红色文字 */
-.jig-table tbody tr.is-mismatch td {
-  background: color-mix(in oklch, var(--destructive) 6%, transparent);
+  color: var(--danger);
 }
 
 /* ── 可下钻的计数格 ──
  *
  * 透视表里点计数格能下钻到明细。只给非空数字格加可点的样子，
- * 标识列（P/N、CST ID）与空格子不可点 —— 免得用户到处点却没反应。 */
+ * 标识列（P/N、CST ID）与空格子不可点 —— 免得用户到处点却没反应。
+ *
+ * **只加手型 + 悬停描边，不改颜色**（原项目口径）：透视表里小计行整行
+ * 都有灰底，若再给可点格换底色，三类行混成一片，反而看不出哪里能点。
+ * 描边只在悬停那一刻出现，静态阅读时表格保持原样。 */
 .jig-table tbody td.is-clickable {
   cursor: pointer;
-  color: var(--accent);
-  font-weight: 600;
 }
 
 .jig-table tbody td.is-clickable:hover {
-  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  color: var(--accent);
 }
 
 /* 小计与总计行的计数格仍可下钻，但悬停时保留自己的底色 ——
  * 否则鼠标扫过时行会「褪色」，汇总行的底纹忽隐忽现。 */
 .jig-table tbody tr.is-subtotal td.is-clickable:hover,
 .jig-table tbody tr.is-total td.is-clickable:hover {
-  background: inherit;
-  filter: brightness(0.94);
+  background: var(--accent-soft);
 }
 
 /* ── 工序轨道 ──
@@ -251,19 +483,20 @@
 }
 
 /*
- * 工序名允许换行，而不是截断成「Jig 洗净及…」。
+ * 工序名不换行：一道工序只占一行，装不下就省略。
  *
- * 原项目用 nowrap + ellipsis，工序名被砍掉一半后反而看不出是哪道工序。
- * 这里改成两行内换行 —— 轨道本来就有 3px 的条 + 名字 + 数字，
- * 名字占两行不影响读数，工序全称看得全更重要。
+ * 换行会让某一段比其它段高出一行，轨道里 3px 的条、名字、数字就对不齐；
+ * 轨道是横向扫一眼看「走到哪道工序」的，等高比全称更重要。
+ * 完整工序名在表格表头与下钻明细里都能看到，这里用省略号收尾即可。
  */
 .jig-stage-name {
   font-size: var(--fs-small);
   font-weight: 500;
   color: var(--muted);
   line-height: 1.35;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .jig-stage-count {
@@ -464,14 +697,6 @@
   flex: 1 1 auto;
   min-height: 0;
   gap: var(--sp-3);
-}
-
-/* 底部导出条：原项目把导出放在这里（左下角大按钮） */
-.jig-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  flex: none;
 }
 
 .jig-toolbar {
@@ -712,12 +937,12 @@
 .jig-map-error {
   grid-column: 1 / -1;
   font-size: var(--fs-small);
-  color: var(--destructive);
+  color: var(--danger);
 }
 
 .jig-map-error-count {
   font-size: var(--fs-small);
-  color: var(--destructive);
+  color: var(--danger);
 }
 
 .jig-map-empty {
@@ -888,4 +1113,60 @@
   100% {
     transform: translateX(350%);
   }
+}
+
+/* ── 覆盖式滚动条 ──────────────────────────────────────────────
+ *
+ * 照搬原项目的 `.osb`：绝对定位的浮层，不占布局尺寸，
+ * 只在滚动时淡入，停下约 0.8 秒后淡出；滑块可拖拽。
+ *
+ * 纵向贴右缘、横向贴底边。颜色用本项目令牌（原项目写死十六进制）。
+ */
+.jig-osb {
+  position: absolute;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.jig-osb--v {
+  width: 10px;
+}
+
+.jig-osb--h {
+  height: 10px;
+}
+
+.jig-osb[data-visible='true'] {
+  opacity: 1;
+}
+
+.jig-osb-thumb {
+  position: absolute;
+  border-radius: 3px;
+  background: var(--control);
+  opacity: 0.5;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.jig-osb--v .jig-osb-thumb {
+  right: 2px;
+  width: 6px;
+}
+
+.jig-osb--h .jig-osb-thumb {
+  bottom: 2px;
+  height: 6px;
+}
+
+.jig-osb[data-visible='true'] .jig-osb-thumb {
+  pointer-events: auto;
+}
+
+.jig-osb[data-dragging='true'] .jig-osb-thumb,
+.jig-osb-thumb:hover {
+  background: var(--control-hover);
+  opacity: 0.9;
 }

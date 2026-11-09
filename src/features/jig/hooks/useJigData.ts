@@ -171,6 +171,30 @@ export interface JigData {
   pendingPath: string | null
   /** 已选中但尚未加载的文件名 */
   pendingName: string | null
+  /**
+   * 是否处于「已选未加载」状态（顶栏标「（待加载）」）。
+   *
+   * 按**路径是否与已载入的相同**判定 —— 重新加载同一个文件时两者相等，
+   * 但此刻数据确实是新的，不该标成待加载。
+   */
+  pendingUnloaded: boolean
+  /**
+   * 输入框里的原始文本（每行一个 Jig ID）。
+   *
+   * **提到 hook 里而不是留在组件里**：顶栏的「加载」按钮在外壳层，
+   * 要判断「输入框是不是空的」必须能在这里读到 —— 空的话加载完跳
+   * 全量透视（没填 ID 就没有查询结果可看）。
+   */
+  queryInput: string
+  /** 改输入框内容 */
+  setQueryInput: (next: string | ((prev: string) => string)) => void
+  /**
+   * 成功加载的次数。
+   *
+   * 界面靠它察觉「刚加载完」—— 加载本身不携带意图（要不要跳页、跳哪一页），
+   * 那是界面的事。
+   */
+  loadCount: number
   /** 读已选中的文件 */
   loadSource: () => Promise<void>
   /** 能否选文件（静态版不行） */
@@ -187,14 +211,36 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   const [source, setSource] = useState<SourceData | null>(null)
   const [sourcePath, setSourcePath] = useState('')
   /**
-   * 已选中但还没加载的文件。
+   * 已选中的文件（点「浏览…」后有了，点「加载」才真的读）。
    *
    * 「浏览…」与「加载」分成两步 —— 选完先看文件名与路径，不满意能换；
    * 点「加载」才真的读。MES 导出的文件动辄几百 KB 到几 MB，
    * 一步到位时选错文件就得从头再走一遍对话框。
+   *
+   * **加载成功后不清** —— 留着才能重复点「加载」做热刷新（源文件更新了，
+   * 同一批 Jig ID 直接在新数据上重查）。
    */
   const [pendingPath, setPendingPath] = useState<string | null>(null)
   const [pendingName, setPendingName] = useState<string | null>(null)
+  /** 当前已载入的源文件路径 —— 用来判断 pending 是不是「还没加载的那个」 */
+  const [loadedPath, setLoadedPath] = useState<string | null>(null)
+  /** 输入框里的原始文本 —— 提到 hook 里，外壳层的「加载」按钮也要读它 */
+  const [queryInput, setQueryInputState] = useState('')
+  /** 成功加载的次数 —— 界面靠它察觉「刚加载完」 */
+  const [loadCount, setLoadCount] = useState(0)
+
+  /**
+   * 改输入框内容。
+   *
+   * 支持 updater 形式 —— 粘贴时要「在原内容后追加」，用的是同一份旧值，
+   * 先读再写中间可能已被别的操作改过。
+   */
+  const setQueryInput = useCallback(
+    (next: string | ((prev: string) => string)) => {
+      setQueryInputState(prev => (typeof next === 'function' ? next(prev) : next))
+    },
+    []
+  )
   const [busy, setBusy] = useState(false)
   /**
    * 「标出尺寸不匹配」开关（查询结果页）。
@@ -522,19 +568,38 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
 
       setSource(data)
       setSourcePath(pendingPath)
+      setLoadedPath(pendingPath)
       writeRaw(STORAGE_KEYS.jigSourceDir, dirname(pendingPath))
 
-      // 换了源数据，旧的查询命中与三张表都作废
-      setQueryIds([])
-
-      // 筛选状态也复位 —— 旧的 P/N 范围在新文件里可能不存在
+      /*
+       * **不清空查询结果** —— 热加载。
+       *
+       * 查询结果表是由 (queryIds, source) 派生出来的：不清 queryIds，
+       * setSource 一改，表就按新数据自动重算了。所以保留上次的 ID，
+       * 用户点「加载」刷新源文件后，看到的是同一批 ID 在新文件里的最新结果，
+       * 不用再点一次「开始查询」。
+       *
+       * 派生链断在这里的话（改成清空 queryIds），用户会以为刷新没生效 ——
+       * 明明新文件里已经查得到那些 Jig 了，页面上却是一片空。
+       */
+      // 筛选状态复位 —— 旧的 P/N 范围在新文件里可能不存在
       setPivotScope('all')
       setPivotAvail('all')
+      // 下钻的定位键是按旧透视表算的，新数据下对不上
       setDrill(null)
 
+      // 有过查询时，顺带报一下按新数据重算后的命中情况
+      let summary = `已载入 ${data.rows.length} 行 · ${data.columns.length} 列`
+      if (queryIds.length > 0) {
+        const detail = queryData(data.rows, queryIds, config)
+        const found = detail.rows.filter(row => row['P/N'] !== '【未找到】').length
+        summary += ` · 已重查 ${detail.rows.length} 条 · 命中 ${found}`
+      }
+
       setStatus('ready')
-      setLog(`已载入 ${data.rows.length} 行 · ${data.columns.length} 列`)
-      notify(`已载入 ${pendingName} · ${data.rows.length} 行`, 'info')
+      setLog(summary)
+      notify(summary, 'info')
+      setLoadCount(n => n + 1)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       notify(message, 'error')
@@ -543,7 +608,7 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     } finally {
       setBusy(false)
     }
-  }, [config, notify, pendingName, pendingPath])
+  }, [config, notify, pendingName, pendingPath, queryIds])
 
   /**
    * 执行查询。
@@ -725,6 +790,10 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     sourceColumns: source?.columns.length ?? 0,
     pendingPath,
     pendingName,
+    pendingUnloaded: pendingPath !== null && pendingPath !== loadedPath,
+    queryInput,
+    setQueryInput,
+    loadCount,
     loadSource,
     sizeValidation,
     setSizeValidation,

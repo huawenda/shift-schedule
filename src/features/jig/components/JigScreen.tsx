@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 
-import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import type { JigConfig } from '../core/config'
@@ -86,6 +85,25 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.drill?.from, tab])
 
+  /**
+   * 加载完成后决定停在哪一页。
+   *
+   * - **没查过**（输入框是空的 / 填了但没点「开始查询」）→ 跳「全量透视」。
+   *   没有查询结果可看，全量透视是唯一有内容的视图 —— 停在空白的
+   *   「查询结果」页等于没反应。
+   * - **查过** → 跳「查询结果」。热加载后结果已按新数据重算，跳过去正好看到。
+   *
+   * 判据是「**查过没有**」而不是「输入框里有没有字」：填了 ID 但没点
+   * 「开始查询」时，输入框非空但结果仍是空的 —— 按后者判会跳到空页。
+   */
+  useEffect(() => {
+    if (data.loadCount === 0) return
+    const hasResult = data.tables.detail.rows.length > 0
+    onTabChange(hasResult ? 'detail' : 'pivot')
+    // 只在「刚加载完」这一刻跑一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.loadCount])
+
   /** 某个页签此刻是否显示下钻明细 */
   const drillOn = (id: JigTabId) => data.drill !== null && data.drill.from === id
 
@@ -113,7 +131,9 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
           notify={notify}
           onClear={data.clearQuery}
           onQuery={runQuery}
+          onValueChange={data.setQueryInput}
           ready={data.ready}
+          value={data.queryInput}
         />
 
         <div className="jig-main">
@@ -234,24 +254,6 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
               </TabsContent>
             ))}
           </Tabs>
-
-          {/*
-            底部导出条：原项目把「导出当前视图」放在内容区底部左下角，
-            而不是顶栏 —— 导出的是「你正在看的这张表」，放在表格旁边
-            才知道导的是哪张。
-          */}
-          <div className="jig-actions">
-            <Button
-              disabled={!data.canExport || counts.current === 0}
-              onClick={() => void data.exportCurrent(tab)}
-              type="button"
-            >
-              {data.drill && data.drill.from === tab
-                ? '导出透视明细'
-                : `导出${JIG_TAB_LABELS[tab]}`}
-            </Button>
-            <span className="jig-toolbar-spacer" />
-          </div>
         </div>
       </div>
     </div>
