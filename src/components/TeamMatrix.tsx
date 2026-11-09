@@ -199,7 +199,10 @@ export function TeamMatrix({ roster, period, mode, today, resetKey, onEdit }: Te
   return (
     <section className={`matrix${byName ? ' is-by-name' : ''}`} aria-label="全员排班矩阵">
       <div className="matrix-frame">
-        <div className="matrix-scroll" ref={scrollRef} style={{ ['--days' as string]: dayCount }}>
+        {/* 列数由 .matrix-days 的子元素个数决定（grid-auto-flow: column），
+            不再往这里传 --days 给 CSS 的 repeat() 用 —— 变量与格子数一旦对不上，
+            就会多出一条没有边界线的空轨道，看着像「最后一列更宽」。 */}
+        <div className="matrix-scroll" ref={scrollRef}>
         <div className="matrix-head">
           {/* 按姓名视图的行头只剩班序，所以表头文案也跟着换 */}
           <div className="matrix-name-cell">{byName ? '班序' : '成员'}</div>

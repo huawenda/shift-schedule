@@ -393,7 +393,16 @@
 .matrix-head,
 .matrix-row {
   display: grid;
-  grid-template-columns: var(--matrix-name-width) minmax(0, 1fr);
+  /* 第一列（行头）**吸收全部余量**，第二列（日期区）严格等于「天数 × 列宽」。
+   *
+   * 原来是 `固定行头 + minmax(0, 1fr)`：装得下整月时 1fr 会比日期区宽出几 px
+   * （31 天余 4px、30 天余 38px），那段空白落在最后一列右侧 —— 即使给最后一列
+   * 补了边界线，30 天的月份看上去仍是「19 日那列拖着一截」，像多出一整列。
+   * 现在把余量挪到行头：行头下限仍是 --matrix-name-width（120 / 窄屏 88），
+   * 上限 1fr 吃掉剩余空间；日期区用 max-content 锁死，最后一列右侧**零留白**。
+   * 白板依旧铺满版心，日期列宽完全不受月份天数与窗口宽度影响。
+   * 窗口窄到装不下时 min-width: max-content 把整行撑开，由 .matrix-scroll 横滚。 */
+  grid-template-columns: minmax(var(--matrix-name-width), 1fr) max-content;
   min-width: max-content;
 }
 
@@ -441,7 +450,10 @@
   flex-direction: column;
   justify-content: center;
   gap: 1px;
-  width: var(--matrix-name-width);
+  /* 行头轨道是 minmax(下限, 1fr)，由它吃掉余量；这里必须填满整个轨道。
+   * 若写死 width: var(--matrix-name-width)，格子只占下限那一段，
+   * 余量又变成轨道内的一条空白（只是从最右挪到了最左）。 */
+  width: 100%;
   height: var(--row-height);
   padding: 0 10px;
   border: 0;
@@ -491,21 +503,42 @@
 
 .matrix-days {
   display: grid;
-  /* 日期列**恒定宽度**（--matrix-day-width: 34px）：所有窗口宽度下都是这一个值。
+  /* 日期列：**列数由子元素个数决定，每一列都是同一个死宽**。
    *
-   * 为什么是 34 而不是原来的 35：结算月最长 31 天（30 / 31 两种），
-   * 版心留给日期列的宽度是 1058px（1228 − 48 内边距 − 2 边框 − 120 姓名列），
-   * 1058 / 31 = 34.13 —— 死宽 35px 时 31×35 = 1085 > 1058，
-   * 31 天装不下，矩阵被迫横滚，右半屏看不到。34px 时 31×34 = 1054，正好装下。
+   * 用 grid-auto-flow: column + grid-auto-columns，而不是
+   * repeat(var(--days), 固定宽) —— 后者把列数绑在一个从 JS 传下来的变量上，
+   * 变量与格子数一旦对不上，就会多出（或少掉）整整一条空轨道；
+   * 那条空轨道没有边界线，看上去正是「最后一列比别的宽」。
+   * 现在有几个 .matrix-day / .matrix-cell 就有几列，30 天、31 天或任何
+   * 天数都是同一套几何，**每列严格等宽**（硬需求 1）。
    *
-   * 为什么不用 1fr 均分：均分虽然也装得下，但列宽会随窗口变化 ——
-   * 同一份排班在 1280 和 1920 下是两套几何，列缝与药丸的比例跟着变。
-   * 这里要的是「一份排班只有一套几何」：窗口窄了宁可横滚，也不改列宽。
+   * 列宽只认 --matrix-day-width 这一个死值（34px），**不随窗口宽度、
+   * 响应式断点、月份天数变化**（硬需求 2）：窗口窄了由 .matrix-scroll
+   * 横滚，绝不压缩列宽 —— 列一窄，「特」字与 4px 药丸留白同时消失，
+   * 矩阵会退化成一条条色带。34px 由版心反推：1228 − 48 − 2 − 120 = 1058，
+   * 1058 / 31 = 34.13 → 取 34，31×34 = 1054 正好落在版心里。
    *
-   * 不用 justify-content: space-between 去摊余量：30 天的月份在版心下
-   * 还余 38px，摊到 30 个列缝里每个 1.27px —— 每条竖直列线都会落在
-   * 不同的亚像素位置上，深浅不一，看起来像虚线。余量宁可留在最右边。 */
-  grid-template-columns: repeat(var(--days, 30), var(--matrix-day-width));
+   * width: max-content + justify-self: start 把盒子锁成「列数 × 列宽」：
+   * 父行第二列是 max-content（见 .matrix-head / .matrix-row），宽度正好等于
+   * 列总宽；余量全部由第一列行头吸收，**最后一列右侧零留白** —— 这是
+   * 「最后一列看着比别的宽」的真正解法，光给最后一列补线是不够的
+   * （30 天时右侧仍会拖着 38px 白边，像多出了一整列）。
+   * 最后一列**不重复画线**：日期区已紧贴白板右缘，白板的 1px 右边框
+   * 就是它的右边界；再画一条列线会叠成 2px 粗线。但它仍保留 1px
+   * 透明占位，content-box 与药丸和其它列完全一致（见 :last-child）。
+   * 也不摊到列间（space-between）：摊开会让每条竖直列线落在不同的
+   * 亚像素位置上，深浅不一，看着像虚线。 */
+  width: max-content;
+  justify-self: start;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--matrix-day-width);
+}
+
+/* 每列**自己**也声明宽度：不靠 grid 轨道的 stretch 决定。
+ * 轨道分配、容器拉伸、自动列三条路走下来，格子始终是同一个数。
+ * 统一 box-sizing: border-box，所以 1px 右边框不会把任何一列撑宽 1px。 */
+.matrix-days > * {
+  width: var(--matrix-day-width);
 }
 
 .matrix-day {
@@ -531,8 +564,24 @@
   color: var(--text);
 }
 
-.matrix-day:last-child {
-  border-right: 0;
+/* 最后一列的可见右边界由**白板自己**画（.matrix-scroll 的 1px --border），
+ * 这里不再重复画一条列线。
+ *
+ * 行头吸收余量之后，日期区右缘与白板内容区右缘严丝合缝：实机 1920 视口下
+ * 最后一列 right = 1677、白板 right = 1678，中间正是白板那 1px 边框。
+ * 若最后一列再画 1px --rule，两条线紧贴成一道 2px 粗线，且 --rule 与
+ * --border 深浅不同，比其它列线明显粗一档。
+ *
+ * 必须保留 1px **透明**边框，而不是 `border-right: 0`：全局是 border-box，
+ * 去掉边框会让最后一列的 content-box 比别的列宽 1px，药丸也跟着宽 1px。
+ * 透明占位让所有列（含最后一列）严格等宽，可见边界只剩白板那一条。
+ *
+ * 前提是「最后一列右侧零留白」（余量由行头吸收）。早先余量还留在最右时，
+ * 这里写过 0 也写过 transparent，两次都让空白与列连成一片、
+ * 看着像 19 日那列多出一截 —— 那次要修的是余量，不是这条线。 */
+.matrix-day:last-child,
+.matrix-cell:last-child {
+  border-right-color: transparent;
 }
 
 .matrix-day.is-weekend {
@@ -620,9 +669,7 @@
   content: '';
 }
 
-.matrix-cell:last-child {
-  border-right: 0;
-}
+/* 同 .matrix-day：最后一列也保留可见右边界线，不做 :last-child 特例。 */
 
 /* 列聚焦铺在药丸后面：格子本底变浅青，药丸仍保留班次色 */
 .matrix-cell.is-column-focus {
@@ -665,13 +712,15 @@
  * 由 `.matrix-scroll` 横向滚动。
  */
 .matrix.is-by-name .matrix-days {
-  /* 固定 56px（放得下 3–4 个汉字），同样是**死宽**，不随窗口伸缩。
-   * 容器装不下就由 `.matrix-scroll` 横向滚动（`.matrix-row / .matrix-head`
-   * 的 min-width: max-content 会把总宽撑出容器）。
-   * 装得下时多出来的宽度留在最后一列右边（最多几十 px）——
-   * 不摊到列间（space-between）：摊开会让每条竖直列线落在不同的亚像素位置上，
-   * 深浅不一，看着像虚线；留一条窄白边换来列线严丝合缝。 */
-  grid-template-columns: repeat(var(--days, 30), var(--matrix-name-cell));
+  /* 只换**列宽**这一个值，其余（自动列数、每列等宽、恒定不随窗口变、
+   * 白板留白归线外）与班次视图完全同一套，见 .matrix-days。
+   * 56px 放得下 3–4 个汉字；容器装不下就由 .matrix-scroll 横滚，
+   * 不改列宽去凑屏幕。 */
+  grid-auto-columns: var(--matrix-name-cell);
+}
+
+.matrix.is-by-name .matrix-days > * {
+  width: var(--matrix-name-cell);
 }
 
 .matrix.is-by-name .matrix-cell {
@@ -1365,17 +1414,17 @@
     box-shadow: var(--shadow-raised-flat);
   }
 
-  /* 矩阵：姓名列 120 → 88、行高 40 → 36；31 天仍然横滚，不压缩字号到读不了。
-   * 日期列宽：窄屏也用同一个 --matrix-day-width（34px）—— 列宽恒定是这一版的硬约束，
-   * 同一份排班在宽屏窄屏下必须是同一套几何；窄屏装不下就横滚，
-   * 不为了塞进屏幕再压窄（压窄会让药丸挤成一条缝）。
+  /* 矩阵：只放行头列宽 120 → 88、行高 40 → 36、字号变小。
+   * ⚠️ **两个日期列宽令牌与 --matrix-pill-gap 一律不在这里覆盖**：
+   * --matrix-day-width（34px）、--matrix-name-cell（56px）都是全视口恒定的死值，
+   * 药丸留白同理 —— 响应式改它们会让同一份排班在宽屏窄屏下变成两套列几何
+   * （硬约束：列宽与药丸不随窗口/断点变化）。
+   * 窄屏装不下就横滚，不为了塞进屏幕再压窄（压窄会让药丸挤成一条缝）。
    * 图例与底栏的留白统一交给 `.canvas-flow` 的底部内边距，这里不再另加 8px —
    * 否则矩阵页会比概览页多出这一档，三个页面滚到底的间距就不等了。 */
   .matrix {
     --matrix-name-width: 88px;
     --row-height: 36px;
-    --matrix-name-cell: 48px;
-    --matrix-pill-gap: 3px;
   }
 
   .matrix-name-cell {
