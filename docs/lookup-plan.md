@@ -185,21 +185,21 @@ export function describeChange(current: LookupGroup, target: LookupGroup): strin
 当前组合：当前型号
 JIG/Recipe 都没变：JIG / Recipe 不变
 JIG 或 Recipe 变：JIG 8348B → 8348C，Recipe 8 → 2
-主料：主料不变 / 主料部分换 / 主料全换
-副料：副料不变 / 副料部分换 / 副料全换
+Main：Main不变 / Main部分换 / Main全换
+Sub：Sub不变 / Sub部分换 / Sub全换
 ```
 
 “变一种还是两种”由后两段直接回答：
 
-- 只有主料变 → 换主料；
-- 只有副料变 → 换副料；
+- 只有Main变 → 换Main；
+- 只有Sub变 → 换Sub；
 - 两段都变 → 主副都换；
 - 两段都不变、但 JIG/Recipe 变 → 只换 JIG 生产条件，FSPM 不动；
 - 全都不变 → 条件不变。
 
 关键例子（必须写进测试）：
 
-| 对比 | JIG / Recipe | 主料 | 副料 |
+| 对比 | JIG / Recipe | Main | Sub |
 |---|---|---|---|
 | `8348B-01` ER → `8348B-02` ES | 不变 | 部分换（少 P405） | 部分换（少 P414、P434） |
 | `8348B-01` ER → `8348C-01` EV | 8348B→8348C，8→2 | 全换 | 部分换（少 P414、P434） |
@@ -375,16 +375,16 @@ pnpm lookup:data   # 重新生成
 
 - `条件不变`（中性）；
 - `JIG / Recipe 变`（`--warning-bg`）；
-- `主料全换` / `主料部分换`；
-- `副料全换` / `副料部分换`。
+- `Main全换` / `Main部分换`；
+- `Sub全换` / `Sub部分换`。
 
 标签最多三枚，超出用“主副都换”合并。不要用红绿区分增删——项目没有“增/减”语义色；用 `+` / `−` 符号与文字。
 
 **展开明细**：每行右侧一个 ghost 图标按钮（`ChevronDown`），展开后先给增删摘要，再给该组合的两张 FSPM 迷你表（与上方同款）：
 
 ```
-主料  移除 P405          新增 —
-副料  移除 P414、P434     新增 —
+Main  移除 P405          新增 —
+Sub  移除 P414、P434     新增 —
 
 主尺寸 83 · Normal            副尺寸 48 · Normal
 P342 INNOX Narrow              P403 INNOX Narrow
@@ -691,9 +691,9 @@ scripts/build-lookup-data.mjs
 `diff.test.ts`：
 
 - `diffSets` 的 same / partial / all 三种；
-- `8348B-01 vs 8348B-02` → JIG 不变、Recipe 不变、主料 partial（移除 P405）、副料 partial（移除 P414/P434）；
-- `8348B-01 vs 8348C-01` → JIG 变、Recipe 变、主料 all、副料 partial；
-- `7748B-01 vs 7748B-02` → JIG/Recipe 不变、主料 all、副料 all；
+- `8348B-01 vs 8348B-02` → JIG 不变、Recipe 不变、Main partial（移除 P405）、Sub partial（移除 P414/P434）；
+- `8348B-01 vs 8348C-01` → JIG 变、Recipe 变、Main all、Sub partial；
+- `7748B-01 vs 7748B-02` → JIG/Recipe 不变、Main all、Sub all；
 - 同组对比 → 全 same；
 - `describeChange` 文案与上表一致。
 

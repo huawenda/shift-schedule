@@ -2,7 +2,7 @@
  * 同 INCH 换型对比。
  *
  * 对比的是**组合**，不是型号：同组型号完全等同，换型号不变；
- * 跨组才可能出现「JIG/Recipe 变、主料变、副料变」。
+ * 跨组才可能出现「Recipe 变、Main 变、Sub 变」。
  */
 
 import type { LookupGroup } from './types'
@@ -88,9 +88,9 @@ export function changeBadges(current: LookupGroup, target: LookupGroup): ChangeB
   if (mainChanged && subChanged) {
     badges.push({ key: 'both', text: 'Main/Sub都换', tone: 'warning' })
   } else if (mainChanged) {
-    badges.push({ key: 'main', text: levelText(diff.main.level, '主料'), tone: 'warning' })
+    badges.push({ key: 'main', text: levelText(diff.main.level, 'Main'), tone: 'warning' })
   } else if (subChanged) {
-    badges.push({ key: 'sub', text: levelText(diff.sub.level, '副料'), tone: 'warning' })
+    badges.push({ key: 'sub', text: levelText(diff.sub.level, 'Sub'), tone: 'warning' })
   } else {
     badges.push({ key: 'fspm', text: 'FSPM 不变', tone: 'neutral' })
   }
@@ -115,8 +115,8 @@ export function describeChange(current: LookupGroup, target: LookupGroup): strin
   lines.push(moved.length > 0 ? moved.join('，') : 'Recipe 不变')
 
   for (const [label, change] of [
-    ['主料', diff.main],
-    ['副料', diff.sub],
+    ['Main', diff.main],
+    ['Sub', diff.sub],
   ] as const) {
     if (change.level === 'same') {
       lines.push(`${label}不变`)

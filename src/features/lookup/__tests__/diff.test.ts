@@ -48,7 +48,7 @@ describe('同 INCH 组合对比', () => {
       .toEqual(['Recipe 同', 'Main/Sub都换'])
   })
 
-  it('8348B-01 → 8348C-01：JIG/Recipe 变，主料全换、副料部分换', () => {
+  it('8348B-01 → 8348C-01：JIG/Recipe 变，Main 全换、Sub 部分换', () => {
     const diff = compareGroups(group('8348B-01'), group('8348C-01'))
     expect(diff.jigChanged).toBe(true)
     expect(diff.recipeChanged).toBe(true)
@@ -56,7 +56,7 @@ describe('同 INCH 组合对比', () => {
     expect(diff.sub.level).toBe('partial')
     const lines = describeChange(group('8348B-01'), group('8348C-01'))
     expect(lines[0]).toBe('JIG 8348B → 8348C，Recipe 8 → 2')
-    expect(lines[1]).toContain('主料全换')
+    expect(lines[1]).toContain('Main全换')
     expect(lines[1]).toContain('P342')
   })
 

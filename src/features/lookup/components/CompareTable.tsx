@@ -43,7 +43,7 @@ export function CompareTable({
       <TableHeader>
         <TableRow>
           <TableHead>型号组</TableHead>
-          <TableHead>Recipe</TableHead>
+          <TableHead>P/N · Recipe</TableHead>
           <TableHead>Bezel</TableHead>
           <TableHead>Main</TableHead>
           <TableHead>Sub</TableHead>
