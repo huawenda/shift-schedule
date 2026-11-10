@@ -29,6 +29,11 @@ export function CompareTable({
 }) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
 
+  /** 当前组合永远排第一行，其余保持原顺序 */
+  const orderedGroups = groups.some(group => group.id === current.id)
+    ? [current, ...groups.filter(group => group.id !== current.id)]
+    : groups
+
   function toggle(id: string) {
     setExpanded(prev => {
       const next = new Set(prev)
@@ -51,14 +56,19 @@ export function CompareTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {groups.map(group => {
+        {orderedGroups.map(group => {
           const isCurrent = group.id === current.id
           const isOpen = expanded.has(group.id)
           const lines = describeChange(current, group)
 
           return (
             <Fragment key={group.id}>
-              <TableRow className={isCurrent ? 'is-current' : undefined}>
+              <TableRow
+                className={`lookup-compare-row${isCurrent ? ' is-current' : ''}`}
+                onClick={() => {
+                  if (!isCurrent) toggle(group.id)
+                }}
+              >
                 <TableCell className="lookup-compare-models">
                   <span>{group.models.join(' / ')}</span>
                   {isCurrent ? <span className="lookup-current-tag">当前</span> : null}
@@ -83,7 +93,10 @@ export function CompareTable({
                         aria-expanded={isOpen}
                         aria-label={`${isOpen ? '收起' : '展开'} ${group.id} 的 FSPM 明细`}
                         className="lookup-expand-btn"
-                        onClick={() => toggle(group.id)}
+                        onClick={event => {
+                          event.stopPropagation()
+                          toggle(group.id)
+                        }}
                         size="icon-xs"
                         type="button"
                         variant="ghost"

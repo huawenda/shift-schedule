@@ -58,8 +58,8 @@ export function compareGroups(current: LookupGroup, target: LookupGroup): GroupD
 }
 
 function levelText(level: ChangeLevel, noun: string): string {
-  if (level === 'same') return `${noun}不变`
-  return level === 'all' ? `${noun}全换` : `${noun}部分换`
+  if (level === 'same') return `${noun} 不变`
+  return level === 'all' ? `${noun} 全换` : `${noun} 部分换`
 }
 
 /** 对比表右侧的标签，最多 2–3 枚 */
@@ -86,7 +86,7 @@ export function changeBadges(current: LookupGroup, target: LookupGroup): ChangeB
   ]
 
   if (mainChanged && subChanged) {
-    badges.push({ key: 'both', text: 'Main/Sub都换', tone: 'warning' })
+    badges.push({ key: 'both', text: 'Main/Sub 都换', tone: 'warning' })
   } else if (mainChanged) {
     badges.push({ key: 'main', text: levelText(diff.main.level, 'Main'), tone: 'warning' })
   } else if (subChanged) {
@@ -98,10 +98,6 @@ export function changeBadges(current: LookupGroup, target: LookupGroup): ChangeB
   return badges
 }
 
-function formatIds(ids: readonly string[]): string {
-  return ids.length > 0 ? ids.join('、') : '—'
-}
-
 /** 展开行里的完整说明；一句一块，UI 只负责排版 */
 export function describeChange(current: LookupGroup, target: LookupGroup): string[] {
   if (current.id === target.id) return ['当前组合']
@@ -110,7 +106,7 @@ export function describeChange(current: LookupGroup, target: LookupGroup): strin
   const lines: string[] = []
 
   const moved: string[] = []
-  if (diff.jigChanged) moved.push(`JIG ${current.jigPn} → ${target.jigPn}`)
+  if (diff.jigChanged) moved.push(`P/N ${current.jigPn} → ${target.jigPn}`)
   if (diff.recipeChanged) moved.push(`Recipe ${current.recipe} → ${target.recipe}`)
   lines.push(moved.length > 0 ? moved.join('，') : 'Recipe 不变')
 
@@ -119,11 +115,15 @@ export function describeChange(current: LookupGroup, target: LookupGroup): strin
     ['Sub', diff.sub],
   ] as const) {
     if (change.level === 'same') {
-      lines.push(`${label}不变`)
+      lines.push(`${label} 不变`)
     } else {
-      lines.push(
-        `${levelText(change.level, label)}（移除 ${formatIds(change.removed)}；新增 ${formatIds(change.added)}）`,
-      )
+      const removed = change.removed.length > 0
+        ? `移除 ${change.removed.join('、')}`
+        : '移除 —'
+      const added = change.added.length > 0
+        ? `新增 ${change.added.join('、')}`
+        : '无新增'
+      lines.push(`${levelText(change.level, label)}（${removed}；${added}）`)
     }
   }
 

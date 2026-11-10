@@ -77,7 +77,6 @@
 
 .lookup-option[data-active='true'] {
   background: var(--accent-weak);
-  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .lookup-option-primary {
@@ -408,8 +407,9 @@
   width: 270px;
 }
 
+/* 6 列合计 1140：1228 版心 − 画布 48 − 卡片 32 = 1148，留 8px 余量，避免 2px 溢出触发横滚 */
 .lookup-compare .lookup-compare-table th:nth-child(6) {
-  width: 190px;
+  width: 180px;
 }
 
 .lookup-compare .lookup-compare-table th {
@@ -434,6 +434,15 @@
 
 .lookup-compare .lookup-compare-table tr.is-current td:first-child {
   box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* 整行可点展开；当前行是参照，不参与展开 */
+.lookup-compare-row {
+  cursor: pointer;
+}
+
+.lookup-compare-row.is-current {
+  cursor: default;
 }
 
 .lookup-compare-models {

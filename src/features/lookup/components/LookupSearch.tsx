@@ -43,6 +43,7 @@ export function LookupSearch({
   onClear,
 }: LookupSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const searchRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
 
@@ -128,7 +129,7 @@ export function LookupSearch({
 
       <Popover open={showList} onOpenChange={setOpen}>
         <PopoverAnchor asChild>
-          <div className="lookup-search">
+          <div className="lookup-search" ref={searchRef}>
             <Search aria-hidden="true" className="lookup-input-icon" />
             <Input
               aria-activedescendant={
@@ -140,10 +141,13 @@ export function LookupSearch({
               aria-haspopup="listbox"
               autoComplete="off"
               className="lookup-input h-9 rounded-md bg-background pr-9 pl-9"
-              onBlur={() => setOpen(false)}
               onChange={event => {
                 onQueryChange(event.target.value)
                 setOpen(true)
+              }}
+              onClick={() => {
+                // 输入框还保持着焦点、浮层已被 Esc/选中关掉时，再点一下要能重新打开
+                if (hasQuery) setOpen(true)
               }}
               onFocus={() => {
                 if (hasQuery) setOpen(true)
@@ -173,7 +177,20 @@ export function LookupSearch({
         <PopoverContent
           align="start"
           className="lookup-suggest w-[640px] max-w-[calc(100vw-48px)] rounded-lg bg-background p-1"
+          onFocusOutside={event => {
+            const target = event.detail.originalEvent.target
+            if (target instanceof Node && searchRef.current?.contains(target)) {
+              event.preventDefault()
+            }
+          }}
+          onMouseLeave={() => setActive(-1)}
           onOpenAutoFocus={event => event.preventDefault()}
+          onPointerDownOutside={event => {
+            const target = event.detail.originalEvent.target
+            if (target instanceof Node && searchRef.current?.contains(target)) {
+              event.preventDefault()
+            }
+          }}
           sideOffset={6}
         >
           {options.length === 0 ? (

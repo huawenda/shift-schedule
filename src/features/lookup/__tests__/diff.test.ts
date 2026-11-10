@@ -45,7 +45,7 @@ describe('同 INCH 组合对比', () => {
     expect(diff.sub.level).toBe('partial')
     expect(diff.sub.removed).toEqual(['P414', 'P434'])
     expect(changeBadges(group('8348B-01'), group('8348B-02')).map(b => b.text))
-      .toEqual(['Recipe 同', 'Main/Sub都换'])
+      .toEqual(['Recipe 同', 'Main/Sub 都换'])
   })
 
   it('8348B-01 → 8348C-01：JIG/Recipe 变，Main 全换、Sub 部分换', () => {
@@ -55,8 +55,8 @@ describe('同 INCH 组合对比', () => {
     expect(diff.main.level).toBe('all')
     expect(diff.sub.level).toBe('partial')
     const lines = describeChange(group('8348B-01'), group('8348C-01'))
-    expect(lines[0]).toBe('JIG 8348B → 8348C，Recipe 8 → 2')
-    expect(lines[1]).toContain('Main全换')
+    expect(lines[0]).toBe('P/N 8348B → 8348C，Recipe 8 → 2')
+    expect(lines[1]).toContain('Main 全换')
     expect(lines[1]).toContain('P342')
   })
 

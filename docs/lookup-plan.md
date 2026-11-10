@@ -184,9 +184,9 @@ export function describeChange(current: LookupGroup, target: LookupGroup): strin
 ```
 当前组合：当前型号
 JIG/Recipe 都没变：JIG / Recipe 不变
-JIG 或 Recipe 变：JIG 8348B → 8348C，Recipe 8 → 2
-Main：Main不变 / Main部分换 / Main全换
-Sub：Sub不变 / Sub部分换 / Sub全换
+JIG 或 Recipe 变：P/N 8348B → 8348C，Recipe 8 → 2
+Main：Main 不变 / Main 部分换 / Main 全换
+Sub：Sub 不变 / Sub 部分换 / Sub 全换
 ```
 
 “变一种还是两种”由后两段直接回答：
@@ -375,16 +375,16 @@ pnpm lookup:data   # 重新生成
 
 - `条件不变`（中性）；
 - `JIG / Recipe 变`（`--warning-bg`）；
-- `Main全换` / `Main部分换`；
-- `Sub全换` / `Sub部分换`。
+- `Main 全换` / `Main 部分换`；
+- `Sub 全换` / `Sub 部分换`。
 
-标签最多三枚，超出用“主副都换”合并。不要用红绿区分增删——项目没有“增/减”语义色；用 `+` / `−` 符号与文字。
+标签最多三枚，超出用“Main/Sub 都换”合并。不要用红绿区分增删——项目没有“增/减”语义色；用 `+` / `−` 符号与文字。
 
 **展开明细**：每行右侧一个 ghost 图标按钮（`ChevronDown`），展开后先给增删摘要，再给该组合的两张 FSPM 迷你表（与上方同款）：
 
 ```
-Main  移除 P405          新增 —
-Sub  移除 P414、P434     新增 —
+Main  移除 P405          无新增
+Sub  移除 P414、P434     无新增
 
 主尺寸 83 · Normal            副尺寸 48 · Normal
 P342 INNOX Narrow              P403 INNOX Narrow
@@ -524,7 +524,7 @@ GLS 型号 · JIG P/N · Recipe 三向互查
 - 表头：12px / 600 / `--muted`，左对齐，`letter-spacing: 0.02em`；
 - 单元格：13px / 400 / `--text`，行高 36；
 - 数字（Recipe、数量）加 `font-variant-numeric: tabular-nums`；
-- 列宽（1228 版心）：型号组 170、JIG·Recipe 150、Bezel（主/副）100、主 FSPM 270、副 FSPM 270、变化 190；总宽 1150，留 30 给行内边距；
+- 列宽（1228 版心）：型号组 170、P/N · Recipe 150、Bezel 100、Main 270、Sub 270、变化 180；总宽 1140，卡片内容宽 1148，留 8px 余量避免 2px 溢出触发横滚；
 - 当前行：`--accent-weak` 底 + 2px `--accent` 左竖条，不用整行加粗；
 - 变化列里的“变”用 `--warning-ink` 文字，不用红底。
 
@@ -577,7 +577,7 @@ GLS 型号 · JIG P/N · Recipe 三向互查
 - 搜索行：页签高 36、输入框高 36，同一行；输入框 `max-width: 640`；
 - 条件卡：内边距 `--sp-4`，字段用两列 `label + value` 网格；
 - 双 FSPM 卡：固定两列 `repeat(2, minmax(0, 1fr))`，间距 `--sp-4`；卡内 3 列迷你表；
-- 对比表：固定 6 列，总宽 1150（见 5.4），不换列；
+- 对比表：固定 6 列，总宽 1140（见 5.4），不换列；
 - 组合卡列表：单列，卡间距 `--sp-3`。
 
 ### 6.3 最小窗口（1024）
