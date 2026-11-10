@@ -23,6 +23,8 @@ import { JigSettingsDialog } from './features/jig/components/JigSettingsDialog'
 import { JigSizeMappingDialog } from './features/jig/components/JigSizeMappingDialog'
 import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
 import { useJigData } from './features/jig/hooks/useJigData'
+import { LookupScreen } from './features/lookup/components/LookupScreen'
+import type { LookupSelection } from './features/lookup/core/types'
 import { pickJigDirectory } from './platform/jigFile'
 import { readJigConfigFile, updateJigConfigFile } from './platform/jigConfigFile'
 import { readRaw, writeRaw, STORAGE_KEYS } from './platform/storage'
@@ -151,6 +153,7 @@ export function App() {
     overview: { flow: 0, matrixLeft: 0, matrixTop: 0 },
     matrix: { flow: 0, matrixLeft: 0, matrixTop: 0 },
     jig: { flow: 0, matrixLeft: 0, matrixTop: 0 },
+    lookup: { flow: 0, matrixLeft: 0, matrixTop: 0 },
     settings: { flow: 0, matrixLeft: 0, matrixTop: 0 }
   })
 
@@ -252,7 +255,7 @@ export function App() {
    * 而不是在浏览过的几个页面之间来回切（Android / iOS 的原生 app 都是这个行为）。
    * `month` 不传时沿用当前结算月；显式传 null 表示回到当前月。
    */
-  const navigate = useCallback((nextRoute: Route, options: { month?: MonthKey | null; settingsTab?: SettingsTab; jigTab?: JigTabId } = {}) => {
+  const navigate = useCallback((nextRoute: Route, options: { month?: MonthKey | null; settingsTab?: SettingsTab; jigTab?: JigTabId; lookup?: LookupSelection | null } = {}) => {
     // 先记下当前页的滚动位置，再换路由：切 tab 回来时能回到离开处
     const flow = document.querySelector<HTMLElement>('.canvas-flow')
     const matrix = document.querySelector<HTMLElement>('.matrix-scroll')
@@ -266,13 +269,14 @@ export function App() {
       route: nextRoute,
       month: 'month' in options ? (options.month ?? null) : (location.month ?? currentMonth),
       settingsTab: options.settingsTab ?? location.settingsTab,
-      jigTab: options.jigTab ?? location.jigTab
+      jigTab: options.jigTab ?? location.jigTab,
+      lookup: 'lookup' in options ? (options.lookup ?? null) : location.lookup
     }
     const hash = buildHash(next)
 
     if (window.location.hash !== hash) window.history.replaceState(null, '', hash)
     setLocation(next)
-  }, [location.route, location.month, location.settingsTab, location.jigTab, currentMonth])
+  }, [location.route, location.month, location.settingsTab, location.jigTab, location.lookup, currentMonth])
 
   function goMonth(delta: number) {
     navigate(location.route, { month: shiftMonth(monthKey, delta) })
@@ -296,10 +300,11 @@ export function App() {
 
   /** 侧栏链接带上当前月份，Cmd/Ctrl+点击开新标签也能落到同一个结算月 */
   const hrefs = useMemo<Record<Route, string>>(() => ({
-    matrix: buildHash({ route: 'matrix', month: monthKey, settingsTab: 'roster', jigTab: 'detail' }),
-    overview: buildHash({ route: 'overview', month: monthKey, settingsTab: 'roster', jigTab: 'detail' }),
-    jig: buildHash({ route: 'jig', month: null, settingsTab: 'roster', jigTab: 'detail' }),
-    settings: buildHash({ route: 'settings', month: monthKey, settingsTab: 'roster', jigTab: 'detail' })
+    matrix: buildHash({ route: 'matrix', month: monthKey, settingsTab: 'roster', jigTab: 'detail', lookup: null }),
+    overview: buildHash({ route: 'overview', month: monthKey, settingsTab: 'roster', jigTab: 'detail', lookup: null }),
+    jig: buildHash({ route: 'jig', month: null, settingsTab: 'roster', jigTab: 'detail', lookup: null }),
+    lookup: buildHash({ route: 'lookup', month: null, settingsTab: 'roster', jigTab: 'detail', lookup: null }),
+    settings: buildHash({ route: 'settings', month: monthKey, settingsTab: 'roster', jigTab: 'detail', lookup: null })
   }), [monthKey])
 
   function clearAll() {
@@ -481,6 +486,11 @@ export function App() {
             notify={(text, tone) => toast.info(text, { tone })}
             tab={location.jigTab}
             onTabChange={changeJigTab}
+          />
+        ) : route === 'lookup' ? (
+          <LookupScreen
+            onSelect={selection => navigate('lookup', { lookup: selection })}
+            selection={location.lookup}
           />
         ) : (
           <OverviewScreen

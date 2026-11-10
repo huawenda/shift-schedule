@@ -1,4 +1,4 @@
-import { CalendarDays, LayoutGrid, Settings, Table2 } from 'lucide-react'
+import { CalendarDays, LayoutGrid, Search, Settings, Table2 } from 'lucide-react'
 
 import {
   Sidebar,
@@ -95,6 +95,9 @@ export function AppSidebar({
    * 静态版与小程序端没有这些能力，挂一个点不动的入口只会让人以为坏了。
    */
   const showJig = isTauriShell()
+  /** 速查只读静态数据，不依赖壳能力 —— web 版也显示 */
+  const showLookup = true
+  const showBusiness = showJig || showLookup
 
   return (
     <Sidebar collapsible="icon">
@@ -148,7 +151,7 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {showJig ? (
+        {showBusiness ? (
           <>
             {/*
               收缩态下两组的分组标题都隐掉了，图标连成一条 —— 补一道短分隔线
@@ -164,16 +167,31 @@ export function AppSidebar({
               <SidebarGroupLabel>业务</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu className="gap-1">
+                  {showJig ? (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={route === 'jig'} tooltip="JIG 数据">
+                        <a
+                          aria-current={route === 'jig' ? 'page' : undefined}
+                          data-view="jig"
+                          href={hrefs.jig}
+                          onClick={event => intercept(event, 'jig')}
+                        >
+                          <Table2 className="size-4" />
+                          <span>JIG 数据</span>
+                        </a>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ) : null}
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={route === 'jig'} tooltip="JIG 数据">
+                    <SidebarMenuButton asChild isActive={route === 'lookup'} tooltip="速查">
                       <a
-                        aria-current={route === 'jig' ? 'page' : undefined}
-                        data-view="jig"
-                        href={hrefs.jig}
-                        onClick={event => intercept(event, 'jig')}
+                        aria-current={route === 'lookup' ? 'page' : undefined}
+                        data-view="lookup"
+                        href={hrefs.lookup}
+                        onClick={event => intercept(event, 'lookup')}
                       >
-                        <Table2 className="size-4" />
-                        <span>JIG 数据</span>
+                        <Search className="size-4" />
+                        <span>速查</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

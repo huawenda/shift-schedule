@@ -6,6 +6,7 @@ import {
   type MonthKey
 } from '@/data/period'
 import type { SettingsTab } from '@/screens/SettingsScreen'
+import type { LookupSelection } from './features/lookup/core/types'
 import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
 
 /**
@@ -32,16 +33,19 @@ export interface AppLocation {
   settingsTab: SettingsTab
   /** JIG 页当前子页；其余视图下无意义 */
   jigTab: JigTabId
+  /** 速查页当前选择；null = 空态 */
+  lookup: LookupSelection | null
 }
 
-/** 四个一级页面：全员矩阵看全组、月度概览看本人、JIG 数据查 MES 导出、设置改配置 */
-export type Route = 'matrix' | 'overview' | 'jig' | 'settings'
+/** 五个一级页面：全员矩阵看全组、月度概览看本人、JIG 数据查 MES 导出、速查查 GLS/FSPM、设置改配置 */
+export type Route = 'matrix' | 'overview' | 'jig' | 'lookup' | 'settings'
 
 export const DEFAULT_LOCATION: AppLocation = {
   route: 'overview',
   month: null,
   settingsTab: 'roster',
-  jigTab: 'detail'
+  jigTab: 'detail',
+  lookup: null,
 }
 
 /** 解析 hash；未知视图回落到概览，未知参数按「当前月 / 人员配置」处理 */
@@ -55,7 +59,7 @@ export function parseLocation(hash: string): AppLocation {
     parts.shift()
   }
 
-  const [view, param] = parts
+  const [view, param, third] = parts
 
   if (view === 'matrix' || view === 'overview') {
     // 兼容旧式 `#/matrix/2026-10`：月份写在视图后面
@@ -77,12 +81,46 @@ export function parseLocation(hash: string): AppLocation {
     return { ...DEFAULT_LOCATION, route: 'jig', jigTab: jigTabFromSlug(param) }
   }
 
+  if (view === 'lookup') {
+    // `#/lookup/model/FY`、`#/lookup/jig/31%2810%29`；也兼容手敲的 `#/lookup/FY`
+    if (param === 'model' || param === 'jig') {
+      const key = third ? safeDecode(third) : ''
+      return {
+        ...DEFAULT_LOCATION,
+        route: 'lookup',
+        lookup: key ? { mode: param, key } : null,
+      }
+    }
+    const key = param ? safeDecode(param) : ''
+    return {
+      ...DEFAULT_LOCATION,
+      route: 'lookup',
+      lookup: key ? { mode: 'model', key } : null,
+    }
+  }
+
   return { ...DEFAULT_LOCATION, month }
 }
 
-/** 生成规范 hash：当前月省略月份；设置页总是带页签；JIG 页不带月份 */
+/** 手敲的 % 序列不合法时按原文保留，不让整个路由崩掉 */
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+/** 生成规范 hash：当前月省略月份；设置页总是带页签；JIG / 速查页不带月份 */
 export function buildHash(location: AppLocation): string {
   if (location.route === 'jig') return `#/jig/${jigTabToSlug(location.jigTab)}`
+
+  if (location.route === 'lookup') {
+    const selection = location.lookup
+    return selection
+      ? `#/lookup/${selection.mode}/${encodeURIComponent(selection.key)}`
+      : '#/lookup'
+  }
 
   const prefix = location.month && compareMonth(location.month, currentMonthKey()) !== 0
     ? `/${monthKeyToString(location.month)}`
@@ -103,5 +141,6 @@ export const ROUTE_TITLE: Record<Route, string> = {
   overview: '月度概览',
   matrix: '全员矩阵',
   jig: 'JIG 数据',
+  lookup: '速查',
   settings: '设置'
 }

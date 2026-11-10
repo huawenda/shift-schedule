@@ -11,6 +11,7 @@ import { JigTopBar } from '@/features/jig/components/JigTopBar'
 import type { JigTabId } from '@/features/jig/components/jigTabs'
 import { computeViewCounts } from '@/features/jig/core/view'
 import type { JigData } from '@/features/jig/hooks/useJigData'
+import { LOOKUP_DATA_VERSION } from '@/features/lookup/data/lookupData'
 import { AppSidebar } from './AppSidebar'
 import { MobileNav } from './MobileNav'
 import { TopBar } from './TopBar'
@@ -150,12 +151,14 @@ export function AppShell({
           ) : (
             <TopBar
               atCurrentMonth={atCurrentMonth}
+              label={route === 'lookup' ? `数据快照 ${LOOKUP_DATA_VERSION}` : undefined}
               monthTitle={monthTitle}
               onBackup={onBackup}
               onRestore={onRestore}
               onShiftMonth={onShiftMonth}
               onToday={onToday}
               onToggleTheme={onToggleTheme}
+              showPeriodNav={route !== 'lookup'}
               theme={theme}
             />
           )}

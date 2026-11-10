@@ -16,6 +16,10 @@ interface TopBarProps {
   /** 当前生效的主题（浅色 / 深色）；按钮图标与 aria-label 都跟着它变 */
   theme: 'light' | 'dark'
   onToggleTheme: () => void
+  /** 与月份无关的页面（速查）传 false，隐藏月份胶囊 */
+  showPeriodNav?: boolean
+  /** showPeriodNav=false 时占位的说明文字 */
+  label?: string
 }
 
 /**
@@ -32,7 +36,9 @@ export function TopBar({
   onBackup,
   onRestore,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  showPeriodNav = true,
+  label,
 }: TopBarProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   /** 窄屏没有侧栏可折叠，导航在底部标签栏，这个开关不显示 */
@@ -48,42 +54,46 @@ export function TopBar({
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
       {isCompact ? null : <SidebarTrigger />}
 
-      <div className="flex items-center gap-0.5 rounded-lg border border-border px-0.5 py-0.5">
-        <Button
-          aria-label="上一期"
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-          onClick={() => onShiftMonth(-1)}
-        >
-          <ChevronLeft />
-        </Button>
-        <span
-          aria-live="polite"
-          className="min-w-28 px-1 text-center text-sm font-medium tabular-nums"
-        >
-          {monthTitle}
-        </span>
-        <Button
-          aria-label="下一期"
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-          onClick={() => onShiftMonth(1)}
-        >
-          <ChevronRight />
-        </Button>
-        <Button
-          className="ml-0.5"
-          disabled={atCurrentMonth}
-          size="sm"
-          type="button"
-          variant="secondary"
-          onClick={onToday}
-        >
-          回到本月
-        </Button>
-      </div>
+      {showPeriodNav ? (
+        <div className="flex items-center gap-0.5 rounded-lg border border-border px-0.5 py-0.5">
+          <Button
+            aria-label="上一期"
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+            onClick={() => onShiftMonth(-1)}
+          >
+            <ChevronLeft />
+          </Button>
+          <span
+            aria-live="polite"
+            className="min-w-28 px-1 text-center text-sm font-medium tabular-nums"
+          >
+            {monthTitle}
+          </span>
+          <Button
+            aria-label="下一期"
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+            onClick={() => onShiftMonth(1)}
+          >
+            <ChevronRight />
+          </Button>
+          <Button
+            className="ml-0.5"
+            disabled={atCurrentMonth}
+            size="sm"
+            type="button"
+            variant="secondary"
+            onClick={onToday}
+          >
+            回到本月
+          </Button>
+        </div>
+      ) : label ? (
+        <span className="px-1 text-sm text-muted-foreground">{label}</span>
+      ) : null}
 
       {/* 右列：备份按钮（<640px 隐藏，设置页里还有一份入口）+ 主题按钮（常驻）。
           ml-auto 挂在这一整组上，不能给两个子元素各挂一个 —— 两个 ml-auto

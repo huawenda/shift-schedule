@@ -1,0 +1,610 @@
+/* 速查页
+ *
+ * 只做桌面壳（窗口 ≥ 1024）；不做移动端 / 小屏重排。
+ * 颜色、字号、间距、圆角全部取 tokens，不写 hex。
+ */
+
+.canvas.is-lookup {
+  width: 100%;
+  max-width: 1228px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------ 搜索栏 */
+
+.lookup-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.lookup-tabs {
+  flex: 0 0 auto;
+}
+
+.lookup-search {
+  position: relative;
+  flex: 1 1 auto;
+  max-width: 640px;
+  min-width: 320px;
+}
+
+.lookup-input-icon {
+  position: absolute;
+  top: 50%;
+  left: var(--sp-3);
+  width: 14px;
+  height: 14px;
+  color: var(--faint);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+/* 字号用项目令牌；选择器比 shadcn 的 md:text-sm 高一档，不受 Tailwind 顺序影响 */
+.lookup-search .lookup-input {
+  font-size: var(--fs-control);
+}
+
+.lookup-clear {
+  position: absolute;
+  top: 50%;
+  right: var(--sp-1);
+  transform: translateY(-50%);
+}
+
+.lookup-search-hint {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+/* 建议浮层：宽度跟输入框同一档；具体尺寸走 Tailwind 类，这里只放列表排版 */
+.lookup-suggest ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lookup-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.lookup-option[data-active='true'] {
+  background: var(--accent-weak);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.lookup-option-primary {
+  font-size: var(--fs-control);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lookup-option-primary mark {
+  background: var(--accent-weak);
+  color: var(--text);
+}
+
+.lookup-option-secondary {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+.lookup-suggest-empty {
+  margin: 0;
+  padding: var(--sp-3);
+  color: var(--faint);
+  font-size: var(--fs-small);
+}
+
+/* ------------------------------------------------------------ 结果 */
+
+.lookup-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.lookup-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+}
+
+.lookup-summary-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.lookup-summary-title {
+  margin: 0;
+  font-size: var(--fs-metric-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.lookup-summary-sub {
+  margin: var(--sp-1) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.lookup-summary-inch {
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.lookup-facts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sp-2);
+  margin: 0;
+}
+
+.lookup-fact {
+  min-width: 0;
+}
+
+.lookup-fact dt {
+  color: var(--faint);
+  font-size: var(--fs-label);
+}
+
+.lookup-fact dd {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--fs-control);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ FSPM */
+
+.lookup-fspm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+.lookup-fspm-panel {
+  min-width: 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.lookup-fspm-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.lookup-fspm-panel-title {
+  font-size: var(--fs-control);
+  font-weight: 600;
+}
+
+.lookup-part-bezel {
+  margin-left: var(--sp-1);
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: var(--fs-label);
+}
+
+.lookup-fspm-panel-count {
+  color: var(--faint);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.lookup-fspm-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+/* 3 列等分卡片内容宽度；对齐方式统一左对齐，避免右对齐造成“列宽不均”的错觉 */
+.lookup-fspm-table th:nth-child(1),
+.lookup-fspm-table th:nth-child(2),
+.lookup-fspm-table th:nth-child(3) {
+  width: 33.3333%;
+}
+
+.lookup-fspm-table th {
+  padding: 0 var(--sp-2) var(--sp-1);
+  color: var(--faint);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  text-align: left;
+}
+
+.lookup-fspm-table td {
+  height: 28px;
+  padding: 0 var(--sp-2);
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 三列等分，内容按 左 / 中 / 右 贴边，避免第三列右侧空一大截 */
+.lookup-fspm-table th:first-child,
+.lookup-fspm-table td:first-child {
+  padding-left: 0;
+  text-align: left;
+}
+
+.lookup-fspm-table th:nth-child(2),
+.lookup-fspm-table td:nth-child(2) {
+  text-align: center;
+}
+
+.lookup-fspm-table th:nth-child(3),
+.lookup-fspm-table td:nth-child(3) {
+  /* 留出 8px，避免右对齐的字形贴到卡片边缘被裁切 */
+  padding-right: var(--sp-2);
+  text-align: right;
+}
+
+.lookup-fspm-id {
+  color: var(--text);
+  font-size: var(--fs-control);
+  font-weight: 600;
+}
+
+/* 材质是现场最少用的属性：不占列，只做弱化小字 */
+.lookup-fspm-material {
+  margin-left: var(--sp-1);
+  color: var(--faint);
+  font-size: var(--fs-label);
+}
+
+.lookup-fspm-table tr.is-invalid td {
+  color: var(--warning-ink);
+}
+
+/* ------------------------------------------------------------ 组合卡 */
+
+.lookup-model-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.lookup-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sub);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.lookup-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.lookup-group-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+}
+
+.lookup-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.lookup-group-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.lookup-group-id {
+  font-size: var(--fs-control);
+  font-weight: 600;
+}
+
+.lookup-group-inch {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.lookup-group-cond {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.lookup-group-count {
+  color: var(--faint);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ 对比表 */
+
+.lookup-compare {
+  padding: var(--sp-4);
+}
+
+.lookup-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+
+.lookup-section-head h2 {
+  margin: 0;
+  font-size: var(--fs-subhead);
+  font-weight: 600;
+}
+
+.lookup-section-head span {
+  color: var(--faint);
+  font-size: var(--fs-small);
+}
+
+/* 只作用于对比表本身；展开行里的 FSPM 迷你表不能被这条规则命中 */
+.lookup-compare .lookup-compare-table {
+  min-width: 1080px;
+  table-layout: fixed;
+}
+
+.lookup-compare .lookup-compare-table th:nth-child(1) {
+  width: 170px;
+}
+
+.lookup-compare .lookup-compare-table th:nth-child(2) {
+  width: 150px;
+}
+
+.lookup-compare .lookup-compare-table th:nth-child(3) {
+  width: 100px;
+}
+
+.lookup-compare .lookup-compare-table th:nth-child(4),
+.lookup-compare .lookup-compare-table th:nth-child(5) {
+  width: 270px;
+}
+
+.lookup-compare .lookup-compare-table th:nth-child(6) {
+  width: 190px;
+}
+
+.lookup-compare .lookup-compare-table th {
+  color: var(--faint);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.lookup-compare .lookup-compare-table td {
+  font-size: var(--fs-control);
+}
+
+/* 比 shadcn TableCell 的 whitespace-nowrap 高一档，长列表可以换行 */
+.lookup-compare .lookup-compare-table .lookup-compare-models,
+.lookup-compare .lookup-compare-table .lookup-compare-fspm {
+  white-space: normal;
+}
+
+.lookup-compare .lookup-compare-table tr.is-current td {
+  background: var(--accent-weak);
+}
+
+.lookup-compare .lookup-compare-table tr.is-current td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.lookup-compare-models {
+  min-width: 170px;
+}
+
+.lookup-compare-models > span:first-child {
+  font-weight: 600;
+}
+
+.lookup-current-tag {
+  margin-left: var(--sp-1);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-size: var(--fs-micro);
+}
+
+.lookup-compare-cond {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lookup-compare-bezel {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.lookup-fspm-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.lookup-inline-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sub);
+  background: var(--surface-tint);
+  font-size: var(--fs-small);
+}
+
+.lookup-inline-item b {
+  font-weight: 600;
+}
+
+.lookup-inline-item span {
+  color: var(--faint);
+  font-size: var(--fs-label);
+}
+
+.lookup-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.lookup-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+}
+
+.lookup-badge-neutral {
+  background: var(--surface-sunken);
+  color: var(--muted);
+}
+
+.lookup-badge-warning {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+
+.lookup-change-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.lookup-expand-btn {
+  margin-left: auto;
+}
+
+.lookup-expand-btn svg {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.lookup-expand-btn svg.is-open {
+  transform: rotate(180deg);
+}
+
+/* 展开明细在表格行内；表格横向滚动时它会跟着滚（已知取舍） */
+.lookup-expand-row td {
+  background: var(--surface-tint);
+}
+
+.lookup-expand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+}
+
+.lookup-expand-lines {
+  margin: 0;
+  padding-left: var(--sp-4);
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.lookup-expand-lines li {
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------ 空态 / 脚注 */
+
+.lookup-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+}
+
+.lookup-empty-title {
+  margin: 0;
+  font-size: var(--fs-subhead);
+  font-weight: 600;
+}
+
+.lookup-empty-desc {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-body);
+}
+
+.lookup-empty-notfound {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-control);
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+  font-size: var(--fs-small);
+}
+
+.lookup-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.lookup-examples-label {
+  color: var(--faint);
+  font-size: var(--fs-small);
+}
+
+.lookup-footnote {
+  margin: 0;
+  color: var(--faint);
+  font-size: var(--fs-small);
+}
+
+.lookup-muted {
+  color: var(--faint);
+}

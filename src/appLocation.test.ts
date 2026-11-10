@@ -114,34 +114,87 @@ describe('路由生成', () => {
   })
 })
 
+describe('路由：速查页', () => {
+  it('空态', () => {
+    const loc = parseLocation('#/lookup')
+    expect(loc.route).toBe('lookup')
+    expect(loc.lookup).toBe(null)
+    expect(loc.month).toBe(null)
+  })
+
+  it('型号深链', () => {
+    expect(parseLocation('#/lookup/model/FY').lookup).toEqual({ mode: 'model', key: 'FY' })
+  })
+
+  it('JIG 深链', () => {
+    expect(parseLocation('#/lookup/jig/7748G').lookup).toEqual({ mode: 'jig', key: '7748G' })
+  })
+
+  it('Recipe 的括号编码还原', () => {
+    expect(parseLocation('#/lookup/jig/31%2810%29').lookup)
+      .toEqual({ mode: 'jig', key: '31(10)' })
+  })
+
+  it('兼容手敲的 `#/lookup/FY`', () => {
+    expect(parseLocation('#/lookup/FY').lookup).toEqual({ mode: 'model', key: 'FY' })
+  })
+
+  it('**月份被忽略** —— 速查与结算月无关', () => {
+    const loc = parseLocation('#/2026-10/lookup/model/FY')
+    expect(loc.route).toBe('lookup')
+    expect(loc.lookup).toEqual({ mode: 'model', key: 'FY' })
+    expect(loc.month).toBe(null)
+  })
+
+  it('生成：空态 / 型号 / Recipe 括号', () => {
+    expect(buildHash({ ...DEFAULT_LOCATION, route: 'lookup' })).toBe('#/lookup')
+    expect(buildHash({
+      ...DEFAULT_LOCATION,
+      route: 'lookup',
+      lookup: { mode: 'model' as const, key: 'FY' },
+    })).toBe('#/lookup/model/FY')
+    expect(buildHash({
+      ...DEFAULT_LOCATION,
+      route: 'lookup',
+      lookup: { mode: 'jig' as const, key: '31(10)' },
+    })).toBe('#/lookup/jig/31(10)')
+  })
+})
+
 describe('路由：解析与生成互为逆运算', () => {
   const cases = [
-    { route: 'overview' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const },
-    { route: 'matrix' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const },
-    { route: 'matrix' as const, month: { year: 2026, month: 10 } as MonthKey, settingsTab: 'roster' as const, jigTab: 'detail' as const },
-    { route: 'settings' as const, month: null, settingsTab: 'profile' as const, jigTab: 'detail' as const },
-    { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'queryPivot' as const },
-    { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'review' as const }
+    { route: 'overview' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: null },
+    { route: 'matrix' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: null },
+    { route: 'matrix' as const, month: { year: 2026, month: 10 } as MonthKey, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: null },
+    { route: 'settings' as const, month: null, settingsTab: 'profile' as const, jigTab: 'detail' as const, lookup: null },
+    { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'queryPivot' as const, lookup: null },
+    { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'review' as const, lookup: null },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: null },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: { mode: 'model' as const, key: 'FY' } },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: { mode: 'jig' as const, key: '31(10)' } }
   ]
 
   for (const loc of cases) {
-    it(`${loc.route}${loc.month ? '/' + loc.month : ''} 往返一致`, () => {
+    it(`${loc.route}${loc.month ? '/' + loc.month : ''}${loc.lookup ? '/' + loc.lookup.key : ''} 往返一致`, () => {
       const parsed = parseLocation(buildHash(loc))
       expect(parsed.route).toBe(loc.route)
       expect(parsed.settingsTab).toBe(loc.settingsTab)
       expect(parsed.jigTab).toBe(loc.jigTab)
-      // JIG 页不保留月份；其余页面保留
-      // MonthKey 是对象，用 toEqual 比内容（toBe 会比引用，解析出来的是新对象）
-      expect(parsed.month).toEqual(loc.route === 'jig' ? null : loc.month)
+      expect(parsed.lookup).toEqual(loc.lookup)
+      // JIG / 速查页不保留月份；其余页面保留
+      expect(parsed.month).toEqual(
+        loc.route === 'jig' || loc.route === 'lookup' ? null : loc.month,
+      )
     })
   }
 })
 
 describe('窗口标题', () => {
-  it('四个视图各有一个标题，且不带软件名前缀', () => {
+  it('五个视图各有一个标题，且不带软件名前缀', () => {
     expect(ROUTE_TITLE.overview).toBe('月度概览')
     expect(ROUTE_TITLE.matrix).toBe('全员矩阵')
     expect(ROUTE_TITLE.jig).toBe('JIG 数据')
+    expect(ROUTE_TITLE.lookup).toBe('速查')
     expect(ROUTE_TITLE.settings).toBe('设置')
     for (const title of Object.values(ROUTE_TITLE)) {
       expect(title).not.toContain('·')

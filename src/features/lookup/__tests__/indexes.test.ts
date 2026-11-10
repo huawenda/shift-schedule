@@ -1,0 +1,50 @@
+import { describe, expect, it } from 'vitest'
+
+import { FSPM_TABLE, LOOKUP_GROUPS } from '../data/lookupData'
+import {
+  buildLookupIndex,
+  findJig,
+  findModel,
+  sameInchGroups,
+  searchJigs,
+  searchModels,
+} from '../core/indexes'
+import { normalizeKey } from '../core/normalize'
+
+const index = buildLookupIndex(LOOKUP_GROUPS, FSPM_TABLE)
+
+describe('查询键归一化', () => {
+  it('全角、空格、大小写都收成同一键', () => {
+    expect(normalizeKey('ｆｙ')).toBe('FY')
+    expect(normalizeKey(' 7748 g ')).toBe('7748G')
+    expect(normalizeKey('31（10）')).toBe('31(10)')
+  })
+})
+
+describe('索引', () => {
+  it('同 INCH 77/48 有 12 组，按 JIG P/N 升序', () => {
+    const groups = sameInchGroups(index, '77/48')
+    expect(groups).toHaveLength(12)
+    const jigs = groups.map(g => g.jigPn)
+    expect(jigs).toEqual([...jigs].sort((a, b) => a.localeCompare(b)))
+  })
+
+  it('未知型号 / JIG 返回空', () => {
+    expect(findModel(index, 'NOPE')).toBeUndefined()
+    expect(findJig(index, 'NOPE')).toBeUndefined()
+    expect(searchModels(index, 'NOPE')).toEqual([])
+    expect(searchJigs(index, 'NOPE')).toEqual([])
+  })
+
+  it('型号搜索：完全匹配排最前', () => {
+    const hits = searchModels(index, 'fy')
+    expect(hits[0]?.model).toBe('FY')
+    expect(hits[0]?.group.id).toBe('7748G-01')
+  })
+
+  it('JIG 搜索：JIG P/N 与 Recipe 都能命中', () => {
+    expect(searchJigs(index, '7748g')[0]?.jigPn).toBe('7748G')
+    expect(searchJigs(index, '31(10)')[0]?.jigPn).toBe('7748G')
+    expect(findJig(index, '31（10）')?.jigPn).toBe('7748G')
+  })
+})
