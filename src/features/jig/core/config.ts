@@ -72,7 +72,7 @@ export interface JigConfig {
 /**
  * 本机偏好：进 localStorage，不进备份文件。
  *
- * 与本项目既有的 theme / sidebarWidth / backupDir 同一档 ——
+ * 与本项目既有的 theme / backupDir 同一档 ——
  * 换台电脑时按新机器的情况重新设更合适，把旧机器的路径搬过去反而指到不存在的目录。
  */
 export interface JigPrefs {

@@ -28,6 +28,11 @@
   /* 画布底：降一档，白色卡片才能靠色调台阶浮起来，而不必靠深边框勾出来 */
   --canvas: #f2f4f6;
   --raised: #f4f6f8;
+  /* 无边框壳的层次：侧栏 / 标题栏 / 缝隙同色（--ui-sidebar），画布层
+   * 与它们拉开一档，画布左上角圆角从同色底上透出来，不留孤立色块。
+   * 不动 --ui-background：按钮 / Tabs / 跳过导航都走它，改它会连带染色。 */
+  --layer-canvas: #ffffff;
+  --layer-gap: #e8ebee;
   --active: #ebedee;
   /* 系统底部导航栏（手势条区域）的浅灰。
    * ⚠️ web 端已不再用它：外壳换成 shadcn 后，手机底栏与系统导航栏统一取画布白
@@ -206,10 +211,12 @@
   --sp-6: 32px;
 
   /* 死令牌：外壳换成 shadcn Sidebar 后，实际宽度由 SidebarProvider 的 inline
-   * --sidebar-width 决定（默认 16rem = 256px，用户可拖右缘在 200–320px 间调整）。
+   * --sidebar-width 决定，现在固定 240px（按顶部品牌区定宽）。
    * 这里只是改造前 228px 的记录，改它不会有任何效果。 */
   --sidebar-width: 228px;
   --topbar-height: 48px;
+  /* 自绘标题栏高度：侧栏那半条与内容区那半条共用，改动要同步两处 */
+  --titlebar-h: 40px;
   /* 顶层版心间距：等于间距阶梯的 24 档 */
   --gap: var(--sp-5);
   --pad: var(--sp-5);
@@ -328,6 +335,8 @@
    * bg-background → --ui-background。改这里不会有视觉效果，别改错地方。 */
   --canvas: #0b0e12;
   --raised: #1e242c;
+  --layer-canvas: #0f1318;
+  --layer-gap: #161b22;
   --active: #262e37;
   --surface-nav: #0f1318;
 

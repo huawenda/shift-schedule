@@ -1,0 +1,133 @@
+/* 自绘标题栏 + 无边框窗口的层次
+ *
+ * 标题栏整条（侧栏半条 + 内容区半条）与侧栏本体同底色，是同一个视觉层：
+ * 左段与下面的导航之间没有分隔线，侧栏通到窗口第一像素。
+ * 标题栏以下才分层：画布层用 --layer-canvas，左上角圆角从 --layer-gap 上露出来，
+ * 于是「侧栏 + 标题栏」与「画布层」之间有色差。
+ *
+ * 两段 .titlebar 分别挂在侧栏与 SidebarInset 的第一行，同高、可各自拖动。
+ * 只在 Tauri 壳里渲染；浏览器与静态版不出现（.canvas-layer--web 会退回原样）。
+ */
+
+.titlebar {
+  position: relative;
+  display: flex;
+  flex: 0 0 var(--titlebar-h);
+  align-items: center;
+  height: var(--titlebar-h);
+  background: var(--ui-sidebar);
+}
+
+/* 两段都必须与侧栏同底色：右段早先取 --layer-gap，整条看起来就和侧栏差一档。
+ * 不画下边线，避免把侧栏 / 标题栏切成两截。 */
+.titlebar--sidebar,
+.titlebar--content {
+  background: var(--ui-sidebar);
+}
+
+/* 单独一层承接拖动：内容层默认不吃指针事件，空白处按下去落到这一层。
+ * 双击最大化也绑在这里，按钮靠更高的 z-index 与 pointer-events 摘出去。 */
+.titlebar-drag {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.titlebar-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  height: 100%;
+  padding: 0 var(--sp-3);
+  pointer-events: none;
+}
+
+.titlebar-content button {
+  pointer-events: auto;
+}
+
+.titlebar-controls {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  margin-left: auto;
+  margin-right: calc(var(--sp-3) * -1);
+}
+
+.titlebar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: default;
+}
+
+.titlebar-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.titlebar-btn:hover {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.titlebar-btn--close:hover {
+  background: var(--danger);
+  color: var(--text-inverse);
+}
+
+.titlebar-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ── 画布层：侧栏之外的整块内容，左上角圆角 ───────────────────────── */
+/* 侧栏与画布已经靠底色分层，右缘那条 1px 框线会把「同一层」重新切开。
+ * border-r 来自 CLI 生成的 sidebar.tsx，这里只在无边框壳里覆盖，
+ * 不改 CLI 副本，也不影响浏览器 / 静态版。 */
+.is-frameless [data-slot='sidebar-container'] {
+  border-right: 0 !important;
+}
+
+.is-frameless-inset {
+  background: var(--layer-gap);
+}
+
+.canvas-layer {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-top-left-radius: var(--radius-panel);
+  background: var(--layer-canvas);
+}
+
+/* 浏览器 / 静态版没有自绘标题栏，也不需要圆角与层色 */
+.canvas-layer--web {
+  overflow: visible;
+  border-top-left-radius: 0;
+  background: transparent;
+}
+
+/* ── 品牌：标题栏里只留小标识，放大的字标压到侧栏主体 ────────────── */
+.brand-hero {
+  padding: var(--sp-4) var(--sp-3) var(--sp-2);
+}
+
+.brand-lockup--hero .brand-lockup__name {
+  font-size: var(--fs-title);
+  letter-spacing: -0.02em;
+}
+
+.brand-lockup--hero .brand-lockup__slogan {
+  font-size: var(--fs-control);
+}

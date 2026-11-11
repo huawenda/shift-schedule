@@ -37,6 +37,10 @@ export interface TauriPathApi {
 export interface TauriWindowHandle {
   /** 改原生窗口标题（任务栏显示的就是它） */
   setTitle?: (title: string) => Promise<void>
+  /** 自绘标题栏的三个按钮；close() 会照常触发 Rust 侧 CloseRequested（隐藏到托盘） */
+  minimize?: () => Promise<void>
+  toggleMaximize?: () => Promise<void>
+  close?: () => Promise<void>
 }
 
 export interface TauriWindowApi {
@@ -60,4 +64,9 @@ declare global {
 export function tauri(): TauriGlobal | null {
   if (typeof window === 'undefined') return null
   return window.__TAURI__ ?? null
+}
+
+/** 取当前窗口句柄；静态版 / 单测里返回 null，调用方用可选链跳过即可 */
+export function currentWindow(): TauriWindowHandle | null {
+  return tauri()?.window?.getCurrentWindow?.() ?? null
 }

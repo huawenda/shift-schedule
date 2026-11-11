@@ -184,7 +184,7 @@
     --ui-chart-4: oklch(0.371 0 0);
     --ui-chart-5: oklch(0.269 0 0);
     --ui-radius: 0.625rem;
-    --ui-sidebar: oklch(0.985 0 0);
+    --ui-sidebar: #e8ebee;
     --ui-sidebar-foreground: oklch(0.145 0 0);
     --ui-sidebar-primary: oklch(0.205 0 0);
     --ui-sidebar-primary-foreground: oklch(0.985 0 0);
@@ -204,12 +204,11 @@
  * 色值不用 shadcn 默认的那套 oklch 灰阶：默认灰阶与项目令牌（冷调深色）
  * 不是一个色温，侧栏、顶栏、弹层与画布会各走各的。 */
 .dark {
-    /* 画布与侧栏同底：#0b0e12 = --ui-sidebar = tokens.scss 的 --ground，
-       三者统一；卡片 --ui-card(#161b22) 靠色调台阶浮起来，不靠深边框勾。
-       原先画布是亮一档的 #0f1318，暗色下侧栏与画布之间会切出一道色差。
+    /* 两层色 + 同色缝隙：侧栏 / 整条标题栏 / 缝隙都是 --ui-sidebar(#161b22)，
+       画布层 --layer-canvas(#0f1318) 暗一档。左上角圆角从与侧栏同色的缝隙上透出来，
+       不再单独留一块深色缺口。
        ⚠️ bg-background 不只画布在用（outline 按钮 / Tabs 选中态 / 底部标签栏 /
-       跳过导航链接都走它），改这里会一起跟着走；只想动画布时改成覆写
-       [data-slot="sidebar-inset"] 的 background。 */
+       跳过导航链接都走它），所以窗口底色仍用 --ui-background，不整体调亮。 */
     --ui-background: #0b0e12;
     --ui-foreground: #e6edf3;
     --ui-card: #161b22;
@@ -235,7 +234,7 @@
     --ui-chart-3: #6e7983;
     --ui-chart-4: #4c5661;
     --ui-chart-5: #2b333b;
-    --ui-sidebar: #0b0e12;
+    --ui-sidebar: #161b22;
     --ui-sidebar-foreground: #e6edf3;
     --ui-sidebar-primary: #e6edf3;
     --ui-sidebar-primary-foreground: #0b0e12;

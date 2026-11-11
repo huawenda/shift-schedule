@@ -15,49 +15,15 @@ import {
   useSidebar
 } from '@/components/ui/sidebar'
 import { isTauriShell } from '@/platform/env'
+import { BrandLockup } from './Brand'
+import { SidebarTitleBar } from './TitleBar'
 import type { Route } from './AppShell'
-
-/**
- * 品牌标识：一个圆，上半昼、下半夜，中间一颗星。
- *
- * 与桌面图标同源（design/logo/logo.svg），只缩不放；星是「夜」的识别锚点，缩到再小也留着。
- * 颜色仍走 tokens.scss 的 `--brand-*`：外壳虽然换成了 shadcn 默认的浅色侧栏，
- * 标识本身的四块色仍属品牌资产，不跟着外壳走。
- */
-function BrandMark() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="size-9 shrink-0 rounded-[10px] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]"
-      focusable="false"
-      viewBox="0 0 192 192"
-    >
-      <rect fill="var(--brand-ink)" height="192" rx="44" width="192" />
-      <circle cx="96" cy="96" fill="var(--brand-night)" r="58" />
-      <path d="M38 96a58 58 0 0 1 116 0Z" fill="var(--brand-day)" />
-      <path
-        d="M96 106Q96 124 114 124Q96 124 96 142Q96 124 78 124Q96 124 96 106Z"
-        fill="var(--brand-star)"
-      />
-    </svg>
-  )
-}
-
-/** 只取 rail 需要的那几个事件，避免这个组件直接依赖宽度 hook */
-type RailDragProps = Pick<
-  React.ComponentProps<'button'>,
-  'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel' | 'onKeyDown'
->
 
 interface AppSidebarProps {
   route: Route
   /** 三个入口的 href：由 App 生成，带上当前结算月，修饰键开新标签也能落到同一个月份 */
   hrefs: Record<Route, string>
   onNavigate: (route: Route) => void
-  /** 拖右缘调整宽度；由 AppShell 的 useSidebarWidth 提供 */
-  dragProps: RailDragProps
-  /** 拖完抬手也会派发 click，用它把那一次从「折叠」里摘出去 */
-  consumeDragClick: () => boolean
 }
 
 /**
@@ -66,14 +32,8 @@ interface AppSidebarProps {
  * 链接仍是真实的 `<a href>`，只是拦住普通点击改成应用内导航 ——
  * Cmd/Ctrl + 点击照旧开新标签，地址里带着当前结算月（和改造前一致）。
  */
-export function AppSidebar({
-  route,
-  hrefs,
-  onNavigate,
-  dragProps,
-  consumeDragClick
-}: AppSidebarProps) {
-  const { state, toggleSidebar } = useSidebar()
+export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
+  const { state } = useSidebar()
 
   /** 修饰键按下时交还给浏览器，等同于「在新标签打开这个视图」 */
   function intercept(event: React.MouseEvent<HTMLAnchorElement>, next: Route) {
@@ -87,36 +47,33 @@ export function AppSidebar({
     { id: 'overview' as const, label: '月度概览', icon: CalendarDays }
   ]
 
+  const inTauri = isTauriShell()
   /**
-   * JIG 数据只在桌面壳里出现。
+   * JIG DATA 页只在桌面壳里出现。
    *
    * 这一页要读用户自选的 Excel 文件、读系统剪贴板（从邮件正文里挑 Jig ID）、
    * 导出带标红的 Excel —— 这三件事都依赖 Tauri 的文件系统与剪贴板插件。
    * 静态版与小程序端没有这些能力，挂一个点不动的入口只会让人以为坏了。
    */
-  const showJig = isTauriShell()
-  /** 速查只读静态数据，不依赖壳能力 —— web 版也显示 */
+  const showJig = inTauri
+  /** 生产速查只读静态数据，不依赖壳能力 —— web 版也显示 */
   const showLookup = true
   const showBusiness = showJig || showLookup
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        {/*
-          品牌区不用 `SidebarMenuButton`：它自带 `[&_svg]:size-4`（后代选择器，特异性高于 `.size-9`），
-          会把 36px 的标识压成 16px 的小点。这里直接用普通链接 + 同样的 hover 反馈。
-          hover 用半透明（/40），与菜单项一致 —— 实色会和「当前选中项」撞脸。
-        */}
+      {/* 壳里的标题栏段与侧栏同一层（不画分隔线），只留 20px 小标识；
+          放大的品牌字标压到它下面的 .brand-hero，像参考稿那样沉一层。
+          浏览器 / 静态版没有自绘标题栏，品牌仍是常规尺寸。
+          两处共用 BrandLockup —— 图案与文案完全一致，只调尺寸与排版。 */}
+      {inTauri ? <SidebarTitleBar /> : null}
+      <SidebarHeader className={inTauri ? 'brand-hero' : undefined}>
         <a
-          className="flex items-center gap-3 rounded-md p-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+          className="flex items-center gap-2 rounded-md p-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
           href={hrefs.overview}
           onClick={event => intercept(event, 'overview')}
         >
-          <BrandMark />
-          <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="truncate text-sm font-semibold">昼夜</span>
-            <span className="truncate text-xs text-muted-foreground">个人倒班记录本</span>
-          </div>
+          <BrandLockup collapseText variant={inTauri ? 'hero' : 'sidebar'} />
         </a>
       </SidebarHeader>
 
@@ -169,7 +126,7 @@ export function AppSidebar({
                 <SidebarMenu className="gap-1">
                   {showJig ? (
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={route === 'jig'} tooltip="JIG 数据">
+                      <SidebarMenuButton asChild isActive={route === 'jig'} tooltip="JIG DATA">
                         <a
                           aria-current={route === 'jig' ? 'page' : undefined}
                           data-view="jig"
@@ -177,13 +134,13 @@ export function AppSidebar({
                           onClick={event => intercept(event, 'jig')}
                         >
                           <Table2 className="size-4" />
-                          <span>JIG 数据</span>
+                          <span>JIG DATA</span>
                         </a>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ) : null}
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={route === 'lookup'} tooltip="速查">
+                    <SidebarMenuButton asChild isActive={route === 'lookup'} tooltip="生产速查">
                       <a
                         aria-current={route === 'lookup' ? 'page' : undefined}
                         data-view="lookup"
@@ -191,7 +148,7 @@ export function AppSidebar({
                         onClick={event => intercept(event, 'lookup')}
                       >
                         <Search className="size-4" />
-                        <span>速查</span>
+                        <span>生产速查</span>
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -220,24 +177,17 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarFooter>
       {/*
-        右缘这条 rail 原本只是「点击折叠」。这里**复用**它而不是另造一条手柄：
-        两者都绝对定位在侧栏右缘，叠在一起会互相抢 pointer 事件。
-        SidebarRail 把 {...props} 展开在最后，所以 onClick / title / tabIndex
-        也能覆盖，CLI 生成的 sidebar.tsx 一个字都不用改。
-
-        位移 < 4px 时 hook 不算拖动，抬手仍走原来的点击折叠；只有真拖过，
-        consumeDragClick 才把那次 click 摘掉，避免「拖完顺手把侧栏收了」。
-        折叠态的宽度由 --sidebar-width-icon 决定，拖了也看不出来，索性不绑拖拽。
+        右缘这条 rail 只做「点击折叠」：展开宽度固定 240px（见 AppShell），不再绑拖拽事件。
+        CLI 版 SidebarRail 自带 onClick={toggleSidebar}，这里只补中文无障碍标签
+        与键盘聚焦反馈（默认 tabIndex=-1，键盘另有 Ctrl/Cmd+B 折叠）。
       */}
       <SidebarRail
-        {...(state === 'collapsed' ? {} : dragProps)}
-        aria-label={state === 'collapsed' ? '展开侧栏' : '调整侧栏宽度，点击折叠侧栏'}
-        className="touch-none select-none data-[dragging=true]:after:bg-sidebar-border focus-visible:after:bg-sidebar-border"
-        onClick={() => {
-          if (!consumeDragClick()) toggleSidebar()
-        }}
+        aria-label={state === 'collapsed' ? '展开侧栏' : '折叠侧栏'}
+        className="focus-visible:after:bg-sidebar-border"
+        // CLI 默认给 rail 挂的是「左右拉伸」光标；现在只能点击折叠，别再暗示能拖
+        style={{ cursor: 'pointer' }}
         tabIndex={0}
-        title="拖动调整宽度 · 点击折叠 · ←/→ 微调"
+        title={state === 'collapsed' ? '展开侧栏' : '折叠侧栏'}
       />
     </Sidebar>
   )

@@ -45,15 +45,14 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
-/// 原生标题栏配色：跟着前端主题走，浅色白底深字、深色画布深色 + 浅字。
+/// 窗口装饰配色：跟着前端主题走。
 ///
-/// 不做自绘标题栏：保留系统的缩放、贴靠、阴影、Alt+Space 菜单与高 DPI 处理，
-/// 只把 caption / text / border 三个 DWM 属性换掉。
-/// 旧版把标题栏写死成深青 `#0e2228`（`--chrome`），那是改造前深青 L 形外壳的颜色；
-/// 外壳换成 shadcn 浅色 Sidebar、又加了暗色主题之后，这道深青成了唯一跟不上主题的部分。
+/// 窗口已改为无边框（`decorations: false`），标题栏由前端自绘，
+/// caption / text 两个 DWM 属性不再有可见对象；这里保留调用，是因为
+/// `DWMWA_USE_IMMERSIVE_DARK_MODE` 仍决定系统绘制的边框与阴影深浅，
+/// `DWMWA_BORDER_COLOR` 也仍作用于无边框窗口的 1px 系统边线。
 /// - 颜色与 `tokens.scss` 的画布对齐：浅 `#ffffff` / 深 `#0f1318`；
-/// - Win11 三个属性都生效；Win10 或旧版 Win11 可能忽略 caption 颜色，
-///   此时 immersive dark mode 仍会让标题栏走深灰，不会留一条白条。
+/// - 窗口阴影与 Win11 圆角由 Tauri `shadow` 的默认值（true）保留。
 #[cfg(target_os = "windows")]
 fn paint_caption(window: &tauri::WebviewWindow, dark: bool) {
     use std::ffi::c_void;
@@ -104,10 +103,10 @@ fn paint_caption(window: &tauri::WebviewWindow, dark: bool) {
     }
 }
 
-/// 前端主题变化时同步原生窗口：DWM 标题栏 + WebView 原生控件一起换。
+/// 前端主题变化时同步窗口：immersive dark mode / 边框色 + WebView 原生控件一起换。
 ///
 /// 只改窗口装饰，不碰任何业务数据。前端在 `applyTheme()` 与 index.html 的
-/// 首帧脚本里各调一次（后者避免深色用户启动时先闪一帧浅色标题栏）；
+/// 首帧脚本里各调一次（后者避免深色用户启动时先闪一帧浅色窗口底色）；
 /// 浏览器 / 静态版里没有 `__TAURI__`，调用点会直接跳过。
 #[tauri::command]
 fn set_window_theme(app: tauri::AppHandle, dark: bool) {
@@ -284,7 +283,7 @@ pub fn run() {
             {
                 if let Some(window) = app.get_webview_window("main") {
                     // 初始按浅色画；真实主题由前端首帧脚本立刻同步过来。
-                    // 深色用户不会停在一条浅色标题栏上。
+                    // 深色用户不会停在一条浅色系统边框 / 阴影上。
                     paint_caption(&window, false);
                 }
             }

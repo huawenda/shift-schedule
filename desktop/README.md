@@ -62,18 +62,19 @@ vite 的热更不覆盖这些文件。
 | 项 | 值 | 理由 |
 |---|---|---|
 | 默认尺寸 | 1466 × 900 | 「全员矩阵」31 天横向铺满的参考宽度，**不是硬性下限** |
-| 最小尺寸 | **1024 × 720** | 从 1466 放宽：web 端本来就不限制最小窗口，侧栏可折叠成 48px、也能拖到 200–320px，固定 34px 的日期列装不下时矩阵自己横滚。取 1024 是为了保住桌面侧栏形态（<1024 才切底部标签栏），让 1024–1466 这段能正常缩放；高度 720 仍照顾 1366×768 办公屏 |
+| 最小尺寸 | **1024 × 720** | 从 1466 放宽：web 端本来就不限制最小窗口，侧栏展开固定 240px、可折叠成 48px，固定 34px 的日期列装不下时矩阵自己横滚。取 1024 是为了保住桌面侧栏形态（<1024 才切底部标签栏），让 1024–1466 这段能正常缩放；高度 720 仍照顾 1366×768 办公屏 |
 | `theme` | `Light`（仅初始值） | 只是**创建窗口时**的起点。应用默认浅色、不跟随系统；真正生效的主题由前端通过 `set_window_theme` 同步过来 |
 | `backgroundColor` | `#ffffff` | 应用默认浅色，窗口创建到首帧之间的底色取画布白。旧值 `#0e2228` 是改造前深青 L 形外壳的颜色，留在浅色窗口上会在启动 / 缩放时露一道深青边 |
-| 标题栏 | **跟随主题**：浅 `#ffffff` / 深 `#0f1318` | `paint_caption` 按 `dark` 调 DWM 的 caption / text / border 三色，同时切 immersive dark mode；`set_window_theme` 还会调 `window.set_theme` 让 WebView2 的原生控件（滚动条 / 输入框 / 右键菜单）一起换。不做自绘标题栏，缩放、贴靠、阴影、Alt+Space 与高 DPI 继续交给系统；客户区顶端另有 1px `var(--border)` 分隔线（`.is-tauri-shell::before`），把标题栏与内容分开 |
+| `decorations` | `false` | 无边框窗口：标题栏由前端自绘，侧栏才通得到窗口顶。阴影与 Win11 圆角仍由系统画（`shadow` 默认 `true`），贴靠与边缘缩放保持系统行为 |
+| 标题栏 | **前端自绘**，40px | `src/components/TitleBar.tsx` 把标题栏拆成两半：侧栏第一行是 20px 小标识 + 拖动区（放大的品牌字标压在下面的 `.brand-hero`），`SidebarInset` 第一行只放最小化 / 最大化 / 关闭（页名交给系统窗口标题，不在标题栏重复）。整条标题栏与侧栏同底色、不画分隔线；下面接一块左上角圆角的 `.canvas-layer`，与侧栏 / 缝隙形成三层色差（`--ui-sidebar` / `--layer-canvas` / `--layer-gap`）。`data-tauri-drag-region` 负责拖动，双击调 `toggleMaximize`，`close()` 照常触发 `CloseRequested` 走托盘偏好。`paint_caption` 只保留 immersive dark mode 与边框色，caption 已无可见对象。不提供 Alt+Space 系统菜单 |
 
 ### 主题同步链路
 
 ```
-index.html 首帧脚本            ← 防深色用户先闪一帧浅色标题栏
+index.html 首帧脚本            ← 防深色用户先闪一帧浅色窗口底色
 src/platform/theme.ts applyTheme ← 顶栏切换 / 设置三态 / 跟随系统实时变化
         ↓ invoke("set_window_theme", { dark })
-lib.rs：DWM 三色 + immersive dark + window.set_theme
+lib.rs：immersive dark + 边框色 + window.set_theme
 ```
 
 静态版 / 浏览器里没有 `__TAURI__`，这两处调用直接跳过；老版本 exe 没有这个命令时
@@ -85,7 +86,7 @@ Promise 会 reject，被 `.catch` 吞掉，不影响页面。改完 Rust 或 `ta
 - **托盘图标**：常驻任务栏通知区域，悬停提示「昼夜 · 个人倒班记录本」
 - **左键单击**：显示主窗口、取消最小化并聚焦
 - **右键菜单**：`显示 / 隐藏主窗口`、`退出`
-- **关闭按钮**：默认直接退出；设置 → 个人资料 → 窗口 可改为「隐藏到托盘」，
+- **关闭按钮**（含自绘标题栏的 ✕）：默认直接退出；设置 → 个人资料 → 窗口 可改为「隐藏到托盘」，
   前端通过自定义命令 `set_close_to_tray` 把偏好同步给 Rust，关闭时由 `on_window_event` 拦截
 - 托盘依赖 `tauri` 的 `tray-icon` feature；改完 Rust 或能力配置后要重启 `desktop:dev` / 重新打包
 

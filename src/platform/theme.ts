@@ -62,8 +62,8 @@ export function applyTheme(theme: ResolvedTheme): void {
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
   if (meta) meta.content = THEME_COLOR[theme]
 
-  /* 壳里还要换原生标题栏（DWM caption / text / border）与 WebView2 的
-   * 原生控件主题，否则暗色页面上会浮着一条浅色标题栏和浅色滚动条。
+  /* 壳里还要同步窗口主题：WebView2 的原生控件（滚动条、输入框、右键菜单）
+   * 与 DWM 的 immersive dark mode，否则暗色页面上会浮着浅色原生控件。
    * 与 windowPrefs.ts 一样只认 __TAURI__：静态版 / 浏览器直接跳过。
    * 命令是幂等的，index.html 的首帧脚本也会先调一次（防启动闪一下浅色），
    * 这里覆盖之后的每一次切换与「跟随系统」的实时变化。 */

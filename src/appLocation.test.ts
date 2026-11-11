@@ -193,8 +193,8 @@ describe('窗口标题', () => {
   it('五个视图各有一个标题，且不带软件名前缀', () => {
     expect(ROUTE_TITLE.overview).toBe('月度概览')
     expect(ROUTE_TITLE.matrix).toBe('全员矩阵')
-    expect(ROUTE_TITLE.jig).toBe('JIG 数据')
-    expect(ROUTE_TITLE.lookup).toBe('速查')
+    expect(ROUTE_TITLE.jig).toBe('JIG DATA')
+    expect(ROUTE_TITLE.lookup).toBe('生产速查')
     expect(ROUTE_TITLE.settings).toBe('设置')
     for (const title of Object.values(ROUTE_TITLE)) {
       expect(title).not.toContain('·')

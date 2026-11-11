@@ -37,7 +37,7 @@ export interface AppLocation {
   lookup: LookupSelection | null
 }
 
-/** 五个一级页面：全员矩阵看全组、月度概览看本人、JIG 数据查 MES 导出、速查查 GLS/FSPM、设置改配置 */
+/** 五个一级页面：全员矩阵看全组、月度概览看本人、JIG DATA 查 MES 导出、生产速查查 GLS/FSPM、设置改配置 */
 export type Route = 'matrix' | 'overview' | 'jig' | 'lookup' | 'settings'
 
 export const DEFAULT_LOCATION: AppLocation = {
@@ -140,7 +140,7 @@ export function buildHash(location: AppLocation): string {
 export const ROUTE_TITLE: Record<Route, string> = {
   overview: '月度概览',
   matrix: '全员矩阵',
-  jig: 'JIG 数据',
-  lookup: '速查',
+  jig: 'JIG DATA',
+  lookup: '生产速查',
   settings: '设置'
 }

@@ -58,7 +58,7 @@ export function LookupScreen({ selection, onSelect }: LookupScreenProps) {
     <div className="canvas is-lookup is-pinned">
       <div className="canvas-head">
         <div>
-          <h1 className="canvas-title">速查</h1>
+          <h1 className="canvas-title">生产速查</h1>
           <p className="canvas-sub">GLS 型号 · JIG P/N · Recipe</p>
         </div>
       </div>

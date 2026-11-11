@@ -38,14 +38,6 @@ export const STORAGE_KEYS = {
    */
   theme: 'shift-schedule:local:theme:v1',
   /**
-   * 侧栏展开时的宽度（px，字符串存）。
-   *
-   * 与折叠状态分开：shadcn 自己用 cookie 记 `sidebar_state`（是否折叠），
-   * 这里只记「展开时多宽」。同样不进备份文件 —— 换台机器屏幕尺寸不同，
-   * 搬过去反而不合适。
-   */
-  sidebarWidth: 'shift-schedule:local:sidebar-width:v1',
-  /**
    * JIG 源 Excel 的默认目录（绝对路径）。
    *
    * 与 backupDir 同一档：路径是「这台电脑」的属性 —— 换台电脑时
