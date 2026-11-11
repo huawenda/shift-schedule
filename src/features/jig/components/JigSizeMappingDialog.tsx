@@ -343,7 +343,7 @@ export function JigSizeMappingDialog({
               </p>
             ) : sorting ? (
               /* 排序模式：与人员配置同一套紧凑行，行高 44 + 间距 8 */
-              <div className="sort-list">
+              <div className={sortDrag ? 'sort-list is-dragging' : 'sort-list'}>
                 {pairs.map((pair, index) => (
                   <div
                     className={[

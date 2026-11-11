@@ -60,8 +60,6 @@ export interface JigConfig {
   /** 总计列的表头文字 */
   keywordTotal: string
 
-  /** 是否启用尺寸校验（不匹配行标红） */
-  sizeValidationEnabled: boolean
   /** P/N 里尺寸码的起始位与长度（默认第 7–10 位，即索引 6 起 4 位） */
   pnExtractStart: number
   pnExtractLength: number
@@ -170,7 +168,6 @@ export function createDefaultJigConfig(): JigConfig {
 
     keywordTotal: '总计',
 
-    sizeValidationEnabled: false,
     pnExtractStart: 6,
     pnExtractLength: 4,
     sizeSpecialMappings: { '65': '65/55' },

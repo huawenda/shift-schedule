@@ -45,19 +45,17 @@ describe('同 INCH 组合对比', () => {
     expect(diff.sub.level).toBe('partial')
     expect(diff.sub.removed).toEqual(['P414', 'P434'])
     expect(changeBadges(group('8348B-01'), group('8348B-02')).map(b => b.text))
-      .toEqual(['Recipe 同', 'Main/Sub 都换'])
+      .toEqual(['Recipe 同', 'Main 部分换', 'Sub 部分换'])
   })
 
-  it('8348B-01 → 8348C-01：JIG/Recipe 变，Main 全换、Sub 部分换', () => {
+  it('8348B-01 → 8348C-01：Recipe 变，Main 全换、Sub 部分换，各一枚徽标', () => {
     const diff = compareGroups(group('8348B-01'), group('8348C-01'))
     expect(diff.jigChanged).toBe(true)
     expect(diff.recipeChanged).toBe(true)
     expect(diff.main.level).toBe('all')
     expect(diff.sub.level).toBe('partial')
-    const lines = describeChange(group('8348B-01'), group('8348C-01'))
-    expect(lines[0]).toBe('P/N 8348B → 8348C，Recipe 8 → 2')
-    expect(lines[1]).toContain('Main 全换')
-    expect(lines[1]).toContain('P342')
+    expect(changeBadges(group('8348B-01'), group('8348C-01')).map(b => b.text))
+      .toEqual(['Recipe 变', 'Main 全换', 'Sub 部分换'])
   })
 
   it('7748B-01 → 7748B-02：JIG/Recipe 同，但主副 FSPM 都全换', () => {
@@ -66,6 +64,11 @@ describe('同 INCH 组合对比', () => {
     expect(diff.recipeChanged).toBe(false)
     expect(diff.main.level).toBe('all')
     expect(diff.sub.level).toBe('all')
+    expect(changeBadges(group('7748B-01'), group('7748B-02')).map(b => b.text))
+      .toEqual(['Recipe 同', 'Main/Sub 全换'])
+    // 全换只留结论，不逐项罗列
+    expect(describeChange(group('7748B-01'), group('7748B-02')))
+      .toEqual(['Recipe 不变', 'Main 全换', 'Sub 全换'])
   })
 
   it('同一组合 = 全 same，标签为“当前”', () => {
@@ -76,9 +79,10 @@ describe('同 INCH 组合对比', () => {
       .toEqual(['当前'])
   })
 
-  it('JIG/Recipe 不变且 FSPM 不变 = 条件不变', () => {
+  it('JIG/Recipe 不变且 FSPM 不变：Main / Sub 各有一枚「不变」徽标', () => {
     const sameJig = group('8348B-01')
     const other = { ...sameJig, id: 'TEST-01' }
-    expect(changeBadges(sameJig, other).map(b => b.text)).toEqual(['条件不变'])
+    expect(changeBadges(sameJig, other).map(b => b.text))
+      .toEqual(['Recipe 同', 'Main 不变', 'Sub 不变'])
   })
 })

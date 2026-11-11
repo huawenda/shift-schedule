@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { Fragment, useMemo } from 'react'
 
 import type { JigConfig } from '../core/config'
 import type { Table } from '../core/table'
@@ -46,37 +46,40 @@ export function JigStageRail({ table, config }: JigStageRailProps) {
     }
   }
 
-  // 峰值用于归一化条形长度，让「最多的一道工序」成为视觉锚点
-  const peak = Math.max(1, ...counts.values())
+  // 数量最多的一道工序作为视觉锚点
   const lead = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
+
+  /* Jig Unloading 是「可用 / 非可用」的分界：从这里断开轨道并立一条分隔线 */
+  const splitIndex = stageNames.indexOf('Jig Unloading')
+  const hasSplit = splitIndex >= 0 && splitIndex < stageNames.length - 1
 
   return (
     <div className="jig-rail">
       <div aria-label="工序分布" className="jig-rail-track" role="list">
-        {stageNames.map(name => {
+        {stageNames.map((name, index) => {
           const n = counts.get(name) ?? 0
           const empty = n === 0
-          // 0-4 档映射到透明度，避免每道工序都画一条同长度的条
-          const weight = n === 0 ? 0 : 0.25 + 0.75 * (n / peak)
 
           return (
-            <div
-              className="jig-stage"
-              data-active={!empty}
-              data-empty={empty}
-              data-lead={name === lead && !empty}
-              key={name}
-              role="listitem"
-              title={`${name}: ${n}`}
-            >
+            <Fragment key={name}>
               <div
-                aria-hidden="true"
-                className="jig-stage-bar"
-                style={{ opacity: weight }}
-              />
-              <div className="jig-stage-name">{name}</div>
-              <div className="jig-stage-count">{n}</div>
-            </div>
+                className="jig-stage"
+                data-active={!empty}
+                data-cut-left={hasSplit && index === splitIndex + 1 ? 'true' : undefined}
+                data-cut-right={hasSplit && index === splitIndex ? 'true' : undefined}
+                data-empty={empty}
+                data-lead={name === lead && !empty}
+                role="listitem"
+                title={`${name}: ${n}`}
+              >
+                <span aria-hidden="true" className="jig-stage-node" />
+                <div className="jig-stage-name">{name}</div>
+                <div className="jig-stage-count">{n}</div>
+              </div>
+              {hasSplit && index === splitIndex ? (
+                <span aria-hidden="true" className="jig-rail-split" />
+              ) : null}
+            </Fragment>
           )
         })}
       </div>

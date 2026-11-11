@@ -185,17 +185,19 @@ export function describeChange(current: LookupGroup, target: LookupGroup): strin
 当前组合：当前型号
 JIG/Recipe 都没变：JIG / Recipe 不变
 JIG 或 Recipe 变：P/N 8348B → 8348C，Recipe 8 → 2
-Main：Main 不变 / Main 部分换 / Main 全换
-Sub：Sub 不变 / Sub 部分换 / Sub 全换
+Main：Main 不变 / Main 全换 / Main 部分换（移除 P405；无新增）
+Sub：Sub 不变 / Sub 全换 / Sub 部分换（移除 P414、P434；无新增）
 ```
+
+「不变 / 全换」只给结论，「部分换」才在括号里列增删。
 
 “变一种还是两种”由后两段直接回答：
 
 - 只有Main变 → 换Main；
 - 只有Sub变 → 换Sub；
-- 两段都变 → 主副都换；
+- 两段都变 → Main、Sub 各一枚徽标，各自标明全换 / 部分换；两段都全换时合并为 `Main/Sub 全换`；
 - 两段都不变、但 JIG/Recipe 变 → 只换 JIG 生产条件，FSPM 不动；
-- 全都不变 → 条件不变。
+- 全都不变 → `Recipe 同` + `Main 不变` + `Sub 不变`。
 
 关键例子（必须写进测试）：
 
@@ -327,8 +329,8 @@ pnpm lookup:data   # 重新生成
 从上到下四块：
 
 1. **条件卡**：型号名 + 组内等同提示 + 五个字段（英寸组合 / JIG P/N / Recipe / 主尺寸·Bezel / 副尺寸·Bezel）。
-2. **双 FSPM 卡**：左“主尺寸 77 · Narrow”，右“副尺寸 48 · Normal”；每张卡标题右侧是“可互换 N 项”。卡内是 **3 列迷你表**：`型号 / 厂家 / Bezel`，材质作为型号后面的弱化小字（11px `--faint`），不占独立列。
-3. **同 INCH 对比**：整行宽表格，列出 `byInch.get(inch)` 的全部组合，当前组高亮。
+2. **双 FSPM 卡**：左“主尺寸 77 · Narrow”，右“副尺寸 48 · Normal”；每张卡标题右侧是“可互换 N 项”。卡内是 **3 列迷你表**：`型号 / 厂家 / 材质`（Bezel 已在卡片标题里，不再重复占列）。
+3. **同 INCH 对比**：一行一张圆角卡片，列出 `byInch.get(inch)` 的全部组合；当前组用左侧装饰条 + 浅青底标记。
 4. **数据脚注**：`数据快照 2026-11-10 · 47 组 / 110 型号`。
 
 **信息优先级**（按现场使用频率）：
@@ -373,22 +375,21 @@ pnpm lookup:data   # 重新生成
 
 **变化标签**：
 
-- `条件不变`（中性）；
-- `JIG / Recipe 变`（`--warning-bg`）；
-- `Main 全换` / `Main 部分换`；
-- `Sub 全换` / `Sub 部分换`。
+- `Recipe 同` / `Recipe 变`（`--warning-bg`）；
+- `Main 不变` / `Main 部分换` / `Main 全换`；
+- `Sub 不变` / `Sub 部分换` / `Sub 全换`；
+- Main 与 Sub 都全换时合并为 `Main/Sub 全换`。
 
-标签最多三枚，超出用“Main/Sub 都换”合并。不要用红绿区分增删——项目没有“增/减”语义色；用 `+` / `−` 符号与文字。
+默认三枚（Recipe + Main + Sub），每枚都带明确等级，不再用「条件不变」把三项糊成一枚。不要用红绿区分增删——项目没有“增/减”语义色；用 `+` / `−` 符号与文字。
 
-**展开明细**：每行右侧一个 ghost 图标按钮（`ChevronDown`），展开后先给增删摘要，再给该组合的两张 FSPM 迷你表（与上方同款）：
+**展开明细**：每行右侧一个 ghost 图标按钮（`ChevronDown`），展开后先给该组合的两张 FSPM 迷你表，最后一行是变化摘要注脚。迷你表在展开区里**不再套第三层卡片**：去掉边框、圆角和底色，用标题行与栏间发丝线分组。摘要里「不变 / 全换」只给结论，「部分换」才列增删：
 
 ```
-Main  移除 P405          无新增
-Sub  移除 P414、P434     无新增
-
-主尺寸 83 · Normal            副尺寸 48 · Normal
-P342 INNOX Narrow              P403 INNOX Narrow
-P436 INNOX Narrow              P435 INNOX Narrow
+Main 83 · Normal                  Sub 48 · Normal
+P342 INNOX Narrow                 P403 INNOX Narrow
+P436 INNOX Narrow                 P435 INNOX Narrow
+──────────────────────────────────────────────────
+8348B → 8348C，8 → 2；Main 全换，Sub 部分换（移除 P414、P434；无新增）
 ```
 
 展开不改变选中项，可同时展开多行；再点收起。没有增删的行不显示按钮。
@@ -485,9 +486,9 @@ GLS 型号 · JIG P/N · Recipe 三向互查
 
 **`ChangeBadges`**：变化标签组。
 
-- 中性：`条件不变`；
-- 变化：`--warning-bg` / `--warning-ink`，圆角 `--radius-pill`，11px；
-- 文案来自 `describeChange`，不在组件里拼业务句子。
+- 中性（`Recipe 同` / `Main 不变` / `Sub 不变`）：`--surface-sunken` 底 + `--muted` 字；
+- 变化（`Recipe 变` / `× 部分换` / `× 全换`）：`--warning-bg` / `--warning-ink`，圆角 `--radius-pill`，11px；
+- 文案来自 `changeBadges` / `describeChange`，不在组件里拼业务句子。
 
 **`SuggestionList`**：建议浮层内容。
 
@@ -556,14 +557,14 @@ GLS 型号 · JIG P/N · Recipe 三向互查
 │          │ │ FY   7748G · Recipe 31(10) · 77/48   同组 6 个型号等同   │ │ 72
 │          │ └──────────────────────────────────────────────────────────┘ │
 │          │ ┌ 主尺寸 77 · Narrow · 可互换 4 项 ──┐ ┌ 副尺寸 48 · Normal · 可互换 5 项 ─┐
-│          │ │ 型号      厂家     Bezel             │ │ 型号      厂家     Bezel            │
-│          │ │ P467 Pro  INNOX   Narrow            │ │ P486 Stal  LGC     Normal           │
-│          │ │ P388 Stal INNOX   Narrow            │ │ P483 Pro   LGC     Normal           │
+│          │ │ 型号      厂家     材质             │ │ 型号      厂家     材质            │
+│          │ │ P467     INNOX    Pro              │ │ P486     LGC      Stal           │
+│          │ │ P388     INNOX    Stal             │ │ P483     LGC      Pro            │
 │          │ └─────────────────────────────────────┘ └────────────────────────────────────┘
 │          │ ┌ 同 INCH 型号对比 · 77/48（12 组）──────────────────────────────────┐ │
-│          │ │ 型号组 | JIG·Recipe | Bezel | 主 FSPM | 副 FSPM | 变化              │ │
-│          │ │ CP/FS/FZ/... | 7748G·31(10) | N/N | ... | ... | 当前               │ │
-│          │ │ KG/7D | 7748B·7 | N/N | ... | ... | 条件不变                       │ │
+│          │ │ 型号组 | P/N·Recipe | Bezel | Main | Sub | 变化                      │ │
+│          │ │ CP/FS/FZ/... | 7748G·31(10) | N/N | ... | ... | 当前                 │ │
+│          │ │ KG/7D | 7748B·7 | N/N | ... | ... | Recipe 同 Main 不变 Sub 不变    │ │
 │          │ └────────────────────────────────────────────────────────────────────┘ │
 │ 设置     │                                                             │
 └──────────┴─────────────────────────────────────────────────────────────┘

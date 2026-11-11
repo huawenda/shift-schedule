@@ -557,6 +557,13 @@
   border: 1px solid var(--ui-border);
   border-radius: var(--radius-card);
   background: var(--ui-card);
+}
+
+/* 只有拖动进行中才启用位移过渡。
+ * 松手的那一帧 sortDrag 清空、顺序同时落定：如果此时仍保留过渡，
+ * 已经让位的行会带着旧位移再走一遍，看起来像被挤上去后又弹了一次。
+ * 关掉过渡后它们直接落在最终位置（布局位移与旧位移正好抵消）。 */
+.sort-list.is-dragging .sort-row:not(.is-dragging) {
   transition: transform var(--dur-fast) var(--ease-out);
 }
 
@@ -570,7 +577,6 @@
   border-color: var(--ui-ring);
   background: var(--ui-card);
   box-shadow: var(--shadow-floating);
-  transition: none;
 }
 
 .sort-handle {

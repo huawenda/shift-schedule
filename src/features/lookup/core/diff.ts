@@ -62,7 +62,12 @@ function levelText(level: ChangeLevel, noun: string): string {
   return level === 'all' ? `${noun} 全换` : `${noun} 部分换`
 }
 
-/** 对比表右侧的标签，最多 2–3 枚 */
+/**
+ * 对比表右侧的标签。
+ *
+ * 只把「Main 与 Sub 都全换」合并成 `Main/Sub 全换`；其余情况 Main / Sub 各一枚，
+ * 保证每一枚都带明确等级，不会分不出部分换还是全换、也分不出是谁换。
+ */
 export function changeBadges(current: LookupGroup, target: LookupGroup): ChangeBadge[] {
   if (current.id === target.id) {
     return [{ key: 'current', text: '当前', tone: 'neutral' }]
@@ -70,12 +75,6 @@ export function changeBadges(current: LookupGroup, target: LookupGroup): ChangeB
 
   const diff = compareGroups(current, target)
   const jigChanged = diff.jigChanged || diff.recipeChanged
-  const mainChanged = diff.main.level !== 'same'
-  const subChanged = diff.sub.level !== 'same'
-
-  if (!jigChanged && !mainChanged && !subChanged) {
-    return [{ key: 'same', text: '条件不变', tone: 'neutral' }]
-  }
 
   const badges: ChangeBadge[] = [
     {
@@ -85,14 +84,20 @@ export function changeBadges(current: LookupGroup, target: LookupGroup): ChangeB
     },
   ]
 
-  if (mainChanged && subChanged) {
-    badges.push({ key: 'both', text: 'Main/Sub 都换', tone: 'warning' })
-  } else if (mainChanged) {
-    badges.push({ key: 'main', text: levelText(diff.main.level, 'Main'), tone: 'warning' })
-  } else if (subChanged) {
-    badges.push({ key: 'sub', text: levelText(diff.sub.level, 'Sub'), tone: 'warning' })
-  } else {
-    badges.push({ key: 'fspm', text: 'FSPM 不变', tone: 'neutral' })
+  if (diff.main.level === 'all' && diff.sub.level === 'all') {
+    badges.push({ key: 'both', text: 'Main/Sub 全换', tone: 'warning' })
+    return badges
+  }
+
+  for (const [key, noun, change] of [
+    ['main', 'Main', diff.main],
+    ['sub', 'Sub', diff.sub],
+  ] as const) {
+    badges.push({
+      key,
+      text: levelText(change.level, noun),
+      tone: change.level === 'same' ? 'neutral' : 'warning',
+    })
   }
 
   return badges
@@ -106,25 +111,26 @@ export function describeChange(current: LookupGroup, target: LookupGroup): strin
   const lines: string[] = []
 
   const moved: string[] = []
-  if (diff.jigChanged) moved.push(`P/N ${current.jigPn} → ${target.jigPn}`)
-  if (diff.recipeChanged) moved.push(`Recipe ${current.recipe} → ${target.recipe}`)
+  if (diff.jigChanged) moved.push(`${current.jigPn} → ${target.jigPn}`)
+  if (diff.recipeChanged) moved.push(`${current.recipe} → ${target.recipe}`)
   lines.push(moved.length > 0 ? moved.join('，') : 'Recipe 不变')
 
   for (const [label, change] of [
     ['Main', diff.main],
     ['Sub', diff.sub],
   ] as const) {
-    if (change.level === 'same') {
-      lines.push(`${label} 不变`)
-    } else {
-      const removed = change.removed.length > 0
-        ? `移除 ${change.removed.join('、')}`
-        : '移除 —'
-      const added = change.added.length > 0
-        ? `新增 ${change.added.join('、')}`
-        : '无新增'
-      lines.push(`${levelText(change.level, label)}（${removed}；${added}）`)
+    // 全换是整套替换，逐项罗列没有意义，只留结论
+    if (change.level !== 'partial') {
+      lines.push(levelText(change.level, label))
+      continue
     }
+    const removed = change.removed.length > 0
+      ? `移除 ${change.removed.join('、')}`
+      : '移除 —'
+    const added = change.added.length > 0
+      ? `新增 ${change.added.join('、')}`
+      : '无新增'
+    lines.push(`${levelText(change.level, label)}（${removed}；${added}）`)
   }
 
   return lines

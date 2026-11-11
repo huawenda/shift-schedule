@@ -1074,7 +1074,9 @@
   justify-content: space-between;
   gap: var(--sp-3);
   padding: var(--sp-4);
-  border-bottom: 1px solid var(--rule);
+  /* 标题下的分隔线用 --border（比卡内发丝线 --rule 深一档）：
+   * 弹层的第一道边界要立得住，下面设置项之间的细分割再退回 --rule。 */
+  border-bottom: 1px solid var(--border);
 }
 
 .dialog-title {

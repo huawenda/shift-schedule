@@ -35,7 +35,6 @@ export function JigReviewToolbar({
 }: JigReviewToolbarProps) {
   return (
     <div className="jig-toolbar">
-      <span className="jig-toolbar-label">P/N</span>
       <Select
         ariaLabel="按型号过滤"
         className="jig-scope-select"

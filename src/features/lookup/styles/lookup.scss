@@ -274,13 +274,6 @@
   font-weight: 600;
 }
 
-/* 材质是现场最少用的属性：不占列，只做弱化小字 */
-.lookup-fspm-material {
-  margin-left: var(--sp-1);
-  color: var(--faint);
-  font-size: var(--fs-label);
-}
-
 .lookup-fspm-table tr.is-invalid td {
   color: var(--warning-ink);
 }
@@ -384,82 +377,128 @@
   font-size: var(--fs-small);
 }
 
-/* 只作用于对比表本身；展开行里的 FSPM 迷你表不能被这条规则命中 */
-.lookup-compare .lookup-compare-table {
-  min-width: 1080px;
-  table-layout: fixed;
+/* 两个主卡的抬头沿用概览页统计卡的语言：
+ * 标题左侧 3px 强调竖条 + 抬头下方内缩一条发丝线。 */
+.lookup-summary-head,
+.lookup-section-head {
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--rule);
 }
 
-.lookup-compare .lookup-compare-table th:nth-child(1) {
-  width: 170px;
+.lookup-summary-title,
+.lookup-section-head h2 {
+  position: relative;
+  /* 3px 竖条 + 8px 与文字的间距 */
+  padding-left: 11px;
 }
 
-.lookup-compare .lookup-compare-table th:nth-child(2) {
-  width: 150px;
+.lookup-summary-title::before,
+.lookup-section-head h2::before {
+  content: "";
+  position: absolute;
+  top: calc(50% - 1px);
+  left: 0;
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: translateY(-50%);
 }
 
-.lookup-compare .lookup-compare-table th:nth-child(3) {
-  width: 100px;
+/* 20px 的标题配高一点的竖条，与汉字笔画高度一致 */
+.lookup-summary-title::before {
+  height: 16px;
 }
 
-.lookup-compare .lookup-compare-table th:nth-child(4),
-.lookup-compare .lookup-compare-table th:nth-child(5) {
-  width: 270px;
+/* 对比表筛选：只筛列表，不改变「当前」组永远在第一行的规则 */
+.lookup-compare-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
 }
 
-/* 6 列合计 1140：1228 版心 − 画布 48 − 卡片 32 = 1148，留 8px 余量，避免 2px 溢出触发横滚 */
-.lookup-compare .lookup-compare-table th:nth-child(6) {
-  width: 180px;
+.lookup-filter-input {
+  position: relative;
+  width: 280px;
 }
 
-.lookup-compare .lookup-compare-table th {
+.lookup-filter-input .lookup-input {
+  font-size: var(--fs-control);
+}
+
+.lookup-compare-count {
+  color: var(--faint);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.lookup-compare-empty {
+  margin: 0;
+  padding: var(--sp-3) 0;
+  font-size: var(--fs-control);
+}
+
+/* 对比列表：一行一张卡片，行间留 8px 呼吸。
+ * 表头与卡片共用同一套栅格和内边距，列才能严格对齐。 */
+.lookup-compare-head,
+.lookup-compare-row {
+  display: grid;
+  grid-template-columns: 17fr 13fr 9fr 25fr 25fr 11fr;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.lookup-compare-head {
+  /* 13 = 卡片内边距 12 + 卡片边框 1，表头文字才能与卡片内容左对齐 */
+  padding: 0 calc(var(--sp-3) + 1px);
+  margin-bottom: var(--sp-2);
   color: var(--faint);
   font-size: var(--fs-small);
   font-weight: 600;
 }
 
-.lookup-compare .lookup-compare-table td {
-  font-size: var(--fs-control);
+.lookup-compare-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
 }
 
-/* 比 shadcn TableCell 的 whitespace-nowrap 高一档，长列表可以换行 */
-.lookup-compare .lookup-compare-table .lookup-compare-models,
-.lookup-compare .lookup-compare-table .lookup-compare-fspm {
-  white-space: normal;
+.lookup-compare-card {
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 
-.lookup-compare .lookup-compare-table tr.is-current td {
+/* 当前组合沿用矩阵聚焦行的左侧 2px 竖线，底色保持原来的浅青 */
+.lookup-compare-card.is-current {
+  border-color: var(--accent-soft);
   background: var(--accent-weak);
-}
-
-.lookup-compare .lookup-compare-table tr.is-current td:first-child {
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
-/* 整行可点展开；当前行是参照，不参与展开 */
 .lookup-compare-row {
+  padding: var(--sp-2) var(--sp-3);
   cursor: pointer;
 }
 
-.lookup-compare-row.is-current {
+.lookup-compare-card.is-current .lookup-compare-row {
   cursor: default;
 }
 
-.lookup-compare-models {
-  min-width: 170px;
+/* 展开后给可点击的头部一行压一道底色，与下方明细分开 */
+.lookup-compare-card.is-open .lookup-compare-row {
+  background: var(--raised);
 }
 
-.lookup-compare-models > span:first-child {
+.lookup-compare-cell {
+  min-width: 0;
+  font-size: var(--fs-control);
+}
+
+.lookup-compare-models > span {
   font-weight: 600;
-}
-
-.lookup-current-tag {
-  margin-left: var(--sp-1);
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  color: var(--text-inverse);
-  font-size: var(--fs-micro);
 }
 
 .lookup-compare-cond {
@@ -472,7 +511,16 @@
   white-space: nowrap;
 }
 
+/* 一个厂家一行，块整体在单元格里垂直居中 */
 .lookup-fspm-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--sp-1);
+}
+
+.lookup-inline-row {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-1);
@@ -498,16 +546,23 @@
   font-size: var(--fs-label);
 }
 
+/* 徽标固定一行一枚、并预留三枚的高度：
+ * 行高不再随「Recipe + 合并项」两枚还是「Recipe + Main + Sub」三枚而参差。 */
 .lookup-badges {
+  --lookup-badge-h: 20px;
+
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
   gap: var(--sp-1);
+  min-height: calc(3 * var(--lookup-badge-h) + 2 * var(--sp-1));
 }
 
 .lookup-badge {
   display: inline-flex;
   align-items: center;
-  height: 20px;
+  height: var(--lookup-badge-h, 20px);
   padding: 0 var(--sp-2);
   border-radius: var(--radius-pill);
   font-size: var(--fs-label);
@@ -542,26 +597,43 @@
   transform: rotate(180deg);
 }
 
-/* 展开明细在表格行内；表格横向滚动时它会跟着滚（已知取舍） */
-.lookup-expand-row td {
-  background: var(--surface-tint);
-}
-
+/* 展开明细留在同一张卡片里，用一条发丝线与上面的一行分隔 */
 .lookup-expand {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  padding: var(--sp-2) 0;
+  /* 底部收到 8px：注脚是收尾的一行，不需要和顶部一样厚的留白 */
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
+  border-top: 1px solid var(--rule);
+  background: var(--surface-tint);
 }
 
-.lookup-expand-lines {
-  margin: 0;
+/* 展开区本身已经在第二层卡片里，Main/Sub 不再各自套第三层卡：
+ * 去掉边框、圆角与底色，靠标题行和栏间一条发丝线分组。 */
+.lookup-expand .lookup-fspm-panel {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.lookup-expand .lookup-fspm-panel + .lookup-fspm-panel {
   padding-left: var(--sp-4);
+  border-left: 1px solid var(--rule);
+}
+
+.lookup-expand .lookup-fspm-panel-head {
+  padding-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* 变化摘要降到卡片底部，以一行注脚呈现，不再插在明细前面把内容切断 */
+.lookup-expand-note {
+  margin: 0;
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--rule);
   color: var(--muted);
   font-size: var(--fs-small);
-}
-
-.lookup-expand-lines li {
   line-height: 1.6;
 }
 

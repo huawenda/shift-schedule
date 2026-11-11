@@ -184,15 +184,6 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
                         pnOptions={data.reviewPnOptions}
                         scope={data.reviewScope}
                       />
-                    ) : id === 'detail' ? (
-                      <div className="jig-toolbar">
-                        <JigSizeValidationSwitch
-                          checked={data.sizeValidation}
-                          mismatchCount={detailFlags.filter(Boolean).length}
-                          onChange={data.setSizeValidation}
-                        />
-                        <span className="jig-toolbar-spacer" />
-                      </div>
                     ) : null}
                   </>
                 )}
@@ -250,36 +241,6 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
         </div>
       </div>
     </div>
-  )
-}
-
-/**
- * 「标出尺寸不匹配」开关（查询结果页工具条左侧）。
- *
- * 原项目是自绘的 toggle；这里用原生 checkbox 配样式画一个 ——
- * 语义与可达性都保住了，外观跟原项目一致。
- */
-function JigSizeValidationSwitch({
-  checked,
-  mismatchCount,
-  onChange
-}: {
-  checked: boolean
-  mismatchCount: number
-  onChange: (on: boolean) => void
-}) {
-  return (
-    <label className="jig-switch">
-      <input
-        checked={checked}
-        onChange={event => onChange(event.target.checked)}
-        type="checkbox"
-      />
-      标出尺寸不匹配
-      {checked && mismatchCount > 0 ? (
-        <span className="jig-toolbar-note">不匹配 {mismatchCount} 行</span>
-      ) : null}
-    </label>
   )
 }
 

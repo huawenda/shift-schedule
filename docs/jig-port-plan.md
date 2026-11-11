@@ -174,7 +174,6 @@ JIG 页在 `.canvas` 内**自成一个两栏布局**（左栏 ~320px：JIG ID �
 | `pivotExcludePns` / `pivotExcludeNames` | 透视黑名单 |
 | `pnExtractStart` / `pnExtractLength` | P/N 尺寸码取值位置（默认 6 / 4） |
 | `sizeSpecialMappings` / `allSizeValue` | 特殊映射与「All Size」判定 |
-| `sizeValidationEnabled` | 是否启用尺寸校验 |
 | `productionIndicatorCode` / `jigStatusColumn` / `jigStatusActiveValue` | 状态口径 |
 | `keywordTotal` | 总计列名 |
 
@@ -630,8 +629,8 @@ P1 已验证过 `drillPivotRows`（逐字节平移）。P5 新写的是**点格�
 
 **两个设计决定**
 
-1. **下钻明细默认标出尺寸不匹配**，不跟随查询结果页的开关 ——
-   这一页就是用来核对下钻结果的，用户没勾选时看到的是一片「全部匹配」，容易误判。
+1. **下钻明细与查询结果页一样恒定标出尺寸不匹配** —— 这一页就是用来核对
+   下钻结果的，不标红会让人误以为全部匹配。
 2. **切页时清掉下钻**（原项目也是切 tab 就 `setDrill(null)`）。
    只靠「视觉上退出」不够：切走再切回来下钻还在，但期间源数据可能已变，
    底稿与定位键对不上，会出现「明细行数与格子上的数字不一致」。

@@ -32,15 +32,9 @@ describe('配置合并：旧版 snake_case 键名', () => {
     clipboard_auto_process_enabled: false,
     export_timestamp_enabled: false,
     close_to_tray: false,
-    size_validation_enabled: true,
     jig_size_mapping: { '999': '88' },
     engineering_config: { PNP: { order: 10 } }
   }
-
-  it('读取旧版 snake_case 的布尔开关（业务侧）', () => {
-    const c = mergeJigConfig(legacyConfig)
-    expect(c.sizeValidationEnabled).toBe(true)
-  })
 
   it('读取旧版 snake_case 的布尔开关（本机偏好侧）', () => {
     const p = mergeJigPrefs(legacyConfig)
@@ -144,8 +138,8 @@ describe('配置合并：容错', () => {
   })
 
   it('未知字段被忽略，不污染配置对象', () => {
-    const c = mergeJigConfig({ 完全不存在的字段: 'x', sizeValidationEnabled: true })
-    expect(c.sizeValidationEnabled).toBe(true)
+    const c = mergeJigConfig({ 完全不存在的字段: 'x', keywordTotal: '合计' })
+    expect(c.keywordTotal).toBe('合计')
     expect('完全不存在的字段' in c).toBe(false)
   })
 })

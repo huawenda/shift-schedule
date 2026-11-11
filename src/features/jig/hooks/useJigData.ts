@@ -139,15 +139,6 @@ export interface JigData {
   detailFlags: boolean[]
   /** 下钻明细的标红标记（与 table.rows 同序） */
   drillFlags: boolean[]
-  /**
-   * 「标出尺寸不匹配」开关（查询结果页工具条左侧）。
-   *
-   * **与配置里的 `sizeValidationEnabled` 分开**：那是从备份带过来的默认值，
-   * 这个是本次会话的临时开关 —— 用户看一眼标红太多，随手关掉，不想改配置。
-   */
-  sizeValidation: boolean
-  /** 改「标出尺寸不匹配」开关 */
-  setSizeValidation: (on: boolean) => void
   /** 能否导出（静态版不行） */
   canExport: boolean
   /** 导出当前视图 */
@@ -245,16 +236,6 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     []
   )
   const [busy, setBusy] = useState(false)
-  /**
-   * 「标出尺寸不匹配」开关（查询结果页）。
-   *
-   * 初值取配置里的 `sizeValidationEnabled`。
-   * **这是本次会话的临时开关，不写回配置** —— 用户看一眼标红太多随手关掉，
-   * 不该因此把备份里的配置改了。
-   */
-  const [sizeValidation, setSizeValidation] = useState(
-    config.sizeValidationEnabled
-  )
   /**
    * 底部状态轨的两项：状态灯与常驻日志。
    *
@@ -365,8 +346,8 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
    *
    * 口径全在 `computeReviewView` 里：先按 P/N 过滤，再分类，再按档筛行。
    *
-   * **审查页不过「标出尺寸不匹配」开关** —— 它的存在意义就是挑出对不上的
-   * JIG，关掉标红这页就没有内容了。
+   * **审查页恒定标出尺寸不匹配** —— 它的存在意义就是挑出对不上的
+   * JIG，不标红这页就没有内容了。
    */
   const review = useMemo(
     () =>
@@ -381,27 +362,22 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
   /**
    * 查询结果页的标红标记。
    *
-   * **跟随「标出尺寸不匹配」开关**（与审查页不同）。
-   *
-   * 开关初值取配置里的 `sizeValidationEnabled`（默认 false），
-   * 但它是**本次会话的临时开关** —— 用户看一眼标红太多随手关掉，
-   * 不该因此把配置改了。
+   * 查询结果恒定标出尺寸不匹配，不再提供开关 —— 这一页就是用来核对
+   * 型号与尺寸的，藏起不匹配反而要靠用户自己逐行比对。
    */
   const detailFlags = useMemo(() => {
-    if (!sizeValidation) return []
     const rules = rulesFromConfig(config)
     return detailTable.rows.map(row => {
       const size = row['对应尺寸'] ?? ''
       return !validateSizeMatch(row['P/N'] ?? '', size, rules)
     })
-  }, [config, detailTable.rows, sizeValidation])
+  }, [config, detailTable.rows])
 
   /**
    * 下钻明细的标红标记。
    *
-   * **恒定标出**，不受「标出尺寸不匹配」开关影响 —— 与原项目同一口径。
-   * 这一页就是用来核对下钻结果的，用户没勾选时看到的是一片「全部匹配」，
-   * 容易误判。
+   * **恒定标出**，与查询结果页同一口径。
+   * 这一页就是用来核对下钻结果的，不标红会让人误以为全部匹配。
    */
   const drillFlags = useMemo(() => {
     const rules = rulesFromConfig(config)
@@ -840,8 +816,6 @@ export function useJigData({ config, notify }: UseJigDataOptions): JigData {
     setQueryInput,
     loadCount,
     loadSource,
-    sizeValidation,
-    setSizeValidation,
     canPick: canPickJigFile(),
     pickSource,
     runQuery,

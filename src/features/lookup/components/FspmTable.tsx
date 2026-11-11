@@ -10,26 +10,39 @@ export function FspmInline({
   fspm: ReadonlyMap<string, Fspm>
 }) {
   if (ids.length === 0) return <span className="lookup-muted">—</span>
+
+  /* 同一厂家独占一行：按厂家分组，组内保持原顺序 */
+  const rows: { maker: string; ids: string[] }[] = []
+  for (const id of ids) {
+    const maker = fspm.get(id)?.maker ?? ''
+    const row = rows.find(item => item.maker === maker)
+    if (row) row.ids.push(id)
+    else rows.push({ maker, ids: [id] })
+  }
+
   return (
     <span className="lookup-fspm-inline">
-      {ids.map(id => {
-        const item = fspm.get(id)
-        return (
-          <span className="lookup-inline-item" key={id}>
-            <b>{id}</b>
-            {item ? <span>{item.maker}</span> : null}
-          </span>
-        )
-      })}
+      {rows.map(row => (
+        <span className="lookup-inline-row" key={row.maker || row.ids[0]}>
+          {row.ids.map(id => {
+            const item = fspm.get(id)
+            return (
+              <span className="lookup-inline-item" key={id}>
+                <b>{id}</b>
+                {item ? <span>{item.maker}</span> : null}
+              </span>
+            )
+          })}
+        </span>
+      ))}
     </span>
   )
 }
 
 /**
- * 组合卡里的 FSPM 明细：3 列迷你表。
+ * 组合卡里的 FSPM 明细：3 列迷你表（型号 / 厂家 / 材质）。
  *
- * 材质是现场最少用的属性，所以不占列，只跟在 P 号后面做弱化小字；
- * 厂家与 Bezel 是默认可见列。
+ * Bezel 已由面板标题给出，行内再列一次属于重复信息。
  */
 export function FspmTable({
   ids,
@@ -53,7 +66,7 @@ export function FspmTable({
           <tr>
             <th scope="col">型号</th>
             <th scope="col">厂家</th>
-            <th scope="col">Bezel</th>
+            <th scope="col">材质</th>
           </tr>
         </thead>
       ) : null}
@@ -65,12 +78,9 @@ export function FspmTable({
             <tr className={invalid ? 'is-invalid' : undefined} key={row.id}>
               <td>
                 <span className="lookup-fspm-id">{row.id}</span>
-                {row.item ? (
-                  <span className="lookup-fspm-material">{row.item.material}</span>
-                ) : null}
               </td>
               <td>{row.item?.maker ?? '—'}</td>
-              <td>{row.item ? formatBezel(row.item.bezel) : '—'}</td>
+              <td>{row.item?.material ?? '—'}</td>
             </tr>
           )
         })}

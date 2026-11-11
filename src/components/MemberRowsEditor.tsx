@@ -491,7 +491,7 @@ export function MemberRowsEditor({
     return (
       <section className="sort-block" aria-label="成员排序">
 
-        <div className="sort-list">
+        <div className={sortDrag ? 'sort-list is-dragging' : 'sort-list'}>
           {visibleRows.map((row, index) => (
             <div
               className={[
