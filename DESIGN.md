@@ -1,8 +1,8 @@
 # 昼夜 · 个人倒班记录本 视觉规范
 
-> 适用范围：描述**本仓库唯一的应用**（昼夜 · 个人倒班记录本）。
-> 桌面端（Tauri 壳 + React）的规范在本文件；小程序端另见 [miniapp-uni/DESIGN.md](miniapp-uni/DESIGN.md)——
-> 它只写移动端的差异与取舍，颜色令牌与视觉基调两处必须一致。
+> 适用范围：描述**本分支唯一的应用**（昼夜 · 个人倒班记录本，Web 静态版 + Tauri 桌面壳共用 `src/`）。
+> 视觉体系与「为什么这么定」都在本文件；uni-app 小程序线已迁到 `refactor` 分支单独开发，
+> 本分支不含 `miniapp-uni/`，也不维护移动端规范。
 >
 > **真相顺序**：`src/styles/tokens.scss` > `README.md` §4/§7 > 本文。
 > 正文解释「为什么这么定」，数值一旦冲突以 tokens 为准；改设计请先改令牌，再回来改这里。
@@ -322,7 +322,7 @@ manifest 的 `theme_color` 画它，而 manifest 是静态文件、没有深色�
 结算月为**当前月时省略**，翻到别的月份才加前缀（`#/2026-10/overview`），切到设置再切回来也保得住。
 **JIG 页例外：hash 不带月份**（`#/jig/pivot`）—— JIG 数据来自 MES 导出的 Excel，与结算月无关。
 解析时若 hash 里带了月份（手敲的 `#/2026-10/jig`），月份被忽略，不保留在 JIG 页上。
-静态版 / 小程序端收到 `#/jig` 时回落到概览：那一端既没有侧栏入口，也没有 JIG 页需要的文件能力，
+静态版收到 `#/jig` 时回落到概览：它既没有侧栏入口，也没有 JIG 页需要的文件能力，
 留着一个进得去出不来的页面没意义。
 **应用内导航一律 `replaceState`，不压历史**：底部 tab、月份、设置页签都只是应用内的位置变化，
 系统返回键应当直接离开应用，而不是在浏览过的页面之间来回切（与原生 app 一致）。
@@ -752,14 +752,14 @@ node scripts/shoot-showcase.mjs --check            # 4 张验收图（1:1，出�
 v1 时这里曾拷一份 `packages/core` 到 `src/core/`，用 `@local/core` 别名引用；
 2026-10 通用化重写时连同别名一起删除。
 
-2026-11 小程序端重构为 uni-app（Vue 3 + TS + Vite，编译目标 `mp-weixin`），代码在 `miniapp-uni/`；
-原生版 `miniapp/` 已删除。它复用 `src/data` 的统计口径（通过 `@data` alias 直接引用，不再产生产物），
-界面是独立的一套移动端规范（见 `miniapp-uni/DESIGN.md`）。
+2026-11 曾并行维护 uni-app 小程序端（`miniapp-uni/`，Vue 3 + TS + Vite → `mp-weixin`），
+原生版 `miniapp/` 更早删除。**2026-11-11 起小程序线整条迁到 `refactor` 分支单独开发**，
+本分支不再包含小程序代码、规范与构建命令；需要时 `git checkout refactor -- miniapp-uni`。
 
 因此：
 
-- 两套界面共用颜色令牌与视觉基调，尺寸、外壳、布局分开定；
-- 数值权威仍是 `src/styles/tokens.scss`，`miniapp-uni/src/styles/tokens.scss` 必须与它同值。
+- 本分支只有一套界面（Web 静态版与 Tauri 壳共用），尺寸、外壳、布局只有一套口径；
+- 数值权威唯一是 `src/styles/tokens.scss`。
 
 ---
 

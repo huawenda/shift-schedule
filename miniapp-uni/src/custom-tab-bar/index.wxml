@@ -1,6 +1,0 @@
-<!--
-  原生 tabBar 的占位：pages.json 里 tabBar.custom = true 时微信要求有这个组件。
-  底栏 UI 仍在页面里的 components/tab-bar.vue（与页面同源，不依赖原生渲染），
-  所以这里保持空内容。好处是 tab 页由 switchTab 缓存，切页不再重建 WebView。
--->
-<view class="noop"></view>

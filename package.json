@@ -22,9 +22,6 @@
     "verify:tauri": "node scripts/verify-tauri-shell.mjs",
     "shoot:showcase": "node scripts/shoot-showcase.mjs",
     "shoot:check": "node scripts/shoot-showcase.mjs --check",
-    "miniapp:dev": "pnpm -C miniapp-uni dev:mp-weixin",
-    "miniapp:build": "pnpm -C miniapp-uni build:mp-weixin",
-    "verify:miniapp-uni": "node scripts/verify-miniapp-uni.mjs",
     "desktop:dev": "tauri dev --config desktop/src-tauri/tauri.conf.json",
     "desktop:build": "tsc --noEmit && tauri build --config desktop/src-tauri/tauri.conf.json"
   },

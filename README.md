@@ -134,7 +134,7 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 
 - **能记加班的四种**：白班 / 夜班 / 白特 / 夜特。休息与事假不产生加班，选到它们时两段整体禁用并清零。
 - **输入精度**：0.5 小时步长，向下取整（`2.7 → 2.5`），上限 24 小时。
-- **预设档位**（与 Web、小程序口径一致）：
+- **预设档位**（Web 静态版与 Tauri 壳同一套口径）：
   - 白/夜 普通 → `2h / 3h / 3.5h`
   - 白特/夜特、或白/夜标了法定 → `10h / 11h / 11.5h`
 - **加班只在「个人日历」里录**。全员矩阵的弹层保持只改班次 —— 矩阵是排班视图，
@@ -587,11 +587,13 @@ pnpm verify:tauri    # 壳内验收（release exe + WebView2 调试口）：建�
 
 ## 10. 仓库形态
 
-**本仓库只有这一个应用，没有任何工作区、共享包或外部依赖。**
+**本分支只有这一个应用（Web 静态版 + Tauri 桌面壳共用 `src/`），没有工作区、共享包或外部依赖。**
 
-2026-10-30 起，原本并行维护的 Web 版、微信小程序与 `packages/core` 已整条移除，
+2026-11-11 起，uni-app 小程序线（`miniapp-uni/`）整条迁到 `refactor` 分支单独开发：
+本分支不再有小程序代码、`miniapp:*` 命令与 `verify:miniapp-uni`。
+小程序代码在 `refactor` / `origin/refactor` 上与迁出前完全一致，
+需要时用 `git checkout refactor -- miniapp-uni` 取回；`packages/core` 自 2026-10 通用化重写后已删除。
 仓库根目录就是本应用的根目录：`src/`、`public/`、`desktop/`、`scripts/`、`design/` 直接可用。
-需要查旧代码时看 `master` 分支的历史即可，那些文件不会回到这条线上。
 
 因此：
 
