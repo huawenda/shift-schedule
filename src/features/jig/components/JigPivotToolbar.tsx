@@ -25,6 +25,10 @@ interface JigPivotToolbarProps {
  * 选某个 P/N 时就不再叠加「生产中」筛选 —— 两个条件互斥却挤在一个单选框里，
  * 用户会判断不出当前到底生效了哪个。
  *
+ * **不配字段名**：这个下拉是工具条的第一个元素，贴着表格外框的左缘。
+ * 位置已经说明了它在过滤下面这张表，再顶一个「显示范围」只会把控件推离表格、
+ * 和表头错开一格。
+ *
  * **可用性是三态分段**：它只有三档且互斥，用分段控件比下拉更快。
  * 每档后面带计数，计数口径与透视表总计行一致（先按显示范围取行，再分档）。
  */
@@ -38,7 +42,6 @@ export function JigPivotToolbar({
 }: JigPivotToolbarProps) {
   return (
     <div className="jig-toolbar">
-      <span className="jig-toolbar-label">显示范围</span>
       <Select
         ariaLabel="显示范围"
         className="jig-scope-select"

@@ -278,10 +278,13 @@
   border-bottom: 0;
 }
 
-/* 悬停：浅青底（原项目 --accent-soft）。shadcn 默认的 muted/50 偏灰，
- * 与小计/总计行的灰带撞色，扫行时分不清是在悬停还是汇总行。 */
+/* 悬停：中性一档（--active），不用品牌青。
+ *
+ * 青色在小计 / 总计的灰带上会变成一条「彩色高亮」，与中性灰主题不搭；
+ * 也不跟汇总行撞：汇总行是 --raised（浅 #f4f6f8 / 深 #2e2e2e），
+ * 悬停是 --active（浅 #ebedee / 深 #343434），浅色更深、深色更亮，都分得开。 */
 .jig-table tbody tr:hover td {
-  background: var(--accent-soft);
+  background: var(--active);
 }
 
 /* 汇总行悬停时保持自己的底色 —— 否则鼠标扫过时底纹忽隐忽现 */
@@ -418,11 +421,11 @@
   color: var(--accent);
 }
 
-/* 小计与总计行的计数格仍可下钻，但悬停时保留自己的底色 ——
- * 否则鼠标扫过时行会「褪色」，汇总行的底纹忽隐忽现。 */
+/* 小计与总计行的计数格仍可下钻，悬停底与普通行同一档中性色 ——
+ * 汇总行的灰带由 --raised 承担，这里只在它上面再叠一层 --active。 */
 .jig-table tbody tr.is-subtotal td.is-clickable:hover,
 .jig-table tbody tr.is-total td.is-clickable:hover {
-  background: var(--accent-soft);
+  background: var(--active);
 }
 
 /* ── 工序轨道 ──
@@ -621,35 +624,51 @@
  * **不是卡片**。原项目整页只有两条竖线分隔（侧栏边界、表格边界），
  * 到处加卡片边框会让这一页看起来像一堆卡片拼的，与原项目完全不同。
  *
- * 三段式（grid rows auto 1fr auto）：标签行固定、输入框吃掉剩余高度、
- * 底部操作区固定。输入框因此能一直往下加行，窗口越宽输入框越高。
+ * 两段式（grid rows auto 1fr）：顶部操作行固定、输入框吃掉剩余高度。
+ * 输入框因此能一直往下加行，窗口越宽输入框越高，底边始终与右栏表格平齐。
+ *
+ * **操作行与右栏页签条对齐**：两栏的内边距同为 --sp-3(12px)，
+ * 操作行里的按钮高度又写成与页签条相同的 32px，所以左栏第一行和右栏 tab
+ * 顶边、底边都落在同一条水平线上；下面 12px 的间距与右栏 tab→内容那一档同值。
  */
 .jig-side {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--sp-3);
   min-height: 0;
-  padding: var(--sp-3) var(--pad);
+  /* 底部 16px 与右栏 `.jig-main` 对齐 —— 两栏的底边落在同一条线上，
+   * 输入框底边才不会比表格底边高出/低出一截。 */
+  padding: var(--sp-3) var(--pad) var(--sp-4);
   /* 跟随画布，而不是 --surface：深色下 --surface(#242424) 比画布更亮，
-   * 左栏会像一块贴在侧栏上的同色板；透明后它与顶栏、右栏同底（#181818），
-   * 只剩 1px 竖线分隔。浅色下画布本来就是白，与改动前一致。 */
+   * 左栏会像一块贴在侧栏上的同色板；透明后它与顶栏、右栏完全同底（#181818），
+   * 连右缘那道 1px 竖线也去掉 —— 两栏靠内容自身的留白分开就够了。
+   * 浅色下画布本来就是白，与改动前一致。 */
   background: transparent;
-  border-right: 1px solid var(--rule);
 }
 
-/* 标签行：「输入 Jig ID」在左，「清空」在右 */
-.jig-side-head {
+/* 顶部操作行：查询宽、清空窄，两个按钮共用输入框的那条宽度。
+ * 行高与右栏页签条一致（32px），左栏第一行才能和 tab 同顶同底；
+ * 中间留一格间距，避免主次两个按钮贴成一块。 */
+.jig-side-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--sp-2);
 }
 
-.jig-side-label {
-  font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--muted);
+/* 高度显式写死而不是靠按钮自身的 size —— 页签条是 shadcn TabsList 的 h-8，
+ * 两边一个取令牌、一个取组件默认值，迟早会差 4px 对不齐。 */
+.jig-side-run {
+  flex: 1 1 auto;
+  height: 32px;
+}
+
+/* 「清空」只占自身宽度：不放大也不缩小，剩下来的宽度全给查询。
+ * 字号比主按钮小一档，主次一眼能分。 */
+.jig-side-clear {
+  flex: 0 0 auto;
+  height: 32px;
+  padding-inline: var(--sp-3);
+  font-size: var(--fs-small);
 }
 
 /* 输入框：Jig ID 每行一个，几十行起步，要能一直往下加 */
@@ -673,23 +692,6 @@
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 30%, transparent);
 }
 
-/* 底部：开始查询 + 提示 */
-.jig-side-foot {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-
-.jig-side-foot > button {
-  width: 100%;
-}
-
-.jig-side-hint {
-  font-size: var(--fs-label);
-  line-height: 1.55;
-  color: var(--muted);
-}
-
 /* 右侧：页签 + 表格 + 导出条 */
 /*
  * 右主区。
@@ -709,9 +711,20 @@
   padding: var(--sp-3) var(--pad) var(--sp-4);
 }
 
+/*
+ * 页签条 / 工序轨道 / 工具条 / 表格 四层之间**统一一个间距**。
+ *
+ * 间距由 `--jig-stack-gap` 一处控制：`.jig-tabs`（页签条 → 面板）与
+ * `.jig-tab-panel`（面板内各层）都取它，改一处四段一起动。
+ *
+ * 必须显式写 gap —— shadcn 的 Tabs root 自带 `gap-2`（8px），比面板内的
+ * 一档（--sp-3 = 12px）紧 4px，页签条会显得贴住轨道，下面却松一档。
+ */
 .jig-tabs {
+  --jig-stack-gap: var(--sp-3);
   flex: 1 1 auto;
   min-height: 0;
+  gap: var(--jig-stack-gap);
 }
 
 /*
@@ -725,7 +738,7 @@
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  gap: var(--sp-3);
+  gap: var(--jig-stack-gap);
 }
 
 .jig-toolbar {
@@ -737,14 +750,6 @@
 
 .jig-toolbar-spacer {
   margin-left: auto;
-}
-
-/* 工具条上的字段名（「显示范围」这类） */
-.jig-toolbar-label {
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--muted);
-  white-space: nowrap;
 }
 
 /* 分段按钮上的计数：与可用性分档口径一致 */

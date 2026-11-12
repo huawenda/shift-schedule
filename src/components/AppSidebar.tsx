@@ -177,7 +177,7 @@ export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarFooter>
       {/*
-        右缘这条 rail 只做「点击折叠」：展开 224px / 折叠 44px（见 AppShell），不再绑拖拽事件。
+        右缘这条 rail 只做「点击折叠」：展开 224px / 折叠 48px（见 AppShell），不再绑拖拽事件。
         CLI 版 SidebarRail 自带 onClick={toggleSidebar}，这里只补中文无障碍标签
         与键盘聚焦反馈（默认 tabIndex=-1，键盘另有 Ctrl/Cmd+B 折叠）。
       */}

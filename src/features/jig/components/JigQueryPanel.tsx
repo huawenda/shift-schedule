@@ -163,13 +163,22 @@ export function JigQueryPanel({
   return (
     <aside className="jig-side">
       {/*
-        标签行：「清空」在右侧（原项目如此）。
-        它紧挨着输入框的标题 —— 清空的是这个框里的东西，
-        放在输入框下方会让人以为它清的是下面的查询结果。
+        操作行：查询占满剩余宽度、清空只占自身宽度，两者共用输入框的宽度。
+        这一行的高度与右栏页签条相同（32px）、顶边对齐，两栏的第一行落在
+        同一条水平线上；查询是这个页面唯一的主动作，所以给它更宽的一格。
       */}
-      <div className="jig-side-head">
-        <span className="jig-side-label">输入 Jig ID</span>
+      <div className="jig-side-actions">
         <Button
+          className="jig-side-run"
+          disabled={!ready || count === 0}
+          onClick={runQuery}
+          type="button"
+        >
+          开始查询
+        </Button>
+
+        <Button
+          className="jig-side-clear"
           disabled={count === 0}
           onClick={() => {
             onValueChange('')
@@ -195,19 +204,6 @@ export function JigQueryPanel({
         ref={inputRef}
         value={value}
       />
-
-      <div className="jig-side-foot">
-        <Button
-          disabled={!ready || count === 0}
-          onClick={runQuery}
-          type="button"
-        >
-          开始查询
-        </Button>
-        <div className="jig-side-hint">
-          Ctrl+Enter 查询 · 粘贴时自动挑出 Jig ID
-        </div>
-      </div>
     </aside>
   )
 }

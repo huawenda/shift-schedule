@@ -18,10 +18,6 @@
   gap: var(--sp-3);
 }
 
-.lookup-tabs {
-  flex: 0 0 auto;
-}
-
 .lookup-search {
   position: relative;
   flex: 1 1 auto;
@@ -50,13 +46,6 @@
   top: 50%;
   right: var(--sp-1);
   transform: translateY(-50%);
-}
-
-.lookup-search-hint {
-  flex: 0 0 auto;
-  color: var(--faint);
-  font-size: var(--fs-small);
-  white-space: nowrap;
 }
 
 /* 建议浮层：宽度跟输入框同一档；具体尺寸走 Tailwind 类，这里只放列表排版 */
@@ -926,6 +915,19 @@
 .lookup-stat-value {
   color: var(--faint);
   font-size: var(--fs-small);
+}
+
+/* ------------------------------------------------------------ 搜索栏的位置
+ *
+ * 搜索框是 `.canvas` 的直接子元素、**不在** `.canvas-flow` 里：
+ * flow 的上边框（shell.scss）就是「常驻搜索 / 滚动结果」的分界线，
+ * 往下翻结果时搜索框和顶栏一起留在原位。
+ *
+ * 内边距与 flow 对齐：flow 留 4px 给聚焦 ring，搜索栏也缩同样的 4px，
+ * 否则输入框左边缘会比下面的卡片多出来一条缝、两者不在同一条竖线上。
+ */
+.canvas.is-lookup > .lookup-toolbar {
+  padding-inline: var(--sp-1);
 }
 
 /* ------------------------------------------------------------ 滚动容器的水平余量

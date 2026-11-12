@@ -20,7 +20,7 @@
  *  10. 导出备份是 v5，且带上自建班序
  *  11. 删除自建班序要输入名字确认，成员与改班记录一并删除
  *  12. 翻月不崩
- *  13. 宽屏不变式（--only=wide）：1024 / 1280 / 1466 / 1008 四档下侧栏展开 224px、折叠 44px、
+ *  13. 宽屏不变式（--only=wide）：1024 / 1280 / 1466 / 1008 四档下侧栏展开 224px、折叠 48px、
  *      无移动端底部 tab / 抽屉、无窄屏重排；并做源码层断言防止窄屏分支回流
  *
  * 依赖：本机 Chrome/Edge，Node 18+（用全局 fetch / WebSocket）。没有第三方依赖。
@@ -538,7 +538,9 @@ async function runScenario(name, url, downloadDir) {
         // 姓名 / 班序两行都不该被省略号截断
         nameClipped: names.some(node => node.scrollWidth > node.clientWidth + 1),
         // 画布内的重要文字必须继承正文色，不能继承深色外框的文字色
-        titleColor: getComputedStyle(document.querySelector('.canvas-title')).color,
+        titleColor: getComputedStyle(
+          document.querySelector('.topbar-title') ?? document.querySelector('.canvas')
+        ).color,
         nameColor: getComputedStyle(document.querySelector('.matrix-name')).color
       }
     })()`)
@@ -2435,8 +2437,12 @@ async function runScenario(name, url, downloadDir) {
     )
     check(`${name}: 矩阵里显示自建班序名`, rowLabels.includes('甲班'), rowLabels.join(','))
 
-    // --- 10. 导出备份：v4 且带上自建班序 ---
-    await client.evaluate(clickByText('.topbar-right button', '导出备份'))
+    // --- 10. 导出备份：v5 且带上自建班序 ---
+    // 顶栏不再放备份按钮，统一从「设置 → 个人资料」触发
+    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
+    await sleep(300)
+    await switchSettingsTab(client, '个人资料')
+    await client.evaluate(clickByText('.settings-actions button', '导出备份'))
 
     let backupFile = null
     const downloadDeadline = Date.now() + 8000
@@ -3063,7 +3069,7 @@ async function runWideScreenChecks(url) {
         m.docW <= m.vw + 1,
         JSON.stringify({ docW: m.docW, vw: m.vw }))
 
-      // 折叠态：图标条 44px，32px 的菜单按钮必须完整落在侧栏里（不被两侧裁掉）
+      // 折叠态：图标条 48px，32px 的菜单按钮必须完整落在侧栏里（不被两侧裁掉）
       await client.evaluate(`document.querySelector('[data-slot="sidebar-trigger"]')?.click(); true`)
       await sleep(350)
       const collapsed = await client.evaluate(`(() => {
@@ -3085,15 +3091,15 @@ async function runWideScreenChecks(url) {
           railRight: Math.round(rail?.right ?? -1)
         }
       })()`)
-      check(`${tag}: 折叠后 44px 图标条，按钮不被裁`,
-        Math.abs(collapsed.w - 44) <= 1 &&
-          Math.abs(collapsed.gapW - 44) <= 1 &&
-          Math.abs(collapsed.insetLeft - 44) <= 1 &&
+      check(`${tag}: 折叠后 48px 图标条，按钮不被裁`,
+        Math.abs(collapsed.w - 48) <= 1 &&
+          Math.abs(collapsed.gapW - 48) <= 1 &&
+          Math.abs(collapsed.insetLeft - 48) <= 1 &&
           collapsed.buttonW === 32 &&
           collapsed.buttonLeft >= 0 &&
           collapsed.buttonRight <= 41,
         JSON.stringify(collapsed))
-      // 抓取条保留，但必须完全落在 44px 侧栏内 —— 越界会撑宽 WebView2 的固定合成层
+      // 抓取条保留，但必须完全落在 48px 侧栏内 —— 越界会撑宽 WebView2 的固定合成层
       check(`${tag}: 抓取条保留且不越出侧栏右缘`,
         collapsed.railW > 0 &&
           collapsed.railLeft >= 0 &&

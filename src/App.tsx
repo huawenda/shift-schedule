@@ -426,18 +426,12 @@ export function App() {
     <>
       <ScrollOverlay />
       <AppShell
-        atCurrentMonth={atCurrentMonth}
         hrefs={hrefs}
-        monthTitle={formatMonthTitle(monthKey)}
         route={route}
-        onBackup={backup}
         onNavigate={next => {
           // 设置页签沿用上次停留的那一页（与小程序页面缓存一致）；首次进入仍是人员配置
           navigate(next)
         }}
-        onRestore={file => void restore(file)}
-        onShiftMonth={goMonth}
-        onToday={goToday}
         onToggleTheme={theme.toggle}
         theme={theme.resolved}
         jig={jigData}
@@ -470,9 +464,13 @@ export function App() {
           />
         ) : route === 'matrix' ? (
           <MatrixScreen
+            atCurrentMonth={atCurrentMonth}
             groupFilter={matrixGroup}
             mode={matrixMode}
+            monthTitle={formatMonthTitle(monthKey)}
             period={period}
+            onShiftMonth={goMonth}
+            onToday={goToday}
             roster={api.roster}
             onEdit={(member, date) => openEditor(member, date, 'matrix')}
             onGroupFilterChange={setMatrixGroup}
@@ -493,7 +491,11 @@ export function App() {
           />
         ) : (
           <OverviewScreen
+            atCurrentMonth={atCurrentMonth}
+            monthTitle={formatMonthTitle(monthKey)}
             period={period}
+            onShiftMonth={goMonth}
+            onToday={goToday}
             roster={api.roster}
             onEdit={(member, date) => openEditor(member, date, 'calendar')}
             onToggleTodo={api.toggleTodo}

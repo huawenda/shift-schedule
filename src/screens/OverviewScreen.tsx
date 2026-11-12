@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { MonthCalendar } from '../components/MonthCalendar'
+import { PeriodNav } from '../components/PeriodNav'
 import { StatsPanels } from '../components/StatsPanels'
 import { TodoCard } from '../components/TodoCard'
 import { TodayPlaque } from '../components/TodayPlaque'
 import { getCalendarMeta } from '../data/calendarMeta'
 import { addDays, formatDateKey, parseDateKey, todayKey } from '../data/dateUtils'
-import { formatPeriodRange, type Period } from '../data/period'
+import { type Period } from '../data/period'
 import {
   getRecordMap,
   getSelf,
@@ -22,6 +23,11 @@ import { useCurrentShift } from '../hooks/useCurrentShift'
 interface OverviewScreenProps {
   roster: Roster
   period: Period
+  /** 结算月导航（原在顶栏，现在落在页头） */
+  monthTitle: string
+  atCurrentMonth: boolean
+  onShiftMonth: (delta: number) => void
+  onToday: () => void
   onEdit: (member: Member, date: string) => void
   /** 勾选 / 取消勾选待办（改动立即生效） */
   onToggleTodo: (todoId: string) => void
@@ -39,6 +45,10 @@ interface OverviewScreenProps {
 export function OverviewScreen({
   roster,
   period,
+  monthTitle,
+  atCurrentMonth,
+  onShiftMonth,
+  onToday,
   onEdit,
   onToggleTodo,
   onOpenProfile
@@ -114,13 +124,12 @@ export function OverviewScreen({
   return (
     <div className="canvas is-overview is-pinned">
       <div className="canvas-head">
-        <div>
-          <h1 className="canvas-title">月度概览</h1>
-          <p className="canvas-sub">
-            {formatPeriodRange(period)} · 共 {period.dates.length} 天 ·{' '}
-            {self ? `${self.name} · ${patternNameOf(roster, self.patternId)}` : '还没有设置本人'}
-          </p>
-        </div>
+        <PeriodNav
+          atCurrentMonth={atCurrentMonth}
+          monthTitle={monthTitle}
+          onShiftMonth={onShiftMonth}
+          onToday={onToday}
+        />
       </div>
 
       {/* 页头固定：标题与副标留在原位，值班牌 / 日历 / 统计收进单独滚动的 flow */}

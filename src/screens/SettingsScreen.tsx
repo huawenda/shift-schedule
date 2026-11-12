@@ -52,11 +52,6 @@ import { Input } from '@/components/ui/input'
 /** 设置分两页：班序与成员占满屏，个人信息/备份/清空放另一页，各自不再互相挤压 */
 export type SettingsTab = 'roster' | 'profile'
 
-const TAB_SUB: Record<SettingsTab, string> = {
-  roster: `成员分组、名单与矩阵行顺序`,
-  profile: '本人与薪资、备份、清空数据'
-}
-
 interface SettingsScreenProps {
   roster: Roster
   /** 页内操作反馈统一走全局底部提示 */
@@ -469,12 +464,8 @@ export function SettingsScreen({
      * 这条页头在翻成员表、翻备份说明时始终留在原位，分隔线就是滚动区的上边界。
      */
     <div className="canvas is-settings is-pinned">
+      {/* 标题已在顶栏，页头只留分页切换 */}
       <div className="canvas-head">
-        <div>
-          <h1 className="canvas-title">设置</h1>
-          <p className="canvas-sub">{TAB_SUB[tab]}</p>
-        </div>
-
         <div className="canvas-tools">
           {/*
             分页换成 shadcn Tabs：value / onValueChange 直接接路由里的 settingsTab，

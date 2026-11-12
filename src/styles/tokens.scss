@@ -20,6 +20,11 @@
   /* 深框上按钮的悬停底：比 --chrome-raised 亮一档，不另立色系 */
   --chrome-hover: #1d3d46;
 
+  /* 面板展开 / 收起（侧栏、抽屉这类整体变宽变窄的东西）：
+   * 宽度、内边距、淡入淡出共用这一条曲线与一档时长，三段动作才是同一个动作。 */
+  --motion-panel-dur: 220ms;
+  --motion-panel-ease: cubic-bezier(0.2, 0, 0, 1);
+
   --ground: #f9fbfc;
   --surface: #ffffff;
   /* 画布内的三级白：纯白画布 / 表头与悬停 / 面板内嵌 */
@@ -210,7 +215,7 @@
   --sp-6: 32px;
 
   /* 死令牌：外壳换成 shadcn Sidebar 后，实际宽度由 SidebarProvider 的 inline
-   * --sidebar-width 决定，现在固定 224px（按顶部品牌区定宽，折叠 44px）。
+   * --sidebar-width 决定，现在固定 224px（按顶部品牌区定宽，折叠 48px）。
    * 这里只是改造前 228px 的记录，改它不会有任何效果。 */
   --sidebar-width: 228px;
   --topbar-height: 48px;

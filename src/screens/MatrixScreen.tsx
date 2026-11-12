@@ -1,13 +1,19 @@
 import { useEffect, useMemo } from 'react'
+import { PeriodNav } from '../components/PeriodNav'
 import { SummaryBar } from '../components/SummaryBar'
 import { TeamMatrix, type MatrixMode } from '../components/TeamMatrix'
-import { formatPeriodRange, type Period } from '../data/period'
+import { type Period } from '../data/period'
 import { groupNameOf, membersOfGroup, type Member, type Roster } from '../data/roster'
 import { useWorkdayKey } from '../hooks/useWorkdayKey'
 
 interface MatrixScreenProps {
   roster: Roster
   period: Period
+  /** 结算月导航（原在顶栏，现在落在页头左侧） */
+  monthTitle: string
+  atCurrentMonth: boolean
+  onShiftMonth: (delta: number) => void
+  onToday: () => void
   /** 视图切换与分组筛选由 App 持有，切到别的页再回来仍是上次的选择 */
   mode: MatrixMode
   onModeChange: (mode: MatrixMode) => void
@@ -34,6 +40,10 @@ const UNGROUPED = '__ungrouped__'
 export function MatrixScreen({
   roster,
   period,
+  monthTitle,
+  atCurrentMonth,
+  onShiftMonth,
+  onToday,
   mode,
   onModeChange,
   groupFilter,
@@ -81,12 +91,12 @@ export function MatrixScreen({
   return (
     <div className="canvas is-matrix is-pinned">
       <div className="canvas-head">
-        <div>
-          <h1 className="canvas-title">全员矩阵</h1>
-          <p className="canvas-sub">
-            {formatPeriodRange(period)} · 共 {period.dates.length} 天
-          </p>
-        </div>
+        <PeriodNav
+          atCurrentMonth={atCurrentMonth}
+          monthTitle={monthTitle}
+          onShiftMonth={onShiftMonth}
+          onToday={onToday}
+        />
 
         <div className="canvas-tools">
           <div className="segmented" role="group" aria-label="矩阵视图">

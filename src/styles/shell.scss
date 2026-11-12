@@ -167,37 +167,20 @@
   gap: var(--sp-4);
 }
 
-/* 标题 600：微软雅黑没有 500，500 会落到 Regular，标题和正文就只能靠字号区分了 */
-.canvas-title {
-  text-wrap: balance;
-  font-size: var(--fs-title);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
+/* 页面主标题已移到顶栏（.topbar-title），页头只剩结算月与页面动作；
+ * 原来的 .canvas-title / .canvas-sub 随副标题一起退役。 */
 
-/*
- * 页面副标题做成一块「铭牌」：浅底 + 1px 边 + 全圆角。
- *
- * 它原来是一行 12px 灰字，和大标题一起读像「标题的第二行」，
- * 但这行的内容是**结算区间 / 天数 / 成员**这类参数，性质不同。
- * 收进胶囊后它有了自己的边界，一眼能分出「标题」和「这批数据的前提」。
- * `inline-block` 是必须的：p 是块级元素，不收缩的话胶囊会横贯整个画布。
- *
- * 边框用 `--border` 而不是 `--rule`：后者几乎等于白底，只剩一层淡淡的底色，
- * 在办公屏上看不出「牌子」的轮廓。
- */
-.canvas-sub {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 2px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--raised);
-  font-size: var(--fs-small);
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+.topbar-title {
+  /* 顶栏 64px 高，20px/600 在这里读起来是「页面标题」而不是一行正文；
+   * 左侧与顶栏内边距(20px)对齐，行内不再额外加 margin。
+   * min-width: 0 —— JIG 页的文件名不截断，位置不够时先让标题让位。 */
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--fs-metric-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .canvas-tools {
@@ -276,6 +259,18 @@
   .canvas {
     animation: none;
   }
+
+  /* 折叠 / 展开也跟随系统设置：直接到位，不做过渡 */
+  [data-slot='sidebar-gap'],
+  [data-slot='sidebar-container'],
+  [data-slot='sidebar'] [data-slot='sidebar-menu-button'],
+  [data-slot='sidebar'] [data-slot='sidebar-group-label'],
+  [data-slot='sidebar'] [data-slot='sidebar-group'],
+  [data-slot='sidebar'] [data-slot='sidebar-footer'],
+  [data-slot='sidebar'] .brand-hero,
+  [data-slot='sidebar'] .titlebar--sidebar .titlebar-content {
+    transition-duration: 1ms;
+  }
 }
 
 /* ------------------------------------------------------------ 宽屏专属外壳
@@ -298,23 +293,57 @@
   flex-shrink: 0;
 }
 
-/* 折叠态图标条 44px：分组与页脚的内边距从 8px 收到 6px（(44 − 32) / 2），
- * 32px 的菜单按钮（CLI 的 `group-data-[collapsible=icon]:size-8!`）正好居中，
- * 两侧各留 6px，hover 药丸不会被裁、图标也不贴边。 */
-[data-slot='sidebar'][data-collapsible='icon'] [data-slot='sidebar-group'],
-[data-slot='sidebar'][data-collapsible='icon'] [data-slot='sidebar-footer'] {
-  padding-inline: 6px;
+/* ------------------------------------------------------------ 折叠 / 展开动效
+ *
+ * 原本三套节奏并行：宽度 `200ms linear`（CLI 的 `transition-[width]`）、
+ * 分组标签 `200ms linear`、内边距与品牌块**瞬切**（`display: none`）。
+ * 线性曲线前段冲得猛、后段拖，加上瞬变的内容，看起来就是「宽度在动、
+ * 东西在跳」。这里把会变的量全部并到一条曲线、一档时长上：
+ * 宽度、内边距、标签淡出、品牌块收放同时开始、同时结束。
+ *
+ * 只能写在 shell.scss（不带 layer），Tailwind 的工具类在 `@layer utilities` 里，
+ * 未分层的规则优先，才盖得过 CLI 自带的那几条 transition-*。 */
+[data-slot='sidebar-gap'],
+[data-slot='sidebar-container'] {
+  transition-property: width, left, right;
+  transition-duration: var(--motion-panel-dur);
+  transition-timing-function: var(--motion-panel-ease);
 }
 
-/* 壳里折叠成图标条时，品牌只剩标题栏那枚 20px 标识。
- * `.brand-hero` 是展开态的大字标，折叠后文字已隐藏、只剩第二枚图标，
- * 会和标题栏的标识上下重复（且被 12px 内边距推到右边、几乎贴住画布）。
- * 直接收起；浏览器版没有标题栏，标识仍由 SidebarHeader 提供，不受影响。 */
+[data-slot='sidebar'] [data-slot='sidebar-menu-button'],
+[data-slot='sidebar'] [data-slot='sidebar-group-label'] {
+  transition-duration: var(--motion-panel-dur);
+  transition-timing-function: var(--motion-panel-ease);
+}
+
+/* 折叠态图标条 48px：32px 的菜单按钮两侧各留 8px（(48 − 32) / 2），
+ * 正好等于 CLI 默认的 `p-2`，所以不需要改内边距 —— 只让它在过渡里跟着滑。 */
+[data-slot='sidebar'] [data-slot='sidebar-group'],
+[data-slot='sidebar'] [data-slot='sidebar-footer'] {
+  transition: padding-inline var(--motion-panel-dur) var(--motion-panel-ease);
+}
+
+/* 壳里折叠成图标条时，品牌大字标要收起（否则和标题栏的折叠按钮上下挤在一起）。
+ * 用「淡出 + 收高」而不是 `display: none`：后者在点击那一帧就消失，
+ * 而宽度还要走 220ms，观感上像内容先炸掉、面板才慢慢合上。
+ * 88px 是展开态的自然高度（标题行 60 + 上下内边距 24）留 4px 余量。 */
+[data-slot='sidebar'] .brand-hero {
+  max-height: 88px;
+  overflow: hidden;
+  transition:
+    max-height var(--motion-panel-dur) var(--motion-panel-ease),
+    opacity calc(var(--motion-panel-dur) * 0.8) var(--motion-panel-ease),
+    padding var(--motion-panel-dur) var(--motion-panel-ease);
+}
+
 [data-slot='sidebar'][data-collapsible='icon'] .brand-hero {
-  display: none;
+  max-height: 0;
+  padding-block: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
-/* 折叠成 44px 图标条时，把右缘那条抓取条（SidebarRail）收进侧栏内。
+/* 折叠成 48px 图标条时，把右缘那条抓取条（SidebarRail）收进侧栏内。
  *
  * CLI 的 rail 是 `w-4` + `-right-4` + `-translate-x-1/2`，横跨右缘两侧各 8px：
  * 越界那 8px 会让 WebView2 把固定侧栏的合成层一起撑到 48px，右缘就露出
@@ -324,18 +353,23 @@
  * 位移要用 `translate` 复位 —— Tailwind v4 的 `-translate-x-1/2` 走的是
  * `translate` 属性而不是 `transform`，只写 `transform: none` 不起作用。
  * 容器右侧还有 1px `border-r`（壳里已去掉），定位基准是它的 padding box，
- * 所以这里的 0 落在 43–44px 之间，仍在 44px 侧栏内。 */
+ * 所以这里的 0 落在 47–48px 之间，仍在 48px 侧栏内。 */
 [data-slot='sidebar'][data-collapsible='icon'] [data-slot='sidebar-rail'] {
   right: 0 !important;
   width: 6px;
   translate: none !important;
 }
 
-/* 标题栏里的 20px 标识在 40px 窄条里要正中：默认左右各 12px 内边距会把它推到
- * 右偏 2px，收起状态改成居中、去掉内边距。只作用于侧栏半条。 */
+/* 标题栏里的折叠按钮在 48px 窄条里要正中：展开时左侧留 12px（padding-inline），
+ * 收起时改成 10px —— 28px 按钮 + 10 + 10 = 48，正好居中。
+ * 不切 `justify-content`（它不可过渡，会在收缩途中跳一下），
+ * 只让 padding 跟着同一条曲线滑过去。 */
+[data-slot='sidebar'] .titlebar--sidebar .titlebar-content {
+  transition: padding-inline var(--motion-panel-dur) var(--motion-panel-ease);
+}
+
 [data-slot='sidebar'][data-collapsible='icon'] .titlebar--sidebar .titlebar-content {
-  justify-content: center;
-  padding-inline: 0;
+  padding-inline: 10px;
 }
 
 /* 触屏没有「悬停」，自绘滚动条既看不见也拖不动 */

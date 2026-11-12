@@ -76,27 +76,29 @@ export function JigTopBar({
   const shownPath = pendingName ?? sourcePath
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
+    <header className="flex h-16 shrink-0 items-center gap-2 px-5">
+      {/* 与主顶栏一致：不画底边线 */}
       {inTauri ? null : <SidebarTrigger />}
+      <h1 className="topbar-title">JIG DATA</h1>
 
-      {/* 源文件位置：路径可能很长，截断显示，完整路径走 title 提示 */}
-      <div className="flex min-w-0 items-center gap-2">
-        <FolderOpen aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-        {shownName ? (
-          <span className="truncate text-sm" title={shownPath}>
-            {shownName}
-            {pendingUnloaded ? (
-              <span className="ml-1 text-xs text-muted-foreground">（待加载）</span>
-            ) : null}
-          </span>
-        ) : (
-          <span className="truncate text-sm text-muted-foreground">
-            尚未选择 MES 导出的 Excel 文件
-          </span>
-        )}
-      </div>
+      <div className="ml-auto flex min-w-0 items-center gap-2">
+        {/* 源文件名放在「浏览…」左侧：先看当前文件，再决定要不要换。
+            文件名**不截断**（包括「待加载」标记），撑不下时让左侧标题收缩，
+            而不是把名字切成「test-500.x…」——用户要靠它确认加载的是哪一份。 */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <FolderOpen aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+          {shownName ? (
+            <span className="whitespace-nowrap text-sm" title={shownPath}>
+              {shownName}
+              {pendingUnloaded ? (
+                <span className="ml-1 text-xs text-muted-foreground">（待加载）</span>
+              ) : null}
+            </span>
+          ) : (
+            <span className="whitespace-nowrap text-sm text-muted-foreground">尚未选择文件</span>
+          )}
+        </div>
 
-      <div className="ml-auto flex items-center gap-2">
         <Button
           disabled={!canPick || busy}
           onClick={onPick}

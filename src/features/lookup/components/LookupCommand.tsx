@@ -209,8 +209,6 @@ export function LookupCommand({
           )}
         </PopoverContent>
       </Popover>
-
-      <span className="lookup-search-hint">Ctrl/⌘+K 聚焦 · 支持 fspm:P467 限定类型</span>
     </div>
   )
 }
