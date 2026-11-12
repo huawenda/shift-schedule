@@ -6,7 +6,7 @@ import {
   type MonthKey
 } from '@/data/period'
 import type { SettingsTab } from '@/screens/SettingsScreen'
-import type { EntityType, LookupView } from './features/lookup/core/types'
+import type { EntityType, LookupDimension, LookupView } from './features/lookup/core/types'
 import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
 
 /**
@@ -82,6 +82,15 @@ export function parseLocation(hash: string): AppLocation {
   }
 
   if (view === 'lookup') {
+    // `#/lookup/browse/inch`：预设展示页
+    if (param === 'browse') {
+      const dim = dimensionOf(third ?? '')
+      return {
+        ...DEFAULT_LOCATION,
+        route: 'lookup',
+        lookupView: dim ? { kind: 'browse', dim } : { kind: 'home' },
+      }
+    }
     // `#/lookup/model/FY`、`#/lookup/inch/77%2F48`、`#/lookup/fspm/P467`；
     // 也兼容手敲的 `#/lookup/FY`（按型号处理）
     const type = param ? entityTypeOf(param) : null
@@ -102,6 +111,19 @@ export function parseLocation(hash: string): AppLocation {
   }
 
   return { ...DEFAULT_LOCATION, month }
+}
+
+/** `#/lookup/browse/<dim>` 的维度；认不出就回落到总览 */
+function dimensionOf(value: string): LookupDimension | null {
+  switch (value) {
+    case 'inch':
+    case 'model':
+    case 'fspm':
+    case 'jig':
+      return value
+    default:
+      return null
+  }
 }
 
 /** hash 第二段是否是实体类型；认不出就当作手敲的型号键 */
@@ -134,6 +156,7 @@ export function buildHash(location: AppLocation): string {
 
   if (location.route === 'lookup') {
     const view = location.lookupView
+    if (view.kind === 'browse') return `#/lookup/browse/${view.dim}`
     return view.kind === 'entity'
       ? `#/lookup/${view.type}/${encodeURIComponent(view.key)}`
       : '#/lookup'

@@ -11,7 +11,13 @@ export type Maker = 'LGC' | 'INNOX'
  * hash 是唯一真相：这个状态由 `buildHash` / `parseLocation` 生成与还原，
  * 组件内部只保留输入框文字、浮层开合这类临时状态。
  */
-export type LookupView = { kind: 'home' } | { kind: 'entity'; type: EntityType; key: string }
+/** 预设展示页的四个浏览维度；`group` 不单列，由组合卡进入 */
+export type LookupDimension = 'inch' | 'model' | 'fspm' | 'jig'
+
+export type LookupView =
+  | { kind: 'home' }
+  | { kind: 'browse'; dim: LookupDimension }
+  | { kind: 'entity'; type: EntityType; key: string }
 
 /** 贴在 JIG 上的膜：P 号为材料型号 */
 export interface Fspm {

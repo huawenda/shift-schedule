@@ -782,3 +782,111 @@
 .lookup-ref-link:hover {
   text-decoration: underline;
 }
+
+/* ------------------------------------------------------------ 总览 / 浏览板 */
+
+.lookup-home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* 四个维度固定四列：内容区最窄 736 时每列约 170，文案仍放得下 */
+.lookup-dim-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.lookup-dim-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  cursor: pointer;
+  text-align: left;
+}
+
+.lookup-dim-card:hover {
+  border-color: var(--accent);
+}
+
+.lookup-dim-title {
+  font-size: var(--fs-control);
+  font-weight: 600;
+}
+
+.lookup-dim-count {
+  color: var(--accent);
+  font-size: var(--fs-small);
+}
+
+.lookup-dim-desc {
+  color: var(--faint);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+
+.lookup-browse {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.lookup-browse-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.lookup-browse-title {
+  margin: 0;
+  font-size: var(--fs-subhead);
+  font-weight: 600;
+}
+
+.lookup-browse-count {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.lookup-browse .lookup-filter-input {
+  width: 320px;
+}
+
+.lookup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-2);
+}
+
+.lookup-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  cursor: pointer;
+  text-align: left;
+}
+
+.lookup-item:hover {
+  border-color: var(--accent);
+}
+
+.lookup-item-label {
+  font-size: var(--fs-control);
+  font-weight: 600;
+}
+
+.lookup-item-sub {
+  color: var(--faint);
+  font-size: var(--fs-small);
+}

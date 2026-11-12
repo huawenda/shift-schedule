@@ -1,16 +1,9 @@
 import { Button } from '@/components/ui/button'
 
+import { QUICK_ENTRIES } from '../core/display'
 import type { LookupIndex } from '../core/indexes'
 import type { EntityRef } from '../core/types'
 import { LookupFootnote } from './LookupFootnote'
-
-const EXAMPLES: EntityRef[] = [
-  { type: 'model', key: 'FY' },
-  { type: 'jig', key: '7748G' },
-  { type: 'recipe', key: '31(10)' },
-  { type: 'inch', key: '77/48' },
-  { type: 'fspm', key: 'P467' },
-]
 
 /** 未选择时的引导：说明能查什么，并给几个覆盖不同实体类型的例子 */
 export function LookupEmpty({
@@ -38,7 +31,7 @@ export function LookupEmpty({
 
       <div className="lookup-examples">
         <span className="lookup-examples-label">试试</span>
-        {EXAMPLES.map(item => (
+        {QUICK_ENTRIES.map(item => (
           <Button
             key={`${item.type}:${item.key}`}
             onClick={() => onPick(item)}

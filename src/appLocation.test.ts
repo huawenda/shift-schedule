@@ -148,6 +148,26 @@ describe('路由：速查页', () => {
       .toEqual({ kind: 'entity', type: 'recipe', key: '31(10)' })
   })
 
+  it('四个展示维度', () => {
+    for (const dim of ['inch', 'model', 'fspm', 'jig'] as const) {
+      expect(parseLocation(`#/lookup/browse/${dim}`).lookupView)
+        .toEqual({ kind: 'browse', dim })
+    }
+  })
+
+  it('认不出的维度 / 缺维度都回落到首页', () => {
+    expect(parseLocation('#/lookup/browse/xxx').lookupView).toEqual({ kind: 'home' })
+    expect(parseLocation('#/lookup/browse').lookupView).toEqual({ kind: 'home' })
+  })
+
+  it('生成：展示页', () => {
+    expect(buildHash({
+      ...DEFAULT_LOCATION,
+      route: 'lookup',
+      lookupView: { kind: 'browse', dim: 'fspm' },
+    })).toBe('#/lookup/browse/fspm')
+  })
+
   it('带类型但缺 key 时回落到首页', () => {
     expect(parseLocation('#/lookup/model').lookupView).toEqual({ kind: 'home' })
   })
@@ -193,6 +213,8 @@ describe('路由：解析与生成互为逆运算', () => {
     { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'queryPivot' as const, lookupView: { kind: 'home' } as const },
     { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'review' as const, lookupView: { kind: 'home' } as const },
     { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'browse', dim: 'inch' } as const },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'browse', dim: 'fspm' } as const },
     { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'entity', type: 'model', key: 'FY' } as const },
     { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'entity', type: 'jig', key: '31(10)' } as const },
     { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'entity', type: 'inch', key: '77/48' } as const },
@@ -202,7 +224,12 @@ describe('路由：解析与生成互为逆运算', () => {
   ]
 
   for (const loc of cases) {
-    const suffix = loc.lookupView.kind === 'entity' ? '/' + loc.lookupView.key : ''
+    const suffix =
+      loc.lookupView.kind === 'entity'
+        ? '/' + loc.lookupView.key
+        : loc.lookupView.kind === 'browse'
+          ? '/browse/' + loc.lookupView.dim
+          : ''
     it(`${loc.route}${loc.month ? '/' + loc.month : ''}${suffix} 往返一致`, () => {
       const parsed = parseLocation(buildHash(loc))
       expect(parsed.route).toBe(loc.route)

@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 
 import { lookupIndex } from '../core/instance'
 import type { LookupView } from '../core/types'
+import { BrowseBoard } from './BrowseBoard'
 import { EntityResult } from './EntityResult'
 import { LookupCommand } from './LookupCommand'
-import { LookupEmpty } from './LookupEmpty'
+import { LookupHome } from './LookupHome'
 
 interface LookupScreenProps {
   view: LookupView
@@ -52,10 +53,18 @@ export function LookupScreen({ view, onNavigate }: LookupScreenProps) {
 
         {view.kind === 'entity' ? (
           <EntityResult index={lookupIndex} onNavigate={onNavigate} view={view} />
-        ) : (
-          <LookupEmpty
+        ) : view.kind === 'browse' ? (
+          <BrowseBoard
+            dim={view.dim}
             index={lookupIndex}
-            onPick={ref => onNavigate({ kind: 'entity', type: ref.type, key: ref.key })}
+            onBack={() => onNavigate({ kind: 'home' })}
+            onNavigate={onNavigate}
+          />
+        ) : (
+          <LookupHome
+            index={lookupIndex}
+            onBrowse={dim => onNavigate({ kind: 'browse', dim })}
+            onNavigate={onNavigate}
           />
         )}
       </div>
