@@ -6,8 +6,8 @@ import { buildLookupIndex } from '../core/indexes'
 const index = buildLookupIndex(LOOKUP_GROUPS, FSPM_TABLE)
 
 describe('速查数据完整性', () => {
-  it('47 组 / 110 型号 / 92 个 FSPM', () => {
-    expect(LOOKUP_GROUPS).toHaveLength(47)
+  it('48 组 / 110 型号 / 92 个 FSPM', () => {
+    expect(LOOKUP_GROUPS).toHaveLength(48)
     expect(index.byModel.size).toBe(110)
     expect(index.fspm.size).toBe(92)
     expect(LOOKUP_DATA_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}$/)
@@ -19,9 +19,11 @@ describe('速查数据完整性', () => {
     expect(group?.models).toEqual(['CP', 'FS', 'FZ', 'FT', 'CU', 'FY'])
   })
 
-  it('CR 命中 7742C-04（CR/RD），不是已归档的 7742D', () => {
-    expect(index.byModel.get('CR')?.id).toBe('7742C-04')
-    expect(LOOKUP_GROUPS.some(g => g.jigPn === '7742D' && g.models.includes('CR'))).toBe(false)
+  it('CR 落在新增的 7742D-03；7742C-04 为 CQ / RD', () => {
+    expect(index.byModel.get('CR')?.id).toBe('7742D-03')
+    expect(index.byModel.get('CQ')?.id).toBe('7742C-04')
+    expect(index.byModel.get('RD')?.id).toBe('7742C-04')
+    expect(index.byJig.get('7742D')).toHaveLength(3)
   })
 
   it('7748B 有 3 个组合', () => {

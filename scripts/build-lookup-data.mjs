@@ -10,6 +10,7 @@
  *
  * 运行时不读 Excel：生成物提交进仓库，保证 file:// 离线可用。
  * 改表后手动跑 `pnpm lookup:data`。
+ * `pnpm lookup:check` 只校验生成物是否与源表一致（不写文件），用于提交前自查。
  */
 
 import fs from 'node:fs'
@@ -102,7 +103,7 @@ for (const r of readSheet(queryFile, '组合-FSPM 明细')) {
 groups.sort((a, b) => a.id.localeCompare(b.id))
 
 // ---------- 校验 ----------
-if (groups.length !== 47) throw new Error(`组合数应为 47，实际 ${groups.length}`)
+if (groups.length !== 48) throw new Error(`组合数应为 48，实际 ${groups.length}`)
 const allModels = groups.flatMap(g => g.models)
 const modelSet = new Set(allModels)
 if (allModels.length !== modelSet.size) throw new Error('存在重复的 GLS 型号')
@@ -119,30 +120,51 @@ for (const g of groups) {
   recipeToJig.set(g.recipe, g.jigPn)
 }
 
-if (groups.some(g => g.jigPn === '7742D' && g.models.includes('CR'))) {
-  throw new Error('已归档的 7742D CR 不应出现在数据里')
+const crGroup = groups.find(g => g.models.includes('CR'))
+if (crGroup?.id !== '7742D-03') {
+  throw new Error(`CR 应归入 7742D-03，实际 ${crGroup?.id ?? '不存在'}`)
 }
 
 // ---------- 输出 ----------
-const version = new Date().toISOString().slice(0, 10)
-const lines = []
-lines.push('/**')
-lines.push(' * 速查页数据 —— 由 scripts/build-lookup-data.mjs 生成，不要手改。')
-lines.push(' * 重新生成：pnpm lookup:data')
-lines.push(` * 数据快照：${version}`)
-lines.push(' */')
-lines.push("import type { Fspm, LookupGroup } from '../core/types'")
-lines.push('')
-lines.push(`export const LOOKUP_DATA_VERSION = '${version}'`)
-lines.push('')
-lines.push(`export const LOOKUP_GROUPS: readonly LookupGroup[] = ${JSON.stringify(groups, null, 2)}`)
-lines.push('')
-lines.push(`export const FSPM_TABLE: Readonly<Record<string, Fspm>> = ${JSON.stringify(fspm, null, 2)}`)
-lines.push('')
+const today = new Date().toISOString().slice(0, 10)
+const render = version => {
+  const lines = []
+  lines.push('/**')
+  lines.push(' * 速查页数据 —— 由 scripts/build-lookup-data.mjs 生成，不要手改。')
+  lines.push(' * 重新生成：pnpm lookup:data')
+  lines.push(` * 数据快照：${version}`)
+  lines.push(' */')
+  lines.push("import type { Fspm, LookupGroup } from '../core/types'")
+  lines.push('')
+  lines.push(`export const LOOKUP_DATA_VERSION = '${version}'`)
+  lines.push('')
+  lines.push(`export const LOOKUP_GROUPS: readonly LookupGroup[] = ${JSON.stringify(groups, null, 2)}`)
+  lines.push('')
+  lines.push(`export const FSPM_TABLE: Readonly<Record<string, Fspm>> = ${JSON.stringify(fspm, null, 2)}`)
+  lines.push('')
+  return lines.join('\n')
+}
 
-fs.mkdirSync(path.dirname(outFile), { recursive: true })
-fs.writeFileSync(outFile, lines.join('\n'), 'utf8')
+const existing = fs.existsSync(outFile) ? fs.readFileSync(outFile, 'utf8') : ''
+const normalize = text => text.replace(/\r\n/g, '\n')
+const bodyOf = text => text.slice(text.indexOf('export const LOOKUP_GROUPS'))
+const existingVersion = normalize(existing).match(/LOOKUP_DATA_VERSION = '([^']+)'/)?.[1]
+/* 数据没变就沿用原来的快照日期，保证 --check 不会因为跨天而误报 */
+const unchanged = existing !== '' && bodyOf(normalize(existing)) === bodyOf(render('__VERSION__'))
+const version = unchanged && existingVersion ? existingVersion : today
+const text = render(version)
 
-console.log(
-  `lookup data: ${groups.length} 组 / ${modelSet.size} 型号 / ${Object.keys(fspm).length} FSPM → ${path.relative(root, outFile)}`,
-)
+if (process.argv.includes('--check')) {
+  if (normalize(existing) !== normalize(text)) {
+    console.error('速查数据已过期：源表与 src/features/lookup/data/lookupData.ts 不一致。')
+    console.error('请运行 pnpm lookup:data 并提交生成物。')
+    process.exit(1)
+  }
+  console.log('lookup data: 生成物与源表一致')
+} else {
+  fs.mkdirSync(path.dirname(outFile), { recursive: true })
+  fs.writeFileSync(outFile, text, 'utf8')
+  console.log(
+    `lookup data: ${groups.length} 组 / ${modelSet.size} 型号 / ${Object.keys(fspm).length} FSPM → ${path.relative(root, outFile)}`,
+  )
+}

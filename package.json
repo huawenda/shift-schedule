@@ -15,6 +15,7 @@
     "build": "node scripts/build-guides.mjs && tsc --noEmit && vite build",
     "guides": "node scripts/build-guides.mjs",
     "lookup:data": "node scripts/build-lookup-data.mjs",
+    "lookup:check": "node scripts/build-lookup-data.mjs --check",
     "preview": "vite preview --host 0.0.0.0 --port 6181",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

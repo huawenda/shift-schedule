@@ -1,11 +1,11 @@
 /**
  * 速查页数据 —— 由 scripts/build-lookup-data.mjs 生成，不要手改。
  * 重新生成：pnpm lookup:data
- * 数据快照：2026-11-10
+ * 数据快照：2026-11-12
  */
 import type { Fspm, LookupGroup } from '../core/types'
 
-export const LOOKUP_DATA_VERSION = '2026-11-10'
+export const LOOKUP_DATA_VERSION = '2026-11-12'
 
 export const LOOKUP_GROUPS: readonly LookupGroup[] = [
   {
@@ -340,10 +340,9 @@ export const LOOKUP_GROUPS: readonly LookupGroup[] = [
       "BR",
       "BC",
       "BW",
-      "UJ",
-      "US",
       "UP",
-      "BH"
+      "BH",
+      "BU"
     ],
     "mainFspm": [
       "P493",
@@ -674,7 +673,7 @@ export const LOOKUP_GROUPS: readonly LookupGroup[] = [
     "mainBezel": "Narrow",
     "subBezel": "Normal",
     "models": [
-      "CR",
+      "CQ",
       "RD"
     ],
     "mainFspm": [
@@ -738,6 +737,30 @@ export const LOOKUP_GROUPS: readonly LookupGroup[] = [
     "source": "Sheet2 行56-57"
   },
   {
+    "id": "7742D-03",
+    "inch": "77/42",
+    "jigPn": "7742D",
+    "recipe": "3",
+    "mainSize": "77",
+    "subSize": "42",
+    "mainBezel": "V-Narrow",
+    "subBezel": "Normal",
+    "models": [
+      "CR"
+    ],
+    "mainFspm": [
+      "P445",
+      "P387",
+      "P407",
+      "P428"
+    ],
+    "subFspm": [
+      "P605",
+      "P582"
+    ],
+    "source": "新表 Sheet1 行53-54"
+  },
+  {
     "id": "7748B-01",
     "inch": "77/48",
     "jigPn": "7748B",
@@ -775,6 +798,7 @@ export const LOOKUP_GROUPS: readonly LookupGroup[] = [
       "FJ"
     ],
     "mainFspm": [
+      "P431",
       "P389",
       "P409",
       "P427"
@@ -845,6 +869,7 @@ export const LOOKUP_GROUPS: readonly LookupGroup[] = [
       "FV"
     ],
     "mainFspm": [
+      "P467",
       "P429",
       "P408"
     ],
