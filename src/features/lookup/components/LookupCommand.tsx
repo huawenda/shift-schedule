@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 
 import { ENTITY_LABEL } from '../core/display'
-import { searchEntities, type EntityHit } from '../core/entities'
+import { parseEntityQuery, searchEntities, type EntityHit } from '../core/entities'
 import type { LookupIndex } from '../core/indexes'
 import type { EntityRef } from '../core/types'
 
@@ -37,7 +37,9 @@ export function LookupCommand({
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
 
-  const hasQuery = query.trim().length > 0
+  // 前缀（fspm:P467）只限定类型，判断「有没有输入」要看冒号后面的部分
+  const parsed = parseEntityQuery(query)
+  const hasQuery = parsed.query.trim().length > 0
 
   const options = useMemo<EntityHit[]>(
     () => (hasQuery ? searchEntities(index, query) : []),
@@ -47,6 +49,18 @@ export function LookupCommand({
   useEffect(() => {
     setActive(-1)
   }, [query])
+
+  // Ctrl/⌘+K 聚焦：与页内常驻输入框共用同一个元素，不做第二个浮层
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return
+      event.preventDefault()
+      inputRef.current?.focus()
+      setOpen(true)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   const showList = open && hasQuery
 
@@ -184,7 +198,7 @@ export function LookupCommand({
                       role="option"
                     >
                       <span className="lookup-option-primary">
-                        <Highlight query={query} text={hit.label} />
+                        <Highlight query={parsed.query} text={hit.label} />
                       </span>
                       <span className="lookup-option-secondary">{hit.secondary}</span>
                     </li>
@@ -196,7 +210,7 @@ export function LookupCommand({
         </PopoverContent>
       </Popover>
 
-      <span className="lookup-search-hint">一个框搜全部：型号 / JIG / Recipe / FSPM / 英寸</span>
+      <span className="lookup-search-hint">Ctrl/⌘+K 聚焦 · 支持 fspm:P467 限定类型</span>
     </div>
   )
 }

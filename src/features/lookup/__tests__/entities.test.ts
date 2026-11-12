@@ -7,6 +7,7 @@ import {
   TOTAL_LIMIT,
   compactInchKey,
   entityCandidates,
+  parseEntityQuery,
   searchEntities,
 } from '../core/entities'
 import type { EntityType } from '../core/types'
@@ -94,5 +95,34 @@ describe('command 搜索', () => {
   it('空查询返回空', () => {
     expect(searchEntities(index, '')).toEqual([])
     expect(searchEntities(index, '   ')).toEqual([])
+  })
+})
+
+describe('类型前缀', () => {
+  it('解析前缀与查询文字', () => {
+    expect(parseEntityQuery('fspm:P467')).toEqual({ type: 'fspm', query: 'P467' })
+    expect(parseEntityQuery('inch : 7748')).toEqual({ type: 'inch', query: '7748' })
+    expect(parseEntityQuery('FY')).toEqual({ type: null, query: 'FY' })
+    expect(parseEntityQuery('foo:bar')).toEqual({ type: null, query: 'foo:bar' })
+  })
+
+  it('只返回前缀指定的类型', () => {
+    const hits = searchEntities(index, 'fspm:P467')
+    expect(hits).toHaveLength(1)
+    expect(hits[0]?.ref).toEqual({ type: 'fspm', key: 'P467' })
+  })
+
+  it('前缀让 7748 只落到 INCH，不掺 JIG', () => {
+    const hits = searchEntities(index, 'inch:7748')
+    expect(hits).toHaveLength(1)
+    expect(hits[0]?.ref).toEqual({ type: 'inch', key: '77/48' })
+  })
+
+  it('前缀后的小写键也能命中', () => {
+    expect(searchEntities(index, 'model:fy')[0]?.ref).toEqual({ type: 'model', key: 'FY' })
+  })
+
+  it('前缀 + 空查询返回空', () => {
+    expect(searchEntities(index, 'fspm:')).toEqual([])
   })
 })

@@ -147,6 +147,27 @@ export function entityCandidates(index: LookupIndex): readonly EntityCandidate[]
   return built
 }
 
+/**
+ * 查询里的类型前缀：`fspm:P467`、`inch:7748`。
+ *
+ * 所有实体的键里都不会出现冒号（型号 / JIG / Recipe / FSPM / 组合都没有），
+ * 所以只在开头切一次，不会误伤 `31(10)` 这类键。认不出的前缀按普通查询处理。
+ */
+const TYPE_PREFIX = /^(inch|model|jig|recipe|fspm|group)\s*:\s*(.*)$/i
+
+export interface EntityQuery {
+  /** 前缀指定的类型；没写就是 null（搜全部） */
+  type: EntityType | null
+  /** 去掉前缀后的查询文字 */
+  query: string
+}
+
+export function parseEntityQuery(input: string): EntityQuery {
+  const match = TYPE_PREFIX.exec(input.trim())
+  if (!match) return { type: null, query: input }
+  return { type: match[1].toLowerCase() as EntityType, query: match[2] }
+}
+
 /** INCH 候选额外接受紧凑写法，其余类型只按原键匹配 */
 function candidateScore(candidate: EntityCandidate, query: string, compact: string): number {
   const queries =
@@ -161,6 +182,13 @@ function candidateScore(candidate: EntityCandidate, query: string, compact: stri
   return best
 }
 
+export interface SearchOptions {
+  /** 只搜某一类实体；`type:` 前缀优先于它 */
+  type?: EntityType
+  /** 最多返回多少条，默认 TOTAL_LIMIT */
+  limit?: number
+}
+
 /**
  * 统一搜索：返回已按「匹配度 → 类型优先级 → 字母序」排好的候选。
  *
@@ -169,15 +197,20 @@ function candidateScore(candidate: EntityCandidate, query: string, compact: stri
  */
 export function searchEntities(
   index: LookupIndex,
-  query: string,
-  limit = TOTAL_LIMIT,
+  input: string,
+  options: SearchOptions = {},
 ): EntityHit[] {
-  const q = normalizeKey(query)
+  const parsed = parseEntityQuery(input)
+  const type = parsed.type ?? options.type ?? null
+  const limit = options.limit ?? TOTAL_LIMIT
+
+  const q = normalizeKey(parsed.query)
   if (!q) return []
-  const compact = compactInchKey(query)
+  const compact = compactInchKey(parsed.query)
 
   const hits: EntityHit[] = []
   for (const candidate of entityCandidates(index)) {
+    if (type && candidate.ref.type !== type) continue
     if (candidate.ref.type === 'group' && q.length < GROUP_MIN_QUERY && !q.includes('-')) {
       continue
     }
