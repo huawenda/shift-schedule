@@ -3,7 +3,6 @@ import { type CSSProperties, type ReactNode } from 'react'
 import { type Route } from '@/appLocation'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { useIsCompact } from '@/hooks/use-compact'
 import { isTauriShell } from '@/platform/env'
 import { JigStatusRail } from '@/features/jig/components/JigStatusRail'
 import { JigTopBar } from '@/features/jig/components/JigTopBar'
@@ -12,7 +11,6 @@ import { computeViewCounts } from '@/features/jig/core/view'
 import type { JigData } from '@/features/jig/hooks/useJigData'
 import { LOOKUP_DATA_VERSION } from '@/features/lookup/data/lookupData'
 import { AppSidebar } from './AppSidebar'
-import { MobileNav } from './MobileNav'
 import { ContentTitleBar } from './TitleBar'
 import { TopBar } from './TopBar'
 
@@ -59,10 +57,9 @@ interface AppShellProps {
  * 现在整块换成默认形态：侧栏由 `Sidebar` 提供（折叠、快捷键、cookie 记忆），
  * 画布直接铺在 `SidebarInset` 里，不再有外框、圆角与投影。
  *
- * 窄屏（≤1023px）不挂侧栏：`Sidebar` 在窄屏默认变抽屉，切页面要先拉抽屉、
- * 遮罩还会把内容压暗。这里换成底部标签栏（MobileNav），三个一级页面永远可见 ——
- * 与改造前老外壳在 ≤1023 的做法一致（见 DESIGN.md §6）。
- * 更宽的窗口仍是可折叠侧栏。
+ * **本分支只做宽屏**：没有窄屏响应式。侧栏永远常驻、宽度固定 240px，
+ * 不随窗口收缩，也不会换成底部标签栏或抽屉；内容区窄了由各自的滚动容器消化，
+ * 靠容器查询重排，不按视口宽度切整套版式。
  *
  * 高度处理：`h-svh` 而不是 `100vh`。移动浏览器的 `100vh` 是「地址栏收起后的最大高度」，
  * 地址栏展开时比可视区高，页面于是能向下滚几十像素；`svh` 拿到的始终是小视口高度。
@@ -86,7 +83,6 @@ export function AppShell({
   onOpenJigSettings,
   children
 }: AppShellProps) {
-  const isCompact = useIsCompact()
   /** 只有 Tauri 壳是无边框窗口，需要自绘标题栏；浏览器 / 静态版保持原样 */
   const inTauri = isTauriShell()
 
@@ -94,8 +90,7 @@ export function AppShell({
     <TooltipProvider>
       {/* --sidebar-width 走 inline style：SidebarProvider 的 ...style 展开在它自己的
           16rem 之后，所以这里传入会覆盖默认值，且不用改 CLI 生成的 sidebar.tsx。
-          240px 按顶部品牌区 + 导航项的舒适宽度定；窄屏没有侧栏，
-          这个变量留着也不影响布局。 */}
+          240px 按顶部品牌区 + 导航项的舒适宽度定，任何窗口宽度都不变。 */}
       <SidebarProvider
         className={`h-svh min-h-0 overflow-hidden${inTauri ? ' is-frameless' : ''}`}
         style={{ '--sidebar-width': '240px' } as CSSProperties}
@@ -112,18 +107,16 @@ export function AppShell({
           跳到主内容
         </a>
 
-        {isCompact ? null : (
-          <AppSidebar hrefs={hrefs} route={route} onNavigate={onNavigate} />
-        )}
+        <AppSidebar hrefs={hrefs} route={route} onNavigate={onNavigate} />
 
         <SidebarInset
-          className={`min-h-0 overflow-hidden${isCompact ? ' pb-[calc(56px+env(safe-area-inset-bottom))]' : ''}${inTauri ? ' is-frameless-inset' : ''}`}
+          className={`min-h-0 overflow-hidden${inTauri ? ' is-frameless-inset' : ''}`}
           id="main"
           tabIndex={-1}
         >
           {/* 自绘标题栏的右半条；下面接一块左上角圆角的画布层，
               圆角从 SidebarInset 的缝隙色上透出来，与左侧栏形成三层色差。 */}
-          {inTauri ? <ContentTitleBar showBrand={isCompact} /> : null}
+          {inTauri ? <ContentTitleBar /> : null}
           <div className={inTauri ? 'canvas-layer' : 'canvas-layer canvas-layer--web'}>
             {/*
               JIG 页有自己的顶栏：月份导航对它毫无意义（数据来自 MES 导出的
@@ -181,10 +174,6 @@ export function AppShell({
             ) : null}
           </div>
         </SidebarInset>
-
-        {isCompact ? (
-          <MobileNav hrefs={hrefs} route={route} onNavigate={onNavigate} />
-        ) : null}
       </SidebarProvider>
     </TooltipProvider>
   )

@@ -4,7 +4,7 @@
  *
  *   node scripts/verify-dist.mjs                # HTTP 托管 + file:// 双击，两种都测
  *   node scripts/verify-dist.mjs --only=file
- *   node scripts/verify-dist.mjs --only=mobile   # 只跑 390×844 小屏布局
+ *   node scripts/verify-dist.mjs --only=wide     # 只跑宽屏不变式（含源码层断言）
  *
  * 覆盖（对应 PRD §8 验收标准）：
  *   1. 空数据首次打开 → 出现三步向导
@@ -20,6 +20,8 @@
  *  10. 导出备份是 v5，且带上自建班序
  *  11. 删除自建班序要输入名字确认，成员与改班记录一并删除
  *  12. 翻月不崩
+ *  13. 宽屏不变式（--only=wide）：1024 / 1280 / 1466 / 1008 四档下侧栏恒 240px、
+ *      无移动端底部 tab / 抽屉、无窄屏重排；并做源码层断言防止窄屏分支回流
  *
  * 依赖：本机 Chrome/Edge，Node 18+（用全局 fetch / WebSocket）。没有第三方依赖。
  */
@@ -2914,19 +2916,53 @@ async function runScenario(name, url, downloadDir) {
 }
 
 /**
- * 小屏验收：390×844（iPhone 14 尺寸）下检查「重排」是否真的发生。
+ * 宽屏验收：本分支不做窄屏响应式，侧栏与版式在任何窗口宽度都保持不变。
  *
- * 只跑 http 一遍 —— 这些断言全是布局，与 file:// / http 的存储差异无关。
+ * 断言覆盖三档桌面宽度（1024 / 1280 / 1466）加 1008（回归：曾经在这里
+ * 被切成底部标签栏）；另做一遍源码层检查，防止窄屏分支回流。
  * 样例班组直接写进 localStorage，省掉一遍向导流程。
  */
-async function runMobileChecks(url, downloadDir) {
-  const name = 'mobile'
-  console.log('\n=== 场景：mobile 390×844 ===')
-  fs.mkdirSync(downloadDir, { recursive: true })
+const WIDE_WIDTHS = [1024, 1280, 1466, 1008]
 
-  const userDataDir = path.join(os.tmpdir(), `shift-verify-mobile-${Date.now()}`)
+function checkWideScreenSources() {
+  const name = 'wide:src'
+  const walk = dir =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+      const full = path.join(dir, entry.name)
+      return entry.isDirectory() ? walk(full) : [full]
+    })
+  const sourceFiles = walk(path.join(projectDir, 'src'))
+    .filter(file => /\.(ts|tsx|scss|css)$/.test(file))
+  const allSource = sourceFiles.map(file => fs.readFileSync(file, 'utf8')).join('\n')
+
+  check(
+    `${name}: 窄屏钩子与移动端底部标签栏已移除`,
+    !fs.existsSync(path.join(projectDir, 'src/hooks/use-compact.ts')) &&
+      !fs.existsSync(path.join(projectDir, 'src/components/MobileNav.tsx')) &&
+      !allSource.includes('useIsCompact') &&
+      !allSource.includes('MobileNav'),
+    'src 中不得出现 use-compact / MobileNav'
+  )
+  check(
+    `${name}: 样式里没有 ≤1023 / ≤639 窄屏断点`,
+    !sourceFiles.some(file =>
+      /@media[^{]*(?:max-width:[ ]*(?:1023|639)px)/.test(fs.readFileSync(file, 'utf8'))
+    ),
+    '只保留 @container 与 1119 桌面重排'
+  )
+  const mobileHook = fs.readFileSync(path.join(projectDir, 'src/hooks/use-mobile.ts'), 'utf8')
+  check(
+    `${name}: useIsMobile 恒为 false（shadcn 不切 Sheet 抽屉）`,
+    /export function useIsMobile\(\)\s*\{\s*return false\s*\}/.test(mobileHook),
+    'CLI 副本不改，靠 hook 关闭抽屉分支'
+  )
+}
+
+async function runWideScreenChecks(url) {
+  const name = 'wide'
+  console.log('\n=== 场景：宽屏布局不随窗口收缩 ===')
+  const userDataDir = path.join(os.tmpdir(), `shift-verify-wide-${Date.now()}`)
   const { child: chrome, debugPort } = launchHeadlessChrome({ userDataDir, target: url })
-
   let client = null
 
   try {
@@ -2935,378 +2971,82 @@ async function runMobileChecks(url, downloadDir) {
     await client.ready
     await client.send('Runtime.enable')
     await client.send('Page.enable')
-    await client.send('Emulation.setDeviceMetricsOverride', {
-      width: 390,
-      height: 844,
-      deviceScaleFactor: 3,
-      mobile: true
-    })
-    await client.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
 
     await waitFor(
       client,
       `location.href.startsWith(${JSON.stringify(url.replace(/[^/]*$/, ''))})`,
       '标签页加载到目标地址'
     )
-
     const roster = JSON.parse(fs.readFileSync(fixturePath, 'utf8')).roster
-    // 小屏日历标记验收：给「今天」造一条同时有加班与法定的记录，
-    // 这是最容易把日期挤掉的一种格子。今天必然在本期，格子一定在网格里。
-    const now = new Date()
-    const pad = value => String(value).padStart(2, '0')
-    const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-    const legalRecord = { memberId: 'm-01', date: todayKey, shift: '夜班', overtimeHours: 10, isLegal: true }
-    const existingLegal = roster.overrides.findIndex(record => record.memberId === 'm-01' && record.date === todayKey)
-    if (existingLegal >= 0) roster.overrides[existingLegal] = legalRecord
-    else roster.overrides.push(legalRecord)
-    // 今天再挂一条待办：同一格里同时有 待办竖条 / 法定 / 加班，是最挤的一种组合
-    roster.todos = [
-      ...roster.todos,
-      { id: 't-mobile-marker', date: todayKey, text: '交班前检查', tone: 1, done: false, createdAt: Date.now() }
-    ]
     await client.evaluate(
       `localStorage.setItem(${JSON.stringify(ROSTER_KEY)}, ${JSON.stringify(JSON.stringify({ ...roster, updatedAt: Date.now() }))}); true`
     )
-    await client.send('Page.reload', { ignoreCache: true })
-    await waitFor(client, 'Boolean(document.querySelector(".plaque"))', '概览页值班牌')
 
-    // --- 概览：外壳 + 值班牌 + 日历/待办 + 统计 ---
-    const layout = await client.evaluate(`(() => {
-      const rect = sel => document.querySelector(sel)?.getBoundingClientRect()
-      const one = sel => document.querySelector(sel)
-      const rail = rect('.rail')
-      const plaque = rect('.plaque')
-      const bars = Array.from(document.querySelectorAll('.plaque-rhythm i'))
-      const widths = bars.map(node => Math.round(node.getBoundingClientRect().width * 10) / 10)
-      const calGrid = rect('.calendar-grid')
-      const todo = rect('.todo-card')
-      const cell = rect('.cal-cell')
-      const cards = Array.from(document.querySelectorAll('.stat-card')).map(node => node.getBoundingClientRect())
-      return {
-        vw: window.innerWidth,
-        vh: window.innerHeight,
-        docW: document.documentElement.scrollWidth,
-        railBottom: Math.round(rail?.bottom ?? -1),
-        railH: Math.round(rail?.height ?? -1),
-        railItemH: Math.round(rect('.rail-item')?.height ?? -1),
-        topbarRight: one('.topbar-right') ? getComputedStyle(one('.topbar-right')).display : 'missing',
-        plaqueH: Math.round(plaque?.height ?? -1),
-        bars: bars.length,
-        barW: widths,
-        calLeft: Math.round(calGrid?.left ?? -1),
-        calW: Math.round(calGrid?.width ?? -1),
-        calBottom: Math.round(calGrid?.bottom ?? -1),
-        todoLeft: Math.round(todo?.left ?? -1),
-        todoTop: Math.round(todo?.top ?? -1),
-        todoH: Math.round(todo?.height ?? -1),
-        cellW: Math.round(cell?.width ?? -1),
-        cellH: Math.round(cell?.height ?? -1),
-        cardLefts: [...new Set(cards.map(item => Math.round(item.left)))],
-        cardHeights: cards.map(item => Math.round(item.height)),
-        otBarH: Array.from(document.querySelectorAll('.ot-bar'))
-          .map(node => Math.round(node.getBoundingClientRect().height)),
-        coarse: window.matchMedia('(pointer: coarse)').matches,
-        controlH: Math.round(rect('.month-switch')?.height ?? -1)
-      }
-    })()`)
-
-    check(
-      `${name}: 页面没有横向溢出`,
-      layout.docW <= layout.vw + 1,
-      JSON.stringify({ docW: layout.docW, vw: layout.vw })
-    )
-    check(
-      `${name}: 侧栏改成底部标签栏`,
-      layout.railBottom >= layout.vh - 1 && layout.railH >= 46 && layout.railItemH >= 44,
-      JSON.stringify({ bottom: layout.railBottom, vh: layout.vh, h: layout.railH, item: layout.railItemH })
-    )
-    // 提示条层常驻在 DOM 里（aria-live 要求），即使没有提示也能量它的落脚点
-    const toastZone = await client.evaluate(`(() => {
-      const layer = document.querySelector('.toast-layer')
-      const rail = document.querySelector('.rail')
-      if (!layer || !rail) return null
-      const l = layer.getBoundingClientRect()
-      const r = rail.getBoundingClientRect()
-      return { layerBottom: Math.round(l.bottom), railTop: Math.round(r.top) }
-    })()`)
-    check(
-      `${name}: 提示条停在底部标签栏上方`,
-      toastZone !== null && toastZone.layerBottom <= toastZone.railTop - 4,
-      JSON.stringify(toastZone)
-    )
-    check(
-      `${name}: 顶栏不再放导出 / 导入`,
-      layout.topbarRight === 'none',
-      JSON.stringify({ topbarRight: layout.topbarRight })
-    )
-    check(
-      `${name}: 值班牌仍完整显示`,
-      layout.plaqueH >= 150,
-      JSON.stringify({ plaqueH: layout.plaqueH })
-    )
-    check(
-      `${name}: 节奏条 30 格等宽`,
-      layout.bars >= 30 &&
-        Math.max(...layout.barW) - Math.min(...layout.barW) <= 1,
-      JSON.stringify({ bars: layout.bars, min: Math.min(...layout.barW), max: Math.max(...layout.barW) })
-    )
-    check(
-      `${name}: 日历与待办改成上下排`,
-      layout.todoLeft === layout.calLeft &&
-        layout.todoTop > layout.calBottom &&
-        layout.todoH > 0,
-      JSON.stringify({
-        calLeft: layout.calLeft,
-        todoLeft: layout.todoLeft,
-        calBottom: layout.calBottom,
-        todoTop: layout.todoTop,
-        todoH: layout.todoH
+    for (const width of WIDE_WIDTHS) {
+      await client.send('Emulation.setDeviceMetricsOverride', {
+        width,
+        height: 900,
+        deviceScaleFactor: 1,
+        mobile: false
       })
-    )
-    check(
-      `${name}: 日历格子适配 7 列`,
-      layout.cellW >= 44 && layout.cellW <= 60 && layout.cellH >= 58,
-      JSON.stringify({ w: layout.cellW, h: layout.cellH })
-    )
-    const badgeLayout = await client.evaluate(`(() => {
-      const cells = Array.from(document.querySelectorAll('.cal-cell'))
-      const cell = cells.find(node => node.querySelector('.cal-legal') && node.querySelector('.cal-ot'))
-      if (!cell) return null
-      const rect = node => node.getBoundingClientRect()
-      const day = rect(cell.querySelector('.cal-day'))
-      const legal = rect(cell.querySelector('.cal-legal'))
-      const meta = rect(cell.querySelector('.cal-meta'))
-      const ot = rect(cell.querySelector('.cal-ot'))
-      const shift = rect(cell.querySelector('.cal-shift'))
-      const box = rect(cell)
-      const overlaps = (a, b) =>
-        !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom)
-      return {
-        dayLegalOverlap: overlaps(day, legal),
-        dayBottom: Math.round(day.bottom),
-        metaTop: Math.round(meta.top),
-        otTop: Math.round(ot.top),
-        otBottom: Math.round(ot.bottom),
-        shiftTop: Math.round(shift.top),
-        metaHeight: Math.round(meta.height),
-        // 普通日子也要有农历：所有非空标签都必须真的占位
-        metaEverywhere: Array.from(document.querySelectorAll('.cal-cell .cal-meta'))
-          .filter(node => node.textContent.trim())
-          .every(node => node.getBoundingClientRect().height > 0),
-        cellRight: Math.round(box.right),
-        legalRight: Math.round(legal.right),
-        otRight: Math.round(ot.right)
-      }
-    })()`)
-    check(
-      `${name}: 法定在右上角不压日期，农历与加班按顺序下排`,
-      badgeLayout !== null &&
-        badgeLayout.dayLegalOverlap === false &&
-        badgeLayout.legalRight <= badgeLayout.cellRight &&
-        badgeLayout.otRight <= badgeLayout.cellRight &&
-        badgeLayout.dayBottom <= badgeLayout.metaTop &&
-        badgeLayout.metaTop <= badgeLayout.otTop &&
-        badgeLayout.otBottom <= badgeLayout.shiftTop &&
-        badgeLayout.metaHeight > 0 &&
-        badgeLayout.metaEverywhere === true,
-      JSON.stringify(badgeLayout)
-    )
-    const todoMark = await client.evaluate(`(() => {
-      const day = document.querySelector('.cal-day.is-todo')
-      if (!day) return null
-      const cs = getComputedStyle(day)
-      const cell = day.closest('.cal-cell')
-      const dayRect = day.getBoundingClientRect()
-      const cellRect = cell.getBoundingClientRect()
-      return {
-        borderBottom: cs.borderBottomWidth,
-        borderColor: cs.borderBottomColor,
-        dayWidth: Math.round(dayRect.width),
-        cellWidth: Math.round(cellRect.width),
-        dayLeftGap: Math.round(dayRect.left - cellRect.left)
-      }
-    })()`)
-    check(
-      `${name}: 待办标记是日期下的一道 2px 短横（不横贯整格）`,
-      todoMark !== null &&
-        todoMark.borderBottom === '2px' &&
-        todoMark.borderColor === 'rgb(193, 113, 42)' &&
-        todoMark.dayWidth < todoMark.cellWidth &&
-        todoMark.dayLeftGap >= 3,
-      JSON.stringify(todoMark)
-    )
-    // 待办短横占的 4px **所有日期都预留**：否则同一行里只有待办那格，农历与加班标会下移
-    const dayBoxes = await client.evaluate(`(() => {
-      const days = Array.from(document.querySelectorAll('.cal-cell .cal-day'))
-      return {
-        heights: [...new Set(days.map(node => Math.round(node.getBoundingClientRect().height)))],
-        todoCount: document.querySelectorAll('.cal-day.is-todo').length
-      }
-    })()`)
-    check(
-      `${name}: 待办日与普通日的日期框等高（下游的农历/加班标不在同一行里错位）`,
-      dayBoxes.heights.length === 1 && dayBoxes.heights[0] > 0 && dayBoxes.todoCount > 0,
-      JSON.stringify(dayBoxes)
-    )
-    check(
-      `${name}: 统计卡单列且都没有塌成 0 高`,
-      layout.cardLefts.length === 1 && layout.cardHeights.every(h => h > 0),
-      JSON.stringify(layout.cardHeights)
-    )
-    check(
-      `${name}: 加班分布的柱高按数值展开（不是 2px 基线）`,
-      layout.otBarH.length >= 4 &&
-        Math.max(...layout.otBarH) > 100 &&
-        layout.otBarH.filter(h => h > 20).length >= 3,
-      JSON.stringify(layout.otBarH)
-    )
-    check(
-      `${name}: 控件抬到 36px（触摸）`,
-      layout.controlH >= 36,
-      JSON.stringify({ controlH: layout.controlH, coarse: layout.coarse })
-    )
+      await client.send('Page.reload', { ignoreCache: true })
+      await waitFor(client, 'Boolean(document.querySelector("[data-slot=sidebar-container]"))', `侧栏 @${width}`)
+      await sleep(300)
 
-    // --- 矩阵：名单浮层 + 姓名列收窄、行高收紧、仍可横滑 ---
-    await client.evaluate(clickByText('[data-view="matrix"]', '全员矩阵'))
-    await waitFor(client, 'Boolean(document.querySelector(".matrix"))', '全员矩阵页')
+      const m = await client.evaluate(`(() => {
+        const rect = sel => document.querySelector(sel)?.getBoundingClientRect()
+        const style = sel => {
+          const node = document.querySelector(sel)
+          return node ? getComputedStyle(node) : null
+        }
+        const sidebar = document.querySelector('[data-slot="sidebar-container"]')
+        const inset = rect('[data-slot="sidebar-inset"]')
+        const gap = rect('[data-slot="sidebar-gap"]')
+        const trigger = rect('[data-slot="sidebar-trigger"]')
+        const head = style('.canvas-head')
+        const box = sidebar?.getBoundingClientRect()
+        return {
+          vw: window.innerWidth,
+          docW: document.documentElement.scrollWidth,
+          sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : 'missing',
+          sidebarLeft: Math.round(box?.left ?? -1),
+          sidebarW: Math.round(box?.width ?? -1),
+          gapW: Math.round(gap?.width ?? -1),
+          insetLeft: Math.round(inset?.left ?? -1),
+          triggerW: Math.round(trigger?.width ?? -1),
+          headWrap: head ? head.flexWrap : 'missing',
+          bottomTab: Boolean(
+            document.querySelector('nav[aria-label="主导航"]') ||
+            document.querySelector('.rail') ||
+            document.querySelector('[data-mobile="true"]')
+          ),
+          sheet: Boolean(document.querySelector('[data-slot="sheet"]'))
+        }
+      })()`)
 
-    // 第二格（今日夜班）最容易把按格子对齐的浮层顶出屏幕左缘
-    await client.evaluate(`document.querySelectorAll('.summary-more')[1]?.click(); true`)
-    await waitFor(client, 'Boolean(document.querySelector(".summary-popover"))', '名单浮层')
-    await sleep(150)
-    const popover = await client.evaluate(`(() => {
-      const node = document.querySelector('.summary-popover')
-      const bar = document.querySelector('.summary')
-      const rect = node.getBoundingClientRect()
-      const barRect = bar.getBoundingClientRect()
-      return {
-        left: Math.round(rect.left),
-        right: Math.round(rect.right),
-        top: Math.round(rect.top),
-        w: Math.round(rect.width),
-        barLeft: Math.round(barRect.left),
-        barRight: Math.round(barRect.right),
-        barBottom: Math.round(barRect.bottom)
-      }
-    })()`)
-    /* 手机端保留旧的自绘浮层（绝对定位在概览条里），所以仍是「贴整条概览条的整宽面板」。 */
-    check(
-      `${name}: 名单浮层贴着概览条、整宽且不出屏`,
-      popover.left === popover.barLeft &&
-        popover.right === popover.barRight &&
-        popover.top > popover.barBottom &&
-        popover.w === popover.barRight - popover.barLeft,
-      JSON.stringify(popover)
-    )
-    await client.evaluate('document.querySelector(".summary-popover-close")?.click(); true')
-    await waitFor(client, '!document.querySelector(".summary-popover")', '名单浮层关闭')
-
-    const matrix = await client.evaluate(`(() => {
-      const scroll = document.querySelector('.matrix-scroll')
-      const nameCell = document.querySelector('.matrix-name-cell')
-      const row = document.querySelector('.matrix-row')
-      return {
-        scrollW: scroll?.scrollWidth ?? -1,
-        clientW: scroll?.clientWidth ?? -1,
-        nameW: Math.round(nameCell?.getBoundingClientRect().width ?? -1),
-        cellH: Math.round(document.querySelector('.matrix-cell')?.getBoundingClientRect().height ?? -1),
-        rowH: Math.round(row?.getBoundingClientRect().height ?? -1),
-        // 首个成员「华文达」在 88px 列里要能完整显示（含「本人」徽章）
-        firstNameClipped: (() => {
-          const name = row?.querySelector('.matrix-name')
-          return name ? name.scrollWidth > name.clientWidth + 1 : true
-        })(),
-        docW: document.documentElement.scrollWidth,
-        vw: window.innerWidth
-      }
-    })()`)
-    check(
-      `${name}: 矩阵姓名列收到 88px、行高 36px`,
-      matrix.nameW === 88 && matrix.cellH === 36 && matrix.rowH <= 38,
-      JSON.stringify({ nameW: matrix.nameW, cellH: matrix.cellH, rowH: matrix.rowH })
-    )
-    check(
-      `${name}: 矩阵首行姓名不被截断`,
-      matrix.firstNameClipped === false,
-      JSON.stringify({ firstNameClipped: matrix.firstNameClipped })
-    )
-    check(
-      `${name}: 矩阵仍可横向滚动`,
-      matrix.scrollW > matrix.clientW,
-      JSON.stringify({ scrollW: matrix.scrollW, clientW: matrix.clientW })
-    )
-    check(
-      `${name}: 矩阵页没有横向溢出`,
-      matrix.docW <= matrix.vw + 1,
-      JSON.stringify({ docW: matrix.docW, vw: matrix.vw })
-    )
-
-    // --- 设置：标题与面板上下排、成员行折成两行 ---
-    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
-    await waitFor(client, 'Boolean(document.querySelector(".settings-section"))', '设置页')
-    await sleep(200)
-    const settings = await client.evaluate(`(() => {
-      const section = document.querySelector('.settings-section')
-      const label = section?.querySelector('.settings-label')
-      const panel = section?.querySelector('.settings-panel')
-      const row = document.querySelector('.member-row')
-      return {
-        cols: section ? getComputedStyle(section).gridTemplateColumns : '',
-        labelBottom: Math.round(label?.getBoundingClientRect().bottom ?? -1),
-        panelTop: Math.round(panel?.getBoundingClientRect().top ?? -1),
-        labelLeft: Math.round(label?.getBoundingClientRect().left ?? -1),
-        panelLeft: Math.round(panel?.getBoundingClientRect().left ?? -1),
-        rowH: Math.round(row?.getBoundingClientRect().height ?? -1),
-        docW: document.documentElement.scrollWidth,
-        vw: window.innerWidth
-      }
-    })()`)
-    check(
-      `${name}: 设置区块改成上下排`,
-      settings.cols.trim().split(' ').length === 1 &&
-        settings.panelTop > settings.labelBottom &&
-        settings.panelLeft === settings.labelLeft,
-      JSON.stringify(settings)
-    )
-    check(
-      `${name}: 成员行折成两行（不再是五列）`,
-      settings.rowH >= 70,
-      JSON.stringify({ rowH: settings.rowH })
-    )
-    check(
-      `${name}: 设置页没有横向溢出`,
-      settings.docW <= settings.vw + 1,
-      JSON.stringify({ docW: settings.docW, vw: settings.vw })
-    )
-
-    // --- 弹层：贴底抽屉，整宽、不超出视口 ---
-    await client.evaluate(clickByText('[data-view="overview"]', '月度概览'))
-    await waitFor(client, 'Boolean(document.querySelector(".calendar-grid"))', '回到概览页')
-    await client.evaluate(`document.querySelector('.cal-cell:not(.is-outside)')?.click(); true`)
-    await waitFor(client, 'Boolean(document.querySelector(".dialog-day"))', '日历弹层')
-    await sleep(250)
-    const dialog = await client.evaluate(`(() => {
-      const node = document.querySelector('.dialog-day')
-      const rect = node.getBoundingClientRect()
-      return {
-        top: Math.round(rect.top),
-        bottom: Math.round(rect.bottom),
-        w: Math.round(rect.width),
-        vw: window.innerWidth,
-        vh: window.innerHeight,
-        radius: getComputedStyle(node).borderTopLeftRadius
-      }
-    })()`)
-    check(
-      `${name}: 弹层是贴底的整宽抽屉`,
-      dialog.w === dialog.vw &&
-        dialog.bottom >= dialog.vh - 1 &&
-        dialog.top >= 0 &&
-        dialog.radius === '16px',
-      JSON.stringify(dialog)
-    )
-    await client.evaluate(clickByText('.dialog-head button', '关闭'))
-    await waitFor(client, '!document.querySelector(".dialog-day")', '弹层关闭')
+      const tag = `${name}@${width}`
+      check(`${tag}: 侧栏常驻且固定 240px（不随宽度收缩）`,
+        m.sidebarDisplay === 'flex' &&
+          Math.abs(m.sidebarW - 240) <= 1 &&
+          m.sidebarLeft === 0 &&
+          Math.abs(m.gapW - 240) <= 1,
+        JSON.stringify({ w: m.sidebarW, left: m.sidebarLeft, gap: m.gapW, display: m.sidebarDisplay }))
+      check(`${tag}: 内容区从侧栏右缘（240px）开始`,
+        Math.abs(m.insetLeft - 240) <= 1,
+        JSON.stringify({ insetLeft: m.insetLeft }))
+      check(`${tag}: 底部不出现移动端 tab / 侧栏抽屉`,
+        !m.bottomTab && !m.sheet,
+        JSON.stringify({ bottomTab: m.bottomTab, sheet: m.sheet }))
+      check(`${tag}: 折叠按钮常驻`,
+        m.triggerW > 0,
+        JSON.stringify({ triggerW: m.triggerW }))
+      check(`${tag}: 页头不换行（没有窄屏重排）`,
+        m.headWrap === 'nowrap',
+        JSON.stringify({ headWrap: m.headWrap }))
+      check(`${tag}: 没有文档层横向溢出`,
+        m.docW <= m.vw + 1,
+        JSON.stringify({ docW: m.docW, vw: m.vw }))
+    }
   } catch (error) {
     check(`${name}: 场景执行`, false, error.message)
   } finally {
@@ -3337,15 +3077,16 @@ async function main() {
   const { server, port } = await startStaticServer(distDir)
 
   try {
-    if (only !== 'file' && only !== 'mobile') {
+    if (only !== 'file' && only !== 'wide') {
       await runScenario('http', `http://127.0.0.1:${port}/index.html`, path.join(downloadDir, 'http'))
     }
-    if (only !== 'http' && only !== 'mobile') {
+    if (only !== 'http' && only !== 'wide') {
       await runScenario('file', pathToFileURL(distIndex).href, path.join(downloadDir, 'file'))
     }
-    // 小屏重排只跟视口有关，跑一遍就够（http 场景顺手复用同一个静态服务）
+    // 宽屏不变式只跟视口有关，跑一遍就够（http 场景顺手复用同一个静态服务）
     if (only !== 'file') {
-      await runMobileChecks(`http://127.0.0.1:${port}/index.html`, path.join(downloadDir, 'mobile'))
+      checkWideScreenSources()
+      await runWideScreenChecks(`http://127.0.0.1:${port}/index.html`)
     }
   } finally {
     server.close()

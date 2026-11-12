@@ -34,10 +34,9 @@
   --layer-canvas: #ffffff;
   --layer-gap: #e8ebee;
   --active: #ebedee;
-  /* 系统底部导航栏（手势条区域）的浅灰。
-   * ⚠️ web 端已不再用它：外壳换成 shadcn 后，手机底栏与系统导航栏统一取画布白
-   * （见 index.html 的 theme-color 与 manifest 的 theme_color / background_color），
-   * 三者同色才没有接缝。miniapp-uni 仍在自己那份 tokens.scss 里用同名变量。 */
+  /* 系统底部导航栏（手势条区域）的浅灰。web 端已不再用它：外壳换成 shadcn 后
+   * 统一取画布白（见 index.html 的 theme-color 与 manifest 的 theme_color /
+   * background_color），三者同色才没有接缝。 */
   --surface-nav: #f7f7f7;
   /* 线条分三级：结构线（卡片外沿 / 表格外框）> 分隔线（卡内分组）> 发丝线（密集表格）。
    * 原先前两级几乎同色（1.2:1 与 1.1:1），眼睛分不出「卡边」和「格子线」，
@@ -194,7 +193,7 @@
    * sheet 是第四种情况：深色外框上的白色画布，背景更暗，需要更重的一层。 */
   --shadow-raised: 0 1px 2px rgba(19, 20, 22, 0.04), 0 10px 24px rgba(19, 20, 22, 0.06);
   /* 单列堆叠的卡片（概览页统计 / 待办）：24px 模糊的第二层会把 16px 间距填满，
-   * 相邻卡片之间看起来连成一条灰带；窄屏只留贴边的一层极浅投影。 */
+   * 相邻卡片之间看起来连成一条灰带；单列堆叠时只留贴边的一层极浅投影。 */
   --shadow-raised-flat: 0 1px 2px rgba(19, 20, 22, 0.04);
   --shadow-floating: 0 2px 6px rgba(19, 20, 22, 0.05), 0 10px 24px rgba(19, 20, 22, 0.09);
   --shadow-overlay: 0 18px 48px rgba(6, 14, 18, 0.28);
@@ -445,39 +444,6 @@
   --changed-stroke: rgba(230, 237, 243, 0.5);
   --changed-stroke-inverse: rgba(230, 237, 243, 0.65);
   --surface-fade: rgba(22, 27, 34, 0);
-}
-
-/* ------------------------------------------------------------ 小屏
- *
- * 桌面 Tauri 窗口最小 1466，下面两档都碰不到它；1440 的产物验收也在断点之上。
- * 这里只改「节奏」令牌，组件自己的断点写在各自的样式文件里。
- */
-@media (max-width: 1023px) {
-  :root {
-    --pad: var(--sp-4);
-    --gap: var(--sp-4);
-    /* 触摸设备上 30px 的控件太薄，抬到 36px；输入框字号另见下方 coarse 规则。 */
-    --control-height: 36px;
-    /* 底部标签栏总高：48 项 + 上下各 4 内边距 + 1px 上边线。
-     * 底部提示条（toast）要按这个值让开，别压在 tab 上。 */
-    --rail-bar-height: 57px;
-  }
-}
-
-@media (max-width: 639px) {
-  :root {
-    --pad: var(--sp-3);
-    --gap: var(--sp-3);
-  }
-}
-
-/* iOS Safari 在字号小于 16px 的输入框聚焦时会把整页放大。
- * 只在「窄屏 + 粗指针」同时成立时抬字号：桌面窄窗不受影响。
- * 选择器换成 shadcn 的 input（带 data-slot）—— 旧的 .input 控件已全部替换。 */
-@media (max-width: 1023px) and (pointer: coarse) {
-  input[data-slot='input'] {
-    font-size: 16px;
-  }
 }
 
 *,

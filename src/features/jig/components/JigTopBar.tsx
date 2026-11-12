@@ -10,7 +10,6 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
-import { useIsCompact } from '@/hooks/use-compact'
 
 interface JigTopBarProps {
   /** 源文件名（还没载入时为空） */
@@ -69,16 +68,13 @@ export function JigTopBar({
   theme,
   onToggleTheme
 }: JigTopBarProps) {
-  /** 窄屏没有侧栏可折叠，导航在底部标签栏，这个开关不显示 */
-  const isCompact = useIsCompact()
-
   /** 顶栏显示的是「当前选定的文件」：选过没加载时显示待加载的那个 */
   const shownName = pendingName ?? sourceName
   const shownPath = pendingName ?? sourcePath
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
-      {isCompact ? null : <SidebarTrigger />}
+      <SidebarTrigger />
 
       {/* 源文件位置：路径可能很长，截断显示，完整路径走 title 提示 */}
       <div className="flex min-w-0 items-center gap-2">

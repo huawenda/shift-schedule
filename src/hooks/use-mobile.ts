@@ -1,32 +1,16 @@
-import * as React from 'react'
-
 /**
- * 「多窄算手机」的阈值：低于它就按手机的紧凑排版处理。
- * （侧栏本身在 <1024px 就换成底部标签栏了，见 `use-compact`；这个 hook 现在主要用于
- * 名单浮层那类「只有手机上才成立」的分支。）
+ * 本分支只做宽屏，不做窄屏 / 手机响应式：**恒为 false**。
  *
- * CLI 给的默认是 768。主项目降到 **640**，因为改造前的断点本来就更靠下：
- * 旧外壳在 `≤1023` 把侧栏变成底部标签栏，1024 以上一直是 228px 的常驻侧栏；
- * 照搬 768 的话，把窗口拖窄一点的普通桌面场景（800–900px）也会突然变成抽屉，
- * 并且会盖一层 10% 黑遮罩（`Sheet` 的 overlay），观感就像「侧栏弹出来了」。
+ * 之所以保留这个导出，是因为 `components/ui/sidebar.tsx`（shadcn CLI 复制源码，
+ * 按约定不改）会读它 —— 一旦返回 true，常驻侧栏就会被换成 `Sheet` 抽屉，
+ * 还要先拉抽屉才能切页面，正是本分支禁止出现的行为。
  *
- * 640 是手机竖屏的实际上限，再往下才是真该用抽屉的场合；
- * 640–768 之间留空间让侧栏自己折叠成图标条（`collapsible="icon"`），更接近原来的使用习惯。
+ * 于是：
+ * - 侧栏永远走 CLI 的桌面分支（固定 240px，点击 / `Ctrl+B` 可折成图标条）；
+ * - `SummaryBar` 统一用 shadcn `Popover`，不再有「手机自绘浮层」那套第二实现。
+ *
+ * 这里不用 useState / useEffect：没有需要监听的断点，也就不该引入首帧抖动。
  */
-const MOBILE_BREAKPOINT = 640
-
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener('change', onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener('change', onChange)
-  }, [])
-
-  return !!isMobile
+  return false
 }

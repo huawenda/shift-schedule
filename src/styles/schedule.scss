@@ -113,46 +113,14 @@
   color: var(--shift-nightx-ink);
 }
 
-/* 「查看名单」浮层有两套实现，按屏幕宽度切换（见 SummaryBar）：
- *
- * ① 手机（≤639）用自绘浮层 .summary-popover：绝对定位在概览条里，
- *    能靠 left/right: 0 贴满整条概览条 —— 手机上三格只有约 120px，
- *    按格子对齐的 320px 浮层会从第二格左缘伸出屏幕外。
- * ② 桌面 / 平板（>639）用 shadcn Popover .summary-popover-panel：
- *    定位、Esc、点外部关闭、焦点归位、碰撞避让都归 Radix 管。
- *
- * 宽度三档（沿用改造前的标准）：
- *   桌面      格子的一半 —— Popover 挂在 body 上，百分比不再相对格子，
- *             所以由 SummaryBar 打开时量一次格子宽度，写进 --summary-panel-w；
- *             ⚠️ 另有 min-width: 200px 下限：桌面壳最小窗口格子一半只有
- *             109–127px，扣掉内边距/列间距/岗位列后姓名列剩 15px，中文逐字换行。
- *   ≤1023    min(320px, 100vw - 24px)
- *   ≤639     自绘版贴满整条概览条（width: auto）
+/* 「查看名单」浮层：本分支只做宽屏，统一用 shadcn `Popover`。
+ * 定位 / Esc / 点外部关闭 / 焦点归位 / 碰撞避让都归 Radix 管，
+ * 宽度取格子的一半（SummaryBar 打开时量一次写进 --summary-panel-w）。
  */
-.summary-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 5;
-  width: 50%;
-  /* 底部比顶部少 4px：列表最后一项没有分隔线，等值内边距会显得下方空一截 */
-  padding: var(--sp-3) var(--sp-3) var(--sp-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  /* 浮层是白纸，必须把深底上的亮字重新压回正文色，否则白底白字 */
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-floating);
-}
-
-.summary-popover:focus {
-  outline: none;
-}
-
-/* 桌面 / 平板：Radix 浮层的外壳（定位由 Radix 负责，这里只定宽与配色） */
+/* Radix 浮层的外壳（定位由 Radix 负责，这里只定宽与配色） */
 .summary-popover-panel {
   width: var(--summary-panel-w, 196px);
-  /* 桌面壳最小窗口（1024）走的是桌面档，格子的一半只剩约 127px：
+  /* 最小窗口（1024）下，格子的一半只剩约 127px：
    * 扣掉左右内边距 24、列间距 12、岗位列 56，姓名列被 flex 压到 35px 左右，
    * 中文姓名就会逐字断成两三行。给浮层一个下限，姓名才能真正单行。
    * 宽窗口下格子的一半远大于 200，这一档不生效；Radix 的碰撞避让仍负责出屏。 */
@@ -165,11 +133,6 @@
   box-shadow: var(--shadow-floating);
 }
 
-@media (max-width: 1023px) {
-  .summary-popover-panel {
-    width: min(320px, calc(100vw - var(--sp-5)));
-  }
-}
 .summary-popover-head {
   display: flex;
   align-items: baseline;
@@ -193,26 +156,11 @@
   font-size: var(--fs-small);
 }
 
-/* 自绘浮层的关闭按钮（桌面用的是 Radix，不需要） */
-.summary-popover-close {
-  margin-left: auto;
-  padding: 0 4px;
-  border: 0;
-  background: transparent;
-  color: var(--faint);
-  font-size: var(--fs-subhead);
-  line-height: 1;
-}
-
-.summary-popover-close:hover {
-  color: var(--text);
-}
-
 .summary-popover-list {
   display: flex;
   flex-direction: column;
   max-height: 300px;
-  /* 高度沿用旧标准：桌面 300 / ≤1023 220 / ≤639 38dvh */
+  /* 名单最多 300px 高，再长由内部滚动消化 */
   margin: 2px 0 0;
   padding: 0;
   overflow-y: auto;
@@ -338,14 +286,6 @@
   color: var(--accent);
 }
 
-/* 触屏上控件高一档，与 ≤1023 的其它按钮同一套 */
-@media (max-width: 1023px) {
-  .matrix-group-chip {
-    height: 34px;
-    padding: 0 12px;
-  }
-}
-
 .matrix {
   display: flex;
   flex-direction: column;
@@ -414,7 +354,7 @@
    * 原来是 `固定行头 + minmax(0, 1fr)`：装得下整月时 1fr 会比日期区宽出几 px
    * （31 天余 4px、30 天余 38px），那段空白落在最后一列右侧 —— 即使给最后一列
    * 补了边界线，30 天的月份看上去仍是「19 日那列拖着一截」，像多出一整列。
-   * 现在把余量挪到行头：行头下限仍是 --matrix-name-width（120 / 窄屏 88），
+   * 现在把余量挪到行头：行头下限仍是 --matrix-name-width（120），
    * 上限 1fr 吃掉剩余空间；日期区用 max-content 锁死，最后一列右侧**零留白**。
    * 白板依旧铺满版心，日期列宽完全不受月份天数与窗口宽度影响。
    * 窗口窄到装不下时 min-width: max-content 把整行撑开，由 .matrix-scroll 横滚。 */
@@ -787,12 +727,6 @@
 .legend-hint {
   margin-left: auto;
   color: var(--muted);
-}
-
-@media (hover: none) and (max-width: 1023px) {
-  .legend-hint {
-    display: none;
-  }
 }
 
 /* ── 个人日历 ─────────────────────────────────────────── */
@@ -1389,219 +1323,5 @@
   to {
     opacity: 1;
     transform: none;
-  }
-}
-
-/* ------------------------------------------------------------ 小屏：概览条 / 矩阵 / 弹层 */
-
-@media (max-width: 1023px) {
-  /* 矩阵概览条：三格保留，但 34px 的数值在窄屏上会顶到格子边 */
-  .summary-cell {
-    min-height: 96px;
-    padding: var(--sp-2) var(--sp-3);
-  }
-
-  .summary-value {
-    font-size: 28px;
-  }
-
-  .summary-names {
-    font-size: var(--fs-small);
-  }
-
-  /* 浮层原来取格子的一半 —— 手机上只有约 65px。
-   * 改成视口宽；第二、三格右对齐弹出，免得超出屏幕右缘。 */
-  .summary-popover {
-    width: min(320px, calc(100vw - var(--sp-5)));
-  }
-
-  .summary-cell:nth-child(2) .summary-popover,
-  .summary-cell:nth-child(3) .summary-popover {
-    left: auto;
-    right: 0;
-  }
-
-  .summary-popover-list {
-    max-height: 220px;
-  }
-
-  /* 窄屏单列堆叠：概览条 / 矩阵白板只留贴边一层阴影，
-   * 避免 24px 模糊的第二层把相邻卡片的间距填成一条灰带。
-   * 日历已是圆角格子（容器透明无投影），这里不再套阴影，否则会在整块矩形外沿
-   * 画出一圈没有对应实体的暗边。 */
-  .summary {
-    box-shadow: var(--shadow-raised-flat);
-  }
-
-  /* 矩阵：只放行头列宽 120 → 88、行高 40 → 36、字号变小。
-   * ⚠️ **两个日期列宽令牌与 --matrix-pill-gap 一律不在这里覆盖**：
-   * --matrix-day-width（34px）、--matrix-name-cell（56px）都是全视口恒定的死值，
-   * 药丸留白同理 —— 响应式改它们会让同一份排班在宽屏窄屏下变成两套列几何
-   * （硬约束：列宽与药丸不随窗口/断点变化）。
-   * 窄屏装不下就横滚，不为了塞进屏幕再压窄（压窄会让药丸挤成一条缝）。
-   * 图例与底栏的留白统一交给 `.canvas-flow` 的底部内边距，这里不再另加 8px —
-   * 否则矩阵页会比概览页多出这一档，三个页面滚到底的间距就不等了。 */
-  .matrix {
-    --matrix-name-width: 88px;
-    --row-height: 36px;
-  }
-
-  .matrix-name-cell {
-    padding: 0 6px;
-  }
-
-  .matrix-name {
-    font-size: var(--fs-control);
-  }
-
-  .matrix-pattern {
-    font-size: var(--fs-micro);
-  }
-
-  .matrix-cell {
-    font-size: var(--fs-label);
-  }
-
-  /* 不再写 `-webkit-overflow-scrolling: touch`：iOS 13+ 默认就是惯性滚动，
-   * 这条旧声明反而会启用旧的 rubber-band 边界回弹，与基础规则里的
-   * `overscroll-behavior: none` 打架。 */
-
-  .matrix-legend {
-    gap: var(--sp-3);
-  }
-
-  /* 弹层内容跟着 36px 的控件走，但**仍然锁高** —— 否则切 tab 时抽屉伸缩、
-   * 文字重新栅格化。卡片 89 = 上下 padding 24 + 边框 2 + 标题行 27 + 内容 36。
-   * 页高按**实机两页总高反推**，不再按控件尺寸手算（原先按选项区 116 算成 318，
-   * 实测该断点选项区是 126，班次页比待办页高 10px，切 tab 会跳一下）。
-   * 328 让两页总高都停在 498.7px。⚠️ 改选项行高、卡片高度或按钮条排布时，
-   * 必须重新实测，差 1px 就会抖。 */
-  .dialog-section {
-    height: 89px;
-  }
-
-  .dialog-day {
-    --day-content-height: 328px;
-  }
-
-  /* 待办列表吃满页高、只在内部滚（桌面规则已给 flex / overflow，
-   * 这里只要解除原先 45dvh 的限制，免得列表先被截短再滚）。 */
-  .dialog-day .todo-list {
-    max-height: none;
-  }
-}
-
-@media (max-width: 639px) {
-  /* 名单浮层（手机自绘版）改成「贴着整条概览条」的整宽面板。
-   *
-   * 三格在手机上一格只有约 120px，按格子对齐的 320px 浮层会从第二格左缘
-   * 伸出屏幕外（390 宽时左边界约 -36px，姓名被裁掉）。
-   * 这里取消格子的定位上下文，让浮层改以 .summary 为基准：
-   * 左右各贴一条边，宽度正好等于概览条，也不会再遮住半屏。 */
-  .summary-cell {
-    position: static;
-    min-height: 88px;
-  }
-
-  .summary-cell .summary-popover,
-  .summary-cell:nth-child(2) .summary-popover,
-  .summary-cell:nth-child(3) .summary-popover {
-    left: 0;
-    right: 0;
-    width: auto;
-  }
-
-  .summary-popover-list {
-    max-height: 38dvh;
-  }
-
-  /* 日历：手机上不再隐藏农历，普通日子也显示「初二 / 廿五」，
-   * 节日与节气仍用强调色。格子高度随内容走，不强行拉齐。 */
-  .cal-cell {
-    min-height: 0;
-    padding: 3px;
-    gap: 2px;
-  }
-
-  .cal-day {
-    font-size: var(--fs-small);
-  }
-
-  /* 10px 才能让「冬月廿五」这类标签在约 41px 的内容宽里不折行；
-   * 更长的（闰月）允许折成两行，格子跟着长高。 */
-  .cal-meta {
-    font-size: var(--fs-micro);
-    line-height: 1.3;
-  }
-
-  .cal-shift {
-    padding: 2px 0;
-    font-size: var(--fs-label);
-  }
-
-  /* 法定挂回右上角：它只有 13px，日期也只占十几像素，横向不会撞；
-   * 真正的冲突来自「法 + +10h」并排，所以只把法定拆出去。
-   *
-   * .cal-corner 用 display: contents 展开：事假 / 加班变成普通流的一行，
-   * 视觉顺序正好是 日期 → 待办短横 → 农历 → 加班 → 班次色块。
-   * 事假与加班互斥，普通流里只会出现一个，不会挤成两行。 */
-  .cal-corner {
-    display: contents;
-  }
-
-  .cal-corner > .cal-legal {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-  }
-
-  /* 普通流里的标记退回到内容宽度，不跟着 flex 列拉满整格 */
-  .cal-ot,
-  .cal-leave {
-    align-self: flex-start;
-    height: 14px;
-    padding: 0 3px;
-    line-height: 14px;
-  }
-
-  .calendar-legend {
-    flex-wrap: wrap;
-    gap: var(--sp-1) var(--sp-2);
-  }
-
-  .calendar-legend .legend-text:not(:last-child) {
-    margin-right: 0;
-  }
-
-  /* 弹层容器已换成 Radix Dialog（居中、自带遮罩与滚动），这里只保留日历弹层的宽度兜底。
-   * ⚠️ 这个断点底部按钮条从横排变竖排：班次页「保存 / 取消 / 恢复默认」三颗 = 145px，
-   * 待办页只有「完成」= 65px，天生差 80px。把这段差额补给待办页的内容区
-   * （空态盒 / 待办列表本来就 flex 拉伸填满，不浪费），两页总高才都停在 560.7px。
-   * 398 = 328 + 80 - 10（班次页选项区在这个断点又矮了 10px）。改按钮条必须重测。 */
-  .dialog-day {
-    width: 100%;
-    max-height: 88dvh;
-    --day-content-height: 398px;
-  }
-
-  .dialog-head {
-    padding: var(--sp-3);
-  }
-
-  /* 抽屉底部按钮条和底栏同色：浏览器模式用浅灰（与 Chrome 底栏同一块），
-   * PWA standalone 用深青（与系统手势条同一块），底部不再出现白/青拼缝。
-   * 总高直接取底栏的 --rail-bar-height + 安全区：按钮条上缘和底栏上缘同高，
-   * 弹层开合时不会因为两条色带起点差几像素而抖动。 */
-  .dialog-options {
-    padding: var(--sp-3);
-    gap: 6px;
-  }
-
-  .option {
-    height: 42px;
-  }
-
-  .dialog-warn {
-    margin: 0 var(--sp-3) var(--sp-2);
   }
 }

@@ -1,7 +1,7 @@
 import { Minus, Square, X } from 'lucide-react'
 
 import { currentWindow } from '@/platform/tauri'
-import { BrandLockup, BrandMark } from './Brand'
+import { BrandMark } from './Brand'
 
 /**
  * 无边框窗口的自绘标题栏，左右两半分别挂在侧栏与内容区里：
@@ -59,18 +59,12 @@ export function SidebarTitleBar() {
   )
 }
 
-interface ContentTitleBarProps {
-  /** 窄屏没有侧栏，品牌要挪到这半条里才看得见 */
-  showBrand: boolean
-}
-
-/** 内容区那半条：只放窗口按钮，页名交给系统窗口标题。 */
-export function ContentTitleBar({ showBrand }: ContentTitleBarProps) {
+/** 内容区那半条：只放窗口按钮，页名交给系统窗口标题。品牌永远在侧栏那半条下面。 */
+export function ContentTitleBar() {
   return (
     <div className="titlebar titlebar--content">
       <div className="titlebar-drag" data-tauri-drag-region onDoubleClick={toggleMaximize} />
       <div className="titlebar-content">
-        {showBrand ? <BrandLockup variant="bar" /> : null}
         <WindowControls />
       </div>
     </div>

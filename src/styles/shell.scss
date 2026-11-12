@@ -278,53 +278,29 @@
   }
 }
 
-/* 小屏：画布铺满整屏，页头与工具栏允许换行。
+/* ------------------------------------------------------------ 宽屏专属外壳
  *
- * 外壳换掉后这里不再需要「侧栏变底部标签栏」那套网格重排 ——
- * 窄屏的导航由 Sidebar 自己切成的 Sheet 抽屉负责（见 AppShell）。
+ * 本分支只做宽屏，不做窄屏响应式。shadcn CLI 生成的 sidebar.tsx 自带
+ * `hidden md:block` / `hidden md:flex`（Tailwind 的 768 断点），窗口一窄
+ * 就会把常驻侧栏整条隐藏；这里覆盖掉，侧栏在任何宽度都在。
+ * gap 是 flex 项，禁止被内容挤压收缩，否则 240px 会被吃掉。
+ * 不改 CLI 副本（同一套覆盖思路见 titlebar.scss 的去框线规则）。
  */
-@media (max-width: 1023px) {
-  /* 底部留白已在基础规则里全局处理（.canvas.is-pinned / .canvas-flow），
-   * 窄屏不再需要单独覆盖。 */
-
-  /* 390px 下标题和分段控件经常挤不进一行 */
-  .canvas-head {
-    flex-wrap: wrap;
-    gap: var(--sp-2);
-  }
-
-  .canvas-tools {
-    margin-left: auto;
-  }
+[data-slot='sidebar']:not([data-mobile='true']) {
+  display: block !important;
 }
 
+[data-slot='sidebar-container'] {
+  display: flex !important;
+}
+
+[data-slot='sidebar-gap'] {
+  flex-shrink: 0;
+}
 
 /* 触屏没有「悬停」，自绘滚动条既看不见也拖不动 */
 @media (hover: none) {
   .scroll-overlay {
     display: none;
-  }
-}
-
-
-@media (max-width: 639px) {
-  .canvas {
-    gap: var(--sp-3);
-  }
-
-  .canvas-title {
-    font-size: var(--fs-metric-lg);
-  }
-
-  /* 副标是一枚胶囊，手机上一行放不下「区间 · 天数 · 姓名 · 班序」 */
-  .canvas-sub {
-    white-space: normal;
-    border-radius: var(--radius-control);
-    line-height: 1.5;
-  }
-
-  /* 触屏上高一档（原 32），同样减 2 抵消父级 padding，总高保持 34px */
-  .segmented-item {
-    height: 30px;
   }
 }
