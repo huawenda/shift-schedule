@@ -6,7 +6,7 @@ import {
   type MonthKey
 } from '@/data/period'
 import type { SettingsTab } from '@/screens/SettingsScreen'
-import type { LookupSelection } from './features/lookup/core/types'
+import type { EntityType, LookupView } from './features/lookup/core/types'
 import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
 
 /**
@@ -33,8 +33,8 @@ export interface AppLocation {
   settingsTab: SettingsTab
   /** JIG 页当前子页；其余视图下无意义 */
   jigTab: JigTabId
-  /** 速查页当前选择；null = 空态 */
-  lookup: LookupSelection | null
+  /** 速查页当前视图：首页引导 / 一个实体的关联结果 */
+  lookupView: LookupView
 }
 
 /** 五个一级页面：全员矩阵看全组、月度概览看本人、JIG DATA 查 MES 导出、生产速查查 GLS/FSPM、设置改配置 */
@@ -45,7 +45,7 @@ export const DEFAULT_LOCATION: AppLocation = {
   month: null,
   settingsTab: 'roster',
   jigTab: 'detail',
-  lookup: null,
+  lookupView: { kind: 'home' },
 }
 
 /** 解析 hash；未知视图回落到概览，未知参数按「当前月 / 人员配置」处理 */
@@ -82,24 +82,41 @@ export function parseLocation(hash: string): AppLocation {
   }
 
   if (view === 'lookup') {
-    // `#/lookup/model/FY`、`#/lookup/jig/31%2810%29`；也兼容手敲的 `#/lookup/FY`
-    if (param === 'model' || param === 'jig') {
+    // `#/lookup/model/FY`、`#/lookup/inch/77%2F48`、`#/lookup/fspm/P467`；
+    // 也兼容手敲的 `#/lookup/FY`（按型号处理）
+    const type = param ? entityTypeOf(param) : null
+    if (type) {
       const key = third ? safeDecode(third) : ''
       return {
         ...DEFAULT_LOCATION,
         route: 'lookup',
-        lookup: key ? { mode: param, key } : null,
+        lookupView: key ? { kind: 'entity', type, key } : { kind: 'home' },
       }
     }
     const key = param ? safeDecode(param) : ''
     return {
       ...DEFAULT_LOCATION,
       route: 'lookup',
-      lookup: key ? { mode: 'model', key } : null,
+      lookupView: key ? { kind: 'entity', type: 'model', key } : { kind: 'home' },
     }
   }
 
   return { ...DEFAULT_LOCATION, month }
+}
+
+/** hash 第二段是否是实体类型；认不出就当作手敲的型号键 */
+function entityTypeOf(value: string): EntityType | null {
+  switch (value) {
+    case 'inch':
+    case 'model':
+    case 'jig':
+    case 'recipe':
+    case 'fspm':
+    case 'group':
+      return value
+    default:
+      return null
+  }
 }
 
 /** 手敲的 % 序列不合法时按原文保留，不让整个路由崩掉 */
@@ -116,9 +133,9 @@ export function buildHash(location: AppLocation): string {
   if (location.route === 'jig') return `#/jig/${jigTabToSlug(location.jigTab)}`
 
   if (location.route === 'lookup') {
-    const selection = location.lookup
-    return selection
-      ? `#/lookup/${selection.mode}/${encodeURIComponent(selection.key)}`
+    const view = location.lookupView
+    return view.kind === 'entity'
+      ? `#/lookup/${view.type}/${encodeURIComponent(view.key)}`
       : '#/lookup'
   }
 

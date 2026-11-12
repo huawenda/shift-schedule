@@ -3,7 +3,15 @@
 export type Bezel = 'Normal' | 'Narrow' | 'V-Narrow'
 export type Material = 'Stal' | 'Pro' | 'Stal-N' | 'Pro-N'
 export type Maker = 'LGC' | 'INNOX'
-export type LookupMode = 'model' | 'jig'
+
+/**
+ * 速查页的完整视图状态。
+ *
+ * P1 先有 home / entity 两种；P2 的预设展示页会再加 `browse`。
+ * hash 是唯一真相：这个状态由 `buildHash` / `parseLocation` 生成与还原，
+ * 组件内部只保留输入框文字、浮层开合这类临时状态。
+ */
+export type LookupView = { kind: 'home' } | { kind: 'entity'; type: EntityType; key: string }
 
 /** 贴在 JIG 上的膜：P 号为材料型号 */
 export interface Fspm {
@@ -38,12 +46,6 @@ export interface LookupGroup {
   subFspm: string[]
   /** 溯源，如 "Sheet2 行37-38" */
   source: string
-}
-
-/** hash 里保存的选择 */
-export interface LookupSelection {
-  mode: LookupMode
-  key: string
 }
 
 /**

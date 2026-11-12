@@ -1,88 +1,62 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { findJig, findModel } from '../core/indexes'
 import { lookupIndex } from '../core/instance'
-import { normalizeKey } from '../core/normalize'
-import type { LookupMode, LookupSelection } from '../core/types'
-import { JigResult } from './JigResult'
+import type { LookupView } from '../core/types'
+import { EntityResult } from './EntityResult'
+import { LookupCommand } from './LookupCommand'
 import { LookupEmpty } from './LookupEmpty'
-import { LookupSearch } from './LookupSearch'
-import { ModelResult } from './ModelResult'
 
 interface LookupScreenProps {
-  selection: LookupSelection | null
-  onSelect: (selection: LookupSelection | null) => void
+  view: LookupView
+  onNavigate: (view: LookupView) => void
 }
 
-/** 速查页：只读的 GLS 型号 / JIG P/N / Recipe 三向查询 */
-export function LookupScreen({ selection, onSelect }: LookupScreenProps) {
-  const [mode, setMode] = useState<LookupMode>(selection?.mode ?? 'model')
-  const [query, setQuery] = useState(selection?.key ?? '')
+/**
+ * 速查页：一个常驻 command + 结果区。
+ *
+ * 输入框文字是组件内状态，选中的实体在 hash 里 —— 刷新、前进后退、深链
+ * 都由 `view` 驱动；`useEffect` 把它同步回输入框。
+ */
+export function LookupScreen({ view, onNavigate }: LookupScreenProps) {
+  const activeType = view.kind === 'entity' ? view.type : null
+  const activeKey = view.kind === 'entity' ? view.key : ''
+
+  const [query, setQuery] = useState(activeKey)
   const flowRef = useRef<HTMLDivElement>(null)
 
-  // hash 是唯一真相：刷新 / 前进后退 / 深链进入时，输入框跟着选择走。
-  // 选择被清空（切模式 / 点清空）时只清输入，不改当前模式 —— 否则点「按 JIG」会被这里弹回「按型号」。
   useEffect(() => {
-    if (selection) {
-      setMode(selection.mode)
-      setQuery(selection.key)
-    } else {
-      setQuery('')
-    }
+    setQuery(activeKey)
     if (flowRef.current) flowRef.current.scrollTop = 0
-  }, [selection?.mode, selection?.key])
-
-  const group =
-    selection?.mode === 'model' ? findModel(lookupIndex, selection.key) : undefined
-  const jig = selection?.mode === 'jig' ? findJig(lookupIndex, selection.key) : undefined
-  const notFound = selection && !group && !jig ? selection.key : undefined
-
-  const modelName =
-    group?.models.find(item => normalizeKey(item) === normalizeKey(selection?.key ?? '')) ??
-    selection?.key ??
-    ''
-
-  function changeMode(next: LookupMode) {
-    setMode(next)
-    setQuery('')
-    onSelect(null)
-  }
-
-  function pick(next: LookupSelection) {
-    setMode(next.mode)
-    setQuery(next.key)
-    onSelect(next)
-  }
+  }, [activeType, activeKey])
 
   return (
     <div className="canvas is-lookup is-pinned">
       <div className="canvas-head">
         <div>
           <h1 className="canvas-title">生产速查</h1>
-          <p className="canvas-sub">GLS 型号 · JIG P/N · Recipe</p>
+          <p className="canvas-sub">GLS 型号 · JIG P/N · Recipe · FSPM · INCH</p>
         </div>
       </div>
 
       <div className="canvas-flow" ref={flowRef}>
-        <LookupSearch
+        <LookupCommand
           index={lookupIndex}
-          mode={mode}
           onClear={() => {
             setQuery('')
-            onSelect(null)
+            onNavigate({ kind: 'home' })
           }}
-          onModeChange={changeMode}
           onQueryChange={setQuery}
-          onSelect={pick}
+          onSelect={ref => onNavigate({ kind: 'entity', type: ref.type, key: ref.key })}
           query={query}
         />
 
-        {group ? (
-          <ModelResult group={group} index={lookupIndex} model={modelName} />
-        ) : jig ? (
-          <JigResult entry={jig} index={lookupIndex} />
+        {view.kind === 'entity' ? (
+          <EntityResult index={lookupIndex} onNavigate={onNavigate} view={view} />
         ) : (
-          <LookupEmpty index={lookupIndex} notFound={notFound} onPick={pick} />
+          <LookupEmpty
+            index={lookupIndex}
+            onPick={ref => onNavigate({ kind: 'entity', type: ref.type, key: ref.key })}
+          />
         )}
       </div>
     </div>

@@ -1,83 +1,60 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-import { normalizeKey } from '../core/normalize'
-import { searchJigs, searchModels, type JigEntry, type LookupIndex } from '../core/indexes'
-import type { LookupMode, LookupSelection } from '../core/types'
+import { ENTITY_LABEL } from '../core/display'
+import { searchEntities, type EntityHit } from '../core/entities'
+import type { LookupIndex } from '../core/indexes'
+import type { EntityRef } from '../core/types'
 
-interface Option {
-  key: string
-  selection: LookupSelection
-  primary: string
-  secondary: string
-}
-
-interface LookupSearchProps {
-  mode: LookupMode
-  query: string
+interface LookupCommandProps {
   index: LookupIndex
-  onModeChange: (mode: LookupMode) => void
+  query: string
   onQueryChange: (query: string) => void
-  onSelect: (selection: LookupSelection) => void
+  onSelect: (ref: EntityRef) => void
   onClear: () => void
 }
 
-const PLACEHOLDER: Record<LookupMode, string> = {
-  model: '输入 GLS 型号，如 FY / 7X',
-  jig: '输入 JIG P/N 或 Recipe，如 7748G / 31(10)',
-}
-
-/** 输入框 + 模式页签 + 建议浮层；键盘操作按 combobox 标准行为 */
-export function LookupSearch({
-  mode,
-  query,
+/**
+ * 统一 command：一个输入框搜全部实体。
+ *
+ * 不再有「按型号 / 按 JIG」两个模式 —— 输入先匹配六类实体，建议列表按类型分组，
+ * 顺序由 `searchEntities` 的「匹配度 → 类型优先级」决定（`7748` 首项是 INCH）。
+ * 键盘沿用 combobox 标准行为；选中才写 hash，输入过程只更新组件内文字。
+ */
+export function LookupCommand({
   index,
-  onModeChange,
+  query,
   onQueryChange,
   onSelect,
   onClear,
-}: LookupSearchProps) {
+}: LookupCommandProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
 
-  const hasQuery = normalizeKey(query).length > 0
+  const hasQuery = query.trim().length > 0
 
-  const options = useMemo<Option[]>(() => {
-    if (!hasQuery) return []
-    if (mode === 'model') {
-      return searchModels(index, query).map(hit => ({
-        key: `model:${hit.model}`,
-        selection: { mode: 'model', key: hit.model },
-        primary: hit.model,
-        secondary: `${hit.group.inch} · ${hit.group.jigPn} · Recipe ${hit.group.recipe}`,
-      }))
-    }
-    return searchJigs(index, query).map(entry => ({
-      key: `jig:${entry.jigPn}`,
-      selection: { mode: 'jig', key: jigKeyOf(entry, query) },
-      primary: entry.jigPn,
-      secondary: `Recipe ${entry.recipe} · ${entry.inches.join(' / ')} · ${entry.models.length} 个型号`,
-    }))
-  }, [hasQuery, index, mode, query])
+  const options = useMemo<EntityHit[]>(
+    () => (hasQuery ? searchEntities(index, query) : []),
+    [hasQuery, index, query],
+  )
 
   useEffect(() => {
     setActive(-1)
-  }, [mode, query])
+  }, [query])
 
   const showList = open && hasQuery
 
-  function choose(option: Option) {
+  function choose(hit: EntityHit) {
     setOpen(false)
     setActive(-1)
-    onSelect(option.selection)
-    onQueryChange(option.selection.key)
+    onSelect(hit.ref)
+    onQueryChange(hit.ref.key)
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -116,17 +93,6 @@ export function LookupSearch({
 
   return (
     <div className="lookup-toolbar">
-      <Tabs
-        className="lookup-tabs"
-        onValueChange={value => onModeChange(value as LookupMode)}
-        value={mode}
-      >
-        <TabsList className="lookup-tabs-list h-9">
-          <TabsTrigger value="model">按 GLS 型号</TabsTrigger>
-          <TabsTrigger value="jig">按 JIG / Recipe</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
       <Popover open={showList} onOpenChange={setOpen}>
         <PopoverAnchor asChild>
           <div className="lookup-search" ref={searchRef}>
@@ -139,6 +105,7 @@ export function LookupSearch({
               aria-controls={showList && options.length > 0 ? 'lookup-suggestions' : undefined}
               aria-expanded={showList}
               aria-haspopup="listbox"
+              aria-label="搜索型号、JIG、Recipe、FSPM 或英寸组合"
               autoComplete="off"
               className="lookup-input h-9 rounded-md bg-background pr-9 pl-9"
               onChange={event => {
@@ -146,14 +113,14 @@ export function LookupSearch({
                 setOpen(true)
               }}
               onClick={() => {
-                // 输入框还保持着焦点、浮层已被 Esc/选中关掉时，再点一下要能重新打开
+                // 输入框还保持着焦点、浮层已被 Esc / 选中关掉时，再点一下要能重新打开
                 if (hasQuery) setOpen(true)
               }}
               onFocus={() => {
                 if (hasQuery) setOpen(true)
               }}
               onKeyDown={handleKeyDown}
-              placeholder={PLACEHOLDER[mode]}
+              placeholder="型号 / JIG / Recipe / FSPM / 英寸，如 FY、7748G、P467、7748"
               ref={inputRef}
               role="combobox"
               spellCheck={false}
@@ -194,44 +161,47 @@ export function LookupSearch({
           sideOffset={6}
         >
           {options.length === 0 ? (
-            <p className="lookup-suggest-empty">
-              没有匹配的{mode === 'model' ? '型号' : ' JIG P/N 或 Recipe'}
-            </p>
+            <p className="lookup-suggest-empty">没有匹配的型号 / JIG / Recipe / FSPM / 英寸</p>
           ) : (
             <ul id="lookup-suggestions" role="listbox">
-              {options.map((option, i) => (
-                <li
-                  aria-selected={i === active}
-                  className="lookup-option"
-                  data-active={i === active}
-                  id={`lookup-option-${i}`}
-                  key={option.key}
-                  onClick={() => choose(option)}
-                  onMouseDown={event => event.preventDefault()}
-                  onMouseEnter={() => setActive(i)}
-                  role="option"
-                >
-                  <span className="lookup-option-primary">
-                    <Highlight query={query} text={option.primary} />
-                  </span>
-                  <span className="lookup-option-secondary">{option.secondary}</span>
-                </li>
-              ))}
+              {options.map((hit, i) => {
+                const newGroup = i === 0 || options[i - 1].ref.type !== hit.ref.type
+                return (
+                  <Fragment key={`${hit.ref.type}:${hit.ref.key}`}>
+                    {newGroup ? (
+                      <li className="lookup-option-group" role="presentation">
+                        {ENTITY_LABEL[hit.ref.type]}
+                      </li>
+                    ) : null}
+                    <li
+                      aria-selected={i === active}
+                      className="lookup-option"
+                      data-active={i === active}
+                      id={`lookup-option-${i}`}
+                      onClick={() => choose(hit)}
+                      onMouseDown={event => event.preventDefault()}
+                      onMouseEnter={() => setActive(i)}
+                      role="option"
+                    >
+                      <span className="lookup-option-primary">
+                        <Highlight query={query} text={hit.label} />
+                      </span>
+                      <span className="lookup-option-secondary">{hit.secondary}</span>
+                    </li>
+                  </Fragment>
+                )
+              })}
             </ul>
           )}
         </PopoverContent>
       </Popover>
 
-      <span className="lookup-search-hint">支持型号 / JIG / Recipe 部分匹配</span>
+      <span className="lookup-search-hint">一个框搜全部：型号 / JIG / Recipe / FSPM / 英寸</span>
     </div>
   )
 }
 
-/** 用户敲的是 Recipe 就保留 Recipe 作为深链 key，避免输入框自己跳成 JIG P/N */
-function jigKeyOf(entry: JigEntry, query: string): string {
-  return normalizeKey(query) === normalizeKey(entry.recipe) ? entry.recipe : entry.jigPn
-}
-
+/** 命中片段高亮；查询是口径之外的写法（如 7748 对 77/48）时自然不高亮 */
 function Highlight({ text, query }: { text: string; query: string }) {
   const q = query.trim()
   if (!q) return <>{text}</>

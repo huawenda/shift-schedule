@@ -1,23 +1,25 @@
 import { Button } from '@/components/ui/button'
 
 import type { LookupIndex } from '../core/indexes'
-import type { LookupSelection } from '../core/types'
+import type { EntityRef } from '../core/types'
 import { LookupFootnote } from './LookupFootnote'
 
-const EXAMPLES: LookupSelection[] = [
-  { mode: 'model', key: 'FY' },
-  { mode: 'jig', key: '7748G' },
-  { mode: 'jig', key: '31(10)' },
+const EXAMPLES: EntityRef[] = [
+  { type: 'model', key: 'FY' },
+  { type: 'jig', key: '7748G' },
+  { type: 'recipe', key: '31(10)' },
+  { type: 'inch', key: '77/48' },
+  { type: 'fspm', key: 'P467' },
 ]
 
-/** 未选择时的引导：说明能查什么，并给三个可直接点的例子 */
+/** 未选择时的引导：说明能查什么，并给几个覆盖不同实体类型的例子 */
 export function LookupEmpty({
   index,
   onPick,
   notFound,
 }: {
   index: LookupIndex
-  onPick: (selection: LookupSelection) => void
+  onPick: (ref: EntityRef) => void
   /** 深链里的 key 找不到时显示 */
   notFound?: string
 }) {
@@ -29,14 +31,16 @@ export function LookupEmpty({
         </p>
       ) : null}
 
-      <h2 className="lookup-empty-title">输入 GLS 型号，查它可用的 Main / Sub FSPM</h2>
-      <p className="lookup-empty-desc">输入 JIG P/N 或 Recipe，反查能做哪些型号。</p>
+      <h2 className="lookup-empty-title">一个框搜全部：型号、JIG、Recipe、FSPM、英寸</h2>
+      <p className="lookup-empty-desc">
+        输入任意一项，结果会列出和它有关的所有组合；英寸也可以直接写 7748。
+      </p>
 
       <div className="lookup-examples">
         <span className="lookup-examples-label">试试</span>
         {EXAMPLES.map(item => (
           <Button
-            key={`${item.mode}:${item.key}`}
+            key={`${item.type}:${item.key}`}
             onClick={() => onPick(item)}
             size="sm"
             type="button"

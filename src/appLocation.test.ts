@@ -115,72 +115,100 @@ describe('路由生成', () => {
 })
 
 describe('路由：速查页', () => {
-  it('空态', () => {
+  it('首页（空态）', () => {
     const loc = parseLocation('#/lookup')
     expect(loc.route).toBe('lookup')
-    expect(loc.lookup).toBe(null)
+    expect(loc.lookupView).toEqual({ kind: 'home' })
     expect(loc.month).toBe(null)
   })
 
   it('型号深链', () => {
-    expect(parseLocation('#/lookup/model/FY').lookup).toEqual({ mode: 'model', key: 'FY' })
+    expect(parseLocation('#/lookup/model/FY').lookupView)
+      .toEqual({ kind: 'entity', type: 'model', key: 'FY' })
   })
 
   it('JIG 深链', () => {
-    expect(parseLocation('#/lookup/jig/7748G').lookup).toEqual({ mode: 'jig', key: '7748G' })
+    expect(parseLocation('#/lookup/jig/7748G').lookupView)
+      .toEqual({ kind: 'entity', type: 'jig', key: '7748G' })
   })
 
-  it('Recipe 的括号编码还原', () => {
-    expect(parseLocation('#/lookup/jig/31%2810%29').lookup)
-      .toEqual({ mode: 'jig', key: '31(10)' })
+  it('旧 Recipe 深链仍按 jig 解析，括号编码还原', () => {
+    expect(parseLocation('#/lookup/jig/31%2810%29').lookupView)
+      .toEqual({ kind: 'entity', type: 'jig', key: '31(10)' })
+  })
+
+  it('英寸 / FSPM / 组合 / Recipe 四类新深链', () => {
+    expect(parseLocation('#/lookup/inch/77%2F48').lookupView)
+      .toEqual({ kind: 'entity', type: 'inch', key: '77/48' })
+    expect(parseLocation('#/lookup/fspm/P467').lookupView)
+      .toEqual({ kind: 'entity', type: 'fspm', key: 'P467' })
+    expect(parseLocation('#/lookup/group/7748G-01').lookupView)
+      .toEqual({ kind: 'entity', type: 'group', key: '7748G-01' })
+    expect(parseLocation('#/lookup/recipe/31(10)').lookupView)
+      .toEqual({ kind: 'entity', type: 'recipe', key: '31(10)' })
+  })
+
+  it('带类型但缺 key 时回落到首页', () => {
+    expect(parseLocation('#/lookup/model').lookupView).toEqual({ kind: 'home' })
   })
 
   it('兼容手敲的 `#/lookup/FY`', () => {
-    expect(parseLocation('#/lookup/FY').lookup).toEqual({ mode: 'model', key: 'FY' })
+    expect(parseLocation('#/lookup/FY').lookupView)
+      .toEqual({ kind: 'entity', type: 'model', key: 'FY' })
   })
 
   it('**月份被忽略** —— 速查与结算月无关', () => {
     const loc = parseLocation('#/2026-10/lookup/model/FY')
     expect(loc.route).toBe('lookup')
-    expect(loc.lookup).toEqual({ mode: 'model', key: 'FY' })
+    expect(loc.lookupView).toEqual({ kind: 'entity', type: 'model', key: 'FY' })
     expect(loc.month).toBe(null)
   })
 
-  it('生成：空态 / 型号 / Recipe 括号', () => {
+  it('生成：首页 / 型号 / 英寸 / Recipe 括号', () => {
     expect(buildHash({ ...DEFAULT_LOCATION, route: 'lookup' })).toBe('#/lookup')
     expect(buildHash({
       ...DEFAULT_LOCATION,
       route: 'lookup',
-      lookup: { mode: 'model' as const, key: 'FY' },
+      lookupView: { kind: 'entity', type: 'model', key: 'FY' },
     })).toBe('#/lookup/model/FY')
     expect(buildHash({
       ...DEFAULT_LOCATION,
       route: 'lookup',
-      lookup: { mode: 'jig' as const, key: '31(10)' },
-    })).toBe('#/lookup/jig/31(10)')
+      lookupView: { kind: 'entity', type: 'inch', key: '77/48' },
+    })).toBe('#/lookup/inch/77%2F48')
+    expect(buildHash({
+      ...DEFAULT_LOCATION,
+      route: 'lookup',
+      lookupView: { kind: 'entity', type: 'recipe', key: '31(10)' },
+    })).toBe('#/lookup/recipe/31(10)')
   })
 })
 
 describe('路由：解析与生成互为逆运算', () => {
   const cases = [
-    { route: 'overview' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: null },
-    { route: 'matrix' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: null },
-    { route: 'matrix' as const, month: { year: 2026, month: 10 } as MonthKey, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: null },
-    { route: 'settings' as const, month: null, settingsTab: 'profile' as const, jigTab: 'detail' as const, lookup: null },
-    { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'queryPivot' as const, lookup: null },
-    { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'review' as const, lookup: null },
-    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: null },
-    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: { mode: 'model' as const, key: 'FY' } },
-    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookup: { mode: 'jig' as const, key: '31(10)' } }
+    { route: 'overview' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'matrix' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'matrix' as const, month: { year: 2026, month: 10 } as MonthKey, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'settings' as const, month: null, settingsTab: 'profile' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'queryPivot' as const, lookupView: { kind: 'home' } as const },
+    { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'review' as const, lookupView: { kind: 'home' } as const },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'entity', type: 'model', key: 'FY' } as const },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'entity', type: 'jig', key: '31(10)' } as const },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'entity', type: 'inch', key: '77/48' } as const },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'entity', type: 'fspm', key: 'P467' } as const },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'entity', type: 'group', key: '7748G-01' } as const },
+    { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'entity', type: 'recipe', key: '31(10)' } as const }
   ]
 
   for (const loc of cases) {
-    it(`${loc.route}${loc.month ? '/' + loc.month : ''}${loc.lookup ? '/' + loc.lookup.key : ''} 往返一致`, () => {
+    const suffix = loc.lookupView.kind === 'entity' ? '/' + loc.lookupView.key : ''
+    it(`${loc.route}${loc.month ? '/' + loc.month : ''}${suffix} 往返一致`, () => {
       const parsed = parseLocation(buildHash(loc))
       expect(parsed.route).toBe(loc.route)
       expect(parsed.settingsTab).toBe(loc.settingsTab)
       expect(parsed.jigTab).toBe(loc.jigTab)
-      expect(parsed.lookup).toEqual(loc.lookup)
+      expect(parsed.lookupView).toEqual(loc.lookupView)
       // JIG / 速查页不保留月份；其余页面保留
       expect(parsed.month).toEqual(
         loc.route === 'jig' || loc.route === 'lookup' ? null : loc.month,

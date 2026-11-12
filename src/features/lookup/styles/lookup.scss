@@ -689,3 +689,96 @@
 .lookup-muted {
   color: var(--faint);
 }
+
+/* ------------------------------------------------------------ 统一 command */
+
+/* 建议列表按实体类型分组：小标题只做分隔，不参与高亮 */
+.lookup-option-group {
+  padding: var(--sp-2) var(--sp-3) var(--sp-1);
+  color: var(--faint);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* ------------------------------------------------------------ 关联结果 */
+
+.lookup-entity-type {
+  display: inline-block;
+  margin-bottom: var(--sp-1);
+  color: var(--accent);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.lookup-chip-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.lookup-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.lookup-chip-label {
+  min-width: 48px;
+  color: var(--faint);
+  font-size: var(--fs-small);
+}
+
+/* 可点 chip：沿用 .lookup-chip 的尺寸，只补按钮的默认样式与 hover */
+.lookup-chip-link {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.lookup-chip-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lookup-chip-more {
+  color: var(--faint);
+  font-size: var(--fs-small);
+}
+
+.lookup-related {
+  display: flex;
+  flex-direction: column;
+}
+
+.lookup-ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+.lookup-ref-table th,
+.lookup-ref-table td {
+  padding: var(--sp-2);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+
+.lookup-ref-table th {
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.lookup-ref-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+}
+
+.lookup-ref-link:hover {
+  text-decoration: underline;
+}

@@ -3,6 +3,7 @@ import { sameInchGroups, type LookupIndex } from '../core/indexes'
 import type { LookupGroup } from '../core/types'
 import { CompareTable } from './CompareTable'
 import { FspmPanel } from './FspmTable'
+import { LookupFact } from './LookupFact'
 import { LookupFootnote } from './LookupFootnote'
 
 /** 已知 GLS 型号：条件卡 + 主副 FSPM + 同 INCH 对比 */
@@ -31,14 +32,14 @@ export function ModelResult({
         </div>
 
         <dl className="lookup-facts">
-          <Fact label="INCH" value={group.inch} />
-          <Fact label="JIG P/N" value={group.jigPn} />
-          <Fact label="Recipe" value={group.recipe} />
-          <Fact
+          <LookupFact label="INCH" value={group.inch} />
+          <LookupFact label="JIG P/N" value={group.jigPn} />
+          <LookupFact label="Recipe" value={group.recipe} />
+          <LookupFact
             label="Main"
             value={`${group.mainSize} · ${formatBezel(group.mainBezel)}`}
           />
-          <Fact
+          <LookupFact
             label="Sub"
             value={`${group.subSize} · ${formatBezel(group.subBezel)}`}
           />
@@ -65,11 +66,3 @@ export function ModelResult({
   )
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="lookup-fact">
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  )
-}
