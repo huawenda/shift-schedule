@@ -57,7 +57,7 @@ interface AppShellProps {
  * 现在整块换成默认形态：侧栏由 `Sidebar` 提供（折叠、快捷键、cookie 记忆），
  * 画布直接铺在 `SidebarInset` 里，不再有外框、圆角与投影。
  *
- * **本分支只做宽屏**：没有窄屏响应式。侧栏永远常驻、宽度固定 240px，
+ * **本分支只做宽屏**：没有窄屏响应式。侧栏永远常驻、展开 224px、折叠 44px，
  * 不随窗口收缩，也不会换成底部标签栏或抽屉；内容区窄了由各自的滚动容器消化，
  * 靠容器查询重排，不按视口宽度切整套版式。
  *
@@ -90,10 +90,11 @@ export function AppShell({
     <TooltipProvider>
       {/* --sidebar-width 走 inline style：SidebarProvider 的 ...style 展开在它自己的
           16rem 之后，所以这里传入会覆盖默认值，且不用改 CLI 生成的 sidebar.tsx。
-          240px 按顶部品牌区 + 导航项的舒适宽度定，任何窗口宽度都不变。 */}
+          224px 按顶部品牌区 + 导航项的舒适宽度定，折叠 44px（图标条），
+          任何窗口宽度都不变。 */}
       <SidebarProvider
         className={`h-svh min-h-0 overflow-hidden${inTauri ? ' is-frameless' : ''}`}
-        style={{ '--sidebar-width': '240px' } as CSSProperties}
+        style={{ '--sidebar-width': '224px', '--sidebar-width-icon': '44px' } as CSSProperties}
       >
         <a
           className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:border focus:border-border focus:bg-background focus:px-3 focus:py-1.5 focus:text-sm"

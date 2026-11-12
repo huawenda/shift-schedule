@@ -51,7 +51,7 @@ fn show_main_window(app: &tauri::AppHandle) {
 /// caption / text 两个 DWM 属性不再有可见对象；这里保留调用，是因为
 /// `DWMWA_USE_IMMERSIVE_DARK_MODE` 仍决定系统绘制的边框与阴影深浅，
 /// `DWMWA_BORDER_COLOR` 也仍作用于无边框窗口的 1px 系统边线。
-/// - 颜色与 `tokens.scss` 的画布对齐：浅 `#ffffff` / 深 `#0f1318`；
+/// - 颜色与画布侧的外壳对齐：浅 `#ffffff` / 深 `#202020`（侧栏与标题栏同色）；
 /// - 窗口阴影与 Win11 圆角由 Tauri `shadow` 的默认值（true）保留。
 #[cfg(target_os = "windows")]
 fn paint_caption(window: &tauri::WebviewWindow, dark: bool) {
@@ -66,9 +66,9 @@ fn paint_caption(window: &tauri::WebviewWindow, dark: bool) {
         return;
     };
 
-    // COLORREF = 0x00BBGGRR：浅 #ffffff / #1f2328，深 #0f1318 / #e9f2f4
+    // COLORREF = 0x00BBGGRR：浅 #ffffff / #1f2328，深 #202020 / #ececec
     let (caption, text) = if dark {
-        (0x0018_130F_u32, 0x00F4_F2E9_u32)
+        (0x0020_2020_u32, 0x00EC_ECEC_u32)
     } else {
         (0x00FF_FFFF_u32, 0x0028_231F_u32)
     };

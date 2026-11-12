@@ -210,7 +210,7 @@
   --sp-6: 32px;
 
   /* 死令牌：外壳换成 shadcn Sidebar 后，实际宽度由 SidebarProvider 的 inline
-   * --sidebar-width 决定，现在固定 240px（按顶部品牌区定宽）。
+   * --sidebar-width 决定，现在固定 224px（按顶部品牌区定宽，折叠 44px）。
    * 这里只是改造前 228px 的记录，改它不会有任何效果。 */
   --sidebar-width: 228px;
   --topbar-height: 48px;
@@ -325,35 +325,36 @@
   --chrome-accent: #7fd2e2;
   --chrome-hover: #1f4a57;
 
-  --ground: #0b0e12;
-  --surface: #161b22;
-  --surface-tint: #1b2129;
-  --surface-sunken: #11161c;
+  --ground: #141414;
+  --surface: #242424;
+  --surface-tint: #2a2a2a;
+  --surface-sunken: #1c1c1c;
   /* 与 .dark 的 --ui-background 同值（侧栏底色）。
    * ⚠️ 这是**死令牌**：真正画画布的是 index.css 里 SidebarInset 的
    * bg-background → --ui-background。改这里不会有视觉效果，别改错地方。 */
-  --canvas: #0b0e12;
-  --raised: #1e242c;
-  --layer-canvas: #0f1318;
-  --layer-gap: #161b22;
-  --active: #262e37;
-  --surface-nav: #0f1318;
+  --canvas: #141414;
+  --raised: #2e2e2e;
+  --layer-canvas: #181818;
+  /* 与侧栏同色：圆角缝隙不该露出一块更深的缺口 */
+  --layer-gap: #202020;
+  --active: #343434;
+  --surface-nav: #181818;
 
   /* 线条在深底上「越重要越亮」：结构线最亮，发丝线最暗 */
-  --border-strong: #3d4750;
-  --border: #2b333b;
-  --rule: #222a31;
-  --control: #6e7983;
-  --control-hover: #8b959e;
-  --control-soft: #454e57;
-  --icon-disabled: #3f484f;
+  --border-strong: #4a4a4a;
+  --border: #383838;
+  --rule: #2a2a2a;
+  --control: #7a7a7a;
+  --control-hover: #9a9a9a;
+  --control-soft: #4e4e4e;
+  --icon-disabled: #454545;
 
-  --text: #e6edf3;
-  --muted: #9aa6b2;
-  --faint: #7d8894;
+  --text: #ececec;
+  --muted: #a0a0a0;
+  --faint: #808080;
   /* 压在亮底上的字（墨底按钮在暗色下反过来变成浅底按钮） */
-  --text-inverse: #0b0e12;
-  --text-strong: #ccd6df;
+  --text-inverse: #141414;
+  --text-strong: #d6d6d6;
 
   --accent: #58b8cf;
   --accent-weak: #123039;
@@ -392,8 +393,8 @@
   --todo-tone-6-bg: #351f13;
   --todo-tone-6-ink: #efa87c;
 
-  --pay-1-bg: #1c232a;
-  --pay-1-ink: #9fb2bf;
+  --pay-1-bg: #2a2a2a;
+  --pay-1-ink: #b3b3b3;
   --pay-2-bg: #123526;
   --pay-2-ink: #86d9a8;
   --pay-3-bg: #3a2c10;
@@ -410,8 +411,8 @@
   --shift-dayx-ink: #f0c66e;
   --shift-nightx-bg: #3d2113;
   --shift-nightx-ink: #f0a172;
-  --shift-leave-bg: #262b31;
-  --shift-leave-ink: #b6bfc9;
+  --shift-leave-bg: #2f2f2f;
+  --shift-leave-ink: #c0c0c0;
 
   /* 柱色：暗色下用「深底上那一档」亮色，色相不变 */
   --bar-day: #7cc7ea;

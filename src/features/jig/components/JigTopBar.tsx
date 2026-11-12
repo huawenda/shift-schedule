@@ -10,6 +10,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { isTauriShell } from '@/platform/env'
 
 interface JigTopBarProps {
   /** 源文件名（还没载入时为空） */
@@ -68,13 +69,15 @@ export function JigTopBar({
   theme,
   onToggleTheme
 }: JigTopBarProps) {
+  /** 壳里的折叠按钮在自绘标题栏左段，顶栏这份只留给浏览器 / 静态版 */
+  const inTauri = isTauriShell()
   /** 顶栏显示的是「当前选定的文件」：选过没加载时显示待加载的那个 */
   const shownName = pendingName ?? sourceName
   const shownPath = pendingName ?? sourcePath
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
-      <SidebarTrigger />
+      {inTauri ? null : <SidebarTrigger />}
 
       {/* 源文件位置：路径可能很长，截断显示，完整路径走 title 提示 */}
       <div className="flex min-w-0 items-center gap-2">

@@ -20,7 +20,7 @@
  *  10. 导出备份是 v5，且带上自建班序
  *  11. 删除自建班序要输入名字确认，成员与改班记录一并删除
  *  12. 翻月不崩
- *  13. 宽屏不变式（--only=wide）：1024 / 1280 / 1466 / 1008 四档下侧栏恒 240px、
+ *  13. 宽屏不变式（--only=wide）：1024 / 1280 / 1466 / 1008 四档下侧栏展开 224px、折叠 44px、
  *      无移动端底部 tab / 抽屉、无窄屏重排；并做源码层断言防止窄屏分支回流
  *
  * 依赖：本机 Chrome/Edge，Node 18+（用全局 fetch / WebSocket）。没有第三方依赖。
@@ -2956,6 +2956,22 @@ function checkWideScreenSources() {
     /export function useIsMobile\(\)\s*\{\s*return false\s*\}/.test(mobileHook),
     'CLI 副本不改，靠 hook 关闭抽屉分支'
   )
+  const shellScss = fs.readFileSync(path.join(projectDir, 'src/styles/shell.scss'), 'utf8')
+  check(
+    `${name}: 折叠态只保留标题栏那一枚品牌标识`,
+    shellScss.includes("[data-slot='sidebar'][data-collapsible='icon'] .brand-hero {"),
+    'brand-hero 在图标条下必须收起（否则壳里会出现两枚 logo）'
+  )
+  const railBody =
+    (shellScss.split("[data-slot='sidebar'][data-collapsible='icon'] [data-slot='sidebar-rail']")[1] ||
+      '').split('}')[0] || ''
+  check(
+    `${name}: 折叠态抓取条收进侧栏内（不越界撑宽合成层）`,
+    railBody.includes('right: 0 !important') &&
+      railBody.includes('translate: none !important') &&
+      !railBody.includes('display: none'),
+    'Rail 仍是 -right-4 时会向侧栏外探 8px，WebView2 固定层多出一截，右缘出现白/灰接缝'
+  )
 }
 
 async function runWideScreenChecks(url) {
@@ -3025,14 +3041,14 @@ async function runWideScreenChecks(url) {
       })()`)
 
       const tag = `${name}@${width}`
-      check(`${tag}: 侧栏常驻且固定 240px（不随宽度收缩）`,
+      check(`${tag}: 侧栏常驻且展开固定 224px（不随宽度收缩）`,
         m.sidebarDisplay === 'flex' &&
-          Math.abs(m.sidebarW - 240) <= 1 &&
+          Math.abs(m.sidebarW - 224) <= 1 &&
           m.sidebarLeft === 0 &&
-          Math.abs(m.gapW - 240) <= 1,
+          Math.abs(m.gapW - 224) <= 1,
         JSON.stringify({ w: m.sidebarW, left: m.sidebarLeft, gap: m.gapW, display: m.sidebarDisplay }))
-      check(`${tag}: 内容区从侧栏右缘（240px）开始`,
-        Math.abs(m.insetLeft - 240) <= 1,
+      check(`${tag}: 内容区从侧栏右缘（224px）开始`,
+        Math.abs(m.insetLeft - 224) <= 1,
         JSON.stringify({ insetLeft: m.insetLeft }))
       check(`${tag}: 底部不出现移动端 tab / 侧栏抽屉`,
         !m.bottomTab && !m.sheet,
@@ -3046,6 +3062,46 @@ async function runWideScreenChecks(url) {
       check(`${tag}: 没有文档层横向溢出`,
         m.docW <= m.vw + 1,
         JSON.stringify({ docW: m.docW, vw: m.vw }))
+
+      // 折叠态：图标条 44px，32px 的菜单按钮必须完整落在侧栏里（不被两侧裁掉）
+      await client.evaluate(`document.querySelector('[data-slot="sidebar-trigger"]')?.click(); true`)
+      await sleep(350)
+      const collapsed = await client.evaluate(`(() => {
+        const rect = sel => document.querySelector(sel)?.getBoundingClientRect()
+        const bar = rect('[data-slot="sidebar-container"]')
+        const gap = rect('[data-slot="sidebar-gap"]')
+        const inset = rect('[data-slot="sidebar-inset"]')
+        const button = rect('[data-slot="sidebar-menu-button"]')
+        const rail = rect('[data-slot="sidebar-rail"]')
+        return {
+          w: Math.round(bar?.width ?? -1),
+          gapW: Math.round(gap?.width ?? -1),
+          insetLeft: Math.round(inset?.left ?? -1),
+          buttonW: Math.round(button?.width ?? -1),
+          buttonLeft: Math.round(button?.left ?? -1),
+          buttonRight: Math.round(button?.right ?? -1),
+          railLeft: Math.round(rail?.left ?? -1),
+          railW: Math.round(rail?.width ?? -1),
+          railRight: Math.round(rail?.right ?? -1)
+        }
+      })()`)
+      check(`${tag}: 折叠后 44px 图标条，按钮不被裁`,
+        Math.abs(collapsed.w - 44) <= 1 &&
+          Math.abs(collapsed.gapW - 44) <= 1 &&
+          Math.abs(collapsed.insetLeft - 44) <= 1 &&
+          collapsed.buttonW === 32 &&
+          collapsed.buttonLeft >= 0 &&
+          collapsed.buttonRight <= 41,
+        JSON.stringify(collapsed))
+      // 抓取条保留，但必须完全落在 44px 侧栏内 —— 越界会撑宽 WebView2 的固定合成层
+      check(`${tag}: 抓取条保留且不越出侧栏右缘`,
+        collapsed.railW > 0 &&
+          collapsed.railLeft >= 0 &&
+          collapsed.railRight <= collapsed.w + 1,
+        JSON.stringify({ railLeft: collapsed.railLeft, railW: collapsed.railW, railRight: collapsed.railRight }))
+      // 展开回去，保持下一轮 / 下一次进入都是默认展开态
+      await client.evaluate(`document.querySelector('[data-slot="sidebar-trigger"]')?.click(); true`)
+      await sleep(350)
     }
   } catch (error) {
     check(`${name}: 场景执行`, false, error.message)

@@ -188,11 +188,13 @@
     --ui-sidebar-foreground: oklch(0.145 0 0);
     --ui-sidebar-primary: oklch(0.205 0 0);
     --ui-sidebar-primary-foreground: oklch(0.985 0 0);
-    /* 选中态底色：shadcn 默认是 oklch(0.97)，只比侧栏底色（0.985）深一档，几乎看不出来。
-       加深到 0.92 —— 与 --ui-border 同档，选中项一眼可辨；侧栏与底部标签栏共用这一条。 */
-    --ui-sidebar-accent: oklch(0.92 0 0);
-    --ui-sidebar-accent-foreground: oklch(0.205 0 0);
-    --ui-sidebar-border: oklch(0.922 0 0);
+    /* 侧栏底色是偏冷的 #e8ebee，accent 必须留在同一冷灰家族，
+       否则选中块会像一块「暖灰补丁」贴在冷灰底上（原先 oklch(0.92 0 0) 就是这个效果）。
+       选中 = 实色 #d2dbe4（比底色深一档）；hover = 同色 40% 叠在底色上（约 #dfe5ea，浅一档），
+       两者一眼可分。边框同步成同色系，分隔线才不突兀。 */
+    --ui-sidebar-accent: #d2dbe4;
+    --ui-sidebar-accent-foreground: #1b2027;
+    --ui-sidebar-border: #d7dee5;
     --ui-sidebar-ring: oklch(0.708 0 0);
 }
 
@@ -204,43 +206,47 @@
  * 色值不用 shadcn 默认的那套 oklch 灰阶：默认灰阶与项目令牌（冷调深色）
  * 不是一个色温，侧栏、顶栏、弹层与画布会各走各的。 */
 .dark {
-    /* 两层色 + 同色缝隙：侧栏 / 整条标题栏 / 缝隙都是 --ui-sidebar(#161b22)，
-       画布层 --layer-canvas(#0f1318) 暗一档。左上角圆角从与侧栏同色的缝隙上透出来，
+    /* 两层色 + 同色缝隙：侧栏 / 整条标题栏 / 缝隙都是 --ui-sidebar(#202020)，
+       画布层 --layer-canvas(#181818) 暗一档。左上角圆角从与侧栏同色的缝隙上透出来，
        不再单独留一块深色缺口。
        ⚠️ bg-background 不只画布在用（outline 按钮 / Tabs 选中态 / 底部标签栏 /
        跳过导航链接都走它），所以窗口底色仍用 --ui-background，不整体调亮。 */
-    --ui-background: #0b0e12;
-    --ui-foreground: #e6edf3;
-    --ui-card: #161b22;
-    --ui-card-foreground: #e6edf3;
-    --ui-popover: #161b22;
-    --ui-popover-foreground: #e6edf3;
+    --ui-background: #141414;
+    --ui-foreground: #ececec;
+    --ui-card: #242424;
+    --ui-card-foreground: #ececec;
+    --ui-popover: #242424;
+    --ui-popover-foreground: #ececec;
     /* 主色反过来：浅色主题里主按钮是墨底白字，暗色里改成浅底深字，
        否则深底按钮会跟画布糊在一起。 */
-    --ui-primary: #e6edf3;
-    --ui-primary-foreground: #0b0e12;
-    --ui-secondary: #1e242c;
-    --ui-secondary-foreground: #e6edf3;
-    --ui-muted: #2a323c;
-    --ui-muted-foreground: #9aa6b2;
-    --ui-accent: #262e37;
-    --ui-accent-foreground: #e6edf3;
+    --ui-primary: #ececec;
+    --ui-primary-foreground: #141414;
+    --ui-secondary: #2e2e2e;
+    --ui-secondary-foreground: #ececec;
+    --ui-muted: #333333;
+    --ui-muted-foreground: #a0a0a0;
+    --ui-accent: #343434;
+    --ui-accent-foreground: #ececec;
     --ui-destructive: #ef7a70;
-    --ui-border: #2b333b;
-    --ui-input: #2b333b;
+    --ui-border: #383838;
+    --ui-input: #383838;
     --ui-ring: #58b8cf;
-    --ui-chart-1: #0f1318;
-    --ui-chart-2: #9aa6b2;
-    --ui-chart-3: #6e7983;
-    --ui-chart-4: #4c5661;
-    --ui-chart-5: #2b333b;
-    --ui-sidebar: #161b22;
-    --ui-sidebar-foreground: #e6edf3;
-    --ui-sidebar-primary: #e6edf3;
-    --ui-sidebar-primary-foreground: #0b0e12;
-    --ui-sidebar-accent: #1e242c;
-    --ui-sidebar-accent-foreground: #e6edf3;
-    --ui-sidebar-border: #2b333b;
+    --ui-chart-1: #181818;
+    --ui-chart-2: #a0a0a0;
+    --ui-chart-3: #7a7a7a;
+    --ui-chart-4: #555555;
+    --ui-chart-5: #383838;
+    /* 中性灰：侧栏 / 标题栏 #202020、画布 #181818（对齐参考的桌面应用观感）；
+       选中态比底色亮一档，hover 走 40% 透明，叠出来约 #262626。 */
+    --ui-sidebar: #202020;
+    --ui-sidebar-foreground: #ececec;
+    --ui-sidebar-primary: #ececec;
+    --ui-sidebar-primary-foreground: #141414;
+    /* 与浅色同一套逻辑：选中比底色亮一档（#2e2e2e vs #202020），
+       hover 走 40% 透明，叠出来约 #262626，不会和选中撞脸。 */
+    --ui-sidebar-accent: #2e2e2e;
+    --ui-sidebar-accent-foreground: #ececec;
+    --ui-sidebar-border: #383838;
     --ui-sidebar-ring: #58b8cf;
 }
 

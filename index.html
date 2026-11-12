@@ -38,9 +38,9 @@
           if (dark) root.classList.add('dark');
           /* 无边框窗口没有系统标题栏，首帧底色由页面自己给；
              不写这一行深色用户会先看到窗口 backgroundColor 的一帧白 */
-          root.style.backgroundColor = dark ? '#0f1318' : '#ffffff';
+          root.style.backgroundColor = dark ? '#181818' : '#ffffff';
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', dark ? '#0f1318' : '#ffffff');
+          if (meta) meta.setAttribute('content', dark ? '#181818' : '#ffffff');
           /* 壳里同步窗口主题：不能等 React 挂载，否则深色用户会先看到
              一帧浅色原生控件。静态版没有 __TAURI__，这段直接跳过；
              老版本 exe 没有这个命令时 Promise 会 reject，被 catch 吞掉。 */

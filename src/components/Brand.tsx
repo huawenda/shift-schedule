@@ -34,7 +34,7 @@ export type BrandVariant = 'bar' | 'sidebar' | 'hero'
 interface BrandLockupProps {
   /** bar = 标题栏小字标；sidebar = Web 侧栏常规；hero = 壳里放大的大字标 */
   variant?: BrandVariant
-  /** 侧栏折叠成 48px 图标条时隐藏文字，只留标识 */
+  /** 侧栏折叠成 44px 图标条时隐藏文字，只留标识 */
   collapseText?: boolean
   className?: string
 }

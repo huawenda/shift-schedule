@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Download, Moon, Sun, Upload } from 'lucide-r
 
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { isTauriShell } from '@/platform/env'
 
 interface TopBarProps {
   monthTitle: string
@@ -40,6 +41,8 @@ export function TopBar({
   label,
 }: TopBarProps) {
   const fileRef = useRef<HTMLInputElement>(null)
+  /** 壳里的折叠按钮在自绘标题栏左段（侧栏顶部），顶栏这份只留给浏览器 / 静态版 */
+  const inTauri = isTauriShell()
 
   function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -49,7 +52,7 @@ export function TopBar({
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
-      <SidebarTrigger />
+      {inTauri ? null : <SidebarTrigger />}
 
       {showPeriodNav ? (
         <div className="flex items-center gap-0.5 rounded-lg border border-border px-0.5 py-0.5">

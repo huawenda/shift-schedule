@@ -283,7 +283,7 @@
  * 本分支只做宽屏，不做窄屏响应式。shadcn CLI 生成的 sidebar.tsx 自带
  * `hidden md:block` / `hidden md:flex`（Tailwind 的 768 断点），窗口一窄
  * 就会把常驻侧栏整条隐藏；这里覆盖掉，侧栏在任何宽度都在。
- * gap 是 flex 项，禁止被内容挤压收缩，否则 240px 会被吃掉。
+ * gap 是 flex 项，禁止被内容挤压收缩，否则 224px 会被吃掉。
  * 不改 CLI 副本（同一套覆盖思路见 titlebar.scss 的去框线规则）。
  */
 [data-slot='sidebar']:not([data-mobile='true']) {
@@ -296,6 +296,46 @@
 
 [data-slot='sidebar-gap'] {
   flex-shrink: 0;
+}
+
+/* 折叠态图标条 44px：分组与页脚的内边距从 8px 收到 6px（(44 − 32) / 2），
+ * 32px 的菜单按钮（CLI 的 `group-data-[collapsible=icon]:size-8!`）正好居中，
+ * 两侧各留 6px，hover 药丸不会被裁、图标也不贴边。 */
+[data-slot='sidebar'][data-collapsible='icon'] [data-slot='sidebar-group'],
+[data-slot='sidebar'][data-collapsible='icon'] [data-slot='sidebar-footer'] {
+  padding-inline: 6px;
+}
+
+/* 壳里折叠成图标条时，品牌只剩标题栏那枚 20px 标识。
+ * `.brand-hero` 是展开态的大字标，折叠后文字已隐藏、只剩第二枚图标，
+ * 会和标题栏的标识上下重复（且被 12px 内边距推到右边、几乎贴住画布）。
+ * 直接收起；浏览器版没有标题栏，标识仍由 SidebarHeader 提供，不受影响。 */
+[data-slot='sidebar'][data-collapsible='icon'] .brand-hero {
+  display: none;
+}
+
+/* 折叠成 44px 图标条时，把右缘那条抓取条（SidebarRail）收进侧栏内。
+ *
+ * CLI 的 rail 是 `w-4` + `-right-4` + `-translate-x-1/2`，横跨右缘两侧各 8px：
+ * 越界那 8px 会让 WebView2 把固定侧栏的合成层一起撑到 48px，右缘就露出
+ * 「白 + 灰」的接缝（截图里那条竖带）。收进后仍是可点的折叠 / 展开热区，
+ * 也不会碰到导航图标：32px 的菜单按钮只占到 36px，抓取条压在它的内边距上。
+ * `right` 与 Tailwind 的 group-data 变体同权重，必须 `!important`；
+ * 位移要用 `translate` 复位 —— Tailwind v4 的 `-translate-x-1/2` 走的是
+ * `translate` 属性而不是 `transform`，只写 `transform: none` 不起作用。
+ * 容器右侧还有 1px `border-r`（壳里已去掉），定位基准是它的 padding box，
+ * 所以这里的 0 落在 43–44px 之间，仍在 44px 侧栏内。 */
+[data-slot='sidebar'][data-collapsible='icon'] [data-slot='sidebar-rail'] {
+  right: 0 !important;
+  width: 6px;
+  translate: none !important;
+}
+
+/* 标题栏里的 20px 标识在 40px 窄条里要正中：默认左右各 12px 内边距会把它推到
+ * 右偏 2px，收起状态改成居中、去掉内边距。只作用于侧栏半条。 */
+[data-slot='sidebar'][data-collapsible='icon'] .titlebar--sidebar .titlebar-content {
+  justify-content: center;
+  padding-inline: 0;
 }
 
 /* 触屏没有「悬停」，自绘滚动条既看不见也拖不动 */

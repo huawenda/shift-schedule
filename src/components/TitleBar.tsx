@@ -1,7 +1,7 @@
 import { Minus, Square, X } from 'lucide-react'
 
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import { currentWindow } from '@/platform/tauri'
-import { BrandMark } from './Brand'
 
 /**
  * 无边框窗口的自绘标题栏，左右两半分别挂在侧栏与内容区里：
@@ -47,13 +47,14 @@ function WindowControls() {
   )
 }
 
-/** 侧栏那半条：只放小标识，品牌大字在它下面的 .brand-hero 里。 */
+/** 侧栏那半条：左上角是折叠 / 展开按钮，品牌大字在它下面的 .brand-hero 里。
+ *  与顶栏那份是同一个 `SidebarTrigger`，壳里只保留这一处（顶栏那份会重复）。 */
 export function SidebarTitleBar() {
   return (
     <div className="titlebar titlebar--sidebar">
       <div className="titlebar-drag" data-tauri-drag-region onDoubleClick={toggleMaximize} />
       <div className="titlebar-content">
-        <BrandMark className="size-5" />
+        <SidebarTrigger aria-label="折叠或展开侧栏" title="折叠或展开侧栏" />
       </div>
     </div>
   )
