@@ -927,3 +927,18 @@
   color: var(--faint);
   font-size: var(--fs-small);
 }
+
+/* ------------------------------------------------------------ 滚动容器的水平余量
+ *
+ * `.canvas-flow` 是速查页唯一的滚动层，`overflow-y: auto` 会让另一轴也算成 auto；
+ * 输入框与内容盒左边缘严丝合缝时，聚焦的 3px 外扩 ring 会被裁掉左侧一条。
+ * 留 4px 水平内边距给 ring 画，内容只内缩 4px，视觉上几乎看不出来。
+ */
+.canvas.is-lookup > .canvas-flow {
+  padding-inline: var(--sp-1);
+}
+
+/* 头部跟着内缩同样的 4px，标题与下面的输入框、卡片保持同一条竖线 */
+.canvas.is-lookup .canvas-head {
+  padding-inline: var(--sp-1);
+}
