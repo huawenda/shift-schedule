@@ -1,6 +1,6 @@
 # 生产速查页重构方案（展示页 + 统一 command）
 
-> **状态**：方案定稿；**P0–P2 已实施（2026-11-12）**，P3–P4 待实施。P1 把双 Tab 换成统一 command，P2 把默认落地从空态换成「总览 + 四维度浏览板」。
+> **状态**：方案定稿；**P0–P3 已实施（2026-11-12）**，P4 可选、文档同步待确认。P1 把双 Tab 换成统一 command，P2 把默认落地从空态换成「总览 + 四维度浏览板」，P3 补齐专属结果块与返回路径。
 > **前身**：`docs/lookup-plan.md` 是 v1 开发文档（2026-11-10 已实现），保留为历史记录，不覆写。
 > **数据**：沿用现有构建期快照，**不改 xlsx、不改生成脚本、不改 `lookupData.ts`**；新增索引全部在运行时推导。
 > **范围**：桌面壳（Tauri，窗口 ≥ 1024）与 Web 静态版；与 v1 一致，**不做移动端 / 窄屏适配**。
@@ -261,7 +261,7 @@ const compact = (s: string) => normalizeKey(s).replace(/[^0-9A-Z]/g, '')
 |---|---|
 | `model` | 整块复用 v1 `ModelResult`（条件卡 + 主副 FSPM 表 + 同 INCH 对比），不重写 |
 | `fspm` | 新增 `FspmResult`：属性卡 + 「被引用位置」表（组合 ID / Main 或 Sub / 型号 / INCH） |
-| `inch` | 新增 `InchResult`：按 JIG 分组统计条 + 复用 `CompareTable` 做同英寸对比 |
+| `inch` | 新增 `InchResult`：按 JIG 分组统计条 + 关联组合卡列表。**不接 `CompareTable`** —— 对比需要一个「当前组合」作基准，而 inch 维度本身没有基准；需要逐组对比时从统计条点进某个 JIG，或直接看组合卡的主副 FSPM |
 | `jig` / `recipe` | 整块复用 v1 `JigResult` |
 | `group` | 单张 `GroupCard` 展开态 |
 
@@ -336,7 +336,7 @@ export type LookupView =
 | P0 | `entities.ts`、`relations.ts`、`byFspm` / `byGroup`、纯函数单测 | **已完成 2026-11-12**：UI 零变化，40 文件 / 608 用例全通过（原 583 + 新增 25） |
 | P1 | `LookupCommand` + `EntityResult`（先保 model / jig 兼容） | **已完成 2026-11-12**：一个输入框出六类候选并落到结果页，`7748` 首项 INCH；`lookupView` 路由 + 四个旧深链兼容；40 文件 / 614 用例通过 |
 | P2 | `LookupHome` + `BrowseBoard` 四维度 | **已完成 2026-11-12**：`#/lookup` 默认总览（四维度卡片 + 快速入口）；`#/lookup/browse/<dim>` 可浏览与筛选，点条目进实体结果；40 文件 / 619 用例通过 |
-| P3 | `FspmResult` / `InchResult`、旧深链兼容、文档同步 | 六类实体结果完整；hash 往返单测通过；README §2 / DESIGN §5 同步 |
+| P3 | `FspmResult` / `InchResult`、旧深链兼容、文档同步 | **代码已完成 2026-11-12**：六类实体结果完整、返回浏览板、chips 与脚注统一；40 文件 / 619 用例通过。README §2 / DESIGN §5 的同步**待确认** |
 | P4（可选） | 类型前缀语法、`Ctrl/⌘+K` 聚焦输入框、组合列表虚拟滚动 | 按需启用，不阻塞前三期 |
 
 ---

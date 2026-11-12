@@ -1,7 +1,6 @@
 import type { JigEntry, LookupIndex } from '../core/indexes'
 import { GroupCard } from './GroupCard'
 import { LookupChip } from './LookupChip'
-import { LookupFootnote } from './LookupFootnote'
 
 /** 已知 JIG P/N 或 Recipe：反查型号与每个组合的 FSPM */
 export function JigResult({ entry, index }: { entry: JigEntry; index: LookupIndex }) {
@@ -32,7 +31,6 @@ export function JigResult({ entry, index }: { entry: JigEntry; index: LookupInde
         ))}
       </div>
 
-      <LookupFootnote index={index} />
     </div>
   )
 }

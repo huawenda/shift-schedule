@@ -890,3 +890,40 @@
   color: var(--faint);
   font-size: var(--fs-small);
 }
+
+/* ------------------------------------------------------------ 结果页返回 / 统计 */
+
+.lookup-back-row {
+  display: flex;
+}
+
+.lookup-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.lookup-stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface-sunken);
+  cursor: pointer;
+}
+
+.lookup-stat:hover {
+  border-color: var(--accent);
+}
+
+.lookup-stat-label {
+  font-size: var(--fs-control);
+  font-weight: 600;
+}
+
+.lookup-stat-value {
+  color: var(--faint);
+  font-size: var(--fs-small);
+}

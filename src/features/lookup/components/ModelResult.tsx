@@ -4,7 +4,6 @@ import type { LookupGroup } from '../core/types'
 import { CompareTable } from './CompareTable'
 import { FspmPanel } from './FspmTable'
 import { LookupFact } from './LookupFact'
-import { LookupFootnote } from './LookupFootnote'
 
 /** 已知 GLS 型号：条件卡 + 主副 FSPM + 同 INCH 对比 */
 export function ModelResult({
@@ -61,7 +60,6 @@ export function ModelResult({
         <CompareTable current={group} fspm={index.fspm} groups={groups} />
       </section>
 
-      <LookupFootnote index={index} />
     </div>
   )
 }
