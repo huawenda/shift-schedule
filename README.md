@@ -72,6 +72,7 @@ pnpm dev -- --strict-port                 # 端口被占用时直接报错，不
 | 导出/导入 JSON 备份（当前格式，不兼容旧版） | 手机端布局（只做大屏 PC） |
 | 完全离线可用（`file://` 双击即开） | — |
 | **JIG DATA**（桌面版专属）：按 Jig ID 查 MES 导出的 Excel、按 P/N · CST · 工序透视、核对型号与尺寸是否匹配 | JIG 数据的在线来源（只读用户自己挑的 Excel） |
+| **生产速查**：按 INCH / GLS 型号 / JIG / Recipe / FSPM 浏览与关联查询；一个输入框搜任意实体，结果列出与它有关的全部组合 | 在线更新查表数据（改表后重跑 `pnpm lookup:data`） |
 
 统计没有单开一页：它被并进了「月度概览」，因为统计的对象就是同一份日历数据，
 单开会让「看哪天加了班」和「这月加了多少」来回切页面。
@@ -178,14 +179,14 @@ interface Roster  { members; overrides; patterns; todos; profile: Profile | null
 
 | 区域 | 尺寸 | 内容 |
 |---|---|---|
-| 侧栏 | 固定 240px（折叠 48px） | 分两组：「排班」组下是 **全员矩阵**／**月度概览**／**设置**；桌面版另有「业务」组下的 **JIG DATA** |
+| 侧栏 | 固定 240px（折叠 48px） | 分两组：「排班」组下是 **全员矩阵**／**月度概览**／**设置**；「业务」组下是 **JIG DATA**（桌面版专属）与 **生产速查**（Web 也显示） |
 | 底部标签栏 | 56px + 安全区（窗口 <1024px 时替代侧栏） | **全员矩阵**／**月度概览**／**设置**，图标 + 文字，选中态高亮 |
-| 顶栏 | 56px | 折叠按钮 + `‹` 月份标题 `›`「回到本期」，右侧：导出备份 · 导入备份 |
+| 顶栏 | 56px | 折叠按钮 + `‹` 月份标题 `›`「回到本期」，右侧：导出备份 · 导入备份；速查页隐藏月份导航、改显数据快照日期 |
 | 底部提示 | — | 操作反馈统一弹在窗口底部居中，2.6–8s 后自动消失；悬停暂停，常驻提示可手动关闭 |
 | 画布头部 | — | 页面标题 + 副标题（日期区间 · 天数 · 人数/本人） |
 | 概览条 | 3 格 | **只在全员矩阵页**：今日白班（含白特）/ 夜班（含夜特）/ 休息 |
 | 值班牌 | 三列 + 节奏条 | **只在月度概览页**：现在 / 下一班 + 倒计时 / 本月六班天数 / 整期节奏条；今天日期、农历（带月份）与待办条数收在第三列 |
-| 主体 | 剩余高度 | 全员矩阵 ／ 月度概览（日历 + 4 块统计） ／ **JIG DATA**（桌面版专属，四段页签 + 工序轨道） |
+| 主体 | 剩余高度 | 全员矩阵 ／ 月度概览（日历 + 4 块统计） ／ **JIG DATA**（桌面版专属，四段页签 + 工序轨道） ／ **生产速查**（总览 + 四维度浏览板 + 实体关联结果） |
 
 - **概览条**只数人不算工时：**白特并入白班、夜特并入夜班**，名单里特勤人员带「特」标记；
   每格显示人数 + 一行姓名摘要（最多三人，超出用「等」），
@@ -437,12 +438,19 @@ src/
 │   └── ui/                  shadcn 组件源码（CLI 复制进来，可直接改）
 │       ├── button / input / select / popover / tabs / table
 │       ├── dialog / sonner / sidebar / sheet / tooltip / separator / skeleton
+├── features/                业务域：core（纯函数，可单测）+ components（界面）
+│   ├── jig/                 JIG DATA：Excel 解析、透视、审查、带标红导出（桌面壳专属）
+│   └── lookup/              生产速查：静态快照 → 实体候选 / 关联 → 展示页与结果页
+│       ├── data/lookupData.ts   生成物（48 组 / 110 型号 / 92 FSPM），不要手改
+│       ├── core/                实体、关联、索引、diff、归一化（零 DOM 依赖）
+│       ├── components/          command / 总览 / 浏览板 / 结果块
+│       └── styles/lookup.scss   速查页样式（由 styles.scss 引入）
 ├── screens/
 │   ├── Wizard.tsx           三步首次配置（本人 → 同事 → 确认）
 │   ├── MatrixScreen.tsx     全员矩阵页（含今日 3 格概览条）
 │   ├── OverviewScreen.tsx   月度概览页（日历 + 统计，日历锁本人）
 │   └── SettingsScreen.tsx   设置：人员配置 / 个人资料 两个 tab
-├── styles/                  tokens → shell → schedule → stats → todos → settings → wizard
+├── styles/                  tokens → shell → titlebar → schedule → stats → todos → settings → wizard（+ features/*）
 ├── index.css                Tailwind v4 入口：主题变量层（--ui-*）+ 工具类层
 ├── App.tsx                  hash 路由（视图 / 结算月 / 设置页签）、弹层与提示
 └── main.tsx
