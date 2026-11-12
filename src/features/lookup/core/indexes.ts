@@ -5,8 +5,8 @@
  * 但也别在渲染里反复线性扫 —— 索引建好后查询都是常数级。
  */
 
-import { normalizeKey } from './normalize'
-import type { Fspm, LookupGroup } from './types'
+import { matchScore, normalizeKey } from './normalize'
+import type { Fspm, FspmRef, LookupGroup } from './types'
 
 /** 一个 JIG 生产条件下的全部组合（同一 JIG 可能对应多个型号组） */
 export interface JigEntry {
@@ -28,6 +28,15 @@ export interface LookupIndex {
   byRecipe: ReadonlyMap<string, readonly LookupGroup[]>
   /** 英寸组合 → 同 INCH 的全部组合 */
   byInch: ReadonlyMap<string, readonly LookupGroup[]>
+  /**
+   * FSPM id（归一化）→ 引用它的位置。
+   *
+   * v1 只有 FSPM → 属性的正向表，反向查询是空白；速查页重构后
+   * 「搜 FSPM 看它被哪些组合用」就靠这张表，不需要改数据快照。
+   */
+  byFspm: ReadonlyMap<string, readonly FspmRef[]>
+  /** 组合 ID（归一化）→ 组合，供 group 实体与 FSPM 反查使用 */
+  byGroup: ReadonlyMap<string, LookupGroup>
   /** 按 JIG P/N 聚合的入口，供反向查询 */
   jigs: readonly JigEntry[]
 }
@@ -48,6 +57,8 @@ export function buildLookupIndex(
   const byJig = new Map<string, LookupGroup[]>()
   const byRecipe = new Map<string, LookupGroup[]>()
   const byInch = new Map<string, LookupGroup[]>()
+  const byFspm = new Map<string, FspmRef[]>()
+  const byGroup = new Map<string, LookupGroup>()
 
   for (const group of groups) {
     for (const model of group.models) {
@@ -59,12 +70,25 @@ export function buildLookupIndex(
     push(byJig, normalizeKey(group.jigPn), group)
     push(byRecipe, normalizeKey(group.recipe), group)
     push(byInch, group.inch, group)
+    byGroup.set(normalizeKey(group.id), group)
+    // 反向引用：Main / Sub 各记一条，同一 P 号在不同位置会得到不同的 part
+    for (const id of group.mainFspm) {
+      push(byFspm, normalizeKey(id), { id, groupId: group.id, part: 'main' })
+    }
+    for (const id of group.subFspm) {
+      push(byFspm, normalizeKey(id), { id, groupId: group.id, part: 'sub' })
+    }
   }
 
   for (const list of byJig.values()) list.sort(byId)
   for (const list of byRecipe.values()) list.sort(byId)
   for (const list of byInch.values()) {
     list.sort((a, b) => a.jigPn.localeCompare(b.jigPn) || a.id.localeCompare(b.id))
+  }
+  // 按组合 ID 排，再按 Main / Sub 排：FSPM 结果页的「被引用位置」直接顺序渲染，
+  // 不用在组件里再排一次
+  for (const list of byFspm.values()) {
+    list.sort((a, b) => a.groupId.localeCompare(b.groupId) || a.part.localeCompare(b.part))
   }
 
   const jigMap = new Map<
@@ -102,6 +126,8 @@ export function buildLookupIndex(
     byJig,
     byRecipe,
     byInch,
+    byFspm,
+    byGroup,
     jigs,
   }
 }
@@ -115,14 +141,6 @@ export function findJig(index: LookupIndex, key: string): JigEntry | undefined {
   return index.jigs.find(
     jig => normalizeKey(jig.jigPn) === q || normalizeKey(jig.recipe) === q,
   )
-}
-
-/** 0 = 完全相等，1 = 前缀，2 = 包含，-1 = 不匹配 */
-function scoreOf(value: string, query: string): number {
-  if (value === query) return 0
-  if (value.startsWith(query)) return 1
-  if (value.includes(query)) return 2
-  return -1
 }
 
 export interface ModelHit {
@@ -140,7 +158,7 @@ export function searchModels(
   if (!q) return []
   const hits: Array<{ hit: ModelHit; score: number }> = []
   for (const [model, group] of index.byModel) {
-    const score = scoreOf(model, q)
+    const score = matchScore(model, q)
     if (score < 0) continue
     hits.push({ hit: { model, group }, score })
   }
@@ -161,8 +179,8 @@ export function searchJigs(
   const hits: Array<{ entry: JigEntry; score: number }> = []
   for (const entry of index.jigs) {
     const scores = [
-      scoreOf(normalizeKey(entry.jigPn), q),
-      scoreOf(normalizeKey(entry.recipe), q),
+      matchScore(normalizeKey(entry.jigPn), q),
+      matchScore(normalizeKey(entry.recipe), q),
     ].filter(score => score >= 0)
     if (scores.length === 0) continue
     hits.push({ entry, score: Math.min(...scores) })

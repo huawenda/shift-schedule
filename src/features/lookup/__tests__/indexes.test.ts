@@ -47,4 +47,29 @@ describe('索引', () => {
     expect(searchJigs(index, '31(10)')[0]?.jigPn).toBe('7748G')
     expect(findJig(index, '31（10）')?.jigPn).toBe('7748G')
   })
+
+  it('byFspm 覆盖 92 个 FSPM，引用位置与组合数据一致', () => {
+    expect(index.byFspm.size).toBe(92)
+    for (const group of LOOKUP_GROUPS) {
+      for (const id of group.mainFspm) {
+        expect(index.byFspm.get(id), `${id} 缺少 Main 引用`).toContainEqual({
+          id,
+          groupId: group.id,
+          part: 'main',
+        })
+      }
+      for (const id of group.subFspm) {
+        expect(index.byFspm.get(id), `${id} 缺少 Sub 引用`).toContainEqual({
+          id,
+          groupId: group.id,
+          part: 'sub',
+        })
+      }
+    }
+  })
+
+  it('byGroup 覆盖 48 个组合', () => {
+    expect(index.byGroup.size).toBe(48)
+    expect(index.byGroup.get('7748G-01')?.models).toHaveLength(6)
+  })
 })

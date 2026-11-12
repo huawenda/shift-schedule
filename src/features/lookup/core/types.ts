@@ -45,3 +45,34 @@ export interface LookupSelection {
   mode: LookupMode
   key: string
 }
+
+/**
+ * 速查页的实体类型：command 搜索与关联结果都以它为单位。
+ *
+ * `group` 是内部实体 —— 展示页不单列维度，由组合卡、对比表行、
+ * 关联组合列表点入；其余五类各有自己的展示维度与结果页。
+ */
+export type EntityType = 'inch' | 'model' | 'jig' | 'recipe' | 'fspm' | 'group'
+
+/**
+ * 一次查询的目标。
+ *
+ * `key` 保留用户看到 / 输入的原样写法（如 `77/48`、`31(10)`），
+ * 查询索引时再归一化 —— 这样 hash、标题、结果页头部都不用做大小写回转。
+ */
+export interface EntityRef {
+  type: EntityType
+  key: string
+}
+
+/**
+ * FSPM 的一次引用：哪个组合的哪个位置用到了它。
+ *
+ * `byFspm` 的元素，也是 FSPM 结果页「被引用位置」表的数据源。
+ * 同一组合的 Main 与 Sub 各算一次；同一位置的多项按组合内顺序排列。
+ */
+export interface FspmRef {
+  id: string
+  groupId: string
+  part: 'main' | 'sub'
+}
