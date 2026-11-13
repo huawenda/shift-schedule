@@ -91,11 +91,27 @@ async function goOverview(client) {
   await waitFor(client, 'Boolean(document.querySelector(".stats-grid"))', '月度概览页')
 }
 
-/** 设置页分两个 tab：人员配置 / 系统设置（JIG DATA 只在桌面壳出现） */
+/** 设置页分两页：人员配置 / 系统设置（JIG DATA 只在桌面壳出现）。
+ * 分页不是画布顶部的 tab —— 进入设置后**左侧主侧栏**整体换成设置导航，
+ * 所以这些项在 sidebar 里（data-settings-tab），点它等于切 hash。 */
 async function switchSettingsTab(client, label) {
-  // 页签是 shadcn Tabs（data-slot="tabs-trigger"），不是 .segmented-item
-  await client.evaluate(clickByText('.canvas-tools [data-slot="tabs-trigger"]', label))
+  await client.evaluate(clickByText('[data-settings-tab]', label))
   await sleep(150)
+}
+
+/** 打开侧栏底部用户区 → 点「设置」。
+ * 设置入口不再是一条导航项，而是用户浮层里的菜单项，
+ * 所以进设置页前要先展开浮层。 */
+async function openSettings(client) {
+  const opened = await client.evaluate(`(() => {
+    const btn = document.querySelector('[data-slot="sidebar-footer"] [aria-label$="的菜单"]')
+    if (btn) btn.click()
+    return Boolean(btn)
+  })()`)
+  await sleep(200)
+  const clicked = await client.evaluate(clickByText('.user-menu-item', '设置'))
+  await sleep(200)
+  return opened && clicked
 }
 
 const firstCell = '.matrix-row:not(.is-self) .matrix-cell'
@@ -697,12 +713,12 @@ async function runScenario(name, url, downloadDir) {
     await goMatrix(client)
 
     // --- 2b. 设置分页 + 个人信息：区块到位，薪资能落盘 ---
-    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
-    await waitFor(client, 'Boolean(document.querySelector(".canvas-tools [data-slot=\\"tabs-trigger\\"]"))', '设置页 tab')
+    await openSettings(client)
+    await waitFor(client, 'Boolean(document.querySelector("[data-settings-tab]"))', '设置页导航')
 
     const tabState = await client.evaluate(`(() => ({
-      labels: Array.from(document.querySelectorAll('.canvas-tools [data-slot="tabs-trigger"]')).map(node => node.textContent.trim()),
-      active: document.querySelector('.canvas-tools [data-slot="tabs-trigger"][data-state="active"]')?.textContent.trim() ?? '',
+      labels: Array.from(document.querySelectorAll('[data-settings-tab]')).map(node => node.textContent.trim()),
+      active: document.querySelector('[data-settings-tab][aria-current="page"]')?.textContent.trim() ?? '',
       patterns: document.querySelectorAll('.pattern-block').length,
       members: document.querySelectorAll('.member-editor').length,
       profile: document.querySelectorAll('.profile-section').length
@@ -1944,8 +1960,8 @@ async function runScenario(name, url, downloadDir) {
       )
 
       // 换人必须先问：有记录时改本人姓名 → 弹影响清单，取消则什么都不动
-      await client.evaluate(clickByText('[data-view="settings"]', '设置'))
-      await waitFor(client, 'Boolean(document.querySelector(".canvas-tools [data-slot=\\"tabs-trigger\\"]"))', '设置页 tab')
+      await openSettings(client)
+      await waitFor(client, 'Boolean(document.querySelector("[data-settings-tab]"))', '设置页导航')
       await switchSettingsTab(client, '人员配置')
       await waitFor(client, 'Boolean(document.querySelector(".profile-section"))', '个人信息区块')
       await client.evaluate(setInputBySelector('.profile-form input', '张三丰'))
@@ -2326,7 +2342,7 @@ async function runScenario(name, url, downloadDir) {
     await waitFor(client, 'document.querySelectorAll(".matrix-row").length === 3', '切开矩阵')
 
     // --- 6. 设置页 ---
-    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
+    await openSettings(client)
     await waitFor(client, 'Boolean(document.querySelector(".settings-section"))', '设置页')
     const settingsRows = await client.evaluate('document.querySelectorAll(".member-row").length')
     check(`${name}: 设置页读到 3 位成员`, settingsRows === 3, String(settingsRows))
@@ -2490,7 +2506,7 @@ async function runScenario(name, url, downloadDir) {
 
     // --- 10. 导出备份：v5 且带上自建班序 ---
     // 顶栏不再放备份按钮，统一从「设置 → 系统设置」触发
-    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
+    await openSettings(client)
     await sleep(300)
     await switchSettingsTab(client, '人员配置')
     await client.evaluate(clickByText('.settings-actions button', '导出备份'))
@@ -2527,7 +2543,7 @@ async function runScenario(name, url, downloadDir) {
     }
 
     // --- 11. 删除自建班序：必须输入名字 ---
-    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
+    await openSettings(client)
     await waitFor(client, 'document.querySelectorAll(".pattern-row").length === 1', '回到设置页')
     check(`${name}: 打开删除确认`, await client.evaluate(clickByText('.pattern-row-actions button', '删除')))
     await waitFor(client, 'Boolean(document.querySelector(".dialog-narrow"))', '删除确认弹层')
@@ -2666,8 +2682,8 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 排班页也没有文档层滚动条`, scheduleOverflow)
 
     // --- 13. 导入 fixtures/班组13人.json（真实班组数据的导入链路） ---
-    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
-    await waitFor(client, 'Boolean(document.querySelector(".canvas-tools [data-slot=\\"tabs-trigger\\"]"))', '设置页 tab')
+    await openSettings(client)
+    await waitFor(client, 'Boolean(document.querySelector("[data-settings-tab]"))', '设置页导航')
     await switchSettingsTab(client, '人员配置')
     await waitFor(client, 'Boolean(document.querySelector(".settings-actions input[type=file]"))', '导入入口')
 
@@ -2879,7 +2895,7 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 矩阵班序旁拼岗位（4F · PNP）`, firstPattern === '4F · PNP', firstPattern)
 
     // --- 14. 人员排序：设置里的行顺序必须映射成矩阵的行顺序 ---
-    await client.evaluate(clickByText('[data-view="settings"]', '设置'))
+    await openSettings(client)
     await waitFor(client, 'document.querySelectorAll(".member-row").length === 13', '回到成员表')
 
     // 拖动排序只在「排序」模式里：先点排序入口，再把第一行把手拖到第二行

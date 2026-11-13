@@ -3,8 +3,6 @@ import {
   FolderOpen,
   Loader,
   Moon,
-  Settings,
-  SlidersHorizontal,
   Sun
 } from 'lucide-react'
 
@@ -33,10 +31,6 @@ interface JigTopBarProps {
   canExport: boolean
   /** 导出当前视图 */
   onExport: () => void
-  /** 打开型号尺寸映射面板 */
-  onOpenSizeMapping: () => void
-  /** 打开 JIG 设置 */
-  onOpenSettings: () => void
   /** 当前生效的主题；按钮图标与 aria-label 都跟着它变 */
   theme: 'light' | 'dark'
   onToggleTheme: () => void
@@ -64,8 +58,6 @@ export function JigTopBar({
   onLoad,
   canExport,
   onExport,
-  onOpenSizeMapping,
-  onOpenSettings,
   theme,
   onToggleTheme
 }: JigTopBarProps) {
@@ -128,20 +120,6 @@ export function JigTopBar({
           <Download data-icon="inline-start" />
           导出
         </Button>
-        <Button onClick={onOpenSizeMapping} size="sm" type="button" variant="outline">
-          <SlidersHorizontal data-icon="inline-start" />
-          型号尺寸匹配
-        </Button>
-        <Button
-          aria-label="JIG 设置"
-          onClick={onOpenSettings}
-          size="icon-sm"
-          type="button"
-          variant="outline"
-        >
-          <Settings />
-        </Button>
-
         {/* 主题切换：图标按钮，跟随当前生效主题换图标（深色时显示太阳，
             点一下回到浅色）。与排班三页的顶栏同一个行为。 */}
         <Button

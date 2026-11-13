@@ -1,47 +1,15 @@
-/* 设置页：成员表、备份、危险区 */
-
-.settings-section {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: var(--gap);
-  padding-bottom: var(--sp-5);
-  border-bottom: 1px solid var(--rule);
-}
-
-/* 最后一个区块不再留段间距：滚动到底时，卡片与底栏的距离只由画布/滚动容器的
- * 底部内边距决定，与概览、矩阵两页保持同一档。 */
-.settings-section:last-of-type {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-/*
- * 设置区块的单双列按**区块实际可用宽度**决定，而不是视口宽度。
+/* 设置页：成员表、备份、危险区
  *
- * 为什么不能按视口宽度判断：本分支只做宽屏、侧栏恒占 224px，视口 1024 时
- * 画布内容区只剩 752px，`320px + 1fr` 双列会把右面板挤到 408px；
- * 而折叠侧栏后同一视口下内容区又变宽 —— 视口数字与内容区宽度是脱钩的。
- *
- * 给 .canvas.is-settings 建一个具名 inline-size 容器，按它的 content-box 宽度
- * （等于 .canvas-flow 宽度）判断；900 = 固定 320px 标签列 + 列间距 +
- * 面板至少约 550px 才放得下成员表。折叠侧栏或改窗口宽度时容器宽度实时变化，
- * 不必为每种情况再补一条断点，也不需要任何窄屏媒体查询。
+ * 分页不在页内 —— 进入设置后左侧**主侧栏**整体换成设置导航（见 AppSidebar）。
+ * 所以这里只需要内容区自己的排布，宽度与矩阵 / 概览同档。
  */
-.canvas.is-settings {
-  container: settings / inline-size;
-}
 
-@container settings (max-width: 900px) {
-  .settings-section {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--sp-3);
-    padding-bottom: var(--sp-4);
-  }
-
-  /* 单列后各区块面板上下相邻，投影同样收成贴边一层 */
-  .settings-panel {
-    box-shadow: var(--shadow-raised-flat);
-  }
+/* 设置页没有页头（分页已挪进侧栏），is-pinned 只为「画布不滚、flow 单独滚」
+ * 这套行为服务；上边框与上内边距是给页头留的，这里一并清掉，
+ * 内容直接从画布的内边距下方开始。 */
+.canvas.is-settings.is-pinned > .canvas-flow {
+  border-top: 0;
+  padding-top: 0;
 }
 
 /*

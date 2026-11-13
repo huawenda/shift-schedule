@@ -297,12 +297,6 @@ export function App() {
   /** 直达设置页的「个人信息」段（它现在并进了人员配置页的最上方） */
   const openProfileTab = useCallback(() => navigate('settings', { settingsTab: 'roster' }), [navigate])
 
-  /** JIG 顶栏的两个设置按钮：都跳到设置页的「JIG DATA」页签 */
-  const openJigSettings = useCallback(
-    () => navigate('settings', { settingsTab: 'jig' }),
-    [navigate]
-  )
-
   /** 侧栏链接带上当前月份，Cmd/Ctrl+点击开新标签也能落到同一个结算月 */
   const hrefs = useMemo<Record<Route, string>>(() => ({
     matrix: buildHash({ route: 'matrix', month: monthKey, settingsTab: 'roster', jigTab: 'detail', lookupView: { kind: 'home' } }),
@@ -442,8 +436,11 @@ export function App() {
         theme={theme.resolved}
         jig={jigData}
         jigTab={location.jigTab}
-        onOpenJigSettings={openJigSettings}
-        onOpenJigSizeMapping={openJigSettings}
+        settingsTab={settingsTab}
+        onSettingsTabChange={changeSettingsTab}
+        userName={
+          api.roster.members.find(member => isSelf(api.roster, member.id))?.name ?? '未设置本人'
+        }
       >
         {route === 'settings' ? (
           <SettingsScreen

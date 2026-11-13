@@ -287,7 +287,7 @@ export function JigMappingSection({ config, onSave }: JigMappingSectionProps) {
       <div className="settings-label">
         <h2>型号尺寸匹配</h2>
         <p className="settings-meta">
-          「对应尺寸」这一列按这张表算出 · {pairs.length} 条规则
+          {pairs.length} 条规则
           {dirty ? ' · 有未保存的修改' : ''}
         </p>
       </div>

@@ -382,3 +382,74 @@
     display: none;
   }
 }
+
+/* ------------------------------------------------------------ 侧栏底部用户区
+ *
+ * 底栏只放一块「头像 + 姓名」，设置与退出收进它的浮层里。
+ * 头像用首字而不是位图：这个应用没有账号体系，只有「本人」这一条记录，
+ * 用姓名首字既不需要额外资源，换人时也会跟着变。
+ */
+.user-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--ui-sidebar-primary);
+  color: var(--ui-sidebar-primary-foreground);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* 浮层：两个菜单项，一行一个，图标 + 文字。
+ * 宽度写死 208：shadcn 的 PopoverContent 自带 `w-72`（288px），
+ * 在 224px 的侧栏上会宽出一截，看着像一条通栏而不是菜单。 */
+.user-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 208px;
+  min-width: 0;
+  padding: var(--sp-1);
+}
+
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-control);
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-menu-item:hover {
+  background: var(--raised);
+}
+
+/* 「退出应用」不再用强调色，改成危险色：它与「关闭窗口」不是一个动作 */
+.user-menu-item.is-danger {
+  color: var(--danger);
+}
+
+.user-menu-item.is-danger:hover:not(:disabled) {
+  background: var(--danger-weak);
+}
+
+.user-menu-item:disabled {
+  color: var(--faint);
+  cursor: not-allowed;
+}
+
+.user-menu-item:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}

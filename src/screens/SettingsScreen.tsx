@@ -12,7 +12,6 @@ import { MemberGroupsEditor } from '../components/MemberGroupsEditor'
 import { MemberGroupTabs } from '../components/MemberGroupTabs'
 import { PatternList } from '../components/PatternList'
 import { ProfileSection } from '../components/ProfileSection'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { isTauriShell } from '../platform/env'
 import { describeImport, mergeImportedMembers, readMemberSheet } from '../data/memberImport'
 import {
@@ -57,7 +56,7 @@ interface SettingsScreenProps {
   roster: Roster
   /** 页内操作反馈统一走全局底部提示 */
   onNotify: (text: string) => void
-  /** 当前页签由路由决定（#/settings/<roster|system|jig>），组件本身不持状态 */
+  /** 当前分页由路由决定（#/settings/<roster|system|jig>），组件本身不持状态 */
   tab: SettingsTab
   onTabChange: (tab: SettingsTab) => void
   onSaveMembers: (members: Member[], groups?: MemberGroup[]) => void
@@ -86,9 +85,9 @@ interface SettingsScreenProps {
 }
 
 /**
- * 设置页：页内三个 tab（人员配置 / 系统设置 / JIG DATA）。
+ * 设置页：左侧二级导航 + 右侧内容（人员配置 / 系统设置 / JIG DATA）。
  *
- * 成员表的草稿（`rows` / `dirty`）留在这一层，**切 tab 不会丢** ——
+ * 成员表的草稿（`rows` / `dirty`）留在这一层，**切分页不会丢** ——
  * 换页只是换渲染分支，受控组件的状态在父组件里，所以不需要「有未保存改动」的拦截。
  */
 export function SettingsScreen({
@@ -468,30 +467,15 @@ export function SettingsScreen({
 
   return (
     /*
-     * 设置页两个 tab 都把页头钉住：`.canvas.is-pinned` 让画布自己不滚，
-     * 页头之下的内容收进 `.canvas-flow` 单独滚 —— 于是「设置 / 分页切换」
-     * 这条页头在翻成员表、翻备份说明时始终留在原位，分隔线就是滚动区的上边界。
+     * 设置页的分页已经挪进**左侧主侧栏**（进入设置后侧栏整体换成设置导航），
+     * 内容区因此只剩一块，宽度回到与矩阵 / 概览同一档。
+     *
+     * `.canvas-flow` 这个类名必须保留：ScrollOverlay 的自绘滑块、
+     * App 的滚动位置记忆、成员表的「滚到这一行」都按这个选择器找容器。
+     * is-pinned 只为拿到「画布不滚、flow 单独滚」这套行为 ——
+     * 页头没了，flow 的上边框与上内边距由 settings.scss 单独清掉。
      */
     <div className="canvas is-settings is-pinned">
-      {/* 标题已在顶栏，页头只留分页切换 */}
-      <div className="canvas-head">
-        <div className="canvas-tools">
-          {/*
-            分页换成 shadcn Tabs：value / onValueChange 直接接路由里的 settingsTab，
-            内容区仍在 Tabs 之外（`tab === 'roster' ? … : …`），所以不用 TabsContent ——
-            页签只负责「显示哪一个」，切换本身还是要写进 hash。
-          */}
-          <Tabs value={tab} onValueChange={next => onTabChange(next as SettingsTab)}>
-            <TabsList aria-label="设置分页">
-              <TabsTrigger value="roster">人员配置</TabsTrigger>
-              <TabsTrigger value="system">系统设置</TabsTrigger>
-              {/* 静态版没有 JIG，页签也跟着不出现（slot 为 null） */}
-              {jig ? <TabsTrigger value="jig">JIG DATA</TabsTrigger> : null}
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
-
       <div className="canvas-flow" ref={flowRef}>
         {tab === 'roster' ? (
           /*
@@ -790,7 +774,6 @@ export function SettingsScreen({
                 <div className="settings-row">
                   <div className="settings-row-label">
                     <span>默认存放目录</span>
-                    <span className="settings-row-hint">仅本机有效，不写进备份文件</span>
                   </div>
                   <div className="settings-row-control">
                     <span

@@ -264,6 +264,16 @@ fn save_jig_export(path: String, contents: Vec<u8>) -> Result<String, String> {
     Ok(target.to_string_lossy().into_owned())
 }
 
+/// 真正退出应用（不是「隐藏到托盘」）。
+///
+/// 侧栏底部的用户菜单里点「退出应用」走这条命令：关闭按钮的行为可能被
+/// 用户设成「隐藏到托盘」，但菜单里的「退出」语义就是结束进程，
+/// 所以直接 `app.exit(0)`，不经窗口关闭事件。
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -348,7 +358,8 @@ pub fn run() {
             read_clipboard_text,
             save_jig_export,
             read_jig_config,
-            write_jig_config
+            write_jig_config,
+            quit_app
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 窗口失败");

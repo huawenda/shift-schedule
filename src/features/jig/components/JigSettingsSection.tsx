@@ -61,7 +61,6 @@ export function JigSettingsSection({
     <section className="settings-group">
       <div className="settings-label">
         <h2>一般</h2>
-        <p className="settings-meta">只对这台电脑生效，不进备份文件</p>
       </div>
 
       <div className="settings-card">

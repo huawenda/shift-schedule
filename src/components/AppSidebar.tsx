@@ -1,4 +1,16 @@
-import { CalendarDays, LayoutGrid, Search, Settings, Table2 } from 'lucide-react'
+import { useState } from 'react'
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronsUpDown,
+  LayoutGrid,
+  LogOut,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  Table2,
+  Users
+} from 'lucide-react'
 
 import {
   Sidebar,
@@ -14,26 +26,57 @@ import {
   SidebarRail,
   useSidebar
 } from '@/components/ui/sidebar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { isTauriShell } from '@/platform/env'
+import { quitApp } from '@/platform/appQuit'
 import { BrandLockup } from './Brand'
 import { SidebarTitleBar } from './TitleBar'
 import type { Route } from './AppShell'
+import type { SettingsTab } from '@/screens/SettingsScreen'
 
 interface AppSidebarProps {
   route: Route
+  /** 侧栏底部显示的名字（本人姓名；没有就落到「未设置本人」） */
+  userName: string
   /** 三个入口的 href：由 App 生成，带上当前结算月，修饰键开新标签也能落到同一个月份 */
   hrefs: Record<Route, string>
   onNavigate: (route: Route) => void
+  /** 设置页当前分页 —— 进入设置后侧栏会切换成设置导航 */
+  settingsTab: SettingsTab
+  onSettingsTabChange: (tab: SettingsTab) => void
+  /** 设置导航顶部的「返回」：离开设置回到概览 */
+  onSettingsBack: () => void
 }
 
 /**
  * 侧栏：品牌 + 三个一级页面。
  *
+ * **进入设置后，整条侧栏换成设置导航**（分页 + 返回），而不是在画布里再叠一条
+ * 二级栏 —— 设置是这个应用里唯一「有内部结构」的场景，把左侧这一列直接交出去，
+ * 内容区就能拿回和矩阵 / 概览一样的完整宽度，视线也只需要在一条竖线上。
+ *
  * 链接仍是真实的 `<a href>`，只是拦住普通点击改成应用内导航 ——
  * Cmd/Ctrl + 点击照旧开新标签，地址里带着当前结算月（和改造前一致）。
  */
-export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
+export function AppSidebar({
+  route,
+  userName,
+  hrefs,
+  onNavigate,
+  settingsTab,
+  onSettingsTabChange,
+  onSettingsBack
+}: AppSidebarProps) {
   const { state } = useSidebar()
+  /**
+   * 用户浮层改成受控。
+   *
+   * 非受控时点「设置」只会触发导航，Radix 并不认为发生了「选择」——
+   * 它只在点外部、按 Esc、再点触发器时才自行关闭。于是跳进设置页之后
+   * 浮层还挂在那里，挡住侧栏底部的用户区和一部分内容。
+   * 这里自己管开关：任何一项被点中都先关，再执行动作。
+   */
+  const [menuOpen, setMenuOpen] = useState(false)
 
   /** 修饰键按下时交还给浏览器，等同于「在新标签打开这个视图」 */
   function intercept(event: React.MouseEvent<HTMLAnchorElement>, next: Route) {
@@ -60,23 +103,94 @@ export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
   const showLookup = true
   const showBusiness = showJig || showLookup
 
+  /** 进入设置：整条侧栏让位给设置导航 */
+  const inSettings = route === 'settings'
+
+  /**
+   * 设置导航的两组。
+   *
+   * 分「排班 / 应用」而不是平铺：人员配置动的是花名册，JIG DATA 与系统设置
+   * 动的是程序本身。顺序按使用频率排 —— 人员配置最常用、JIG DATA 次之、
+   * 系统设置（配色 / 备份 / 清空）一年点不了几次，放最下面。
+   * JIG DATA 只在桌面壳里出现，条件与画布里的插槽一致（都是 inTauri）。
+   */
+  const settingsGroups: {
+    label: string
+    items: { id: SettingsTab; label: string; icon: typeof Users }[]
+  }[] = [
+    { label: '排班', items: [{ id: 'roster', label: '人员配置', icon: Users }] },
+    {
+      label: '应用',
+      items: [
+        ...(showJig ? [{ id: 'jig' as const, label: 'JIG DATA', icon: Table2 }] : []),
+        { id: 'system' as const, label: '系统设置', icon: SlidersHorizontal }
+      ]
+    }
+  ]
+
   return (
     <Sidebar collapsible="icon">
       {/* 壳里的标题栏段与侧栏同一层（不画分隔线），只留折叠按钮；
           品牌字标压到它下面的 .brand-hero，像参考稿那样沉一层。
           浏览器 / 静态版没有自绘标题栏，品牌仍是同一份横向单行排版。 */}
       {inTauri ? <SidebarTitleBar /> : null}
-      <SidebarHeader className={inTauri ? 'brand-hero' : undefined}>
-        <a
-          className="flex items-center rounded-md py-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
-          href={hrefs.overview}
-          onClick={event => intercept(event, 'overview')}
-        >
-          <BrandLockup collapseText />
-        </a>
-      </SidebarHeader>
+
+      {inSettings ? (
+        /* 设置态：品牌让位给「返回」。设置是这个应用里唯一的二级场景，
+         * 左上角的返回就是它的出口，同时也提示「你不在主界面」。
+         * 折叠成图标条时只剩箭头，tooltip 补上文字。 */
+        <SidebarHeader className="settings-side-head">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={onSettingsBack} tooltip="返回">
+                <ArrowLeft className="size-4" />
+                <span>返回</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+      ) : (
+        <SidebarHeader className={inTauri ? 'brand-hero' : undefined}>
+          <a
+            className="flex items-center rounded-md py-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+            href={hrefs.overview}
+            onClick={event => intercept(event, 'overview')}
+          >
+            <BrandLockup collapseText />
+          </a>
+        </SidebarHeader>
+      )}
 
       <SidebarContent>
+        {inSettings ? (
+          settingsGroups.map(group => (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-1">
+                  {group.items.map(item => {
+                    const Icon = item.icon
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          aria-current={settingsTab === item.id ? 'page' : undefined}
+                          data-settings-tab={item.id}
+                          isActive={settingsTab === item.id}
+                          tooltip={item.label}
+                          onClick={() => onSettingsTabChange(item.id)}
+                        >
+                          <Icon className="size-4" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))
+        ) : (
+        <>
         <SidebarGroup>
           <SidebarGroupLabel>排班</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -156,22 +270,75 @@ export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
             </SidebarGroup>
           </>
         ) : null}
+        </>
+        )}
       </SidebarContent>
 
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={route === 'settings'} tooltip="设置">
-              <a
-                aria-current={route === 'settings' ? 'page' : undefined}
-                data-view="settings"
-                href={hrefs.settings}
-                onClick={event => intercept(event, 'settings')}
+            {/*
+              底部不再是「设置」入口，而是**用户区**：头像 + 姓名，点开一个浮层。
+              设置与退出都在浮层里 —— 底栏只这一处常驻，视觉上比「一个孤零零的
+              齿轮图标」更像一个应用。折叠成 44px 图标条时只剩头像。
+            */}
+            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+              <PopoverTrigger asChild>
+                <SidebarMenuButton
+                  aria-label={`${userName} 的菜单`}
+                  className="h-auto py-1.5 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  size="lg"
+                  tooltip={userName}
+                >
+                  <span aria-hidden="true" className="user-avatar">
+                    {userName.slice(0, 1)}
+                  </span>
+                  <span className="flex min-w-0 flex-col text-left group-data-[collapsible=icon]:hidden">
+                    <span className="truncate text-sm font-medium">{userName}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {route === 'settings' ? '当前在设置页' : '设置与退出'}
+                    </span>
+                  </span>
+                  <ChevronsUpDown className="ml-auto size-3.5 opacity-60 group-data-[collapsible=icon]:hidden" />
+                </SidebarMenuButton>
+              </PopoverTrigger>
+
+              <PopoverContent
+                align="start"
+                className="user-menu"
+                side="top"
+                sideOffset={8}
               >
-                <Settings className="size-4" />
-                <span>设置</span>
-              </a>
-            </SidebarMenuButton>
+                <button
+                  className="user-menu-item"
+                  data-view="settings"
+                  type="button"
+                  onClick={() => {
+                    // 先关浮层再导航：已经在设置页时导航是空操作，浮层同样要收起
+                    setMenuOpen(false)
+                    onNavigate('settings')
+                  }}
+                >
+                  <Settings className="size-4" />
+                  设置
+                </button>
+                {/* 浏览器里没有进程可退，但这一项仍显示（禁用 + 说明），
+                    否则浮层只剩一行、看起来像一条导航栏而不是菜单 */}
+                <button
+                  className="user-menu-item is-danger"
+                  disabled={!inTauri}
+                  title={inTauri ? undefined : '仅桌面版可退出应用'}
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    void quitApp()
+                  }}
+                >
+                  <LogOut className="size-4" />
+                  退出应用
+                </button>
+              </PopoverContent>
+            </Popover>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

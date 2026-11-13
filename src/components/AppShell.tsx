@@ -1,6 +1,7 @@
 import { type CSSProperties, type ReactNode } from 'react'
 
 import { ROUTE_TITLE, type Route } from '@/appLocation'
+import type { SettingsTab } from '@/screens/SettingsScreen'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { isTauriShell } from '@/platform/env'
@@ -35,10 +36,11 @@ interface AppShellProps {
   jig: JigData
   /** JIG 页当前子页 —— 导出「当前视图」要知道导哪一页的表 */
   jigTab: JigTabId
-  /** 打开型号尺寸映射面板 */
-  onOpenJigSizeMapping: () => void
-  /** 打开 JIG 设置 */
-  onOpenJigSettings: () => void
+  /** 侧栏底部用户区显示的名字（本人姓名） */
+  userName: string
+  /** 设置页当前分页 —— 进入设置后侧栏整体切换成设置导航 */
+  settingsTab: SettingsTab
+  onSettingsTabChange: (tab: SettingsTab) => void
   children: ReactNode
 }
 
@@ -65,8 +67,9 @@ export function AppShell({
   onToggleTheme,
   jig,
   jigTab,
-  onOpenJigSizeMapping,
-  onOpenJigSettings,
+  userName,
+  settingsTab,
+  onSettingsTabChange,
   children
 }: AppShellProps) {
   /** 只有 Tauri 壳是无边框窗口，需要自绘标题栏；浏览器 / 静态版保持原样 */
@@ -94,7 +97,15 @@ export function AppShell({
           跳到主内容
         </a>
 
-        <AppSidebar hrefs={hrefs} route={route} onNavigate={onNavigate} />
+        <AppSidebar
+          hrefs={hrefs}
+          route={route}
+          settingsTab={settingsTab}
+          userName={userName}
+          onNavigate={onNavigate}
+          onSettingsBack={() => onNavigate('overview')}
+          onSettingsTabChange={onSettingsTabChange}
+        />
 
         <SidebarInset
           className={`min-h-0 overflow-hidden${inTauri ? ' is-frameless-inset' : ''}`}
@@ -116,8 +127,6 @@ export function AppShell({
                 canPick={jig.canPick}
                 onExport={() => void jig.exportCurrent(jigTab)}
                 onLoad={() => void jig.loadSource()}
-                onOpenSettings={onOpenJigSettings}
-                onOpenSizeMapping={onOpenJigSizeMapping}
                 onPick={() => void jig.pickSource()}
                 onToggleTheme={onToggleTheme}
                 pendingName={jig.pendingName}

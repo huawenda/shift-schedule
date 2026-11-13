@@ -66,7 +66,6 @@ export function LookupHome({
       <section className="lookup-related">
         <header className="lookup-section-head">
           <h2>快速入口</h2>
-          <span>点一下直接看关联结果</span>
         </header>
         <div className="lookup-chip-row">
           {QUICK_ENTRIES.map(ref => (

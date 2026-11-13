@@ -460,10 +460,11 @@
   background: var(--surface);
 }
 
-/* 当前组合沿用矩阵聚焦行的左侧 2px 竖线，底色保持原来的浅青 */
+/* 当前组合：底色用**中性灰**（--raised），不染强调色 —— 浅色下是 #f4f6f8、
+ * 深色下 #2e2e2e，与卡片底拉开一档就够；识别交给左侧那 2px 强调竖线。 */
 .lookup-compare-card.is-current {
-  border-color: var(--accent-soft);
-  background: var(--accent-weak);
+  border-color: var(--border);
+  background: var(--raised);
   box-shadow: inset 2px 0 0 var(--accent);
 }
 

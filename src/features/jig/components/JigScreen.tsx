@@ -10,7 +10,6 @@ import { JigDrillBar } from './JigDrillBar'
 import { JigPivotToolbar } from './JigPivotToolbar'
 import { JigQueryPanel } from './JigQueryPanel'
 import { JigReviewToolbar } from './JigReviewToolbar'
-import { JigStageRail } from './JigStageRail'
 import { JigTable } from './JigTable'
 import {
   JIG_TAB_LABELS,
@@ -157,15 +156,6 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
                   />
                 ) : (
                   <>
-                    {/*
-                      工序轨道：透视类页面才显示，因为它读的是总计行的工序分布。
-                      位置在工具条**之上** —— 轨道是「当前范围的概览」，
-                      工具条是「控制当前范围的手段」，概览在前更顺。
-                    */}
-                    {id === 'pivot' ? (
-                      <JigStageRail config={config} table={data.pivot.table} />
-                    ) : null}
-
                     {id === 'pivot' ? (
                       <JigPivotToolbar
                         avail={data.pivotAvail}

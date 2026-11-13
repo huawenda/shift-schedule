@@ -16,7 +16,7 @@
   --chrome-text: #e9f2f4;
   --chrome-muted: #a3b7bc;
   --chrome-faint: #7f979d;
-  --chrome-accent: #7fd2e2;
+  --chrome-accent: #d5d5d5;
   /* 深框上按钮的悬停底：比 --chrome-raised 亮一档，不另立色系 */
   --chrome-hover: #1d3d46;
 
@@ -71,10 +71,12 @@
   /* 纯黑：只用于墨底按钮悬停再深一档，其余一律用 --text */
   --text-strong: #000000;
 
-  --accent: #1b6c80;
-  --accent-weak: #eaf2f4;
-  /* 命中/选中底再深一档：浅灰底栏上 accent-weak 几乎看不出，用这一档才立得住 */
-  --accent-soft: #d4e0e4;
+  /* 浅色主题的强调色用**中性灰**：白底上不再有青色，链接、标题竖条、
+   * 下划线全靠明度分层；深色主题仍保留青色（#58b8cf）。
+   * #444 在白底约 9.7:1，--accent-weak 是极浅灰填充，--accent-soft 再深一档。 */
+  --accent: #444444;
+  --accent-weak: #f1f1f1;
+  --accent-soft: #e3e3e3;
 
   /* 应用标识改用位图（public/icons），不再需要品牌图形色 token；
    * 品牌字标换成单行拉丁字标后，中文衬线 --font-brand 也一并退役。 */
@@ -307,16 +309,21 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  /* 外壳：仍是深青，但抬到比画布亮一档 —— 深色下「唯一的暗块」没有了，
-   * 值班牌与概览条要靠色调而不是明度来立住。 */
-  --chrome: #14313a;
-  --chrome-raised: #1b3d48;
-  --chrome-line: #2a5764;
-  --chrome-text: #e9f2f4;
-  --chrome-muted: #a3b7bc;
-  --chrome-faint: #7f979d;
-  --chrome-accent: #7fd2e2;
-  --chrome-hover: #1f4a57;
+  /* 外壳：深色下改成**中性灰**，不再走青色。
+   *
+   * 原先靠「深青」色调立住（浅色下画布是白的，深色块天然是视觉重点），
+   * 但深色主题整体是中性灰（侧栏 #202020 / 卡片 #242424 / 画布 #121212），
+   * 一块偏绿的 #14313a 贴在里面就像另一个主题的卡片。现在改为中性灰、
+   * 比卡片亮一档：仍能读成「抬起来的一块」，但不再带色相。
+   * 青色只留给 --chrome-accent（进度条、强调数字），作为唯一彩色点缀。 */
+  --chrome: #2a2a2a;
+  --chrome-raised: #333333;
+  --chrome-line: #3d3d3d;
+  --chrome-text: #ececec;
+  --chrome-muted: #a8a8a8;
+  --chrome-faint: #7c7c7c;
+  --chrome-accent: #58b8cf;
+  --chrome-hover: #353535;
 
   --ground: #141414;
   --surface: #242424;
