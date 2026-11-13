@@ -769,94 +769,19 @@
   min-width: 150px;
 }
 
-/* ── JIG 设置 ──
+/* ── 型号尺寸映射（设置页 JIG DATA 页签） ──
  *
- * 独立于排班的设置页 —— 两套业务的设置项完全不同，混在一起谁都不好找。
- * 这一屏全是本机偏好，不进备份文件。
+ * 原来是独立弹层；搬进设置页后仍保留自己的滚动区（最高 60vh / 520px），
+ * 表头留在滚动区外，列才能严格对齐。面板不再自带内边距 ——
+ * `.jig-map` 自己有 12px 上下留白，底部操作条单独补间距。
  */
-.jig-settings-dialog {
-  max-width: 560px;
+.settings-panel.jig-map-panel {
+  gap: 0;
+  padding: 0;
 }
 
-/* 两个 JIG 弹层的底栏分隔线统一走发丝线。
- * DialogFooter 自带的 border-t 取 --ui-border（暗色 #2b333b），
- * 比弹层头部（--rule）和表内行线重一档，整屏看会显得突兀。 */
-.jig-settings-dialog [data-slot='dialog-footer'],
-.jig-map-dialog [data-slot='dialog-footer'] {
-  border-top-color: var(--rule);
-}
-
-/*
- * 结构与班次弹层（DayEditor）完全一致：
- * DialogContent 去掉默认的 padding 与 gap（组件上写 gap-0 p-0），
- * 头部复用 `.dialog-head` —— 自带 16px 内边距和一条**通栏**分隔线；
- * 内容区在这里补左右内边距，底部留 12px 再交给 DialogFooter。
- */
-.jig-settings {
-  display: flex;
-  flex-direction: column;
-  padding: 0 var(--sp-4) var(--sp-3);
-}
-
-.jig-settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-4);
-  padding: var(--sp-3) 0;
-  /* 与弹层头部同一条发丝线。设置项之间是卡内细分割，
-   * --rule 比 --border（卡内分组 / 单元格）更轻，整屏不会显得被横线切碎。 */
-  border-bottom: 1px solid var(--rule);
-}
-
-.jig-settings-row:last-child {
-  border-bottom: 0;
-}
-
-.jig-settings-label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  font-size: var(--fs-control);
-  font-weight: 500;
-  color: var(--text);
-}
-
-.jig-settings-hint {
-  font-size: var(--fs-small);
-  font-weight: 400;
-  color: var(--muted);
-}
-
-.jig-settings-control {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-shrink: 0;
-}
-
-/* 目录路径：太长时截断，完整路径走 title */
-.jig-settings-path {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--fs-small);
-  color: var(--muted);
-}
-
-.jig-settings-path.is-default {
-  font-style: italic;
-}
-
-/* ── 型号尺寸映射面板 ──
- *
- * 独立弹层，不做成设置页里的一个分组：映射表通常有十几行，塞进固定宽的
- * 表单会把整页挤到要滚动；而这张表又是使用频率最高、最容易出错的一块。
- */
-.jig-map-dialog {
-  max-width: 640px;
+.jig-map-actions {
+  padding: 0 var(--sp-4) var(--sp-4);
 }
 
 .jig-map {

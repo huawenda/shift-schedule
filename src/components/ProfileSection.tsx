@@ -137,15 +137,22 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
 
   return (
     <>
-    <section className="settings-section profile-section">
+    <section className="settings-group profile-section">
       <div className="settings-label">
-        <h2>本人</h2>
+        <h2>个人信息</h2>
         <p className="settings-meta">
           {self ? `本人 ${self.name} · ${patternNameOf(roster, self.patternId)}` : '还没有设置本人'}
         </p>
       </div>
 
-      <div className="settings-panel">
+      {/*
+        两段共用一张卡、各留一个保存按钮：改身份会清空薪资（换人），
+        合成一个保存按钮的话，用户改名字时顺手改了薪资，一点保存就两头都没了。
+      */}
+      <div className="settings-card">
+        <div className="settings-block">
+          <div className="settings-block-head">本人</div>
+
           <div className="profile-form">
             <label className="field">
               <span className="field-label">姓名</span>
@@ -200,25 +207,20 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
           ) : null}
 
           <div className="settings-actions">
-            <button
-              className="btn btn-primary"
+            <Button
               disabled={!identityDirty}
-              type="button"
               onClick={submitIdentity}
+              type="button"
             >
               {self ? '保存本人信息' : '设为本人'}
-            </button>
+            </Button>
             {self ? null : <span className="settings-hint">设置后个人日历只显示你本人。</span>}
           </div>
-      </div>
-    </section>
+        </div>
 
-    <section className="settings-section profile-section">
-      <div className="settings-label">
-        <h2>薪资</h2>
-      </div>
+        <div className="settings-block">
+          <div className="settings-block-head">薪资</div>
 
-      <div className="settings-panel">
           {self ? null : <p className="settings-hint">先设置本人，才能填薪资。</p>}
 
           <div className="salary-grid">
@@ -247,15 +249,15 @@ export function ProfileSection({ roster, patterns, onSaveSelf, onSaveSalary, onN
           </div>
 
           <div className="settings-actions">
-            <button
-              className="btn btn-primary"
+            <Button
               disabled={!self || !salaryDirty}
-              type="button"
               onClick={submitSalary}
+              type="button"
             >
               保存薪资
-            </button>
+            </Button>
           </div>
+        </div>
       </div>
     </section>
 

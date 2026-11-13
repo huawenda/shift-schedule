@@ -106,6 +106,146 @@
   background: var(--ui-card);
 }
 
+/* ------------------------------------------------------------ 设置组与行式设置项
+ *
+ * 骨架照搬 JIG 设置弹层原来的 `.jig-settings-row`：左边「名称 + 一句说明」，
+ * 右边控件靠右对齐，行与行之间 1px 发丝线，整组包在一张卡里。
+ *
+ * 与旧的 `.settings-section`（320px 标签列 + 一区一卡 + 段间横线）的差别：
+ * 标签列不再整段留白 —— 每个设置项自带名称，行高 48 / 56，
+ * 一屏能放下原来两倍的项目；分组只靠组标题与卡间距区分，不再画四条横线。
+ */
+.settings-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.settings-card {
+  overflow: hidden;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-panel);
+  background: var(--ui-card);
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 48px;
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--rule);
+}
+
+/* 首行不画线：卡片的圆角与边框已经是边界 */
+.settings-row:first-child {
+  border-top: 0;
+}
+
+/* 带说明的行高一点：名称 14 + 说明 12 两行，配 12+12 内边距正好 56。
+ * 用 :has 而不是加一个修饰类 —— 有没有说明是内容里的选择，不该由调用点决定。 */
+.settings-row:has(.settings-row-hint) {
+  min-height: 56px;
+}
+
+.settings-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--fs-control);
+  font-weight: 500;
+  color: var(--text);
+}
+
+.settings-row-hint {
+  max-width: 46ch;
+  font-size: var(--fs-small);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* 控件位靠右：右缘与行的内容边对齐，宽度由内容自己决定。
+ *
+ * **不能写百分比 max-width**：这一格在 `grid-template-columns: 1fr auto` 的
+ * auto 轨道里，百分比会按「该轨道的宽度」解析，而轨道宽度又是按内容撑开的，
+ * 于是 62% 把控件反向压到比内容还窄 —— 分段控件的文字被挤成一字一行、
+ * 两个按钮被卡片 overflow 裁掉。限宽交给具体的长控件（`.settings-path` /
+ * 行内 input）自己做，短控件一律不缩。 */
+.settings-row-control {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  justify-self: end;
+  min-width: 0;
+}
+
+/* 按钮与分段控件不参与收缩：宁可让标签列换行，也不把按钮压扁裁掉 */
+.settings-row-control > [data-slot='button'],
+.settings-row-control > .segmented {
+  flex: 0 0 auto;
+}
+
+/* 行内输入框与路径芯片可伸缩，宽度上限各自定义 */
+.settings-row-control > input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------ 表单段（个人资料）
+ *
+ * 一张卡里放两段表单：段标题 + 字段网格 + 自己的保存按钮。
+ * 换人会清空薪资，所以两段各留一个保存按钮 —— 合起来会连坐。
+ */
+.settings-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-top: 1px solid var(--rule);
+}
+
+.settings-block:first-child {
+  border-top: 0;
+}
+
+.settings-block-head {
+  font-size: var(--fs-control);
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* 危险区：边框与组标题都转成警示色，与普通组一眼可分 */
+.settings-group.is-danger .settings-label h2 {
+  color: var(--danger);
+}
+
+.settings-group.is-danger .settings-label h2::before {
+  background: var(--danger);
+}
+
+.settings-card.is-danger {
+  border-color: var(--danger-border);
+}
+
+/* 设置页与两个 JIG 弹层里的分段控件抬高 2px（26 → 28）：
+ * 同一行里按钮 / 输入框都是 32，分段控件 30 会矮一截。
+ * 只在这三处生效 —— 班次弹层的四张卡是按 30px 写死高度的（schedule.scss），
+ * 全局改会把它撑高 2px 并裁掉内容。 */
+.canvas.is-settings .segmented-item,
+.jig-settings-dialog .segmented-item,
+.jig-map-dialog .segmented-item {
+  height: 28px;
+}
+
 /* 操作条：说明文字 + 按钮同一行。
  * `align-items: center` 不能省 —— flex 默认 stretch 会把文字那一格拉成按钮高（30px），
  * 文字贴着格子上沿，看起来就比按钮「高了一截」。 */
@@ -121,25 +261,15 @@
   color: var(--muted);
 }
 
-/* 备份的默认存放目录：一行「标签 + 路径 + 两个按钮」。
- * 路径可能很长（D:\备份\2026\昼夜），所以给它 flex: 1 的伸缩位并省略中间，
- * 按钮永远固定宽度不被挤扁；hover 时用 title 看全路径。 */
-.backup-dir {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding-top: 2px;
-}
-
-.backup-dir-label {
-  flex: 0 0 auto;
-  font-size: var(--fs-small);
-  color: var(--muted);
-}
-
-.backup-dir-path {
+/* 路径芯片：一行「路径 + 选择… + 清除」里的那个框。
+ * 路径可能很长（D:\备份\2026\Workhorse），所以给它可伸缩位并省略，
+ * 按钮固定宽度不被挤扁；hover 用 title 看全路径。
+ * 设置页的备份目录与 JIG 弹层的两个目录行共用。 */
+.settings-path {
   flex: 1 1 auto;
   min-width: 0;
+  /* 长路径只占这么多，超出省略：否则一行控件会被路径顶到卡片外面 */
+  max-width: 240px;
   overflow: hidden;
   padding: 0 8px;
   height: var(--control-height);
@@ -149,12 +279,13 @@
   color: var(--text);
   font-size: var(--fs-small);
   line-height: calc(var(--control-height) - 2px);
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 /* 没设过的时候显示的是「系统「下载」文件夹」这种说明文字，压淡一档免得像真路径 */
-.backup-dir-path.is-default {
+.settings-path.is-default {
   color: var(--faint);
 }
 
@@ -650,13 +781,8 @@
   box-shadow: var(--shadow-floating);
 }
 
-/* ── 危险区 ───────────────────────────────────────────── */
-
-.danger-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+/* 危险区用 `.settings-group.is-danger` 表达（卡框与标题转警示色），
+ * 不再单独维护一行「居中排布」的 .danger-row —— 现在它就是普通的一行设置项。 */
 
 /* ── 班序区块 ─────────────────────────────────────────── */
 

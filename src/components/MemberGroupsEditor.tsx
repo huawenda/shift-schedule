@@ -155,9 +155,9 @@ export function MemberGroupsEditor({
                 <span className={`group-usage${usage === 0 ? ' is-empty' : ''}`}>
                   {usage > 0 ? `${usage} 人` : '未使用'}
                 </span>
-                <button className="btn btn-quiet" type="button" onClick={() => setPendingDeleteId(group.id)}>
+                <Button onClick={() => setPendingDeleteId(group.id)} type="button" variant="ghost">
                   删除
-                </button>
+                </Button>
               </div>
             )
           })}
@@ -191,9 +191,9 @@ export function MemberGroupsEditor({
                 }
               }}
             />
-            <button className="btn btn-primary" type="submit">添加</button>
-            <button
-              className="btn btn-quiet"
+            <Button type="submit">添加</Button>
+            <Button
+              variant="ghost"
               type="button"
               onClick={() => {
                 setNewName('')
@@ -201,7 +201,7 @@ export function MemberGroupsEditor({
               }}
             >
               取消
-            </button>
+            </Button>
           </form>
         ) : (
           <button

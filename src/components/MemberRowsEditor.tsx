@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createMemberId, type Member, type MemberGroup } from '../data/roster'
 import { Select, type SelectGroup, type SelectOption } from './Select'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 /** 「未分组」不是真实分组，用哨兵值表达 tab/筛选条件 */
 export const UNGROUPED_MEMBERS = '__ungrouped__'
@@ -204,15 +205,15 @@ const MemberRowView = memo(function MemberRowView({
         </div>
 
         <div className="member-row-actions">
-          <button
-            className="btn btn-quiet"
+          <Button
+            variant="ghost"
             disabled={isSelf}
             title={isSelf ? '本人不能在这里删除，请到「个人信息」里更换' : undefined}
             type="button"
             onClick={() => onRemove(row.key)}
           >
             删除
-          </button>
+          </Button>
         </div>
       </div>
 

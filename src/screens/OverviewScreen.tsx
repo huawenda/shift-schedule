@@ -31,7 +31,7 @@ interface OverviewScreenProps {
   onEdit: (member: Member, date: string) => void
   /** 勾选 / 取消勾选待办（改动立即生效） */
   onToggleTodo: (todoId: string) => void
-  /** 没填基本工资时，统计区给一个直达「个人资料」的入口 */
+  /** 没填基本工资时，统计区给一个直达「个人信息」的入口 */
   onOpenProfile: () => void
 }
 

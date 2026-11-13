@@ -16,6 +16,7 @@ import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/comp
  *   #/overview                #/2026-10/overview
  *   #/matrix                  #/2026-10/matrix
  *   #/settings/roster         #/2026-10/settings/profile
+ *   #/settings/system
  *   #/jig/pivot
  *
  * 月份放在最前面而不是挂在某个视图上，是为了「切到设置再切回来」也保得住；
@@ -72,7 +73,8 @@ export function parseLocation(hash: string): AppLocation {
       ...DEFAULT_LOCATION,
       route: 'settings',
       month,
-      settingsTab: param === 'profile' ? 'profile' : 'roster'
+      // `#/settings/jig` = JIG DATA 页签；旧深链 profile 已并入人员配置，归一到 roster
+      settingsTab: param === 'system' || param === 'jig' ? param : 'roster'
     }
   }
 

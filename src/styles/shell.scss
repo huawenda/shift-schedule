@@ -211,6 +211,8 @@
   color: var(--muted);
   font-size: var(--fs-small);
   font-weight: 500;
+  /* 档位名一律单行：容器被挤压时宁可溢出，也不要「跟随系统」竖排成三行 */
+  white-space: nowrap;
 }
 
 /* 内缩之后，首尾项要自己带圆角（比外框小 1px 才同心）。

@@ -19,8 +19,8 @@ import {
   type JigConfig
 } from './features/jig/core/config'
 import { JigScreen } from './features/jig/components/JigScreen'
-import { JigSettingsDialog } from './features/jig/components/JigSettingsDialog'
-import { JigSizeMappingDialog } from './features/jig/components/JigSizeMappingDialog'
+import { JigSettingsSection } from './features/jig/components/JigSettingsSection'
+import { JigMappingSection } from './features/jig/components/JigMappingSection'
 import { jigTabFromSlug, jigTabToSlug, type JigTabId } from './features/jig/components/jigTabs'
 import { useJigData } from './features/jig/hooks/useJigData'
 import { LookupScreen } from './features/lookup/components/LookupScreen'
@@ -135,10 +135,10 @@ export function App() {
     },
     []
   )
-  /** 型号尺寸映射面板是否打开 */
-  const [jigMapOpen, setJigMapOpen] = useState(false)
-  /** JIG 设置面板是否打开 */
-  const [jigSettingsOpen, setJigSettingsOpen] = useState(false)
+  /**
+   * JIG 的两个设置入口现在都落在设置页：顶栏按钮不再开弹层，
+   * 而是跳到「系统设置」页签（JIG 组排在那里）。定义见 `openProfileTab` 附近。
+   */
   const jigData = useJigData({
     config: jigConfig,
     notify: (text, tone) => toast.info(text, { tone })
@@ -294,8 +294,14 @@ export function App() {
     navigate('jig', { jigTab: tab })
   }
 
-  /** 直达「个人资料」页（侧栏点「设置」时用默认 tab，这里是显式指定） */
-  const openProfileTab = useCallback(() => navigate('settings', { settingsTab: 'profile' }), [navigate])
+  /** 直达设置页的「个人信息」段（它现在并进了人员配置页的最上方） */
+  const openProfileTab = useCallback(() => navigate('settings', { settingsTab: 'roster' }), [navigate])
+
+  /** JIG 顶栏的两个设置按钮：都跳到设置页的「JIG DATA」页签 */
+  const openJigSettings = useCallback(
+    () => navigate('settings', { settingsTab: 'jig' }),
+    [navigate]
+  )
 
   /** 侧栏链接带上当前月份，Cmd/Ctrl+点击开新标签也能落到同一个结算月 */
   const hrefs = useMemo<Record<Route, string>>(() => ({
@@ -436,8 +442,8 @@ export function App() {
         theme={theme.resolved}
         jig={jigData}
         jigTab={location.jigTab}
-        onOpenJigSettings={() => setJigSettingsOpen(true)}
-        onOpenJigSizeMapping={() => setJigMapOpen(true)}
+        onOpenJigSettings={openJigSettings}
+        onOpenJigSizeMapping={openJigSettings}
       >
         {route === 'settings' ? (
           <SettingsScreen
@@ -461,6 +467,34 @@ export function App() {
               setWizardSkipped(false)
               navigate('overview')
             }}
+            /* JIG 的两组设置只在桌面壳里有意义（要读本地文件、写本机偏好），
+               静态版不渲染这两段。 */
+            jig={isTauriShell() ? (
+              <>
+                <JigSettingsSection
+                  canPickDir
+                  exportDir={jigData.prefs.exportDir || null}
+                  onPickDir={current => pickJigDirectory(current)}
+                  onSave={(prefs, dirs) => jigData.savePrefs(prefs, dirs)}
+                  prefs={jigData.prefs}
+                  sourceDir={jigData.prefs.sourceDir || null}
+                />
+                <JigMappingSection
+                  config={jigConfig}
+                  onSave={(mapping, order) => {
+                    // 改映射 → 所有视图按新规则重算。
+                    // 之所以能自动生效，是因为四张表都是从源数据**派生**出来的，
+                    // 不是加载时算好存起来的。
+                    setJigConfig(prev => ({
+                      ...prev,
+                      jigSizeMapping: mapping,
+                      jigSizeMappingOrder: order
+                    }))
+                    toast.info('型号尺寸映射已更新，各视图已重算', { tone: 'info' })
+                  }}
+                />
+              </>
+            ) : null}
           />
         ) : route === 'matrix' ? (
           <MatrixScreen
@@ -503,37 +537,6 @@ export function App() {
           />
         )}
       </AppShell>
-
-      {jigSettingsOpen ? (
-        <JigSettingsDialog
-          canPickDir={isTauriShell()}
-          exportDir={jigData.prefs.exportDir || null}
-          onClose={() => setJigSettingsOpen(false)}
-          onPickDir={current => pickJigDirectory(current)}
-          onSave={(prefs, dirs) => jigData.savePrefs(prefs, dirs)}
-          prefs={jigData.prefs}
-          sourceDir={jigData.prefs.sourceDir || null}
-        />
-      ) : null}
-
-      {jigMapOpen ? (
-        <JigSizeMappingDialog
-          config={jigConfig}
-          onClose={() => setJigMapOpen(false)}
-          onSave={(mapping, order) => {
-            // 改映射 → 所有视图按新规则重算。
-            // 之所以能自动生效，是因为四张表都是从源数据**派生**出来的，
-            // 不是加载时算好存起来的。
-            setJigConfig(prev => ({
-              ...prev,
-              jigSizeMapping: mapping,
-              jigSizeMappingOrder: order
-            }))
-            setJigMapOpen(false)
-            toast.info('型号尺寸映射已更新，各视图已重算', { tone: 'info' })
-          }}
-        />
-      ) : null}
 
       {editor && editorMember ? (
         editor.source === 'calendar' ? (

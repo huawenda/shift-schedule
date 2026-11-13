@@ -2,14 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 
 import {
@@ -23,7 +15,7 @@ import {
 import { createDefaultJigConfig, type JigConfig } from '../core/config'
 import { JigScrollbar } from './JigScrollbar'
 
-interface JigSizeMappingDialogProps {
+interface JigMappingSectionProps {
   /** 当前的业务配置 */
   config: JigConfig
   /**
@@ -33,44 +25,27 @@ interface JigSizeMappingDialogProps {
    * 顺序（JS 对象会把纯数字键按数值升序排在前面），顺序必须单列一份。
    */
   onSave: (mapping: Record<string, string>, order: string[]) => void
-  /** 关闭（丢弃未保存的改动） */
-  onClose: () => void
 }
 
 /**
- * 型号尺寸匹配面板。
+ * 设置页「型号尺寸匹配」组。
  *
- * **独立于设置页，不做成设置里的一个分组。** 理由有二：
- *   1. 设置页是固定宽的表单，映射表通常有十几行，塞进去会把整页挤到要滚动；
- *   2. 这张表是使用频率最高、也最容易出错的一块，值得一个单独的入口。
+ * 原来是一个独立弹层（JIG 顶栏的按钮）。搬进设置页后**不再是弹层**，
+ * 但仍然是「草稿 + 保存」：这张表是业务数据（进备份文件），
+ * 有校验与排序，边改边落盘会把半成品写进去。
  *
- * 编辑的是草稿，点「保存」才回传；点「取消」原样丢弃。
- * **有校验错误时一律不提交** —— 避免写出一份半成品配置。
+ * 表格列多行也长，所以保留自己的滚动区（最高 60vh / 520px），
+ * 不把整页撑到要滚很久；表头留在滚动区外面，列才能严格对齐。
  */
-export function JigSizeMappingDialog({
-  config,
-  onSave,
-  onClose
-}: JigSizeMappingDialogProps) {
+export function JigMappingSection({ config, onSave }: JigMappingSectionProps) {
   const [pairs, setPairs] = useState<MappingPair[]>(() =>
     orderedPairs(config.jigSizeMapping, config.jigSizeMappingOrder)
   )
-  /** 打开时的初始值，用来判断「有未保存的改动」 */
-  const initialPairs = useRef(pairs).current
-  const dirty = useMemo(
-    () => JSON.stringify(pairs) !== JSON.stringify(initialPairs),
-    [pairs, initialPairs]
+  /** 最近一次落盘的内容，用来判断「有未保存的改动」与「还原」 */
+  const [saved, setSaved] = useState<MappingPair[]>(() =>
+    orderedPairs(config.jigSizeMapping, config.jigSizeMappingOrder)
   )
-  /** 关闭前先拦一下未保存的改动（与班次弹层同一套） */
-  const [confirmDiscard, setConfirmDiscard] = useState(false)
-
-  function requestClose() {
-    if (dirty) {
-      setConfirmDiscard(true)
-      return
-    }
-    onClose()
-  }
+  const dirty = useMemo(() => JSON.stringify(pairs) !== JSON.stringify(saved), [pairs, saved])
 
   const errors = useMemo(() => validateMappingPairs(pairs), [pairs])
   const errorCount = Object.keys(errors).length
@@ -252,7 +227,7 @@ export function JigSizeMappingDialog({
       }
 
       const sortGap = body.querySelector('.sort-row') ? 8 : 0
-      // 与 .jig-map 的 max-height: min(60vh, 520px) 保持一致（含上下 padding 与表头）
+      // 与 .jig-map 的 max-height 保持一致（含上下 padding 与表头）
       const cap = Math.min(window.innerHeight * 0.6, 520) - 24 - headHeight
       let used = 0
       for (const row of rows) {
@@ -295,33 +270,29 @@ export function JigSizeMappingDialog({
     setPairs(orderedPairs(defaults.jigSizeMapping, defaults.jigSizeMappingOrder))
   }
 
+  /** 丢弃未保存的改动，回到最近一次落盘的内容 */
+  const discard = () => setPairs(saved.map(pair => ({ ...pair })))
+
   const save = () => {
     if (errorCount > 0) return
     const mapping = pairsToMapping(pairs)
     // 顺序单独存一份：映射表本身存不下顺序
     const order = pairs.map(p => p.model.trim()).filter(Boolean)
     onSave(mapping, order)
+    setSaved(pairs.map(pair => ({ ...pair })))
   }
 
   return (
-    <Dialog onOpenChange={open => { if (!open) requestClose() }} open>
-      <DialogContent
-        className="jig-map-dialog gap-0 p-0"
-        onInteractOutside={event => {
-          // 点遮罩 = 取消；有未保存改动时先确认
-          event.preventDefault()
-          requestClose()
-        }}
-        onOpenAutoFocus={event => {
-          // 不在打开时自动聚焦第一个输入框（否则 184 会被选中、弹出即带焦点环）
-          event.preventDefault()
-        }}
-        showCloseButton={false}
-      >
-        <DialogHeader className="dialog-head">
-          <DialogTitle className="dialog-title">型号尺寸匹配</DialogTitle>
-        </DialogHeader>
+    <section className="settings-group">
+      <div className="settings-label">
+        <h2>型号尺寸匹配</h2>
+        <p className="settings-meta">
+          「对应尺寸」这一列按这张表算出 · {pairs.length} 条规则
+          {dirty ? ' · 有未保存的修改' : ''}
+        </p>
+      </div>
 
+      <div className="settings-panel jig-map-panel">
         <div className="jig-map">
           {/*
             表头放在滚动区**外面**：原生滚动条已隐藏（改用 JigScrollbar），
@@ -421,66 +392,44 @@ export function JigSizeMappingDialog({
           <JigScrollbar targetRef={listRef} />
         </div>
 
-        <DialogFooter className="jig-map-footer mx-0 mb-0">
-          {confirmDiscard ? (
+        <div className="settings-actions jig-map-actions">
+          {sorting ? (
             <>
-              <span className="dialog-discard mr-auto">有未保存的修改</span>
-              <Button
-                onClick={() => setConfirmDiscard(false)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                继续编辑
-              </Button>
-              <Button onClick={onClose} size="sm" type="button" variant="destructive">
-                放弃修改
-              </Button>
-            </>
-          ) : sorting ? (
-            <>
+              <span className="settings-hint">拖拽行首把手调整顺序，完成后回到编辑态</span>
               <span className="jig-toolbar-spacer" />
-              <Button onClick={() => setSorting(false)} size="sm" type="button">
-                完成
-              </Button>
-              <Button onClick={requestClose} size="sm" type="button" variant="outline">
-                取消
-              </Button>
+              <Button onClick={() => setSorting(false)} type="button">完成</Button>
             </>
           ) : (
             <>
-              <Button onClick={add} size="sm" type="button" variant="outline">
+              <Button onClick={add} type="button" variant="outline">
                 <Plus data-icon="inline-start" />
                 新增
               </Button>
               <Button
                 disabled={pairs.length < 2}
                 onClick={() => setSorting(true)}
-                size="sm"
                 type="button"
                 variant="ghost"
               >
                 排序
               </Button>
-              <Button onClick={restore} size="sm" type="button" variant="ghost">
+              <Button onClick={restore} type="button" variant="ghost">
                 恢复默认
               </Button>
               <span className="jig-toolbar-spacer" />
               {errorCount > 0 ? (
-                <span className="jig-map-error-count">
-                  {errorCount} 处需要修正
-                </span>
+                <span className="jig-map-error-count">{errorCount} 处需要修正</span>
               ) : null}
-              <Button disabled={errorCount > 0} onClick={save} size="sm" type="button">
-                保存
-              </Button>
-              <Button onClick={requestClose} size="sm" type="button" variant="outline">
-                取消
-              </Button>
+              {dirty ? (
+                <>
+                  <Button onClick={discard} type="button" variant="ghost">还原</Button>
+                  <Button disabled={errorCount > 0} onClick={save} type="button">保存</Button>
+                </>
+              ) : null}
             </>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </section>
   )
 }

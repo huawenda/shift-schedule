@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   createRow,
   fromRows,
@@ -48,15 +48,16 @@ import {
 } from '../platform/windowPrefs'
 import type { ThemePreference } from '../platform/theme'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
-/** 设置分两页：班序与成员占满屏，个人信息/备份/清空放另一页，各自不再互相挤压 */
-export type SettingsTab = 'roster' | 'profile'
+/** 设置分三页：人员（个人信息 + 班序 + 成员）/ 系统设置（界面 / 备份 / 危险区）/ JIG DATA（仅桌面壳） */
+export type SettingsTab = 'roster' | 'system' | 'jig'
 
 interface SettingsScreenProps {
   roster: Roster
   /** 页内操作反馈统一走全局底部提示 */
   onNotify: (text: string) => void
-  /** 当前页签由路由决定（#/settings/roster | #/settings/profile），组件本身不持状态 */
+  /** 当前页签由路由决定（#/settings/<roster|system|jig>），组件本身不持状态 */
   tab: SettingsTab
   onTabChange: (tab: SettingsTab) => void
   onSaveMembers: (members: Member[], groups?: MemberGroup[]) => void
@@ -75,10 +76,17 @@ interface SettingsScreenProps {
   /** 当前的外观偏好（跟随系统 / 浅色 / 深色） */
   theme: ThemePreference
   onThemeChange: (preference: ThemePreference) => void
+  /**
+   * JIG 的两组设置（「一般」= 本机偏好 + 型号尺寸映射），单独占一个页签。
+   *
+   * 用插槽而不是把 JIG 的 props 全搬进来：JIG 依赖 Tauri 的文件能力，
+   * 静态版整个不渲染（页签也不出现）；设置页所以不需要知道 JIG 的存在。
+   */
+  jig?: ReactNode
 }
 
 /**
- * 设置页：页内两个 tab。
+ * 设置页：页内三个 tab（人员配置 / 系统设置 / JIG DATA）。
  *
  * 成员表的草稿（`rows` / `dirty`）留在这一层，**切 tab 不会丢** ——
  * 换页只是换渲染分支，受控组件的状态在父组件里，所以不需要「有未保存改动」的拦截。
@@ -100,7 +108,8 @@ export function SettingsScreen({
   onClearAll,
   onStartWizard,
   theme,
-  onThemeChange
+  onThemeChange,
+  jig
 }: SettingsScreenProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   /** Excel 批量导入：选文件 → 解析 → 追加 → 直接落盘（与排序「完成」同一套） */
@@ -143,7 +152,7 @@ export function SettingsScreen({
   /**
    * 页头固定后，内容滚在 `.canvas-flow` 里。
    * 同一个页面内切 tab 时容器会被 React 复用，滚动位置会留着 ——
-   * 从人员配置滚到一半切到个人资料，就会停在中间，所以切页统一回顶。
+   * 从人员配置滚到一半切到系统设置，就会停在中间，所以切页统一回顶。
    * 但首次挂载（例如从别的页面切回设置）不能回顶：App 会恢复上次的位置。
    */
   const flowRef = useRef<HTMLDivElement>(null)
@@ -460,7 +469,7 @@ export function SettingsScreen({
   return (
     /*
      * 设置页两个 tab 都把页头钉住：`.canvas.is-pinned` 让画布自己不滚，
-     * 页头之下的内容收进 `.canvas-flow` 单独滚 —— 于是「设置 / 人员配置 / 分页切换」
+     * 页头之下的内容收进 `.canvas-flow` 单独滚 —— 于是「设置 / 分页切换」
      * 这条页头在翻成员表、翻备份说明时始终留在原位，分隔线就是滚动区的上边界。
      */
     <div className="canvas is-settings is-pinned">
@@ -475,7 +484,9 @@ export function SettingsScreen({
           <Tabs value={tab} onValueChange={next => onTabChange(next as SettingsTab)}>
             <TabsList aria-label="设置分页">
               <TabsTrigger value="roster">人员配置</TabsTrigger>
-              <TabsTrigger value="profile">个人资料</TabsTrigger>
+              <TabsTrigger value="system">系统设置</TabsTrigger>
+              {/* 静态版没有 JIG，页签也跟着不出现（slot 为 null） */}
+              {jig ? <TabsTrigger value="jig">JIG DATA</TabsTrigger> : null}
             </TabsList>
           </Tabs>
         </div>
@@ -483,8 +494,22 @@ export function SettingsScreen({
 
       <div className="canvas-flow" ref={flowRef}>
         {tab === 'roster' ? (
-          <>
-            <section className="settings-section">
+          /*
+           * 人员配置：个人信息 → 班序 → 成员，三段一页。
+           * 个人信息放在最前：概览页的「去填本人信息」入口就落在这页的顶部，
+           * 不必让人先滚过班序与成员表；其余两段沿用原来的编辑器，只换了外壳
+           * （`.settings-group`：标题在卡外，不再占 320px 的标签列）。
+           */
+          <div className="settings-groups">
+            <ProfileSection
+              patterns={patternOptions}
+              roster={roster}
+              onNotice={onNotify}
+              onSaveSalary={onSaveSalary}
+              onSaveSelf={onSaveSelf}
+            />
+
+            <section className="settings-group">
               <div className="settings-label">
                 <h2>班序</h2>
               </div>
@@ -500,7 +525,7 @@ export function SettingsScreen({
               </div>
             </section>
 
-            <section className="settings-section">
+            <section className="settings-group">
               <div className="settings-label">
                 <div className="label-head">
                   <h2>成员</h2>
@@ -583,8 +608,8 @@ export function SettingsScreen({
                   <div className="settings-actions is-sticky">
                     <span className="save-hint is-sort">拖拽调整顺序，完成即保存</span>
                     <div className="save-bar-actions">
-                      <button className="btn btn-quiet" type="button" onClick={cancelSorting}>取消</button>
-                      <button className="btn btn-primary" type="button" onClick={finishSorting}>完成</button>
+                      <Button onClick={cancelSorting} type="button" variant="ghost">取消</Button>
+                      <Button onClick={finishSorting} type="button">完成</Button>
                     </div>
                   </div>
                 ) : dirty ? (
@@ -595,103 +620,133 @@ export function SettingsScreen({
                         : '有未保存的修改'}
                     </span>
                     <div className="save-bar-actions">
-                      <button className="btn btn-quiet" type="button" onClick={discardMemberDraft}>取消</button>
-                      <button className="btn btn-primary" disabled={errors.length > 0} type="button" onClick={save}>
+                      <Button onClick={discardMemberDraft} type="button" variant="ghost">取消</Button>
+                      <Button disabled={errors.length > 0} onClick={save} type="button">
                         保存成员设置
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : null}
 
                 {rows.length === 0 ? (
                   <div className="settings-actions">
-                    <button className="btn" type="button" onClick={onStartWizard}>用向导重新配置</button>
+                    <Button onClick={onStartWizard} type="button" variant="outline">用向导重新配置</Button>
                   </div>
                 ) : null}
               </div>
             </section>
-          </>
-        ) : (
-          <>
-            <ProfileSection
-              patterns={patternOptions}
-              roster={roster}
-              onNotice={onNotify}
-              onSaveSalary={onSaveSalary}
-              onSaveSelf={onSaveSelf}
-            />
-
-            <section className="settings-section">
-              <div className="settings-label">
-                <h2>外观</h2>
-              </div>
-
-              <div className="settings-panel">
-                <div className="settings-actions">
-                  <div className="segmented" role="group" aria-label="界面配色">
-                    <button
-                      aria-pressed={theme === 'system'}
-                      className={`segmented-item${theme === 'system' ? ' is-on' : ''}`}
-                      type="button"
-                      onClick={() => onThemeChange('system')}
-                    >
-                      跟随系统
-                    </button>
-                    <button
-                      aria-pressed={theme === 'light'}
-                      className={`segmented-item${theme === 'light' ? ' is-on' : ''}`}
-                      type="button"
-                      onClick={() => onThemeChange('light')}
-                    >
-                      浅色
-                    </button>
-                    <button
-                      aria-pressed={theme === 'dark'}
-                      className={`segmented-item${theme === 'dark' ? ' is-on' : ''}`}
-                      type="button"
-                      onClick={() => onThemeChange('dark')}
-                    >
-                      深色
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {isTauriShell() ? (
-              <section className="settings-section">
+          </div>
+        ) : tab === 'jig' ? (
+          /*
+           * JIG DATA：一般（目录 / 行高 / 两个开关）+ 型号尺寸匹配。
+           * 两组都由 App 以插槽传进来 —— 它们依赖 Tauri 的文件能力，
+           * 静态版这里拿到的是 undefined，页签本身也不会出现。
+           */
+          <div className="settings-groups">
+            {jig ?? (
+              <section className="settings-group">
                 <div className="settings-label">
-                  <h2>窗口</h2>
+                  <h2>JIG DATA</h2>
                 </div>
-
-                <div className="settings-panel">
-                  <div className="settings-actions">
-                    <div className="segmented" role="group" aria-label="关闭主窗口时">
-                      <button
-                        aria-pressed={closeBehavior === 'exit'}
-                        className={`segmented-item${closeBehavior === 'exit' ? ' is-on' : ''}`}
-                        type="button"
-                        onClick={() => changeCloseBehavior('exit')}
-                      >
-                        直接退出
-                      </button>
-                      <button
-                        aria-pressed={closeBehavior === 'tray'}
-                        className={`segmented-item${closeBehavior === 'tray' ? ' is-on' : ''}`}
-                        type="button"
-                        onClick={() => changeCloseBehavior('tray')}
-                      >
-                        隐藏到托盘
-                      </button>
+                <div className="settings-card">
+                  <div className="settings-row">
+                    <div className="settings-row-label">
+                      <span>暂无可用设置</span>
+                      <span className="settings-row-hint">
+                        JIG 的目录、表格与型号映射只在桌面版可用
+                      </span>
                     </div>
                   </div>
                 </div>
               </section>
-            ) : null}
-
-            <section className="settings-section">
+            )}
+          </div>
+        ) : (
+          /*
+           * 系统设置：三张组卡，卡内一行一个设置项。
+           * 与人员配置页的差别是「行式」——左侧名称 + 一句说明，控件靠右，
+           * 不再给每个设置项配一张卡、一段 320px 标签列。
+           */
+          <div className="settings-groups">
+            <section className="settings-group">
               <div className="settings-label">
-                <h2>备份</h2>
+                <h2>界面</h2>
+              </div>
+
+              <div className="settings-card">
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span>界面配色</span>
+                    <span className="settings-row-hint">
+                      「跟随系统」会随 Windows 的浅色 / 深色设置自动切换
+                    </span>
+                  </div>
+                  <div className="settings-row-control">
+                    <div className="segmented" role="group" aria-label="界面配色">
+                      <button
+                        aria-pressed={theme === 'system'}
+                        className={`segmented-item${theme === 'system' ? ' is-on' : ''}`}
+                        type="button"
+                        onClick={() => onThemeChange('system')}
+                      >
+                        跟随系统
+                      </button>
+                      <button
+                        aria-pressed={theme === 'light'}
+                        className={`segmented-item${theme === 'light' ? ' is-on' : ''}`}
+                        type="button"
+                        onClick={() => onThemeChange('light')}
+                      >
+                        浅色
+                      </button>
+                      <button
+                        aria-pressed={theme === 'dark'}
+                        className={`segmented-item${theme === 'dark' ? ' is-on' : ''}`}
+                        type="button"
+                        onClick={() => onThemeChange('dark')}
+                      >
+                        深色
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {isTauriShell() ? (
+                  <div className="settings-row">
+                    <div className="settings-row-label">
+                      <span>关闭主窗口时</span>
+                      <span className="settings-row-hint">
+                        选「隐藏到托盘」后程序仍在后台运行，退出请用托盘菜单
+                      </span>
+                    </div>
+                    <div className="settings-row-control">
+                      <div className="segmented" role="group" aria-label="关闭主窗口时">
+                        <button
+                          aria-pressed={closeBehavior === 'exit'}
+                          className={`segmented-item${closeBehavior === 'exit' ? ' is-on' : ''}`}
+                          type="button"
+                          onClick={() => changeCloseBehavior('exit')}
+                        >
+                          直接退出
+                        </button>
+                        <button
+                          aria-pressed={closeBehavior === 'tray'}
+                          className={`segmented-item${closeBehavior === 'tray' ? ' is-on' : ''}`}
+                          type="button"
+                          onClick={() => changeCloseBehavior('tray')}
+                        >
+                          隐藏到托盘
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
+            <section className="settings-group">
+              <div className="settings-label">
+                <h2>备份与恢复</h2>
                 {/*
                   只在桌面壳里提示：数据存于 WebView2 自己的用户目录
                   （%LOCALAPPDATA%\<bundle id>\EBWebView），卸载 / 重装 /
@@ -702,82 +757,105 @@ export function SettingsScreen({
                 </p>
               </div>
 
-              <div className="settings-panel">
-                <div className="settings-actions">
-                  <button className="btn" type="button" onClick={onBackup}>导出备份</button>
-                  <button className="btn" type="button" onClick={() => fileRef.current?.click()}>导入备份</button>
-                  <input
-                    ref={fileRef}
-                    accept="application/json,.json"
-                    className="visually-hidden"
-                    name="backup-file"
-                    tabIndex={-1}
-                    type="file"
-                    onChange={event => {
-                      const file = event.target.files?.[0]
-                      if (file) onRestore(file)
-                      event.target.value = ''
-                    }}
-                  />
+              <div className="settings-card">
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span>数据备份</span>
+                    <span className="settings-row-hint">
+                      导出含薪资与全部记录的 JSON；导入会整体覆盖现有数据
+                    </span>
+                  </div>
+                  <div className="settings-row-control">
+                    <Button onClick={onBackup} type="button" variant="outline">导出备份</Button>
+                    <Button onClick={() => fileRef.current?.click()} type="button" variant="outline">
+                      导入备份
+                    </Button>
+                    <input
+                      ref={fileRef}
+                      accept="application/json,.json"
+                      className="visually-hidden"
+                      name="backup-file"
+                      tabIndex={-1}
+                      type="file"
+                      onChange={event => {
+                        const file = event.target.files?.[0]
+                        if (file) onRestore(file)
+                        event.target.value = ''
+                      }}
+                    />
+                  </div>
                 </div>
+
                 {/* 默认存放目录：只对本机有效，所以不进备份文件，也不跟着换机器走 */}
-                <div className="backup-dir">
-                  <span className="backup-dir-label">默认存放目录</span>
-                  <span
-                    className={`backup-dir-path${shownBackupDir ? '' : ' is-default'}`}
-                    title={shownBackupDir ?? '系统「下载」文件夹'}
-                  >
-                    {shownBackupDir ?? '系统「下载」文件夹'}
-                  </span>
-                  <button
-                    className="btn"
-                    disabled={!dirSelectable}
-                    type="button"
-                    onClick={chooseBackupDir}
-                  >
-                    选择…
-                  </button>
-                  {backupDir ? (
-                    <button className="btn btn-quiet" type="button" onClick={resetBackupDir}>
-                      恢复默认
-                    </button>
-                  ) : null}
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span>默认存放目录</span>
+                    <span className="settings-row-hint">仅本机有效，不写进备份文件</span>
+                  </div>
+                  <div className="settings-row-control">
+                    <span
+                      className={`settings-path${shownBackupDir ? '' : ' is-default'}`}
+                      title={shownBackupDir ?? '系统「下载」文件夹'}
+                    >
+                      {shownBackupDir ?? '系统「下载」文件夹'}
+                    </span>
+                    <Button
+                      disabled={!dirSelectable}
+                      onClick={chooseBackupDir}
+                      type="button"
+                      variant="outline"
+                    >
+                      选择…
+                    </Button>
+                    {backupDir ? (
+                      <Button onClick={resetBackupDir} type="button" variant="ghost">
+                        清除
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-
               </div>
             </section>
 
-            <section className="settings-section">
+            <section className="settings-group is-danger">
               <div className="settings-label">
-                <h2>清空数据</h2>
+                <h2>危险区</h2>
               </div>
 
-              <div className="settings-panel">
-                <div className="danger-row">
-                  <Input
-                    aria-label="输入清空以确认"
-                    autoComplete="off"
-                    className="max-w-[220px] max-lg:max-w-none max-lg:flex-1 max-lg:basis-[140px]"
-                    name="clear-confirm"
-                    placeholder="输入「清空」以确认"
-                    value={confirmText}
-                    onChange={event => setConfirmText(event.target.value)}
-                  />
-                  <button
-                    className="btn btn-danger"
-                    disabled={confirmText.trim() !== '清空'}
-                    type="button"
-                    onClick={() => {
-                      onClearAll()
-                      setConfirmText('')
-                    }}
-                  >
-                    清空全部数据
-                  </button>
+              <div className="settings-card is-danger">
+                <div className="settings-row">
+                  <div className="settings-row-label">
+                    <span>清空全部数据</span>
+                    <span className="settings-row-hint">
+                      个人信息、成员、班序与全部记录都会被删除，且不能撤销
+                    </span>
+                  </div>
+                  <div className="settings-row-control">
+                    <Input
+                      aria-label="输入清空以确认"
+                      autoComplete="off"
+                      className="max-w-[180px]"
+                      name="clear-confirm"
+                      placeholder="输入「清空」以确认"
+                      value={confirmText}
+                      onChange={event => setConfirmText(event.target.value)}
+                    />
+                    <Button
+                      disabled={confirmText.trim() !== '清空'}
+                      onClick={() => {
+                        onClearAll()
+                        setConfirmText('')
+                      }}
+                      type="button"
+                      variant="destructive"
+                    >
+                      清空全部数据
+                    </Button>
+                  </div>
                 </div>
               </div>
             </section>
-          </>
+          </div>
         )}
       </div>
     </div>

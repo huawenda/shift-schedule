@@ -10,6 +10,7 @@ import {
   TableRow
 } from '@/components/ui/table'
 import { SHIFT_META, shiftToneClass, type ShiftType } from '../data/shifts'
+import { Button } from '@/components/ui/button'
 import {
   OVERTIME_KIND_LABEL,
   OVERTIME_PAY_FIELD,
@@ -289,9 +290,9 @@ export function StatsPanels({ stats, totalDays, onOpenProfile }: StatsPanelsProp
         ) : (
           <div className="stat-empty-block">
             <p className="stat-empty">还没填基本工资，算不出加班费与实发。</p>
-            <button className="btn btn-quiet" type="button" onClick={onOpenProfile}>
-              去「个人资料」填
-            </button>
+            <Button onClick={onOpenProfile} type="button" variant="ghost">
+              去「个人信息」填
+            </Button>
           </div>
         )}
       </section>

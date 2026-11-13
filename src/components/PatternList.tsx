@@ -198,30 +198,30 @@ export function PatternList({ roster, lookup, onSavePattern, onRemovePattern, on
                       {usage.members.length > 0 ? `${usage.members.length} 人` : '未使用'}
                     </span>
                     <div className="pattern-row-actions">
-                      <button
+                      <Button
                         aria-expanded={open}
-                        className="btn btn-quiet"
+                        variant="ghost"
                         type="button"
                         onClick={() => setCustomPreviewId(open ? null : pattern.id)}
                       >
                         {open ? '收起' : '查看'}
-                      </button>
-                      <button
-                        className="btn btn-quiet"
+                      </Button>
+                      <Button
+                        variant="ghost"
                         type="button"
                         onClick={() => setEditing({ pattern })}
                       >
                         编辑
-                      </button>
-                      <button
-                        className="btn btn-quiet"
+                      </Button>
+                      <Button
+                        variant="ghost"
                         disabled={pattern.id === selfPatternId}
                         title={pattern.id === selfPatternId ? '本人正用着这条班序，先把本人换到别的班序' : undefined}
                         type="button"
                         onClick={() => startDelete(pattern)}
                       >
                         删除
-                      </button>
+                      </Button>
                     </div>
                   </div>
 

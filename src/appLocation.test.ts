@@ -41,9 +41,14 @@ describe('路由解析：排班三页', () => {
     expect(loc.month).toEqual({ year: 2026, month: 10 })
   })
 
-  it('设置页的两个页签', () => {
+  it('设置页的三个页签', () => {
     expect(parseLocation('#/settings/roster').settingsTab).toBe('roster')
-    expect(parseLocation('#/settings/profile').settingsTab).toBe('profile')
+    expect(parseLocation('#/settings/system').settingsTab).toBe('system')
+    expect(parseLocation('#/settings/jig').settingsTab).toBe('jig')
+  })
+
+  it('旧深链 #/settings/profile 归一到人员配置', () => {
+    expect(parseLocation('#/settings/profile').settingsTab).toBe('roster')
   })
 
   it('未知的设置页签回落到人员配置', () => {
@@ -98,8 +103,8 @@ describe('路由生成', () => {
   })
 
   it('设置页总是带页签', () => {
-    expect(buildHash({ ...DEFAULT_LOCATION, route: 'settings', settingsTab: 'profile' }))
-      .toBe('#/settings/profile')
+    expect(buildHash({ ...DEFAULT_LOCATION, route: 'settings', settingsTab: 'system' }))
+      .toBe('#/settings/system')
   })
 
   it('**JIG 页不带月份前缀**，哪怕 location 上有月份', () => {
@@ -209,7 +214,10 @@ describe('路由：解析与生成互为逆运算', () => {
     { route: 'overview' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
     { route: 'matrix' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
     { route: 'matrix' as const, month: { year: 2026, month: 10 } as MonthKey, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
-    { route: 'settings' as const, month: null, settingsTab: 'profile' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'settings' as const, month: null, settingsTab: 'system' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'settings' as const, month: null, settingsTab: 'jig' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'settings' as const, month: null, settingsTab: 'system' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
+    { route: 'settings' as const, month: null, settingsTab: 'jig' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },
     { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'queryPivot' as const, lookupView: { kind: 'home' } as const },
     { route: 'jig' as const, month: null, settingsTab: 'roster' as const, jigTab: 'review' as const, lookupView: { kind: 'home' } as const },
     { route: 'lookup' as const, month: null, settingsTab: 'roster' as const, jigTab: 'detail' as const, lookupView: { kind: 'home' } as const },

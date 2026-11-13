@@ -91,9 +91,10 @@ async function goOverview(client) {
   await waitFor(client, 'Boolean(document.querySelector(".stats-grid"))', '月度概览页')
 }
 
-/** 设置页分两个 tab：人员配置 / 个人资料。切页后给 React 一拍时间 */
+/** 设置页分两个 tab：人员配置 / 系统设置（JIG DATA 只在桌面壳出现） */
 async function switchSettingsTab(client, label) {
-  await client.evaluate(clickByText('.canvas-tools .segmented-item', label))
+  // 页签是 shadcn Tabs（data-slot="tabs-trigger"），不是 .segmented-item
+  await client.evaluate(clickByText('.canvas-tools [data-slot="tabs-trigger"]', label))
   await sleep(150)
 }
 
@@ -403,7 +404,7 @@ async function runScenario(name, url, downloadDir) {
       days: document.querySelectorAll('.day-count').length,
       noOvertime: Array.from(document.querySelectorAll('.stat-empty')).map(node => node.textContent.trim()),
       profileCta: Boolean(Array.from(document.querySelectorAll('.stat-empty-block button'))
-        .find(node => node.textContent.trim() === '去「个人资料」填'))
+        .find(node => node.textContent.trim() === '去「个人信息」填'))
     }))()`)
     check(`${name}: 本月概览列出六个班次天数`, emptyStats.days === 6, JSON.stringify(emptyStats))
     check(
@@ -697,18 +698,18 @@ async function runScenario(name, url, downloadDir) {
 
     // --- 2b. 设置分页 + 个人信息：区块到位，薪资能落盘 ---
     await client.evaluate(clickByText('[data-view="settings"]', '设置'))
-    await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
+    await waitFor(client, 'Boolean(document.querySelector(".canvas-tools [data-slot=\\"tabs-trigger\\"]"))', '设置页 tab')
 
     const tabState = await client.evaluate(`(() => ({
-      labels: Array.from(document.querySelectorAll('.canvas-tools .segmented-item')).map(node => node.textContent.trim()),
-      active: document.querySelector('.canvas-tools .segmented-item.is-on')?.textContent.trim() ?? '',
+      labels: Array.from(document.querySelectorAll('.canvas-tools [data-slot="tabs-trigger"]')).map(node => node.textContent.trim()),
+      active: document.querySelector('.canvas-tools [data-slot="tabs-trigger"][data-state="active"]')?.textContent.trim() ?? '',
       patterns: document.querySelectorAll('.pattern-block').length,
       members: document.querySelectorAll('.member-editor').length,
       profile: document.querySelectorAll('.profile-section').length
     }))()`)
     check(
-      `${name}: 设置分两页且默认落在人员配置`,
-      JSON.stringify(tabState.labels) === JSON.stringify(['人员配置', '个人资料']) &&
+      `${name}: 设置分两页且默认落在人员配置（JIG DATA 只在桌面壳出现）`,
+      JSON.stringify(tabState.labels) === JSON.stringify(['人员配置', '系统设置']) &&
         tabState.active === '人员配置' &&
         tabState.patterns === 1 &&
         tabState.members === 1 &&
@@ -814,7 +815,7 @@ async function runScenario(name, url, downloadDir) {
       return {
         selfBadges: document.querySelectorAll('.member-row .badge-self').length,
         selfInputs: document.querySelectorAll('.member-row.is-self input, .member-row.is-self select, .member-row.is-self .select-trigger').length,
-        selfDeleteDisabled: Boolean(document.querySelector('.member-row.is-self .btn-quiet[disabled]')),
+        selfDeleteDisabled: Boolean(document.querySelector('.member-row.is-self [data-slot="button"][disabled]')),
         lockedBg: lockedCs?.backgroundColor ?? '',
         lockedShadow: lockedCs?.boxShadow ?? ''
       }
@@ -831,31 +832,33 @@ async function runScenario(name, url, downloadDir) {
       JSON.stringify(selfRow)
     )
 
-    await switchSettingsTab(client, '个人资料')
+    // 个人信息已并入人员配置页（排在最前）：三段同页共存
     await waitFor(client, 'Boolean(document.querySelector(".profile-section"))', '个人信息区块')
-
-    const profilePageOnly = await client.evaluate(`(() => ({
+    const mergedPage = await client.evaluate(`(() => ({
       patterns: document.querySelectorAll('.pattern-block').length,
       members: document.querySelectorAll('.member-editor').length,
-      profile: document.querySelectorAll('.profile-section').length
+      profile: document.querySelectorAll('.profile-section').length,
+      order: [...document.querySelectorAll('.canvas-flow .settings-group')]
+        .map(node => node.querySelector('h2')?.textContent?.trim() ?? '')
+        .slice(0, 3)
     }))()`)
     check(
-      `${name}: 切到个人资料后班序与成员不再渲染`,
-      // profile 是 2：本人一块 + 薪资一块
-      profilePageOnly.patterns === 0 && profilePageOnly.members === 0 && profilePageOnly.profile === 2,
-      JSON.stringify(profilePageOnly)
+      `${name}: 个人信息 / 班序 / 成员同页共存，个人信息排最前`,
+      mergedPage.patterns === 1 && mergedPage.members === 1 && mergedPage.profile === 1 &&
+        JSON.stringify(mergedPage.order) === JSON.stringify(['个人信息', '班序', '成员']),
+      JSON.stringify(mergedPage)
     )
 
     const profileMeta = await client.evaluate(
-      `document.querySelector('.settings-section .settings-meta')?.textContent.trim() ?? ''`
+      `document.querySelector('.profile-section .settings-meta')?.textContent.trim() ?? ''`
     )
-    check(`${name}: 个人资料页标出本人`, profileMeta.includes('张三'), profileMeta)
+    check(`${name}: 人员配置页标出本人`, profileMeta.includes('张三'), profileMeta)
 
     // 个人资料页与人员配置页同一套：页头钉住 + 分隔线
     // 内容高度随数据与文案变化：能滚时要求真的滚起来，装得下时只校验页头不动
     const pinnedProfile = await client.evaluate(pinnedState)
     check(
-      `${name}: 个人资料页页头同样钉住（分隔线下滚，页头不动）`,
+      `${name}: 人员配置页页头同样钉住（分隔线下滚，页头不动）`,
       pinnedProfile.canvasOverflow === 'hidden' &&
         pinnedProfile.flowOverflow === 'auto' &&
         pinnedProfile.borderTop === '1px solid' &&
@@ -869,7 +872,7 @@ async function runScenario(name, url, downloadDir) {
     await sleep(150)
     check(
       `${name}: 保存本人信息（只改岗位）`,
-      await client.evaluate(clickByText('.profile-section .btn-primary', '保存本人信息'))
+      await client.evaluate(clickByText('.profile-section [data-slot="button"]', '保存本人信息'))
     )
     await sleep(300)
     const selfPosition = await client.evaluate(`(() => {
@@ -884,7 +887,7 @@ async function runScenario(name, url, downloadDir) {
 
     check(`${name}: 填基本工资`, await client.evaluate(setInputBySelector('.salary-grid input', '8000')))
     await sleep(150)
-    check(`${name}: 保存薪资`, await client.evaluate(clickByText('.profile-section .btn-primary', '保存薪资')))
+    check(`${name}: 保存薪资`, await client.evaluate(clickByText('.profile-section [data-slot="button"]', '保存薪资')))
     await sleep(300)
 
     const salaryStored = await client.evaluate(`(() => {
@@ -899,6 +902,54 @@ async function runScenario(name, url, downloadDir) {
       `${name}: 薪资写进 profile 并落盘`,
       salaryStored.base === '8000' && salaryStored.hasMemberId,
       JSON.stringify(salaryStored)
+    )
+
+    // 系统设置页：三张组卡 + 行式设置项（行高 48/56、控件右对齐、危险区独立配色）
+    await switchSettingsTab(client, '系统设置')
+    await waitFor(client, 'document.querySelectorAll(".settings-group").length === 3', '系统设置三组')
+    const systemLook = await client.evaluate(`(() => {
+      const groups = [...document.querySelectorAll('.settings-group')]
+      const rows = [...document.querySelectorAll('.settings-row')]
+      const first = rows[0]
+      const cs = first ? getComputedStyle(first) : null
+      const control = first?.querySelector('.settings-row-control')
+      const card = document.querySelector('.settings-card')
+      const dangerCard = document.querySelector('.settings-group.is-danger .settings-card')
+      const dangerTitle = document.querySelector('.settings-group.is-danger .settings-label h2')
+      return {
+        groups: groups.length,
+        dangerGroups: document.querySelectorAll('.settings-group.is-danger').length,
+        rows: rows.length,
+        rowH: first ? Math.round(first.getBoundingClientRect().height) : -1,
+        rowPadY: cs ? parseFloat(cs.paddingTop) : -1,
+        controlRightAligned: control
+          ? Math.abs(control.getBoundingClientRect().right - first.getBoundingClientRect().right) <= 17
+          : false,
+        cardRadius: card ? getComputedStyle(card).borderRadius : '',
+        dangerBorder: dangerCard ? getComputedStyle(dangerCard).borderTopColor : '',
+        dangerTitleColor: dangerTitle ? getComputedStyle(dangerTitle).color : '',
+        segH: (() => {
+          const item = document.querySelector('.settings-row .segmented-item')
+          const wrap = document.querySelector('.settings-row .segmented')
+          if (!item || !wrap) return -1
+          return Math.round(wrap.getBoundingClientRect().height)
+        })()
+      }
+    })()`)
+    check(
+      `${name}: 系统设置三组卡、行式设置项、危险区独立配色`,
+      systemLook.groups === 3 &&
+        systemLook.dangerGroups === 1 &&
+        systemLook.rows >= 4 &&
+        systemLook.rows <= 6 &&
+        systemLook.rowPadY === 12 &&
+        systemLook.rowH >= 48 &&
+        systemLook.controlRightAligned &&
+        systemLook.cardRadius === '12px' &&
+        systemLook.dangerBorder === 'rgb(227, 181, 176)' &&
+        systemLook.dangerTitleColor === 'rgb(180, 35, 24)' &&
+        systemLook.segH === 32,
+      JSON.stringify(systemLook)
     )
 
     await client.evaluate(clickByText('[data-view="matrix"]', '全员矩阵'))
@@ -1894,14 +1945,14 @@ async function runScenario(name, url, downloadDir) {
 
       // 换人必须先问：有记录时改本人姓名 → 弹影响清单，取消则什么都不动
       await client.evaluate(clickByText('[data-view="settings"]', '设置'))
-      await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
-      await switchSettingsTab(client, '个人资料')
+      await waitFor(client, 'Boolean(document.querySelector(".canvas-tools [data-slot=\\"tabs-trigger\\"]"))', '设置页 tab')
+      await switchSettingsTab(client, '人员配置')
       await waitFor(client, 'Boolean(document.querySelector(".profile-section"))', '个人信息区块')
       await client.evaluate(setInputBySelector('.profile-form input', '张三丰'))
       await sleep(150)
       check(
         `${name}: 改本人姓名触发保存`,
-        await client.evaluate(clickByText('.profile-section .btn-primary', '保存本人信息'))
+        await client.evaluate(clickByText('.profile-section [data-slot="button"]', '保存本人信息'))
       )
       await waitFor(client, 'Boolean(document.querySelector(".impact-list"))', '换人确认弹层')
       const impactText = await client.evaluate('document.querySelector(".impact-list").textContent.trim()')
@@ -1978,7 +2029,7 @@ async function runScenario(name, url, downloadDir) {
       const saveBarAlign = await client.evaluate(`(() => {
         const actions = document.querySelector('.settings-actions.is-sticky')
         const hint = actions?.querySelector('.save-hint')
-        const btn = actions?.querySelector('.btn-primary')
+        const btn = actions?.querySelector('[data-slot="button"][data-variant="default"]')
         if (!actions || !hint || !btn) return null
         const h = hint.getBoundingClientRect()
         const b = btn.getBoundingClientRect()
@@ -2438,10 +2489,10 @@ async function runScenario(name, url, downloadDir) {
     check(`${name}: 矩阵里显示自建班序名`, rowLabels.includes('甲班'), rowLabels.join(','))
 
     // --- 10. 导出备份：v5 且带上自建班序 ---
-    // 顶栏不再放备份按钮，统一从「设置 → 个人资料」触发
+    // 顶栏不再放备份按钮，统一从「设置 → 系统设置」触发
     await client.evaluate(clickByText('[data-view="settings"]', '设置'))
     await sleep(300)
-    await switchSettingsTab(client, '个人资料')
+    await switchSettingsTab(client, '人员配置')
     await client.evaluate(clickByText('.settings-actions button', '导出备份'))
 
     let backupFile = null
@@ -2616,8 +2667,8 @@ async function runScenario(name, url, downloadDir) {
 
     // --- 13. 导入 fixtures/班组13人.json（真实班组数据的导入链路） ---
     await client.evaluate(clickByText('[data-view="settings"]', '设置'))
-    await waitFor(client, 'Boolean(document.querySelector(".canvas-tools .segmented"))', '设置页 tab')
-    await switchSettingsTab(client, '个人资料')
+    await waitFor(client, 'Boolean(document.querySelector(".canvas-tools [data-slot=\\"tabs-trigger\\"]"))', '设置页 tab')
+    await switchSettingsTab(client, '人员配置')
     await waitFor(client, 'Boolean(document.querySelector(".settings-actions input[type=file]"))', '导入入口')
 
     // 备份的默认存放目录：静态版没有 __TAURI__，「选择…」必须是禁用态

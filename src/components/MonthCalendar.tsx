@@ -56,7 +56,7 @@ export function MonthCalendar({
       <div className="empty">
         <p className="empty-title">还没有设置本人</p>
         <p className="empty-text">
-          个人日历只显示本人。到「设置 → 个人资料」里填上你的姓名与班序，这里就会出现你自己的月历。
+          个人日历只显示本人。到「设置 → 人员配置 → 个人信息」里填上你的姓名与班序，这里就会出现你自己的月历。
         </p>
       </div>
     )
