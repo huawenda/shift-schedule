@@ -323,12 +323,14 @@
   transition: padding-inline var(--motion-panel-dur) var(--motion-panel-ease);
 }
 
-/* 壳里折叠成图标条时，品牌大字标要收起（否则和标题栏的折叠按钮上下挤在一起）。
+/* 壳里折叠成图标条时，品牌字标要收起（否则和标题栏的折叠按钮上下挤在一起）。
  * 用「淡出 + 收高」而不是 `display: none`：后者在点击那一帧就消失，
  * 而宽度还要走 220ms，观感上像内容先炸掉、面板才慢慢合上。
- * 88px 是展开态的自然高度（标题行 60 + 上下内边距 24）留 4px 余量。 */
+ * 116px = 展开态自然高度：56px 图标 + <a> 上下各 8px padding = 72px，
+ * 再加 .brand-hero 的 16 + 24 内边距 = 112px，留 4px 余量。
+ * 品牌头放大后这个值必须跟着走，否则展开态会被 overflow:hidden 削掉底边。 */
 [data-slot='sidebar'] .brand-hero {
-  max-height: 88px;
+  max-height: 116px;
   overflow: hidden;
   transition:
     max-height var(--motion-panel-dur) var(--motion-panel-ease),

@@ -183,13 +183,17 @@ WebView2 原生控件主题仍由 `set_window_theme` 在首帧与每次切主题
 
 ### 3.1 标识
 
-石墨底 + 四把内六角组套：深色握把、铆钉、斜向构图，背景换成 `#1A2125` 的纯色。
+深石墨底 + 四把内六角的**扁平抽象**剪影：米白 L 形条、深色握把带、一点青。
+底色 `#151C21`（接近画布 `#181818`），握把比底亮一档，所以不用描边也能浮出来。
 
-- **母版**：`design/logo/hexkey/icon-1024.png`（1024 透明圆角 PNG），原始素材留在同目录 `source.png`。
+- **母版**：`design/logo/flat-abstract/icon-1024.png`（1024 透明圆角 PNG，深色底已合成好）。
+  同目录 `ref-C.png` 是白底效果图（原始素材）；母版就是把它的白底抠成透明、
+  原样合成到深底，图形与配色一个像素都没重绘 —— 不要照效果图再画一版，那会是另一个东西。
+- **上一版标识**：`design/logo/hexkey/`（写实内六角组套，1024 母版 + `source.png`）保留可回退。
 - **备用方案**：`design/logo/gauge/`（八刻度仪表）与 `design/logo/alt-hexnut/`（六角螺母），都不接入应用。
-- **旧标识仍保留**：`design/logo/logo.svg` 与 `design/logo/legacy/` 里的 PNG / ICO / ICNS 可随时回退。
+- **更早的旧标识**：`design/logo/logo.svg` 与 `design/logo/legacy/` 里的 PNG / ICO / ICNS 可随时回退。
 - 换母版后重跑：
-  `pnpm exec tauri icon design/logo/hexkey/icon-1024.png -o .tmp-icons`
+  `pnpm exec tauri icon design/logo/flat-abstract/icon-1024.png -o .tmp-icons`
   只取 `.tmp-icons` 顶层的桌面图标覆盖 `desktop/src-tauri/icons/`（不要复制 `ios/`、`android/`），
   再用 `icon.png` 生成 `public/icons/icon-512.png` 与 `icon-192.png`，最后删掉 `.tmp-icons`。
 - 换完图标文件后 **Rust 必须重编译一次**：窗口与任务栏图标是编译期由 `tauri-build`
@@ -388,10 +392,11 @@ manifest 的 `theme_color` 画它，而 manifest 是静态文件、没有深色�
 内容区只有 752px；折叠侧栏后同一视口下内容区又变宽，视口数字与内容区宽度是脱钩的。
 折叠侧栏或改窗口宽度时容器宽度实时变化，不必补断点。
 
-- **侧栏选中 / hover 与底色同色系**：侧栏底色 `--ui-sidebar`（浅 `#e8ebee` 偏冷 / 深 `#202020` 中性灰），
-  accent 必须留在同一冷灰家族 —— 选中 `#d2dbe4`（比浅色底深一档）、hover 取同色 40%（约 `#dfe5ea`），
-  深色下选中 `#242c37`、hover 约 `#1b2229`。原先用的 `oklch(0.92 0 0)` 是中性暖灰，
-  贴在冷灰底上像一块补丁；`--ui-sidebar-border` 同步成 `#d7dee5`，分隔线才不突兀。
+- **侧栏选中 / hover 与底色同色系**：侧栏底色 `--ui-sidebar`（浅 `#fafafa` / 深 `#202020`，都是中性灰），
+  accent 留在同一中性灰家族 —— 浅色选中 `#e3e3e3`（比底色深一档）、hover 同色 40%（约 `#f1f1f1`），
+  深色选中 `#2e2e2e`、hover 约 `#262626`。浅色三值取自参考应用截图实测；
+  旧的冷灰蓝家族（`#e8ebee` / `#d2dbe4` / `#d7dee5`）贴在中性白上会偏色。
+  `--ui-sidebar-border` 同步成 `#f0f0f0`，即参考应用那道分界线。
 - **折叠按钮只有一处**：壳里它是自绘标题栏左段那个 28px 图标按钮（展开时贴左、48px 图标条下
   居中），顶栏 / JIG 顶栏那份**在壳内不再渲染**，避免同一行上下出现两个折叠按钮；浏览器 /
   静态版没有标题栏，仍由顶栏提供。品牌大字标只在展开态出现，折叠态 `.brand-hero` 收起，

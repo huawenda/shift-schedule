@@ -19,10 +19,10 @@ export type ResolvedTheme = 'light' | 'dark'
 
 const DARK_QUERY = '(prefers-color-scheme: dark)'
 
-/** 画布底色：与 tokens.scss 的 --canvas 保持一致，PWA 状态栏跟着它走 */
+/** 画布底色：跟随 --layer-canvas（深色为实测取来的 #121212），PWA 状态栏跟着它走 */
 const THEME_COLOR: Record<ResolvedTheme, string> = {
   light: '#ffffff',
-  dark: '#0f1318'
+  dark: '#121212'
 }
 
 function isThemePreference(value: string | null): value is ThemePreference {

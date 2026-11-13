@@ -37,7 +37,9 @@
    * 与它们拉开一档，画布左上角圆角从同色底上透出来，不留孤立色块。
    * 不动 --ui-background：按钮 / Tabs / 跳过导航都走它，改它会连带染色。 */
   --layer-canvas: #ffffff;
-  --layer-gap: #e8ebee;
+  /* 缝隙与侧栏同色：浅色实测侧栏 #FAFAFA、画布 #FFFFFF，
+   * 圆角缺口不能露出一块比侧栏更深的冷灰（旧值 #e8ebee）。 */
+  --layer-gap: #fafafa;
   --active: #ebedee;
   /* 系统底部导航栏（手势条区域）的浅灰。web 端已不再用它：外壳换成 shadcn 后
    * 统一取画布白（见 index.html 的 theme-color 与 manifest 的 theme_color /
@@ -74,16 +76,8 @@
   /* 命中/选中底再深一档：浅灰底栏上 accent-weak 几乎看不出，用这一档才立得住 */
   --accent-soft: #d4e0e4;
 
-  /* 应用标识改用位图（public/icons），不再需要品牌图形色 token。 */
-
-  /* 品牌名字体：衬线。与正文黑体拉开形态差别，让「昼夜」读起来是品牌，而不是一行界面文字。
-   * 回退链按「越像越好」排，且每一档都还是衬线 —— 缺字体只会换一款宋/衬线，不会跳回黑体：
-   *   Noto Serif SC（可变字重，400/500/600/700 四档各不相同，实测墨迹 636/712/796/872）
-   *   → 华文中宋 STZhongsong（Windows 自带，有旧式印刷味）
-   *   → Songti SC（macOS 自带）
-   *   → SimSun 宋体（Windows 保底，一定有）
-   * 全部为系统已装字体，不加载网络字体（file:// 离线可用的硬约束）。 */
-  --font-brand: "Noto Serif SC", "STZhongsong", "Songti SC", "SimSun", serif;
+  /* 应用标识改用位图（public/icons），不再需要品牌图形色 token；
+   * 品牌字标换成单行拉丁字标后，中文衬线 --font-brand 也一并退役。 */
 
   --danger: #b42318;
   --danger-weak: #fdecea;
@@ -214,7 +208,7 @@
   --sidebar-width: 228px;
   --topbar-height: 48px;
   /* 自绘标题栏高度：侧栏那半条与内容区那半条共用，改动要同步两处 */
-  --titlebar-h: 40px;
+  --titlebar-h: 32px;
   /* 顶层版心间距：等于间距阶梯的 24 档 */
   --gap: var(--sp-5);
   --pad: var(--sp-5);
@@ -333,7 +327,9 @@
    * bg-background → --ui-background。改这里不会有视觉效果，别改错地方。 */
   --canvas: #141414;
   --raised: #2e2e2e;
-  --layer-canvas: #181818;
+  /* 画布底色取参考应用实测的 #121212：比侧栏 #202020 暗 14，
+   * 正好是「画布沉进去一层」的那一档；旧值 #181818 偏亮、边界不够清。 */
+  --layer-canvas: #121212;
   /* 与侧栏同色：圆角缝隙不该露出一块更深的缺口 */
   --layer-gap: #202020;
   --active: #343434;

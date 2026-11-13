@@ -1,6 +1,6 @@
 {
-  "name": "昼夜 · 个人倒班记录本",
-  "short_name": "昼夜",
+  "name": "Workhorse",
+  "short_name": "Workhorse",
   "description": "个人倒班记录工具：班序固定，成员自定义",
   "id": "./",
   "start_url": "./#/overview",

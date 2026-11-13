@@ -1,4 +1,4 @@
-// 昼夜 · 个人倒班记录本 —— Tauri 壳。
+// Workhorse —— Tauri 壳。
 //
 // 壳本身不碰任何业务逻辑：班序展开、成员与改班记录全在前端 src/data/ 里
 // （纯 TS，有单测覆盖），这个 crate 只负责开一个窗口、把前端资源挂上去。
@@ -297,7 +297,7 @@ pub fn run() {
                 .menu(&menu)
                 // 左键留给「显示并聚焦」，右键才弹菜单
                 .show_menu_on_left_click(false)
-                .tooltip("昼夜 · 个人倒班记录本")
+                .tooltip("Workhorse")
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "toggle" => {
                         if let Some(window) = app.get_webview_window("main") {

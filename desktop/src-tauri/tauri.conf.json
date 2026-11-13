@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "昼夜",
+  "productName": "Workhorse",
   "mainBinaryName": "昼夜",
   "version": "1.0.0",
   "identifier": "com.huawenda.shiftschedule",
@@ -48,7 +48,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "copyright": "昼夜 · 个人倒班记录本",
+    "copyright": "Workhorse",
     "category": "Productivity",
     "shortDescription": "个人倒班记录工具：班序固定，成员自定义",
     "longDescription": "个人倒班记录工具：13 条固定班序模板，成员姓名与人数由使用者自定义，数据保存在本机。",

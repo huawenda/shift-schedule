@@ -498,9 +498,9 @@ fixtures/
 **暗色主题已实现**：`<html data-theme="dark">` 覆盖项目令牌（`src/styles/tokens.scss`），
 `.dark` 类覆盖 shadcn 的 `--ui-*`（`src/index.css`），由 `src/platform/theme.ts` 驱动；
 偏好三态（跟随系统 / 浅色 / 深色）存在本机 localStorage，默认浅色。
-暗色下侧栏与整条标题栏 `--ui-sidebar` `#202020`，画布层 `--layer-canvas` `#181818` 暗一档（中性灰，不偏蓝）；
+暗色下侧栏与整条标题栏 `--ui-sidebar` `#202020`，画布层 `--layer-canvas` `#121212` 暗一档（中性灰，不偏蓝）；
 圆角缝隙 `--layer-gap` 取侧栏同色，画布层左上角圆角从同色底上透出来，不留深色缺口。
-浅色同理（`#e8ebee` / `#ffffff`），两档主题都不会在圆角处露出突兀色块。
+浅色同理（`#fafafa` / `#ffffff`，取自参考应用截图实测），两档主题都不会在圆角处露出突兀色块。
 `--ui-background` 仍不变（按钮 / Tabs / 跳过导航都走它），详见 `DESIGN.md`。
 
 **夜班是六色里唯一的反相块**（深蓝底 + 近白字）：浅蓝灰的夜班和事假几乎同色，

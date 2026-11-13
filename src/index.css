@@ -184,17 +184,18 @@
     --ui-chart-4: oklch(0.371 0 0);
     --ui-chart-5: oklch(0.269 0 0);
     --ui-radius: 0.625rem;
-    --ui-sidebar: #e8ebee;
+    --ui-sidebar: #fafafa;
     --ui-sidebar-foreground: oklch(0.145 0 0);
     --ui-sidebar-primary: oklch(0.205 0 0);
     --ui-sidebar-primary-foreground: oklch(0.985 0 0);
-    /* 侧栏底色是偏冷的 #e8ebee，accent 必须留在同一冷灰家族，
-       否则选中块会像一块「暖灰补丁」贴在冷灰底上（原先 oklch(0.92 0 0) 就是这个效果）。
-       选中 = 实色 #d2dbe4（比底色深一档）；hover = 同色 40% 叠在底色上（约 #dfe5ea，浅一档），
-       两者一眼可分。边框同步成同色系，分隔线才不突兀。 */
-    --ui-sidebar-accent: #d2dbe4;
+    /* 浅色侧栏取参考应用实测：底 #FAFAFA，画布 #FFFFFF，两者只差 5，
+       靠一道 1px #F0F0F0 分界线切开。选中块 #E3E3E3 比底深一档；
+       hover 是同色 40% 叠底（约 #F1F1F1），两者一眼可分。
+       三个值都是中性灰 —— 旧的冷灰蓝家族(#e8ebee/#d2dbe4/#d7dee5)
+       贴在中性白上会偏色，整套一起换掉。 */
+    --ui-sidebar-accent: #e3e3e3;
     --ui-sidebar-accent-foreground: #1b2027;
-    --ui-sidebar-border: #d7dee5;
+    --ui-sidebar-border: #f0f0f0;
     --ui-sidebar-ring: oklch(0.708 0 0);
 }
 
@@ -207,7 +208,7 @@
  * 不是一个色温，侧栏、顶栏、弹层与画布会各走各的。 */
 .dark {
     /* 两层色 + 同色缝隙：侧栏 / 整条标题栏 / 缝隙都是 --ui-sidebar(#202020)，
-       画布层 --layer-canvas(#181818) 暗一档。左上角圆角从与侧栏同色的缝隙上透出来，
+       画布层 --layer-canvas(#121212) 暗一档。左上角圆角从与侧栏同色的缝隙上透出来，
        不再单独留一块深色缺口。
        ⚠️ bg-background 不只画布在用（outline 按钮 / Tabs 选中态 / 底部标签栏 /
        跳过导航链接都走它），所以窗口底色仍用 --ui-background，不整体调亮。 */
@@ -236,7 +237,7 @@
     --ui-chart-3: #7a7a7a;
     --ui-chart-4: #555555;
     --ui-chart-5: #383838;
-    /* 中性灰：侧栏 / 标题栏 #202020、画布 #181818（对齐参考的桌面应用观感）；
+    /* 中性灰：侧栏 / 标题栏 #202020、画布 #121212（对齐参考的桌面应用观感）；
        选中态比底色亮一档，hover 走 40% 透明，叠出来约 #262626。 */
     --ui-sidebar: #202020;
     --ui-sidebar-foreground: #ececec;

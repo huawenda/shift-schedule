@@ -62,18 +62,17 @@ export function AppSidebar({ route, hrefs, onNavigate }: AppSidebarProps) {
 
   return (
     <Sidebar collapsible="icon">
-      {/* 壳里的标题栏段与侧栏同一层（不画分隔线），只留 20px 小标识；
-          放大的品牌字标压到它下面的 .brand-hero，像参考稿那样沉一层。
-          浏览器 / 静态版没有自绘标题栏，品牌仍是常规尺寸。
-          两处共用 BrandLockup —— 图案与文案完全一致，只调尺寸与排版。 */}
+      {/* 壳里的标题栏段与侧栏同一层（不画分隔线），只留折叠按钮；
+          品牌字标压到它下面的 .brand-hero，像参考稿那样沉一层。
+          浏览器 / 静态版没有自绘标题栏，品牌仍是同一份横向单行排版。 */}
       {inTauri ? <SidebarTitleBar /> : null}
       <SidebarHeader className={inTauri ? 'brand-hero' : undefined}>
         <a
-          className="flex items-center gap-2 rounded-md p-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+          className="flex items-center rounded-md py-2 text-sidebar-foreground transition-colors hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
           href={hrefs.overview}
           onClick={event => intercept(event, 'overview')}
         >
-          <BrandLockup collapseText variant={inTauri ? 'hero' : 'sidebar'} />
+          <BrandLockup collapseText />
         </a>
       </SidebarHeader>
 

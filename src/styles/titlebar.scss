@@ -118,16 +118,47 @@
   background: transparent;
 }
 
-/* ── 品牌：标题栏里只留小标识，放大的字标压到侧栏主体 ────────────── */
+/* ── 画布框线 ──────────────────────────────────────────────
+ * 只画**上、左**两道 1px 发丝线（--rule）：这两条是画布的起点边界，
+ * 一条接标题栏、一条接侧栏，正好把内容区从外壳里切出来。
+ * 右 / 下不画 —— 画布贴着窗口右缘与底边，再描一遍会和窗口边缘叠成双线，
+ * 而且直角线顶到系统圆角上会露出硬角。窗口边界交给系统阴影即可。
+ * 只在壳里生效 —— 浏览器 / 静态版的窗口边由系统画。 */
+.canvas-layer:not(.canvas-layer--web) {
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+}
+
+/* ── 品牌：标题栏里只留折叠按钮，字标压到侧栏主体 ────────── */
 .brand-hero {
-  padding: var(--sp-4) var(--sp-3) var(--sp-2);
+  /* 左右只留 8px：26px 的 9 字母字标在 224px 侧栏里要跟 56px 图标并排，
+   * 12px 内边距时余量只剩 4px，浏览器换用 Bold 字重就可能被 truncate 吃掉尾字母。
+   * 下方留 24px：品牌头与「排班」分组之间要有呼吸，
+   * 否则大字标直接压在导航上，看起来像一行超长的菜单项。 */
+  padding: var(--sp-4) var(--sp-2) var(--sp-5);
 }
 
-.brand-lockup--hero .brand-lockup__name {
+/* 单行拉丁字标：56px 图标 + 26px 字标，靠行高与图标垂直居中。
+ * 继承全站无衬线字体 —— 旧的中文衬线 --font-brand 已退役
+ * （「Workhorse」是拉丁字标，宋体回退链对它没有意义）。
+ * 负字距是必要的：9 个字母在 224px 侧栏里要挤进 56px 图标右侧的
+ * 那点空间，-0.03em 省下约 7px，字标才不会被 truncate。 */
+.brand-lockup {
+  /* 4px：图标与字标要读成一个整体；12px / 8px 时中间那道缝都还把两者拆开 */
+  gap: var(--sp-1);
+}
+
+.brand-lockup__name {
   font-size: var(--fs-title);
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 
-.brand-lockup--hero .brand-lockup__slogan {
-  font-size: var(--fs-control);
+/* 去底图形靠侧栏底色托着：深色侧栏上米白 L 形条正好亮起来；
+ * 浅色侧栏（#fafafa）与米白几乎同亮度，条子会整片消失、只剩一块深握把。
+ * 所以只在浅色主题下把整个图形压成深色剪影，两种底色下图形都完整。
+ * 深色主题保持原色，青点也留着。 */
+:root:not([data-theme='dark']) .brand-lockup img {
+  filter: brightness(0.34) saturate(1.15);
 }

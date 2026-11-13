@@ -16,7 +16,7 @@
          浅色时写 light（原生控件不被系统暗色染黑），深色时写 dark。 -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="昼夜" />
+    <meta name="apple-mobile-web-app-title" content="Workhorse" />
     <meta name="description" content="个人倒班记录工具：班序固定，成员自定义" />
     <link rel="icon" type="image/png" href="./icons/icon-192.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
@@ -38,9 +38,9 @@
           if (dark) root.classList.add('dark');
           /* 无边框窗口没有系统标题栏，首帧底色由页面自己给；
              不写这一行深色用户会先看到窗口 backgroundColor 的一帧白 */
-          root.style.backgroundColor = dark ? '#181818' : '#ffffff';
+          root.style.backgroundColor = dark ? '#121212' : '#ffffff';
           var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', dark ? '#181818' : '#ffffff');
+          if (meta) meta.setAttribute('content', dark ? '#121212' : '#ffffff');
           /* 壳里同步窗口主题：不能等 React 挂载，否则深色用户会先看到
              一帧浅色原生控件。静态版没有 __TAURI__，这段直接跳过；
              老版本 exe 没有这个命令时 Promise 会 reject，被 catch 吞掉。 */
