@@ -1,7 +1,7 @@
 /**
  * 品牌标识与字标：侧栏头部和自绘标题栏共用同一份内容。
  *
- * 图案取自 design/logo/logo.svg，文案是「昼夜 / 个人倒班记录本」——
+ * 图案取自 design/logo/hexkey/icon-1024.png（石墨底四把内六角组套）——
  * 三种尺寸只允许调排版，不改图案和文案本身。
  */
 
@@ -9,23 +9,16 @@ interface BrandMarkProps {
   className?: string
 }
 
-/** 一个圆，上半昼、下半夜，中间一颗星；星是「夜」的识别锚点，缩到再小也留着。 */
+/** 直接用应用图标，侧栏、标题栏和任务栏保持同一张图。 */
 export function BrandMark({ className = 'size-9' }: BrandMarkProps) {
   return (
-    <svg
+    <img
+      alt=""
       aria-hidden="true"
-      className={`shrink-0 rounded-[10px] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] ${className}`}
-      focusable="false"
-      viewBox="0 0 192 192"
-    >
-      <rect fill="var(--brand-ink)" height="192" rx="44" width="192" />
-      <circle cx="96" cy="96" fill="var(--brand-night)" r="58" />
-      <path d="M38 96a58 58 0 0 1 116 0Z" fill="var(--brand-day)" />
-      <path
-        d="M96 106Q96 124 114 124Q96 124 96 142Q96 124 78 124Q96 124 96 106Z"
-        fill="var(--brand-star)"
-      />
-    </svg>
+      className={`shrink-0 object-contain ${className}`}
+      draggable={false}
+      src="./icons/icon-192.png"
+    />
   )
 }
 

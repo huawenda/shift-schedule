@@ -183,16 +183,34 @@ WebView2 原生控件主题仍由 `set_window_theme` 在首帧与每次切主题
 
 ### 3.1 标识
 
-一个圆：上半昼、下半夜，夜里一点星。深青盘是为了在浅色桌面、任务栏和 16px 托盘上都立得住。
+石墨底 + 四把内六角组套：深色握把、铆钉、斜向构图，背景换成 `#1A2125` 的纯色。
 
-- **母版唯一**：`design/logo/logo.svg`（192 基准网格、23% 圆角）。
-  桌面图标、PWA 图标、侧栏字标全从它派生，不做第二套画法。
-- 改母版后必须重跑
-  `pnpm exec tauri icon design/logo/logo.svg -o desktop/src-tauri/icons`，
-  否则 `icon.ico` / `icon.icns` 停在旧图；`public/icons/` 的 192 / 512 由 `icon.png` 等比缩放补出。
+- **母版**：`design/logo/hexkey/icon-1024.png`（1024 透明圆角 PNG），原始素材留在同目录 `source.png`。
+- **备用方案**：`design/logo/gauge/`（八刻度仪表）与 `design/logo/alt-hexnut/`（六角螺母），都不接入应用。
+- **旧标识仍保留**：`design/logo/logo.svg` 与 `design/logo/legacy/` 里的 PNG / ICO / ICNS 可随时回退。
+- 换母版后重跑：
+  `pnpm exec tauri icon design/logo/hexkey/icon-1024.png -o .tmp-icons`
+  只取 `.tmp-icons` 顶层的桌面图标覆盖 `desktop/src-tauri/icons/`（不要复制 `ios/`、`android/`），
+  再用 `icon.png` 生成 `public/icons/icon-512.png` 与 `icon-192.png`，最后删掉 `.tmp-icons`。
 - 换完图标文件后 **Rust 必须重编译一次**：窗口与任务栏图标是编译期由 `tauri-build`
   嵌进二进制的，运行时只认 binary 里那份。只动 `icons/` 不动源码，cargo 会判定无变更直接跳过，
   `tauri dev` 仍显示旧图。先 touch `src/lib.rs` 再 `cargo build`，或 `cargo clean -p shift-schedule-desktop`。
+- **物理图标只有两处**：
+  1. `public/icons/` —— 浏览器 favicon、PWA，以及应用内 `Brand.tsx` 直接引用的 `./icons/icon-192.png`；
+  2. `desktop/src-tauri/icons/` —— exe、任务栏、托盘（要重编译 Rust）。
+  `Brand.tsx` 不再单独画一套图形，换 `public/icons/` 就会同步侧栏和标题栏。
+- **`tauri dev` 会复用旧的图标资源缓存**：即使 `icons/icon.ico` 已更新、exe 也重新链接了，
+  嵌进去的窗口图标仍可能是旧的（不同 `TAURI_ENV_*` 会落到不同的 build 目录，旧目录里的
+  `resource.lib` 不会自动失效）。表现是任务栏 / 标题栏图标没变，但 `Brand.tsx` 已经变了。
+  处理：完全退出 dev（应用、vite、tauri dev 全部退出）→
+  `cargo clean -p shift-schedule-desktop` → 重新 `cargo build` 或 `tauri dev`。
+  验证 exe 里的图标：
+  ```powershell
+  Add-Type -AssemblyName System.Drawing
+  $ico = [System.Drawing.Icon]::ExtractAssociatedIcon("desktop\src-tauri\target\debug\shift-schedule-desktop.exe")
+  $ico.ToBitmap().Save("$env:TEMP\exe-icon.png")
+  ```
+  若 exe 图标已新、任务栏仍旧，是 Explorer 的图标缓存：重启 Explorer，或取消固定再固定。
 
 ### 3.2 侧栏品牌区＝书脊
 
