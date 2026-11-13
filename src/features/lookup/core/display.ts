@@ -27,7 +27,7 @@ export const DIMENSION_LABEL: Record<LookupDimension, string> = {
 export const QUICK_ENTRIES: readonly EntityRef[] = [
   { type: 'model', key: 'FY' },
   { type: 'jig', key: '7748G' },
-  { type: 'recipe', key: '31(10)' },
+  { type: 'recipe', key: '310(10)' },
   { type: 'inch', key: '77/48' },
   { type: 'fspm', key: 'P467' },
 ]

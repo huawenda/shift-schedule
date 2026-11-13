@@ -25,8 +25,8 @@ describe('INCH 紧凑键', () => {
     expect(compactInchKey('7748')).toBe('7748')
   })
 
-  it('不用于 Recipe：31(10) 的紧凑形式与 INCH 不撞', () => {
-    expect(compactInchKey('31(10)')).toBe('3110')
+  it('不用于 Recipe：310(10) 的紧凑形式与 INCH 不撞', () => {
+    expect(compactInchKey('310(10)')).toBe('31010')
     expect(candidates.some(c => c.ref.type === 'inch' && c.keys.includes('3110'))).toBe(false)
   })
 })
@@ -76,8 +76,8 @@ describe('command 搜索', () => {
   })
 
   it('Recipe 走完整键，能命中 recipe 实体', () => {
-    const hits = searchEntities(index, '31(10)')
-    expect(hits.some(hit => hit.ref.type === 'recipe' && hit.ref.key === '31(10)')).toBe(true)
+    const hits = searchEntities(index, '310(10)')
+    expect(hits.some(hit => hit.ref.type === 'recipe' && hit.ref.key === '310(10)')).toBe(true)
   })
 
   it('型号完全匹配排最前', () => {

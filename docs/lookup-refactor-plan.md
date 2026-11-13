@@ -116,7 +116,7 @@
 | `#/lookup/browse/inch`、`/browse/model`、`/browse/fspm`、`/browse/jig` | 维度展示页 |
 | `#/lookup/inch/77%2F48` | INCH 实体结果 |
 | `#/lookup/model/FY` | 型号实体结果（**与 v1 完全相同**） |
-| `#/lookup/jig/7748G`、`#/lookup/recipe/31(10)` | JIG / Recipe 实体结果 |
+| `#/lookup/jig/7748G`、`#/lookup/recipe/310(10)` | JIG / Recipe 实体结果 |
 | `#/lookup/fspm/P467` | FSPM 实体结果 |
 | `#/lookup/group/7748G-01` | 单组合详情 |
 
@@ -126,7 +126,7 @@
 |---|---|
 | `#/lookup/model/FY` | 原样解析为 `{ type: 'model', key: 'FY' }` |
 | `#/lookup/jig/7748G` | 原样解析为 `{ type: 'jig', key: '7748G' }` |
-| `#/lookup/jig/31(10)` | `jig` 查不到 P/N 时按 Recipe 回退命中，结果与 v1 的 `findJig` 一致 |
+| `#/lookup/jig/310(10)` | `jig` 查不到 P/N 时按 Recipe 回退命中，结果与 v1 的 `findJig` 一致 |
 | `#/lookup/FY` | 手敲兼容，默认按 `model` 解析 |
 
 写入仍用 `window.history.replaceState`，**不压历史**；输入过程中的临时文字不进 hash。
@@ -187,7 +187,7 @@ const compact = (s: string) => normalizeKey(s).replace(/[^0-9A-Z]/g, '')
 // compact('77/48') === compact('77-48') === compact('7748') === '7748'
 ```
 
-于是 `77/48`、`77-48`、`77 48`、`7748`、全角 `７７／４８` 都归一到同一个 INCH 键。紧凑化**不用于** Recipe（`31(10)` 会变成 `3110`，容易误命中），Recipe 仍走完整键匹配。
+于是 `77/48`、`77-48`、`77 48`、`7748`、全角 `７７／４８` 都归一到同一个 INCH 键。紧凑化**不用于** Recipe（`310(10)` 会变成 `3110`，容易误命中），Recipe 仍走完整键匹配。
 
 ### 6.2 候选生成与打分
 
@@ -345,7 +345,7 @@ export type LookupView =
 
 **新增单测**（vitest）：
 
-- INCH 别名：`7748` / `77-48` / `77 48` / 全角都归一到 `77/48`；`31(10)` 不被紧凑化误命中；
+- INCH 别名：`7748` / `77-48` / `77 48` / 全角都归一到 `77/48`；`310(10)` 不被紧凑化误命中；
 - `relationsOf` 六类实体的关联集合，含 `P467 → 5 组`、`P526 → 1 组`、某个 FSPM 跨 Main/Sub 的情形；
 - `7748` 候选首项必须是 `inch`，且并列给出 6 个 `7748*` JIG；
 - `byFspm` 覆盖全部 92 个 FSPM，引用位置与组合的 `mainFspm` / `subFspm` 一致；

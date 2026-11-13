@@ -65,7 +65,7 @@ export type EntityType = 'inch' | 'model' | 'jig' | 'recipe' | 'fspm' | 'group'
 /**
  * 一次查询的目标。
  *
- * `key` 保留用户看到 / 输入的原样写法（如 `77/48`、`31(10)`），
+ * `key` 保留用户看到 / 输入的原样写法（如 `77/48`、`310(10)`），
  * 查询索引时再归一化 —— 这样 hash、标题、结果页头部都不用做大小写回转。
  */
 export interface EntityRef {

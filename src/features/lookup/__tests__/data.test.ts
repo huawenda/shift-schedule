@@ -31,7 +31,7 @@ describe('速查数据完整性', () => {
   })
 
   it('Recipe 与 JIG P/N 一一对应', () => {
-    expect(index.byRecipe.get('31(10)')?.map(g => g.id))
+    expect(index.byRecipe.get('310(10)')?.map(g => g.id))
       .toEqual(index.byJig.get('7748G')?.map(g => g.id))
     const recipes = new Set(LOOKUP_GROUPS.map(g => g.recipe))
     const jigs = new Set(LOOKUP_GROUPS.map(g => g.jigPn))

@@ -17,7 +17,7 @@ describe('查询键归一化', () => {
   it('全角、空格、大小写都收成同一键', () => {
     expect(normalizeKey('ｆｙ')).toBe('FY')
     expect(normalizeKey(' 7748 g ')).toBe('7748G')
-    expect(normalizeKey('31（10）')).toBe('31(10)')
+    expect(normalizeKey('310（10）')).toBe('310(10)')
   })
 })
 
@@ -44,8 +44,8 @@ describe('索引', () => {
 
   it('JIG 搜索：JIG P/N 与 Recipe 都能命中', () => {
     expect(searchJigs(index, '7748g')[0]?.jigPn).toBe('7748G')
-    expect(searchJigs(index, '31(10)')[0]?.jigPn).toBe('7748G')
-    expect(findJig(index, '31（10）')?.jigPn).toBe('7748G')
+    expect(searchJigs(index, '310(10)')[0]?.jigPn).toBe('7748G')
+    expect(findJig(index, '310（10）')?.jigPn).toBe('7748G')
   })
 
   it('byFspm 覆盖 92 个 FSPM，引用位置与组合数据一致', () => {

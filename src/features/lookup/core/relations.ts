@@ -47,7 +47,7 @@ function resolveGroups(index: LookupIndex, ref: EntityRef): readonly LookupGroup
       return group ? [group] : []
     }
     case 'jig': {
-      // findJig 同时认 JIG P/N 与 Recipe，旧深链 `#/lookup/jig/31(10)` 因此仍然有效
+      // findJig 同时认 JIG P/N 与 Recipe，旧深链 `#/lookup/jig/310(10)` 因此仍然有效
       const entry = findJig(index, ref.key)
       return entry?.groups ?? []
     }

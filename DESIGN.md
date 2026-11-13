@@ -328,7 +328,7 @@ manifest 的 `theme_color` 画它，而 manifest 是静态文件、没有深色�
 解析时若 hash 里带了月份（手敲的 `#/2026-10/jig`），月份被忽略，不保留在 JIG 页上。
 **速查页同样不带月份**：`#/lookup` 是总览，`#/lookup/browse/<维度>` 是展示页，
 `#/lookup/<实体类型>/<键>` 是关联结果（如 `#/lookup/fspm/P467`）；旧深链
-`#/lookup/model/FY`、`#/lookup/jig/7748G`、`#/lookup/jig/31(10)` 继续可用。
+`#/lookup/model/FY`、`#/lookup/jig/7748G`、`#/lookup/jig/310(10)` 继续可用。
 静态版收到 `#/jig` 时回落到概览：它既没有侧栏入口，也没有 JIG 页需要的文件能力，
 留着一个进得去出不来的页面没意义。生产速查只读静态数据、不依赖壳能力，静态版正常显示。
 **应用内导航一律 `replaceState`，不压历史**：底部 tab、月份、设置页签都只是应用内的位置变化，

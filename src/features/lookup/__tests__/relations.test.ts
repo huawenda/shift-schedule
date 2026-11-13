@@ -12,7 +12,7 @@ describe('关联查询', () => {
     expect(rel.groups.map(group => group.id)).toEqual(['7748G-01'])
     expect(rel.models).toEqual(['CP', 'FS', 'FZ', 'FT', 'CU', 'FY'])
     expect(rel.jigs.map(entry => entry.jigPn)).toEqual(['7748G'])
-    expect(rel.recipes).toEqual(['31(10)'])
+    expect(rel.recipes).toEqual(['310(10)'])
     expect(rel.inches).toEqual(['77/48'])
   })
 
@@ -61,8 +61,8 @@ describe('关联查询', () => {
     expect(rel.inches).toEqual(['77/48'])
   })
 
-  it('Recipe 31(10) 与 JIG 7748G 指向同一组', () => {
-    const byRecipe = relationsOf(index, { type: 'recipe', key: '31(10)' })
+  it('Recipe 310(10) 与 JIG 7748G 指向同一组', () => {
+    const byRecipe = relationsOf(index, { type: 'recipe', key: '310(10)' })
     const byJig = relationsOf(index, { type: 'jig', key: '7748G' })
     expect(byRecipe.groups.map(group => group.id)).toEqual(byJig.groups.map(group => group.id))
   })

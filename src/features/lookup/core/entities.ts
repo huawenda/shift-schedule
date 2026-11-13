@@ -53,7 +53,7 @@ export interface EntityHit extends EntityCandidate {
  * INCH 的紧凑键：`77/48` → `7748`。
  *
  * 现场口头和邮件里常把 77/48 写成 7748；NFKC 先收全角，再去掉所有分隔符。
- * **只用于 INCH** —— Recipe `31(10)` 紧凑后是 `3110`，会与别的键误撞。
+ * **只用于 INCH** —— Recipe `310(10)` 紧凑后是 `31010`，会与别的键误撞。
  */
 export function compactInchKey(input: string): string {
   return normalizeKey(input).replace(/[^0-9A-Z]/g, '')
@@ -151,7 +151,7 @@ export function entityCandidates(index: LookupIndex): readonly EntityCandidate[]
  * 查询里的类型前缀：`fspm:P467`、`inch:7748`。
  *
  * 所有实体的键里都不会出现冒号（型号 / JIG / Recipe / FSPM / 组合都没有），
- * 所以只在开头切一次，不会误伤 `31(10)` 这类键。认不出的前缀按普通查询处理。
+ * 所以只在开头切一次，不会误伤 `310(10)` 这类键。认不出的前缀按普通查询处理。
  */
 const TYPE_PREFIX = /^(inch|model|jig|recipe|fspm|group)\s*:\s*(.*)$/i
 
