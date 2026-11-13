@@ -13,7 +13,6 @@ import {
   type MappingPair
 } from '../core/mapping'
 import { createDefaultJigConfig, type JigConfig } from '../core/config'
-import { JigScrollbar } from './JigScrollbar'
 
 interface JigMappingSectionProps {
   /** 当前的业务配置 */
@@ -34,8 +33,9 @@ interface JigMappingSectionProps {
  * 但仍然是「草稿 + 保存」：这张表是业务数据（进备份文件），
  * 有校验与排序，边改边落盘会把半成品写进去。
  *
- * 表格列多行也长，所以保留自己的滚动区（最高 60vh / 520px），
- * 不把整页撑到要滚很久；表头留在滚动区外面，列才能严格对齐。
+ * 表格**不自带滚动**：16 条规则（或以后几十条）全部平铺，滚的是设置页本身。
+ * 卡片里再套一条滚动条会出现「两条竖滑块、拖到卡片底就停住」的错觉；
+ * 表头留在行列表外面，列宽才能严格对齐。
  */
 export function JigMappingSection({ config, onSave }: JigMappingSectionProps) {
   const [pairs, setPairs] = useState<MappingPair[]>(() =>
@@ -103,10 +103,19 @@ export function JigMappingSection({ config, onSave }: JigMappingSectionProps) {
 
   useEffect(() => stopAutoScroll, [])
 
+  /**
+   * 列表自己不再滚（所有行平铺），拖动排序该滚的是外层 ——
+   * 设置页的 `.canvas-flow`。原来读 listRef.scrollTop，现在它恒为 0，
+   * 拖到可视区边缘时页面不会跟手，行会「拖不动」。
+   */
+  function scroller(): HTMLElement | null {
+    return listRef.current?.closest<HTMLElement>('.canvas-flow') ?? null
+  }
+
   function updateSort(clientY: number) {
     const state = sortRef.current
     if (!state) return
-    const scroll = listRef.current?.scrollTop ?? 0
+    const scroll = scroller()?.scrollTop ?? 0
     const raw = clientY - state.startY + (scroll - state.startScroll)
     const min = -state.from * SORT_STEP
     const max = (pairs.length - 1 - state.from) * SORT_STEP
@@ -123,12 +132,12 @@ export function JigMappingSection({ config, onSave }: JigMappingSectionProps) {
   function sortAutoStep() {
     const state = sortRef.current
     if (!state) return
-    const scroller = listRef.current
-    if (!scroller) return
-    const rect = scroller.getBoundingClientRect()
+    const box = scroller()
+    if (!box) return
+    const rect = box.getBoundingClientRect()
     const edge = 56
-    if (state.y < rect.top + edge) scroller.scrollTop -= 10
-    else if (state.y > rect.bottom - edge) scroller.scrollTop += 10
+    if (state.y < rect.top + edge) box.scrollTop -= 10
+    else if (state.y > rect.bottom - edge) box.scrollTop += 10
     updateSort(state.y)
   }
 
@@ -143,7 +152,7 @@ export function JigMappingSection({ config, onSave }: JigMappingSectionProps) {
       from: index,
       target: index,
       startY: event.clientY,
-      startScroll: listRef.current?.scrollTop ?? 0,
+      startScroll: scroller()?.scrollTop ?? 0,
       y: event.clientY
     }
     setSortDrag({ from: index, target: index, offset: 0 })
@@ -203,50 +212,6 @@ export function JigMappingSection({ config, onSave }: JigMappingSectionProps) {
     rowRefs.current[firstIndex]?.scrollIntoView({ block: 'nearest' })
   }, [errors])
 
-  /*
-   * 列表可视高度对齐到**整行**。
-   *
-   * 滚动区高度如果不是行距的整数倍，底部会露出下一行输入框的上边框 ——
-   * 看起来像多画了两条横线。这里按「表头 + 若干完整行」算高度，
-   * 静止时底部永远落在行与行的分界上。
-   */
-  useEffect(() => {
-    const body = listRef.current
-    if (!body) return
-
-    const align = () => {
-      const map = body.parentElement
-      const head = map?.querySelector<HTMLElement>('.jig-map-head')
-      const headHeight = head
-        ? head.offsetHeight + (parseFloat(getComputedStyle(head).marginBottom) || 0)
-        : 0
-      const rows = [...body.querySelectorAll<HTMLElement>('.jig-map-row, .sort-row')]
-      if (rows.length === 0) {
-        body.style.height = ''
-        return
-      }
-
-      const sortGap = body.querySelector('.sort-row') ? 8 : 0
-      // 与 .jig-map 的 max-height 保持一致（含上下 padding 与表头）
-      const cap = Math.min(window.innerHeight * 0.6, 520) - 24 - headHeight
-      let used = 0
-      for (const row of rows) {
-        const next = used + row.offsetHeight + sortGap
-        if (next > cap) break
-        used = next
-      }
-      // 至少留一行，避免窗口极矮时滚动区高度为 0
-      body.style.height = `${Math.max(rows[0].offsetHeight, used)}px`
-    }
-
-    const frame = requestAnimationFrame(align)
-    window.addEventListener('resize', align)
-    return () => {
-      cancelAnimationFrame(frame)
-      window.removeEventListener('resize', align)
-    }
-  }, [pairs, sorting])
-
   const patch = (index: number, next: Partial<MappingPair>) =>
     setPairs(prev =>
       prev.map((row, i) => (i === index ? { ...row, ...next } : row))
@@ -295,9 +260,10 @@ export function JigMappingSection({ config, onSave }: JigMappingSectionProps) {
       <div className="settings-panel jig-map-panel">
         <div className="jig-map">
           {/*
-            表头放在滚动区**外面**：原生滚动条已隐藏（改用 JigScrollbar），
-            两者宽度一致，列能严格对齐；同时表头不会盖住滚动的行，
-            也不存在 sticky 背景透出内容的问题。排序模式是另一套紧凑行，隐藏。
+            表头与行列表是同一个容器里的两段（不分滚动区）：所有行平铺，
+            滚的是设置页本身。表头不吸顶 —— 整页滚的时候它跟着走，
+            换来的是「一屏能看到所有规则」，而不是「表头常驻但只能看 5 行」。
+            排序模式是另一套紧凑行，表头隐藏。
           */}
           {sorting ? null : (
             <div className="jig-map-head">
@@ -387,9 +353,6 @@ export function JigMappingSection({ config, onSave }: JigMappingSectionProps) {
               })
             )}
           </div>
-
-          {/* 原生滚动条已隐藏，换成与 JIG 表格同一套的覆盖式浮层 */}
-          <JigScrollbar targetRef={listRef} />
         </div>
 
         <div className="settings-actions jig-map-actions">

@@ -89,7 +89,7 @@ export function TodayPlaque({
       : moment.kind === 'idle'
         ? '本月'
         : '下一班'
-  const shiftName = !todayInPeriod || moment.kind === 'idle' ? '—' : moment.shift
+  const shiftName = !todayInPeriod || moment.kind === 'idle' ? '-' : moment.shift
   // 跨零点的夜班属于昨天：把日期带上，避免让人以为这是今天的班
   const rangeText = todayInPeriod
     ? moment.kind === 'active' && moment.dateKey !== today

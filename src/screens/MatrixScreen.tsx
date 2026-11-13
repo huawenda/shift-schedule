@@ -90,13 +90,65 @@ export function MatrixScreen({
 
   return (
     <div className="canvas is-matrix is-pinned">
+      {/*
+        页头一行三段：月份导航靠左、分组胶囊居中、视图切换靠右。
+      */}
       <div className="canvas-head">
-        <PeriodNav
-          atCurrentMonth={atCurrentMonth}
-          monthTitle={monthTitle}
-          onShiftMonth={onShiftMonth}
-          onToday={onToday}
-        />
+
+        <div className="matrix-period">
+          <PeriodNav
+            atCurrentMonth={atCurrentMonth}
+            monthTitle={monthTitle}
+            onShiftMonth={onShiftMonth}
+            onToday={onToday}
+          />
+        </div>
+
+        {roster.groups.length > 0 ? (
+          /*
+           * 分组切换沿用成员页那套胶囊 tab（`.chip-tabs` / `.chip-tab`，
+           * 与设置页的分组 tab 是同一份样式）：同一个「按分组筛选」的动作
+           * 在两页长得不一样，切页时会像换了个控件。
+           * `.matrix-groups` 只留这一页特有的约束（别被矩阵挤扁）。
+           */
+          <div className="matrix-groups chip-tabs" role="group" aria-label="按分组筛选">
+            <button
+              aria-pressed={groupFilter === null}
+              className={`chip-tab${groupFilter === null ? ' is-on' : ''}`}
+              type="button"
+              onClick={() => onGroupFilterChange(null)}
+            >
+              <span>全部</span>
+              <span className="chip-tab-count">{roster.members.length}</span>
+            </button>
+            {roster.groups.map(group => {
+              const count = roster.members.filter(member => member.groupId === group.id).length
+              return (
+                <button
+                  aria-pressed={groupFilter === group.id}
+                  className={`chip-tab${groupFilter === group.id ? ' is-on' : ''}`}
+                  key={group.id}
+                  type="button"
+                  onClick={() => onGroupFilterChange(group.id)}
+                >
+                  <span>{group.name}</span>
+                  <span className="chip-tab-count">{count}</span>
+                </button>
+              )
+            })}
+            {ungroupedCount > 0 ? (
+              <button
+                aria-pressed={groupFilter === UNGROUPED}
+                className={`chip-tab${groupFilter === UNGROUPED ? ' is-on' : ''}`}
+                type="button"
+                onClick={() => onGroupFilterChange(UNGROUPED)}
+              >
+                <span>未分组</span>
+                <span className="chip-tab-count">{ungroupedCount}</span>
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="canvas-tools">
           <div className="segmented" role="group" aria-label="矩阵视图">
@@ -122,46 +174,6 @@ export function MatrixScreen({
 
       {/* 页头固定：标题与视图切换留在原位，概览条与矩阵收进单独滚动的 flow */}
       <div className="canvas-flow">
-        {roster.groups.length > 0 ? (
-          <div className="matrix-groups" role="group" aria-label="按分组筛选">
-            <button
-              aria-pressed={groupFilter === null}
-              className={`matrix-group-chip${groupFilter === null ? ' is-on' : ''}`}
-              type="button"
-              onClick={() => onGroupFilterChange(null)}
-            >
-              <span>全部</span>
-              <span className="matrix-group-chip-count">{roster.members.length}</span>
-            </button>
-            {roster.groups.map(group => {
-              const count = roster.members.filter(member => member.groupId === group.id).length
-              return (
-                <button
-                  aria-pressed={groupFilter === group.id}
-                  className={`matrix-group-chip${groupFilter === group.id ? ' is-on' : ''}`}
-                  key={group.id}
-                  type="button"
-                  onClick={() => onGroupFilterChange(group.id)}
-                >
-                  <span>{group.name}</span>
-                  <span className="matrix-group-chip-count">{count}</span>
-                </button>
-              )
-            })}
-            {ungroupedCount > 0 ? (
-              <button
-                aria-pressed={groupFilter === UNGROUPED}
-                className={`matrix-group-chip${groupFilter === UNGROUPED ? ' is-on' : ''}`}
-                type="button"
-                onClick={() => onGroupFilterChange(UNGROUPED)}
-              >
-                <span>未分组</span>
-                <span className="matrix-group-chip-count">{ungroupedCount}</span>
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-
         <SummaryBar date={workday} period={period} roster={viewRoster} />
 
         {groupEmpty ? (

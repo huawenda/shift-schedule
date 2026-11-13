@@ -137,47 +137,60 @@ export function JigScreen({ tab, onTabChange, data, config, notify }: JigScreenP
             onValueChange={value => onTabChange(value as JigTabId)}
             value={tab}
           >
-            <TabsList>
-              {JIG_TAB_ORDER.map(id => (
-                <TabsTrigger key={id} value={id}>
-                  {JIG_TAB_LABELS[id]}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            {/*
+              顶行：**页签贴左**（与下面表格的左缘对齐），**工具条靠右**
+              （下拉过滤 + 分段计数相邻）。
+
+              DOM 顺序也是「页签在前」：靠右靠的是工具条（它带 margin-left:auto），
+              顺序反了的话会把「工具条 + 页签」整段推到右边去。
+
+              工具条随页签切换（全量透视 / 数据审查各有一套，其余页签没有）；
+              下钻时这一行换成面包屑，占满整行 —— 页签仍在原位，随时能切走。
+            */}
+            <div className="jig-head">
+              {/*
+                页签与「成员分组 / 矩阵分组」共用同一套胶囊（`.chip-tabs` / `.chip-tab`）：
+                同一个应用里出现第三种页签形态是最扎眼的不一致。
+                选中态由 Radix 的 data-state 标，样式块里两种写法都认。
+              */}
+              <TabsList className="chip-tabs jig-head-tabs">
+                {JIG_TAB_ORDER.map(id => (
+                  <TabsTrigger className="chip-tab" key={id} value={id}>
+                    {JIG_TAB_LABELS[id]}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {drillOn(tab) ? (
+                <JigDrillBar
+                  drill={data.drill!}
+                  mismatchCount={drillMismatchCount}
+                  onBack={data.exitDrill}
+                  rowCount={data.drillTable.rows.length}
+                />
+              ) : tab === 'pivot' ? (
+                <JigPivotToolbar
+                  avail={data.pivotAvail}
+                  availCounts={data.pivot.availCounts}
+                  onAvailChange={data.setPivotAvail}
+                  onScopeChange={data.setPivotScope}
+                  pnOptions={data.pivot.pnOptions}
+                  scope={data.pivotScope}
+                />
+              ) : tab === 'review' ? (
+                <JigReviewToolbar
+                  counts={data.review.counts}
+                  onPnChange={data.setReviewPn}
+                  onScopeChange={data.setReviewScope}
+                  pn={data.reviewPn}
+                  pnOptions={data.reviewPnOptions}
+                  scope={data.reviewScope}
+                />
+              ) : null}
+            </div>
 
             {JIG_TAB_ORDER.map(id => (
               <TabsContent className="jig-tab-panel" key={id} value={id}>
-                {drillOn(id) ? (
-                  <JigDrillBar
-                    drill={data.drill!}
-                    mismatchCount={drillMismatchCount}
-                    onBack={data.exitDrill}
-                    rowCount={data.drillTable.rows.length}
-                  />
-                ) : (
-                  <>
-                    {id === 'pivot' ? (
-                      <JigPivotToolbar
-                        avail={data.pivotAvail}
-                        availCounts={data.pivot.availCounts}
-                        onAvailChange={data.setPivotAvail}
-                        onScopeChange={data.setPivotScope}
-                        pnOptions={data.pivot.pnOptions}
-                        scope={data.pivotScope}
-                      />
-                    ) : id === 'review' ? (
-                      <JigReviewToolbar
-                        counts={data.review.counts}
-                        onPnChange={data.setReviewPn}
-                        onScopeChange={data.setReviewScope}
-                        pn={data.reviewPn}
-                        pnOptions={data.reviewPnOptions}
-                        scope={data.reviewScope}
-                      />
-                    ) : null}
-                  </>
-                )}
-
                 {drillOn(id) ? (
                   <JigTable
                     emptyHint="透视表的数字来自已加载的源数据；如果这里为空，请返回并重新加载文件。"

@@ -123,7 +123,6 @@ export function JigSettingsSection({
         <div className="settings-row">
           <div className="settings-row-label">
             <span>表格行高</span>
-            <span className="settings-row-hint">四个页签的表格同时生效</span>
           </div>
           <div className="settings-row-control">
             <div className="segmented" role="group" aria-label="表格行高">

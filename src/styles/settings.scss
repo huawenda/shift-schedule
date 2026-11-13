@@ -259,19 +259,32 @@
 
 /* ── 成员分组 tab ─────────────────────────────────────── */
 
-/* 下划线 tab：分组之间的切换是「看哪一组」，不需要另造一种选中底色。
- * 横向滚动，tab 与右侧「新建 / 管理」动作分开，动作永远可见。 */
+/* 胶囊式切换条：设置页的分组成员（`.member-tabs`）与矩阵页的分组筛选
+ * （`.chip-tabs`）**共用同一份样式** —— 同一个「按分组看人」的动作，
+ * 两页长得不一样，切页时就像换了个控件。
+ *
+ * 条本身是浅底槽 + 2px 内缝，选中项浮出一块与卡片同色的胶囊；
+ * 尺寸与 shadcn 页签的胶囊一致（28px 高、0.875rem），横向可滚 —— 分组能有十几个。
+ *
+ * 这里只放「皮肤」，不放尺寸约束：成员页那条要吃掉剩余宽度（flex:1），
+ * 矩阵页那条不能被矩阵挤扁（flex:0 0 auto），各自的 flex 写在各自的页面样式里。
+ */
+/* 分组 tab 与右侧动作同一行：胶囊按内容宽度，动作靠右端。
+ * 抽共用样式时这条 flex 规则被一并删掉了，动作因此掉到下一行。 */
 .member-tabs-row {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  /* 胶囊式 tab 自带底色，不再需要底部那条分隔线 */
 }
 
-.member-tabs {
+.member-tabs,
+.chip-tabs {
   display: flex;
-  flex: 1 1 auto;
-  min-width: 0;
+  /* 同时作用于 TabsList：CLI 默认 `h-8`，那高度装不下 28px 胶囊 + 内缝；
+   * 宽度按内容收（`fit-content`），浅底槽才不会拉成一条空槽 ——
+   * 需要铺满的成员页那条在下面单独覆盖成 width: auto。 */
+  width: fit-content;
+  height: auto;
   gap: 2px;
   padding: 3px;
   border-radius: var(--radius-lg);
@@ -280,13 +293,17 @@
   scrollbar-width: none;
 }
 
-.member-tabs::-webkit-scrollbar {
+.member-tabs::-webkit-scrollbar,
+.chip-tabs::-webkit-scrollbar {
   display: none;
 }
 
-.member-tab {
+.member-tab,
+.chip-tab {
   position: relative;
+  display: inline-flex;
   flex: 0 0 auto;
+  align-items: center;
   height: 28px;
   padding: 0 10px;
   border: 0;
@@ -299,11 +316,16 @@
   transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
-.member-tab:hover {
+.member-tab:hover,
+.chip-tab:hover {
   color: var(--ui-foreground);
 }
 
-.member-tab.is-on {
+/* 选中态两种写法都认：手写的 `.is-on`（成员页 / 矩阵页的分组胶囊）
+ * 与 Radix 的 `data-state="active"`（JIG 页的 shadcn Tabs）。 */
+.member-tab.is-on,
+.chip-tab.is-on,
+.chip-tab[data-state='active'] {
   background: var(--ui-card);
   color: var(--ui-foreground);
   font-weight: 500;
@@ -311,11 +333,13 @@
 }
 
 .member-tab:focus-visible,
+.chip-tab:focus-visible,
 .member-tab-action:focus-visible {
   outline-offset: -2px;
 }
 
-.member-tab-count {
+.member-tab-count,
+.chip-tab-count {
   margin-left: 4px;
   color: var(--ui-muted-foreground);
   font-size: var(--fs-small);
@@ -323,8 +347,17 @@
   font-weight: 400;
 }
 
-.member-tab.is-on .member-tab-count {
+.member-tab.is-on .member-tab-count,
+.chip-tab.is-on .chip-tab-count,
+.chip-tab[data-state='active'] .chip-tab-count {
   color: var(--ui-foreground);
+}
+
+/* 成员页这条：浅底槽只包住胶囊本身，不要拉满整行 ——
+ * 拉满就是一条几百像素的空槽，右侧空一大片。分组多到放不下时再横向滚。 */
+.member-tabs {
+  width: fit-content;
+  max-width: 100%;
 }
 
 .member-tabs-actions {
@@ -332,6 +365,8 @@
   flex: 0 0 auto;
   align-items: center;
   gap: var(--sp-1);
+  /* 推到行的右端：胶囊组在左，动作在右，中间留白 */
+  margin-left: auto;
 }
 
 .member-tab-action {

@@ -235,55 +235,49 @@
 
 /* 分组切换条：只在存在分组时出现，横向滚动不折行。
  * 用现有的 accent-soft / accent 两枚令牌，不单独造一种「部门色」。 */
+/*
+ * 矩阵页的分组胶囊。
+ *
+ * 视觉（浅底槽 + 胶囊）走 settings.scss 里与成员页共用的 `.chip-tabs` / `.chip-tab`，
+ * 这里只留本页特有的约束：横向滚动（分组可能十几个），不换行。
+ */
 .matrix-groups {
-  /* 胶囊条不能被矩阵的「吃掉剩余高度」挤扁：它是横向滚动容器，
-   * flex 的自动最小尺寸是 0，默认 shrink 会把它压成一条细缝（胶囊上下被裁）。 */
-  flex: 0 0 auto;
-  display: flex;
+  max-width: 100%;
   flex-wrap: nowrap;
-  gap: var(--sp-2);
-  overflow-x: auto;
-  padding: 0 2px 2px;
-  scrollbar-width: none;
+  padding: 3px 3px 4px;
 }
 
-.matrix-groups::-webkit-scrollbar {
-  display: none;
-}
-
-.matrix-group-chip {
-  display: inline-flex;
-  flex: 0 0 auto;
+/* ── 矩阵页页头：一行三段 ──
+ *
+ * 分组胶囊靠左、月份导航居中、视图切换（按班次 / 按姓名）靠右。
+ *
+ * 月份导航居中是有理由的：它是「现在在看哪个月」的全局坐标，
+ * 跟分组筛选不是一回事 —— 贴着左边会被读成分组筛选的一部分，
+ * 居中之后左右对称，扫一眼就知道自己在哪个月。
+ *
+ * 两侧列用 `minmax(0, 1fr)`：胶囊多到放不下时压缩自己并横滚，
+ * 不会把中间的月份导航挤走。
+ */
+.canvas.is-matrix > .canvas-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: var(--fs-small);
+  gap: var(--sp-4);
 }
 
-.matrix-group-chip:hover {
-  border-color: var(--control-hover);
-  color: var(--text);
+.canvas.is-matrix > .canvas-head > .matrix-period {
+  grid-column: 1;
+  justify-self: start;
 }
 
-.matrix-group-chip.is-on {
-  border-color: transparent;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
+.canvas.is-matrix > .canvas-head > .matrix-groups {
+  grid-column: 2;
+  justify-self: center;
 }
 
-.matrix-group-chip-count {
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
-}
-
-.matrix-group-chip.is-on .matrix-group-chip-count {
-  color: var(--accent);
+.canvas.is-matrix > .canvas-head > .canvas-tools {
+  grid-column: 3;
+  justify-self: end;
 }
 
 .matrix {

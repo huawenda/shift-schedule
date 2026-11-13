@@ -136,7 +136,7 @@ export function SummaryBar({ roster, period, date }: SummaryBarProps) {
           <div className="summary-cell" key={cell.label}>
             <span className="summary-label">{cell.label}</span>
             <span className="summary-value">
-              {cell.value === null ? '—' : cell.value}
+              {cell.value === null ? '-' : cell.value}
               <span className="summary-unit">{cell.value === null ? '' : cell.hint}</span>
             </span>
             {cell.people.length > 0 ? (
