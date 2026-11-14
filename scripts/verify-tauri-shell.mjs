@@ -27,7 +27,7 @@ import path from 'node:path'
 import { createCdpClient, sleep } from './lib/cdp.mjs'
 
 const PORT = 9333
-const DEFAULT_EXE = path.resolve('desktop/src-tauri/target/release/昼夜.exe')
+const DEFAULT_EXE = path.resolve('desktop/src-tauri/target/release/Workhorse.exe')
 
 const args = process.argv.slice(2)
 const exePath = (() => {

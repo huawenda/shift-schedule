@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 一键拉起「昼夜 · 个人倒班记录本」开发服务器。
+ * 一键拉起 Workhorse 开发服务器。
  *
  * 为什么不直接 `vite`：
  *   1. 端口锁在 6180。vite 默认 5173，端口不锁死时容易开错窗口。
@@ -79,7 +79,7 @@ const cyan = text => paint('36', text)
 
 function printHelp() {
   console.log(`
-${bold('昼夜 · 个人倒班记录本')} 开发服务器
+${bold('Workhorse')} 开发服务器
 
 ${bold('用法')}
   pnpm dev [选项]
@@ -162,7 +162,7 @@ async function main() {
   }
 
   console.log('')
-  console.log(`  ${bold('昼夜 · 个人倒班记录本')}`)
+  console.log(`  ${bold('Workhorse')}`)
   console.log('')
 
   // 证书缺失时直接讲清楚怎么生成，而不是让 vite 抛一段 TLS 报错

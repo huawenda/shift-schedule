@@ -24,7 +24,7 @@ import { createCdpClient, sleep } from '../lib/cdp.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const PORT = 9349
-const DEFAULT_EXE = path.join(ROOT, 'desktop', 'src-tauri', 'target', 'release', '昼夜.exe')
+const DEFAULT_EXE = path.join(ROOT, 'desktop', 'src-tauri', 'target', 'release', 'Workhorse.exe')
 const FIXTURE = path.join(
   ROOT,
   'src',
@@ -156,7 +156,7 @@ try {
   })()`)
   check('点了导出备份', exported?.ok === true, exported?.error ?? (exported?.toasts ?? []).join(' | '))
 
-  // 备份文件名带时间戳（昼夜-备份-20261109-1711.json），找目录下那个 json
+  // 备份文件名带时间戳（Workhorse-备份-20261109-1711.json），找目录下那个 json
   const written = fs.readdirSync(outDir).filter(f => f.endsWith('.json'))
   if (written.length > 0) {
     fs.copyFileSync(path.join(outDir, written[0]), backupFile)

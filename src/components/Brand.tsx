@@ -39,7 +39,7 @@ interface BrandLockupProps {
 /**
  * 横向单行：56px 图标 + 26px 字标，垂直居中 —— 品牌区是侧栏的「头部」，
  * 字标要比 13px 的导航文字重得多，不能做成一条普通菜单项。
- * 早期有 bar / sidebar / hero 三档字号，是为「昼夜 + 副标题」两行中文排版服务的；
+ * 早期有 bar / sidebar / hero 三档字号，是为早期「中文品牌 + 副标题」两行排版服务的；
  * 换成单行拉丁字标后三者没有差别，统一一份，折叠态只缩图标。
  */
 export function BrandLockup({ collapseText = false, className = '' }: BrandLockupProps) {

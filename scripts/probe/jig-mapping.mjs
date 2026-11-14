@@ -20,7 +20,7 @@ import { createCdpClient, sleep } from '../lib/cdp.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const PORT = 9348
-const DEFAULT_EXE = path.join(ROOT, 'desktop', 'src-tauri', 'target', 'release', '昼夜.exe')
+const DEFAULT_EXE = path.join(ROOT, 'desktop', 'src-tauri', 'target', 'release', 'Workhorse.exe')
 const FIXTURE = path.join(
   ROOT,
   'src',

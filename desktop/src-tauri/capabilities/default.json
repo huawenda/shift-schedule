@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "昼夜壳的最小权限集。\n\n这个应用是纯本地的：没有网络请求、没有遥测，\n排班数据始终待在前端的 localStorage 里，不经过 Rust 侧。\n这里只开三件事 —— 备份导出/导入需要的保存与打开对话框、\n写/读用户明确选中的那一个文件，以及自绘标题栏的最小化/最大化/关闭/拖动。\n\nfs 权限刻意限定到 $DOWNLOAD / $DOCUMENT：\n备份文件由用户在对话框里自己挑地方落盘，\n程序不会主动去扫这两个目录。",
+  "description": "Workhorse 桌面壳的最小权限集。\n\n这个应用是纯本地的：没有网络请求、没有遥测，\n排班数据始终待在前端的 localStorage 里，不经过 Rust 侧。\n这里只开三件事 —— 备份导出/导入需要的保存与打开对话框、\n写/读用户明确选中的那一个文件，以及自绘标题栏的最小化/最大化/关闭/拖动。\n\nfs 权限刻意限定到 $DOWNLOAD / $DOCUMENT：\n备份文件由用户在对话框里自己挑地方落盘，\n程序不会主动去扫这两个目录。",
   "windows": ["main"],
   "permissions": [
     "core:default",

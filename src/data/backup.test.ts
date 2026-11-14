@@ -75,7 +75,7 @@ describe('backup 当前格式', () => {
 
   it('拒收别的应用导出的文件', () => {
     const text = JSON.stringify({ app: 'someone-else', version: 6, roster: { members: [], overrides: [] } })
-    expect(() => parseBackup(text)).toThrow('不是「昼夜」导出的')
+    expect(() => parseBackup(text)).toThrow('不是「Workhorse」导出的')
   })
 
   it('非法 JSON 给出中文错误', () => {

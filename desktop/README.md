@@ -83,7 +83,7 @@ Promise 会 reject，被 `.catch` 吞掉，不影响页面。改完 Rust 或 `ta
 
 ## 托盘与关闭行为
 
-- **托盘图标**：常驻任务栏通知区域，悬停提示「昼夜 · 个人倒班记录本」
+- **托盘图标**：常驻任务栏通知区域，悬停提示「Workhorse」
 - **左键单击**：显示主窗口、取消最小化并聚焦
 - **右键菜单**：`显示 / 隐藏主窗口`、`退出`
 - **关闭按钮**（含自绘标题栏的 ✕）：默认直接退出；设置 → 系统设置 → 窗口 可改为「隐藏到托盘」，
@@ -156,8 +156,8 @@ pnpm verify:tauri    # = node scripts/verify-tauri-shell.mjs
 ## 产物
 
 - 可执行文件：`src-tauri/target/release/` 下，文件名取 `tauri.conf.json` 的
-  `mainBinaryName`（当前是 `昼夜.exe`）
-- 安装包：`src-tauri/target/release/bundle/nsis/昼夜_1.0.0_x64-setup.exe`
+  `mainBinaryName`（当前是 `Workhorse.exe`）
+- 安装包：`src-tauri/target/release/bundle/nsis/Workhorse_1.0.0_x64-setup.exe`
 
 （包名由 `productName` + `version` 拼出，以实际产物为准。）
 
